@@ -7,14 +7,18 @@ export default function App() {
   const [athletes, setAthletes] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Данные текущего пользователя
+  // Пользователь
   const [myProfile, setMyProfile] = useState(null);
   const [telegramUser, setTelegramUser] = useState({ id: null, username: '', first_name: '' });
+
+  // Фильтры ленты
+  const [filterMatchOnly, setFilterMatchOnly] = useState(true);
+  const [filterGender, setFilterGender] = useState('all'); // 'all' | 'GymBro' | 'GymGirl'
 
   // Форма регистрации
   const [formData, setFormData] = useState({
     name: '',
-    gender: 'GymBro', // GymBro или GymGirl
+    gender: 'GymBro',
     level: 'Средний (1-3 года)',
     weekdayGym: '',
     weekendGym: '',
@@ -31,7 +35,7 @@ export default function App() {
     async function initApp() {
       setLoading(true);
 
-      // 1. Считываем данные из Telegram WebApp
+      // 1. Считываем данные Telegram WebApp
       let tgId = null;
       let tgUser = '';
       let tgName = '';
@@ -48,7 +52,7 @@ export default function App() {
         setFormData(prev => ({ ...prev, name: tgName }));
       }
 
-      // 2. Загружаем список залов из Supabase
+      // 2. Загружаем список залов
       const { data: gymData } = await supabase.from('gyms').select('*');
       if (gymData && gymData.length > 0) {
         setBranches(gymData);
@@ -59,7 +63,8 @@ export default function App() {
         }));
       }
 
-      // 3. Проверяем, зарегистрирован ли уже этот пользователь
+      // 3. Проверяем наличие профиля
+      let currentProfile = null;
       if (tgId) {
         const { data: existingProfile } = await supabase
           .from('athlete_profiles')
@@ -68,55 +73,33 @@ export default function App() {
           .maybeSingle();
 
         if (existingProfile) {
+          currentProfile = existingProfile;
           setMyProfile(existingProfile);
         }
       }
 
-      // 4. Загружаем общую ленту атлетов
-      await loadAthletes();
+      // 4. Загружаем всех атлетов
+      await loadAthletes(currentProfile?.telegram_id || tgId);
       setLoading(false);
     }
 
     initApp();
   }, []);
 
-  async function loadAthletes() {
+  async function loadAthletes(currentTgId) {
     const { data } = await supabase
       .from('athlete_profiles')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (data && data.length > 0) {
-      setAthletes(data);
-    } else {
-      setAthletes([
-        {
-          id: 1,
-          name: 'Алихан',
-          gender: 'GymBro',
-          level: 'Опытный (3 года)',
-          weekday_gym: 'Invictus Go — ЖК LAMIYA',
-          weekend_gym: 'Invictus Go — ЖК Q\'net Towers',
-          split: 'Ноги / Спина',
-          time_slot: '07:30 - 09:00',
-          telegram_username: 'alikhan_fit'
-        },
-        {
-          id: 2,
-          name: 'Диас',
-          gender: 'GymBro',
-          level: 'Средний (1.5 года)',
-          weekday_gym: 'Invictus Go — Аскарова',
-          weekend_gym: 'Invictus Go — Аскарова',
-          split: 'Грудь / Руки',
-          time_slot: '19:30 - 21:00',
-          telegram_username: 'dias_almaty'
-        }
-      ]);
+    if (data) {
+      // Исключаем себя из списка напарников
+      const filtered = currentTgId ? data.filter(a => a.telegram_id !== currentTgId) : data;
+      setAthletes(filtered);
     }
   }
 
-  // Создание анкеты
+  // Регистрация
   async function handleRegister(e) {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -147,10 +130,24 @@ export default function App() {
       alert('Ошибка при регистрации: ' + error.message);
     } else {
       setMyProfile(data);
-      await loadAthletes();
+      await loadAthletes(data.telegram_id);
     }
     setSaving(false);
   }
+
+  // Фильтрация атлетов
+  const displayedAthletes = athletes.filter(bro => {
+    // Фильтр по полу
+    if (filterGender !== 'all' && bro.gender !== filterGender) return false;
+
+    // Фильтр совпадения залов с пользователем
+    if (filterMatchOnly && myProfile) {
+      const matchWeekday = bro.weekday_gym === myProfile.weekday_gym || bro.weekend_gym === myProfile.weekday_gym;
+      const matchWeekend = bro.weekday_gym === myProfile.weekend_gym || bro.weekend_gym === myProfile.weekend_gym;
+      return matchWeekday || matchWeekend;
+    }
+    return true;
+  });
 
   // Расчет рациона
   const calories = goal === 'muscle' ? Math.round(weight * 36) : Math.round(weight * 28);
@@ -169,7 +166,7 @@ export default function App() {
     );
   }
 
-  // ЭКРАН РЕГИСТРАЦИИ (показывается первым делом)
+  // ЭКРАН ОНБОРДИНГА (Регистрация нового пользователя)
   if (!myProfile) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans p-5 max-w-md mx-auto">
@@ -180,7 +177,7 @@ export default function App() {
           </div>
           <h1 className="text-xl font-black tracking-tight mt-2 text-white">Создай анкету атлета</h1>
           <p className="text-xs text-slate-400">
-            Заполни данные, чтобы получить доступ к поиску напарников по филиалам Invictus в Алматы.
+            Заполни данные один раз, чтобы находить напарников в залах Invictus Алматы.
           </p>
         </header>
 
@@ -227,7 +224,7 @@ export default function App() {
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1">Уровень подготовки</label>
+              <label className="text-[11px] font-semibold text-slate-400 block mb-1">Уровень в зале</label>
               <select
                 value={formData.level}
                 onChange={e => setFormData({ ...formData, level: e.target.value })}
@@ -273,7 +270,7 @@ export default function App() {
                 onChange={e => setFormData({ ...formData, split: e.target.value })}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
               >
-                <option value="Ноги / Спина">Ноги / Спина (акцент на базу)</option>
+                <option value="Ноги / Спина (акцент на базу)">Ноги / Спина (акцент на базу)</option>
                 <option value="Грудь / Плечи / Руки">Грудь / Плечи / Руки</option>
                 <option value="Full Body (все тело)">Full Body (все тело)</option>
                 <option value="Пауэрлифтинг (присед / тяга)">Пауэрлифтинг (присед / тяга)</option>
@@ -304,7 +301,7 @@ export default function App() {
     );
   }
 
-  // ГЛАВНЫЙ ЭКРАН
+  // ГЛАВНЫЙ ЭКРАН С УМНЫМИ ФИЛЬТРАМИ
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans pb-20 select-none">
       <header className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60 backdrop-blur sticky top-0 z-10">
@@ -325,9 +322,10 @@ export default function App() {
       <main className="flex-1 p-4 max-w-md mx-auto w-full space-y-4">
         {activeTab === 'find' && (
           <div className="space-y-4">
-            <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800">
-              <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                Твои залы:
+            {/* Твои залы */}
+            <div className="bg-slate-900 p-3.5 rounded-2xl border border-slate-800">
+              <h2 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Твоя локация:
               </h2>
               <div className="text-xs space-y-1 text-slate-300">
                 <p><span className="text-slate-500">🏢 Будни:</span> {myProfile.weekday_gym}</p>
@@ -335,53 +333,133 @@ export default function App() {
               </div>
             </div>
 
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
-              Атлеты в сети ({athletes.length}):
-            </h2>
+            {/* Блок фильтров */}
+            <div className="space-y-2">
+              {/* Фильтр: Совпадение залов или Все залы */}
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => setFilterMatchOnly(true)}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-xl border transition ${
+                    filterMatchOnly
+                      ? 'bg-amber-500 text-slate-950 border-amber-500'
+                      : 'bg-slate-900 text-slate-400 border-slate-800'
+                  }`}
+                >
+                  🎯 Мои залы
+                </button>
+                <button
+                  onClick={() => setFilterMatchOnly(false)}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-xl border transition ${
+                    !filterMatchOnly
+                      ? 'bg-amber-500 text-slate-950 border-amber-500'
+                      : 'bg-slate-900 text-slate-400 border-slate-800'
+                  }`}
+                >
+                  🌍 Все залы
+                </button>
+              </div>
 
+              {/* Фильтр по полу */}
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => setFilterGender('all')}
+                  className={`flex-1 py-1 text-[11px] rounded-lg border transition ${
+                    filterGender === 'all'
+                      ? 'bg-slate-800 text-white border-slate-600'
+                      : 'bg-slate-950 text-slate-500 border-slate-900'
+                  }`}
+                >
+                  Все
+                </button>
+                <button
+                  onClick={() => setFilterGender('GymBro')}
+                  className={`flex-1 py-1 text-[11px] rounded-lg border transition ${
+                    filterGender === 'GymBro'
+                      ? 'bg-slate-800 text-amber-400 border-slate-600'
+                      : 'bg-slate-950 text-slate-500 border-slate-900'
+                  }`}
+                >
+                  🧔 GymBro
+                </button>
+                <button
+                  onClick={() => setFilterGender('GymGirl')}
+                  className={`flex-1 py-1 text-[11px] rounded-lg border transition ${
+                    filterGender === 'GymGirl'
+                      ? 'bg-slate-800 text-amber-400 border-slate-600'
+                      : 'bg-slate-950 text-slate-500 border-slate-900'
+                  }`}
+                >
+                  👩 GymGirl
+                </button>
+              </div>
+            </div>
+
+            {/* Заголовок ленты */}
+            <div className="flex justify-between items-center px-1">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Напарники рядом ({displayedAthletes.length}):
+              </h2>
+              <button
+                onClick={() => loadAthletes(myProfile.telegram_id)}
+                className="text-[11px] text-amber-400 active:scale-95 transition"
+              >
+                🔄 Обновить
+              </button>
+            </div>
+
+            {/* Карточки напарников */}
             <div className="space-y-3">
-              {athletes.map(bro => (
-                <div key={bro.id} className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-2.5">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                        {bro.name}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-normal">
-                          {bro.gender || 'GymBro'}
-                        </span>
-                      </h3>
-                      <p className="text-xs text-amber-400 font-medium">{bro.level}</p>
+              {displayedAthletes.length > 0 ? (
+                displayedAthletes.map(bro => (
+                  <div key={bro.id} className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-2.5">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                          {bro.name}
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-normal">
+                            {bro.gender || 'GymBro'}
+                          </span>
+                        </h3>
+                        <p className="text-xs text-amber-400 font-medium">{bro.level}</p>
+                      </div>
+                      <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
+                        {bro.split}
+                      </span>
                     </div>
-                    <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
-                      {bro.split}
-                    </span>
-                  </div>
 
-                  <div className="text-xs text-slate-300 space-y-1 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
-                    <p><span className="text-slate-500">🏢 Будни:</span> {bro.weekday_gym}</p>
-                    <p><span className="text-slate-500">🏙 Выходные:</span> {bro.weekend_gym}</p>
-                    <p><span className="text-slate-500">⏰ Время:</span> {bro.time_slot}</p>
-                  </div>
+                    <div className="text-xs text-slate-300 space-y-1 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
+                      <p><span className="text-slate-500">🏢 Будни:</span> {bro.weekday_gym}</p>
+                      <p><span className="text-slate-500">🏙 Выходные:</span> {bro.weekend_gym}</p>
+                      <p><span className="text-slate-500">⏰ Время:</span> {bro.time_slot}</p>
+                    </div>
 
-                  {bro.telegram_username ? (
-                    <a
-                      href={`https://t.me/${bro.telegram_username}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full mt-1 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs py-2 rounded-xl transition flex items-center justify-center gap-1.5 no-underline"
-                    >
-                      Написать в Telegram (@{bro.telegram_username}) 🤝
-                    </a>
-                  ) : (
-                    <button
-                      onClick={() => alert(`Запрос отправлен атлету ${bro.name}!`)}
-                      className="w-full mt-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs py-2 rounded-xl transition"
-                    >
-                      Забиться на тренировку 🤝
-                    </button>
-                  )}
+                    {bro.telegram_username ? (
+                      <a
+                        href={`https://t.me/${bro.telegram_username}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full mt-1 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs py-2 rounded-xl transition flex items-center justify-center gap-1.5 no-underline"
+                      >
+                        Написать в Telegram (@{bro.telegram_username}) 🤝
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => alert(`У ${bro.name} не указан публичный username в Telegram`)}
+                        className="w-full mt-1 bg-slate-800 text-slate-400 text-xs py-2 rounded-xl"
+                      >
+                        Username скрыт
+                      </button>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 bg-slate-900/40 rounded-2xl border border-dashed border-slate-800 p-4 space-y-1">
+                  <p className="text-sm text-slate-300">В выбранных залах пока нет напарников</p>
+                  <p className="text-xs text-slate-500">
+                    Переключи фильтр на «🌍 Все залы» или пригласи друга!
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
