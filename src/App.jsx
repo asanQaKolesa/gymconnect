@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
+import { LEGAL_DOCS } from './legalDocs';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
@@ -9,6 +10,9 @@ export default function App() {
 
   const [myProfile, setMyProfile] = useState(null);
   const [telegramUser, setTelegramUser] = useState({ id: null, username: '', first_name: '' });
+
+  // Всплывающее окно для документов
+  const [activeDoc, setActiveDoc] = useState(null);
 
   const [filterMatchOnly, setFilterMatchOnly] = useState(true);
   const [filterGender, setFilterGender] = useState('all');
@@ -185,11 +189,40 @@ export default function App() {
     );
   }
 
+  // Модальное окно просмотра документов
+  const ModalDoc = activeDoc && (
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full max-h-[80vh] flex flex-col shadow-2xl">
+        <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+          <h3 className="text-xs font-bold text-white pr-2">{LEGAL_DOCS[activeDoc]?.title}</h3>
+          <button
+            onClick={() => setActiveDoc(null)}
+            className="text-slate-400 hover:text-white text-base px-2 py-1 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="p-4 overflow-y-auto text-xs text-slate-300 leading-relaxed whitespace-pre-line">
+          {LEGAL_DOCS[activeDoc]?.content}
+        </div>
+        <div className="p-3 border-t border-slate-800 bg-slate-950/40 rounded-b-3xl">
+          <button
+            onClick={() => setActiveDoc(null)}
+            className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-2.5 rounded-xl font-bold transition cursor-pointer"
+          >
+            Понятно
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   // Регистрация
   if (!myProfile) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans p-5 max-w-md mx-auto">
-        <header className="text-center py-4 space-y-1">
+        {ModalDoc}
+        <header className="text-center py-3 space-y-1">
           <div className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
             <span className="text-amber-500 text-sm">⚡</span>
             <span className="text-xs font-bold text-amber-400">GymConnect ID</span>
@@ -220,7 +253,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, gender: 'GymBro' })}
-                  className={`py-2 text-xs font-bold rounded-xl border flex items-center justify-center gap-1.5 transition ${
+                  className={`py-2 text-xs font-bold rounded-xl border flex items-center justify-center gap-1.5 transition cursor-pointer ${
                     formData.gender === 'GymBro'
                       ? 'bg-amber-500 text-slate-950 border-amber-500'
                       : 'bg-slate-950 text-slate-400 border-slate-800'
@@ -231,7 +264,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, gender: 'GymGirl' })}
-                  className={`py-2 text-xs font-bold rounded-xl border flex items-center justify-center gap-1.5 transition ${
+                  className={`py-2 text-xs font-bold rounded-xl border flex items-center justify-center gap-1.5 transition cursor-pointer ${
                     formData.gender === 'GymGirl'
                       ? 'bg-amber-500 text-slate-950 border-amber-500'
                       : 'bg-slate-950 text-slate-400 border-slate-800'
@@ -308,13 +341,21 @@ export default function App() {
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full mt-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3.5 rounded-xl transition shadow-lg shadow-amber-500/20 disabled:opacity-50"
-          >
-            {saving ? 'Создаем профиль...' : 'Завершить бесплатную регистрацию 🚀'}
-          </button>
+          <div className="space-y-2 mt-2">
+            <p className="text-[10px] text-slate-400 text-center leading-tight">
+              Нажимая кнопку, вы принимаете{' '}
+              <button type="button" onClick={() => setActiveDoc('offer')} className="text-amber-400 underline cursor-pointer">Договор-оферту</button>,{' '}
+              <button type="button" onClick={() => setActiveDoc('privacy')} className="text-amber-400 underline cursor-pointer">Политику конфиденциальности</button> и{' '}
+              <button type="button" onClick={() => setActiveDoc('rules')} className="text-amber-400 underline cursor-pointer">Правила сообщества</button>.
+            </p>
+            <button
+              type="submit"
+              disabled={saving}
+              className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3.5 rounded-xl transition shadow-lg shadow-amber-500/20 disabled:opacity-50 cursor-pointer"
+            >
+              {saving ? 'Создаем профиль...' : 'Завершить бесплатную регистрацию 🚀'}
+            </button>
+          </div>
         </form>
       </div>
     );
@@ -322,6 +363,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans pb-24 select-none">
+      {ModalDoc}
+
       <header className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60 backdrop-blur sticky top-0 z-10">
         <div className="flex items-center gap-1.5">
           <span className="text-amber-500 font-black text-lg">⚡</span>
@@ -380,7 +423,7 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab('gymbro')}
-                className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3 rounded-2xl transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5"
+                className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3 rounded-2xl transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 Открыть поиск напарников ➔
               </button>
@@ -402,7 +445,7 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab('nutrition')}
-                className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs py-3 rounded-2xl transition border border-slate-700 flex items-center justify-center gap-1.5"
+                className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs py-3 rounded-2xl transition border border-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 Рассчитать свой рацион ➔
               </button>
@@ -425,7 +468,7 @@ export default function App() {
               <div className="flex gap-1.5">
                 <button
                   onClick={() => setFilterMatchOnly(true)}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-xl border transition ${
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-xl border transition cursor-pointer ${
                     filterMatchOnly
                       ? 'bg-amber-500 text-slate-950 border-amber-500'
                       : 'bg-slate-900 text-slate-400 border-slate-800'
@@ -435,7 +478,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setFilterMatchOnly(false)}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-xl border transition ${
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-xl border transition cursor-pointer ${
                     !filterMatchOnly
                       ? 'bg-amber-500 text-slate-950 border-amber-500'
                       : 'bg-slate-900 text-slate-400 border-slate-800'
@@ -448,7 +491,7 @@ export default function App() {
               <div className="flex gap-1.5">
                 <button
                   onClick={() => setFilterGender('all')}
-                  className={`flex-1 py-1 text-[11px] rounded-lg border transition ${
+                  className={`flex-1 py-1 text-[11px] rounded-lg border transition cursor-pointer ${
                     filterGender === 'all'
                       ? 'bg-slate-800 text-white border-slate-600'
                       : 'bg-slate-950 text-slate-500 border-slate-900'
@@ -458,7 +501,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setFilterGender('GymBro')}
-                  className={`flex-1 py-1 text-[11px] rounded-lg border transition ${
+                  className={`flex-1 py-1 text-[11px] rounded-lg border transition cursor-pointer ${
                     filterGender === 'GymBro'
                       ? 'bg-slate-800 text-amber-400 border-slate-600'
                       : 'bg-slate-950 text-slate-500 border-slate-900'
@@ -468,7 +511,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setFilterGender('GymGirl')}
-                  className={`flex-1 py-1 text-[11px] rounded-lg border transition ${
+                  className={`flex-1 py-1 text-[11px] rounded-lg border transition cursor-pointer ${
                     filterGender === 'GymGirl'
                       ? 'bg-slate-800 text-amber-400 border-slate-600'
                       : 'bg-slate-950 text-slate-500 border-slate-900'
@@ -485,7 +528,7 @@ export default function App() {
               </h2>
               <button
                 onClick={() => loadAthletes(myProfile.telegram_id)}
-                className="text-[11px] text-amber-400 active:scale-95 transition"
+                className="text-[11px] text-amber-400 active:scale-95 transition cursor-pointer"
               >
                 🔄 Обновить
               </button>
@@ -523,7 +566,7 @@ export default function App() {
                           href={`https://t.me/${bro.telegram_username}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex-1 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs py-2 rounded-xl transition flex items-center justify-center gap-1.5 no-underline"
+                          className="flex-1 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 no-underline shadow-md shadow-amber-500/10"
                         >
                           Telegram (@{bro.telegram_username}) 🤝
                         </a>
@@ -533,7 +576,7 @@ export default function App() {
                           href={`https://instagram.com/${bro.instagram}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="bg-slate-800 hover:bg-slate-700 active:scale-95 text-pink-400 font-bold text-xs px-3 py-2 rounded-xl transition flex items-center justify-center no-underline border border-slate-700"
+                          className="bg-slate-800 hover:bg-slate-700 active:scale-95 text-pink-400 font-bold text-xs px-3 py-2.5 rounded-xl transition flex items-center justify-center no-underline border border-slate-700"
                         >
                           📸 Inst
                         </a>
@@ -620,10 +663,21 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            <div className="p-3 bg-slate-900/40 rounded-2xl border border-slate-800/60 text-[11px] text-slate-400">
+              ⚠️ <b>Внимание:</b> Расчет носит информационный характер.{' '}
+              <button
+                type="button"
+                onClick={() => setActiveDoc('disclaimer')}
+                className="text-amber-400 underline font-medium cursor-pointer"
+              >
+                Медицинский отказ от ответственности
+              </button>.
+            </div>
           </div>
         )}
 
-        {/* ПРОФИЛЬ АТЛЕТА */}
+        {/* ПРОФИЛЬ + ТЕХПОДДЕРЖКА + ВСТРОЕННЫЕ ДОКУМЕНТЫ */}
         {activeTab === 'profile' && (
           <div className="space-y-4">
             <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-3">
@@ -634,7 +688,7 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => setIsEditing(!isEditing)}
-                  className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-xl font-bold active:scale-95 transition"
+                  className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-xl font-bold active:scale-95 transition cursor-pointer"
                 >
                   {isEditing ? 'Отмена' : 'Изменить ✏️'}
                 </button>
@@ -695,7 +749,7 @@ export default function App() {
                       type="text"
                       value={formData.bio}
                       onChange={e => setFormData({ ...formData, bio: e.target.value })}
-                      placeholder="Ищу страховку на тяжелый присед / жим"
+                      placeholder="Ищу страховку на присед / жим"
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
                     />
                   </div>
@@ -739,7 +793,7 @@ export default function App() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs py-3 rounded-xl transition"
+                    className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs py-3 rounded-xl transition cursor-pointer"
                   >
                     {saving ? 'Сохраняем...' : 'Сохранить изменения'}
                   </button>
@@ -747,20 +801,81 @@ export default function App() {
               )}
             </div>
 
-            <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-2">
+            {/* ТЕХПОДДЕРЖКА */}
+            <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-2.5">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-white">Статус доступа</span>
-                <span className="text-[10px] bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded">PRO Тест</span>
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">Поддержка пользователей</h3>
+                <span className="text-lg">💬</span>
               </div>
-              <p className="text-[11px] text-slate-400">
-                Бесплатный тестовый доступ активен. Полный доступ к поиску и питанию после запуска: 2 990 ₸/мес.
+              <p className="text-xs text-slate-400">
+                Возник вопрос по работе сервиса или есть предложение по залам? Напиши напрямую в службу заботы.
               </p>
+              <a
+                href="https://t.me/asanali_kk"
+                target="_blank"
+                rel="noreferrer"
+                className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-400 border border-amber-500/30 font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 no-underline"
+              >
+                Написать в техподдержку (@asanali_kk) 🤝
+              </a>
             </div>
+
+            {/* ДОКУМЕНТЫ БЕЗ ТИЛЬДЫ (ВСТРОЕННЫЕ) */}
+            <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-2">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Документы и безопасность
+              </h3>
+              <div className="grid grid-cols-1 gap-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setActiveDoc('rules')}
+                  className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 hover:text-white flex justify-between items-center cursor-pointer"
+                >
+                  <span>🛡 Правила сообщества и безопасности</span>
+                  <span className="text-slate-500">➔</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDoc('offer')}
+                  className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 hover:text-white flex justify-between items-center cursor-pointer"
+                >
+                  <span>📄 Публичный договор-оферта</span>
+                  <span className="text-slate-500">➔</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDoc('privacy')}
+                  className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 hover:text-white flex justify-between items-center cursor-pointer"
+                >
+                  <span>🔒 Политика конфиденциальности</span>
+                  <span className="text-slate-500">➔</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDoc('payment')}
+                  className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 hover:text-white flex justify-between items-center cursor-pointer"
+                >
+                  <span>💳 Регламент оплаты и возврата (Kaspi)</span>
+                  <span className="text-slate-500">➔</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDoc('disclaimer')}
+                  className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 hover:text-white flex justify-between items-center cursor-pointer"
+                >
+                  <span>⚕️ Медицинский отказ от ответственности</span>
+                  <span className="text-slate-500">➔</span>
+                </button>
+              </div>
+            </div>
+
+            <p className="text-center text-[10px] text-slate-600 pb-2">
+              GymConnect © 2026 • Алматы, Казахстан
+            </p>
           </div>
         )}
       </main>
 
-      {/* НАВИГАЦИЯ */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/95 backdrop-blur border-t border-slate-800 flex justify-around py-2 z-20">
         <button
           onClick={() => setActiveTab('home')}
