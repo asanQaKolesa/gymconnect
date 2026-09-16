@@ -9,7 +9,7 @@ export default function App() {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Профиль приложения (таблица users)
+  // 1. Базовый профиль (таблица users)
   const [currentUser, setCurrentUser] = useState(null);
   const [telegramUser, setTelegramUser] = useState({ id: null, username: '', first_name: '' });
 
@@ -20,7 +20,7 @@ export default function App() {
   const [activeDoc, setActiveDoc] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Регистрация аккаунта в приложении (Имя, Пол, Город)
+  // Форма базовой регистрации
   const [regForm, setRegForm] = useState({
     name: '',
     gender: 'Парень',
@@ -45,12 +45,12 @@ export default function App() {
       setTelegramUser({ id: tgId, username: tgUser, first_name: tgName });
       if (tgName) setRegForm(prev => ({ ...prev, name: tgName }));
 
-      // Загружаем залы
+      // Загрузка залов
       const { data: gymData } = await supabase.from('gyms').select('*');
       if (gymData) setBranches(gymData);
 
       if (tgId) {
-        // Загружаем пользователя из users
+        // Загрузка из users
         const { data: userData } = await supabase
           .from('users')
           .select('*')
@@ -61,7 +61,7 @@ export default function App() {
           setCurrentUser(userData);
         }
 
-        // Загружаем его анкету GymBro из gymbro_cards
+        // Загрузка из gymbro_cards
         const { data: cardData } = await supabase
           .from('gymbro_cards')
           .select('*')
@@ -92,10 +92,10 @@ export default function App() {
     }
   }
 
-  // Регистрация базового пользователя (Уровень 1)
+  // Создание базового профиля
   async function handleRegisterUser(e) {
     e.preventDefault();
-    if (!regForm.name.trim()) return alert('Укажи свое имя');
+    if (!regForm.name.trim()) return alert('Укажи имя');
 
     setSaving(true);
     const tgId = telegramUser.id || Date.now();
@@ -116,12 +116,12 @@ export default function App() {
     if (!error) {
       setCurrentUser(data);
     } else {
-      alert('Ошибка создания аккаунта: ' + error.message);
+      alert('Ошибка: ' + error.message);
     }
     setSaving(false);
   }
 
-  // Создание/обновление анкеты GymBro (Уровень 2)
+  // Сохранение анкеты поиска GymBro
   async function handleSaveGymBroCard(cardData) {
     setSaving(true);
     const tgId = telegramUser.id || (currentUser ? currentUser.telegram_id : Date.now());
@@ -188,19 +188,19 @@ export default function App() {
       <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full max-h-[80vh] flex flex-col shadow-2xl">
         <div className="p-4 border-b border-slate-800 flex justify-between items-center">
           <h3 className="text-xs font-bold text-white pr-2">{LEGAL_DOCS[activeDoc]?.title}</h3>
-          <button onClick={() => setActiveDoc(null)} className="text-slate-400 hover:text-white text-base px-2 py-1 cursor-pointer">✕</button>
+          <button onClick={() => setActiveDoc(null)} className="text-slate-400 hover:text-white text-base px-2 py-1">✕</button>
         </div>
         <div className="p-4 overflow-y-auto text-xs text-slate-300 leading-relaxed whitespace-pre-line">
           {LEGAL_DOCS[activeDoc]?.content}
         </div>
         <div className="p-3 border-t border-slate-800 bg-slate-950/40 rounded-b-3xl">
-          <button onClick={() => setActiveDoc(null)} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-2.5 rounded-xl font-bold cursor-pointer">Понятно</button>
+          <button onClick={() => setActiveDoc(null)} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-2.5 rounded-xl font-bold">Понятно</button>
         </div>
       </div>
     </div>
   );
 
-  // ЭКРАН 1: БАЗОВАЯ РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЯ (Имя, Пол, Город)
+  // ЭКРАН 1: БАЗОВАЯ РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЯ
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans p-5 max-w-md mx-auto">
@@ -211,9 +211,7 @@ export default function App() {
             <span className="text-xs font-bold text-amber-400">GymConnect ID</span>
           </div>
           <h1 className="text-xl font-black tracking-tight mt-2 text-white">Добро пожаловать</h1>
-          <p className="text-xs text-slate-400">
-            Создай базовый аккаунт атлета (быстро и бесплатно).
-          </p>
+          <p className="text-xs text-slate-400">Создай базовый профиль атлета (быстро и бесплатно).</p>
         </header>
 
         <form onSubmit={handleRegisterUser} className="space-y-4 mt-2 flex-1 flex flex-col justify-between">
@@ -226,7 +224,7 @@ export default function App() {
                 value={regForm.name}
                 onChange={e => setRegForm({ ...regForm, name: e.target.value })}
                 placeholder="Твое имя"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
               />
             </div>
 
@@ -236,7 +234,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setRegForm({ ...regForm, gender: 'Парень' })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                  className={`py-2 text-xs font-bold rounded-xl border ${
                     regForm.gender === 'Парень' ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-950 text-slate-400 border-slate-800'
                   }`}
                 >
@@ -245,7 +243,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setRegForm({ ...regForm, gender: 'Девушка' })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                  className={`py-2 text-xs font-bold rounded-xl border ${
                     regForm.gender === 'Девушка' ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-950 text-slate-400 border-slate-800'
                   }`}
                 >
@@ -260,7 +258,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setRegForm({ ...regForm, city: 'Алматы' })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                  className={`py-2 text-xs font-bold rounded-xl border ${
                     regForm.city === 'Алматы' ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-950 text-slate-400 border-slate-800'
                   }`}
                 >
@@ -269,7 +267,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setRegForm({ ...regForm, city: 'Астана' })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                  className={`py-2 text-xs font-bold rounded-xl border ${
                     regForm.city === 'Астана' ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-950 text-slate-400 border-slate-800'
                   }`}
                 >
@@ -282,13 +280,13 @@ export default function App() {
           <div className="space-y-2">
             <p className="text-[10px] text-slate-400 text-center leading-tight">
               Нажимая кнопку, вы принимаете{' '}
-              <button type="button" onClick={() => setActiveDoc('offer')} className="text-amber-400 underline cursor-pointer">Оферту</button> и{' '}
-              <button type="button" onClick={() => setActiveDoc('privacy')} className="text-amber-400 underline cursor-pointer">Политику конфиденциальности</button>.
+              <button type="button" onClick={() => setActiveDoc('offer')} className="text-amber-400 underline">Оферту</button> и{' '}
+              <button type="button" onClick={() => setActiveDoc('privacy')} className="text-amber-400 underline">Политику конфиденциальности</button>.
             </p>
             <button
               type="submit"
               disabled={saving}
-              className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3.5 rounded-2xl transition shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
+              className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3.5 rounded-2xl transition shadow-lg shadow-amber-500/20"
             >
               {saving ? 'Создаем профиль...' : 'Войти в GymConnect 🚀'}
             </button>
@@ -302,7 +300,6 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans pb-24 select-none">
       {ModalDoc}
 
-      {/* Верхний бар */}
       <header className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60 backdrop-blur sticky top-0 z-10">
         <div className="flex items-center gap-1.5">
           <span className="text-amber-500 font-black text-lg">⚡</span>
@@ -363,7 +360,7 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab('gymbro')}
-                className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3 rounded-2xl transition shadow-lg shadow-amber-500/20 cursor-pointer"
+                className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3 rounded-2xl transition shadow-lg shadow-amber-500/20"
               >
                 {myGymBroCard ? 'Открыть поиск напарников ➔' : 'Заполнить анкету GymBro ➔'}
               </button>
@@ -383,7 +380,7 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab('nutrition')}
-                className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs py-3 rounded-2xl transition border border-slate-700 cursor-pointer"
+                className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs py-3 rounded-2xl transition border border-slate-700"
               >
                 Открыть конструктор питания ➔
               </button>
@@ -391,7 +388,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= 2. GYMBRO ================= */}
+        {/* ================= 2. GYMBRO (МОДУЛЬ) ================= */}
         {activeTab === 'gymbro' && (
           <GymBroTab
             myCard={myGymBroCard}
@@ -438,7 +435,7 @@ export default function App() {
                       <p className="text-amber-400 font-bold">Карточка GymBro активна:</p>
                       <button
                         onClick={() => setActiveTab('gymbro')}
-                        className="text-[11px] text-amber-400 underline cursor-pointer"
+                        className="text-[11px] text-amber-400 underline"
                       >
                         Изменить
                       </button>
@@ -454,7 +451,7 @@ export default function App() {
                 ) : (
                   <button
                     onClick={() => setActiveTab('gymbro')}
-                    className="w-full py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-xl text-xs font-bold transition cursor-pointer"
+                    className="w-full py-2.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl text-xs font-bold"
                   >
                     + Заполнить анкету поиска GymBro
                   </button>
@@ -479,15 +476,15 @@ export default function App() {
             <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-2">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Документы</h3>
               <div className="grid grid-cols-1 gap-1.5 text-xs">
-                <button type="button" onClick={() => setActiveDoc('rules')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center cursor-pointer">
+                <button type="button" onClick={() => setActiveDoc('rules')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center">
                   <span>🛡 Правила сообщества</span>
                   <span className="text-slate-500">➔</span>
                 </button>
-                <button type="button" onClick={() => setActiveDoc('offer')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center cursor-pointer">
+                <button type="button" onClick={() => setActiveDoc('offer')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center">
                   <span>📄 Публичный договор-оферта</span>
                   <span className="text-slate-500">➔</span>
                 </button>
-                <button type="button" onClick={() => setActiveDoc('payment')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center cursor-pointer">
+                <button type="button" onClick={() => setActiveDoc('payment')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center">
                   <span>💳 Регламент оплаты (Kaspi)</span>
                   <span className="text-slate-500">➔</span>
                 </button>
@@ -497,18 +494,18 @@ export default function App() {
         )}
       </main>
 
-      {/* Нижняя навигация */}
+      {/* Навигация */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/95 backdrop-blur border-t border-slate-800 flex justify-around py-2 z-20">
-        <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center text-[11px] font-semibold cursor-pointer ${activeTab === 'home' ? 'text-amber-400' : 'text-slate-400'}`}>
+        <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center text-[11px] font-semibold ${activeTab === 'home' ? 'text-amber-400' : 'text-slate-400'}`}>
           <span className="text-base mb-0.5">🏠</span> Главная
         </button>
-        <button onClick={() => setActiveTab('gymbro')} className={`flex flex-col items-center text-[11px] font-semibold cursor-pointer ${activeTab === 'gymbro' ? 'text-amber-400' : 'text-slate-400'}`}>
+        <button onClick={() => setActiveTab('gymbro')} className={`flex flex-col items-center text-[11px] font-semibold ${activeTab === 'gymbro' ? 'text-amber-400' : 'text-slate-400'}`}>
           <span className="text-base mb-0.5">👥</span> GymBro
         </button>
-        <button onClick={() => setActiveTab('nutrition')} className={`flex flex-col items-center text-[11px] font-semibold cursor-pointer ${activeTab === 'nutrition' ? 'text-amber-400' : 'text-slate-400'}`}>
+        <button onClick={() => setActiveTab('nutrition')} className={`flex flex-col items-center text-[11px] font-semibold ${activeTab === 'nutrition' ? 'text-amber-400' : 'text-slate-400'}`}>
           <span className="text-base mb-0.5">🥗</span> Питание
         </button>
-        <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center text-[11px] font-semibold cursor-pointer ${activeTab === 'profile' ? 'text-amber-400' : 'text-slate-400'}`}>
+        <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center text-[11px] font-semibold ${activeTab === 'profile' ? 'text-amber-400' : 'text-slate-400'}`}>
           <span className="text-base mb-0.5">👤</span> Профиль
         </button>
       </nav>
