@@ -9,18 +9,18 @@ export default function App() {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Базовый профиль (таблица users)
+  // 1. Базовый профиль пользователя (таблица users)
   const [currentUser, setCurrentUser] = useState(null);
   const [telegramUser, setTelegramUser] = useState({ id: null, username: '', first_name: '' });
 
-  // 2. Анкета GymBro (таблица gymbro_cards)
+  // 2. Отдельная анкета GymBro (таблица gymbro_cards)
   const [myGymBroCard, setMyGymBroCard] = useState(null);
   const [gymBroCards, setGymBroCards] = useState([]);
 
   const [activeDoc, setActiveDoc] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Форма базовой регистрации
+  // Форма базовой регистрации аккаунта
   const [regForm, setRegForm] = useState({
     name: '',
     gender: 'Парень',
@@ -28,57 +28,57 @@ export default function App() {
   });
 
   useEffect(() => {
-    async function initApp() {
-      setLoading(true);
-
-      let tgId = null;
-      let tgUser = '';
-      let tgName = '';
-
-      if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-        const u = window.Telegram.WebApp.initDataUnsafe.user;
-        tgId = u.id;
-        tgUser = u.username || '';
-        tgName = [u.first_name, u.last_name].filter(Boolean).join(' ');
-      }
-
-      setTelegramUser({ id: tgId, username: tgUser, first_name: tgName });
-      if (tgName) setRegForm(prev => ({ ...prev, name: tgName }));
-
-      // Загрузка залов
-      const { data: gymData } = await supabase.from('gyms').select('*');
-      if (gymData) setBranches(gymData);
-
-      if (tgId) {
-        // Загрузка из users
-        const { data: userData } = await supabase
-          .from('users')
-          .select('*')
-          .eq('telegram_id', tgId)
-          .maybeSingle();
-
-        if (userData) {
-          setCurrentUser(userData);
-        }
-
-        // Загрузка из gymbro_cards
-        const { data: cardData } = await supabase
-          .from('gymbro_cards')
-          .select('*')
-          .eq('telegram_id', tgId)
-          .maybeSingle();
-
-        if (cardData) {
-          setMyGymBroCard(cardData);
-        }
-      }
-
-      await loadAllCards(tgId);
-      setLoading(false);
-    }
-
     initApp();
   }, []);
+
+  async function initApp() {
+    setLoading(true);
+
+    let tgId = null;
+    let tgUser = '';
+    let tgName = '';
+
+    if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+      const u = window.Telegram.WebApp.initDataUnsafe.user;
+      tgId = u.id;
+      tgUser = u.username || '';
+      tgName = [u.first_name, u.last_name].filter(Boolean).join(' ');
+    }
+
+    setTelegramUser({ id: tgId, username: tgUser, first_name: tgName });
+    if (tgName) setRegForm(prev => ({ ...prev, name: tgName }));
+
+    // Загрузка залов
+    const { data: gymData } = await supabase.from('gyms').select('*');
+    if (gymData) setBranches(gymData);
+
+    if (tgId) {
+      // 1. Проверяем базовый аккаунт в users
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('telegram_id', tgId)
+        .maybeSingle();
+
+      if (userData) {
+        setCurrentUser(userData);
+      }
+
+      // 2. Проверяем отдельную анкету в gymbro_cards
+      const { data: cardData } = await supabase
+        .from('gymbro_cards')
+        .select('*')
+        .eq('telegram_id', tgId)
+        .maybeSingle();
+
+      if (cardData) {
+        setMyGymBroCard(cardData);
+      }
+    }
+
+    await loadAllCards(tgId);
+    setLoading(false);
+  }
 
   async function loadAllCards(currentTgId) {
     const { data } = await supabase
@@ -92,10 +92,10 @@ export default function App() {
     }
   }
 
-  // Создание базового профиля
+  // Создание базового аккаунта пользователя
   async function handleRegisterUser(e) {
     e.preventDefault();
-    if (!regForm.name.trim()) return alert('Укажи имя');
+    if (!regForm.name.trim()) return alert('Укажи свое имя');
 
     setSaving(true);
     const tgId = telegramUser.id || Date.now();
@@ -116,12 +116,12 @@ export default function App() {
     if (!error) {
       setCurrentUser(data);
     } else {
-      alert('Ошибка: ' + error.message);
+      alert('Ошибка создания профиля: ' + error.message);
     }
     setSaving(false);
   }
 
-  // Сохранение анкеты поиска GymBro
+  // Создание / обновление анкеты поиска GymBro
   async function handleSaveGymBroCard(cardData) {
     setSaving(true);
     const tgId = telegramUser.id || (currentUser ? currentUser.telegram_id : Date.now());
@@ -154,6 +154,8 @@ export default function App() {
       if (!error) {
         setMyGymBroCard(data);
         await loadAllCards(tgId);
+      } else {
+        alert('Ошибка обновления анкеты: ' + error.message);
       }
     } else {
       const { data, error } = await supabase
@@ -188,19 +190,19 @@ export default function App() {
       <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full max-h-[80vh] flex flex-col shadow-2xl">
         <div className="p-4 border-b border-slate-800 flex justify-between items-center">
           <h3 className="text-xs font-bold text-white pr-2">{LEGAL_DOCS[activeDoc]?.title}</h3>
-          <button onClick={() => setActiveDoc(null)} className="text-slate-400 hover:text-white text-base px-2 py-1">✕</button>
+          <button onClick={() => setActiveDoc(null)} className="text-slate-400 hover:text-white text-base px-2 py-1 cursor-pointer">✕</button>
         </div>
         <div className="p-4 overflow-y-auto text-xs text-slate-300 leading-relaxed whitespace-pre-line">
           {LEGAL_DOCS[activeDoc]?.content}
         </div>
         <div className="p-3 border-t border-slate-800 bg-slate-950/40 rounded-b-3xl">
-          <button onClick={() => setActiveDoc(null)} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-2.5 rounded-xl font-bold">Понятно</button>
+          <button onClick={() => setActiveDoc(null)} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-2.5 rounded-xl font-bold cursor-pointer">Понятно</button>
         </div>
       </div>
     </div>
   );
 
-  // ЭКРАН 1: БАЗОВАЯ РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЯ
+  // ЭКРАН 1: БАЗОВАЯ РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЯ (Имя, Пол, Город)
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans p-5 max-w-md mx-auto">
@@ -224,7 +226,7 @@ export default function App() {
                 value={regForm.name}
                 onChange={e => setRegForm({ ...regForm, name: e.target.value })}
                 placeholder="Твое имя"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
               />
             </div>
 
@@ -234,7 +236,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setRegForm({ ...regForm, gender: 'Парень' })}
-                  className={`py-2 text-xs font-bold rounded-xl border ${
+                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
                     regForm.gender === 'Парень' ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-950 text-slate-400 border-slate-800'
                   }`}
                 >
@@ -243,7 +245,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setRegForm({ ...regForm, gender: 'Девушка' })}
-                  className={`py-2 text-xs font-bold rounded-xl border ${
+                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
                     regForm.gender === 'Девушка' ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-950 text-slate-400 border-slate-800'
                   }`}
                 >
@@ -258,7 +260,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setRegForm({ ...regForm, city: 'Алматы' })}
-                  className={`py-2 text-xs font-bold rounded-xl border ${
+                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
                     regForm.city === 'Алматы' ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-950 text-slate-400 border-slate-800'
                   }`}
                 >
@@ -267,7 +269,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setRegForm({ ...regForm, city: 'Астана' })}
-                  className={`py-2 text-xs font-bold rounded-xl border ${
+                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
                     regForm.city === 'Астана' ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-950 text-slate-400 border-slate-800'
                   }`}
                 >
@@ -280,13 +282,13 @@ export default function App() {
           <div className="space-y-2">
             <p className="text-[10px] text-slate-400 text-center leading-tight">
               Нажимая кнопку, вы принимаете{' '}
-              <button type="button" onClick={() => setActiveDoc('offer')} className="text-amber-400 underline">Оферту</button> и{' '}
-              <button type="button" onClick={() => setActiveDoc('privacy')} className="text-amber-400 underline">Политику конфиденциальности</button>.
+              <button type="button" onClick={() => setActiveDoc('offer')} className="text-amber-400 underline cursor-pointer">Оферту</button> и{' '}
+              <button type="button" onClick={() => setActiveDoc('privacy')} className="text-amber-400 underline cursor-pointer">Политику конфиденциальности</button>.
             </p>
             <button
               type="submit"
               disabled={saving}
-              className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3.5 rounded-2xl transition shadow-lg shadow-amber-500/20"
+              className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3.5 rounded-2xl transition shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
             >
               {saving ? 'Создаем профиль...' : 'Войти в GymConnect 🚀'}
             </button>
@@ -300,6 +302,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans pb-24 select-none">
       {ModalDoc}
 
+      {/* Верхний бар */}
       <header className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60 backdrop-blur sticky top-0 z-10">
         <div className="flex items-center gap-1.5">
           <span className="text-amber-500 font-black text-lg">⚡</span>
@@ -308,12 +311,15 @@ export default function App() {
             <p className="text-[10px] text-slate-400">{currentUser.city} • Фитнес-сеть</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => initApp()}
+            className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full font-semibold active:scale-90 transition cursor-pointer"
+          >
+            🔄 Сброс кэша
+          </button>
           <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">
             PRO Тест
-          </span>
-          <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold">
-            Online
           </span>
         </div>
       </header>
@@ -360,7 +366,7 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab('gymbro')}
-                className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3 rounded-2xl transition shadow-lg shadow-amber-500/20"
+                className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3 rounded-2xl transition shadow-lg shadow-amber-500/20 cursor-pointer"
               >
                 {myGymBroCard ? 'Открыть поиск напарников ➔' : 'Заполнить анкету GymBro ➔'}
               </button>
@@ -380,7 +386,7 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab('nutrition')}
-                className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs py-3 rounded-2xl transition border border-slate-700"
+                className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs py-3 rounded-2xl transition border border-slate-700 cursor-pointer"
               >
                 Открыть конструктор питания ➔
               </button>
@@ -388,7 +394,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= 2. GYMBRO (МОДУЛЬ) ================= */}
+        {/* ================= 2. GYMBRO ================= */}
         {activeTab === 'gymbro' && (
           <GymBroTab
             myCard={myGymBroCard}
@@ -435,7 +441,7 @@ export default function App() {
                       <p className="text-amber-400 font-bold">Карточка GymBro активна:</p>
                       <button
                         onClick={() => setActiveTab('gymbro')}
-                        className="text-[11px] text-amber-400 underline"
+                        className="text-[11px] text-amber-400 underline cursor-pointer"
                       >
                         Изменить
                       </button>
@@ -451,7 +457,7 @@ export default function App() {
                 ) : (
                   <button
                     onClick={() => setActiveTab('gymbro')}
-                    className="w-full py-2.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl text-xs font-bold"
+                    className="w-full py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-xl text-xs font-bold transition cursor-pointer"
                   >
                     + Заполнить анкету поиска GymBro
                   </button>
@@ -476,15 +482,15 @@ export default function App() {
             <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-2">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Документы</h3>
               <div className="grid grid-cols-1 gap-1.5 text-xs">
-                <button type="button" onClick={() => setActiveDoc('rules')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center">
+                <button type="button" onClick={() => setActiveDoc('rules')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center cursor-pointer">
                   <span>🛡 Правила сообщества</span>
                   <span className="text-slate-500">➔</span>
                 </button>
-                <button type="button" onClick={() => setActiveDoc('offer')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center">
+                <button type="button" onClick={() => setActiveDoc('offer')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center cursor-pointer">
                   <span>📄 Публичный договор-оферта</span>
                   <span className="text-slate-500">➔</span>
                 </button>
-                <button type="button" onClick={() => setActiveDoc('payment')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center">
+                <button type="button" onClick={() => setActiveDoc('payment')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center cursor-pointer">
                   <span>💳 Регламент оплаты (Kaspi)</span>
                   <span className="text-slate-500">➔</span>
                 </button>
@@ -494,18 +500,18 @@ export default function App() {
         )}
       </main>
 
-      {/* Навигация */}
+      {/* Нижняя навигация */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/95 backdrop-blur border-t border-slate-800 flex justify-around py-2 z-20">
-        <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center text-[11px] font-semibold ${activeTab === 'home' ? 'text-amber-400' : 'text-slate-400'}`}>
+        <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center text-[11px] font-semibold cursor-pointer ${activeTab === 'home' ? 'text-amber-400' : 'text-slate-400'}`}>
           <span className="text-base mb-0.5">🏠</span> Главная
         </button>
-        <button onClick={() => setActiveTab('gymbro')} className={`flex flex-col items-center text-[11px] font-semibold ${activeTab === 'gymbro' ? 'text-amber-400' : 'text-slate-400'}`}>
+        <button onClick={() => setActiveTab('gymbro')} className={`flex flex-col items-center text-[11px] font-semibold cursor-pointer ${activeTab === 'gymbro' ? 'text-amber-400' : 'text-slate-400'}`}>
           <span className="text-base mb-0.5">👥</span> GymBro
         </button>
-        <button onClick={() => setActiveTab('nutrition')} className={`flex flex-col items-center text-[11px] font-semibold ${activeTab === 'nutrition' ? 'text-amber-400' : 'text-slate-400'}`}>
+        <button onClick={() => setActiveTab('nutrition')} className={`flex flex-col items-center text-[11px] font-semibold cursor-pointer ${activeTab === 'nutrition' ? 'text-amber-400' : 'text-slate-400'}`}>
           <span className="text-base mb-0.5">🥗</span> Питание
         </button>
-        <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center text-[11px] font-semibold ${activeTab === 'profile' ? 'text-amber-400' : 'text-slate-400'}`}>
+        <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center text-[11px] font-semibold cursor-pointer ${activeTab === 'profile' ? 'text-amber-400' : 'text-slate-400'}`}>
           <span className="text-base mb-0.5">👤</span> Профиль
         </button>
       </nav>
