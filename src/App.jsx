@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
 import { LEGAL_DOCS } from './legalDocs';
+import NutritionTab from './components/NutritionTab';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
@@ -11,7 +12,7 @@ export default function App() {
   const [myProfile, setMyProfile] = useState(null);
   const [telegramUser, setTelegramUser] = useState({ id: null, username: '', first_name: '' });
 
-  // Всплывающее окно для документов
+  // Модальное окно для документов
   const [activeDoc, setActiveDoc] = useState(null);
 
   const [filterMatchOnly, setFilterMatchOnly] = useState(true);
@@ -30,9 +31,6 @@ export default function App() {
   });
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-
-  const [weight, setWeight] = useState(75);
-  const [goal, setGoal] = useState('muscle');
 
   useEffect(() => {
     async function initApp() {
@@ -173,11 +171,6 @@ export default function App() {
     return true;
   });
 
-  const calories = goal === 'muscle' ? Math.round(weight * 36) : Math.round(weight * 28);
-  const protein = Math.round(weight * 2.2);
-  const fat = Math.round(weight * 0.9);
-  const carbs = Math.round((calories - (protein * 4 + fat * 9)) / 4);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center font-sans">
@@ -189,7 +182,6 @@ export default function App() {
     );
   }
 
-  // Модальное окно просмотра документов
   const ModalDoc = activeDoc && (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full max-h-[80vh] flex flex-col shadow-2xl">
@@ -217,7 +209,6 @@ export default function App() {
     </div>
   );
 
-  // Регистрация
   if (!myProfile) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans p-5 max-w-md mx-auto">
@@ -384,7 +375,7 @@ export default function App() {
       </header>
 
       <main className="flex-1 p-4 max-w-md mx-auto w-full space-y-4">
-        {/* ГЛАВНАЯ */}
+        {/* 1. ГЛАВНАЯ */}
         {activeTab === 'home' && (
           <div className="space-y-4">
             <div className="bg-gradient-to-br from-amber-500/15 via-slate-900 to-slate-900 p-4 rounded-3xl border border-amber-500/20 space-y-3">
@@ -453,7 +444,7 @@ export default function App() {
           </div>
         )}
 
-        {/* GYMBRO */}
+        {/* 2. GYMBRO */}
         {activeTab === 'gymbro' && (
           <div className="space-y-4">
             <div className="bg-gradient-to-r from-amber-500/20 to-slate-900 p-3 rounded-2xl border border-amber-500/30 flex justify-between items-center">
@@ -576,7 +567,7 @@ export default function App() {
                           href={`https://instagram.com/${bro.instagram}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="bg-slate-800 hover:bg-slate-700 active:scale-95 text-pink-400 font-bold text-xs px-3 py-2.5 rounded-xl transition flex items-center justify-center no-underline border border-slate-700"
+                          className="bg-slate-800 hover:bg-slate-700 active:scale-95 text-pink-400 font-bold text-xs px-3 py-2 rounded-xl transition flex items-center justify-center no-underline border border-slate-700"
                         >
                           📸 Inst
                         </a>
@@ -594,90 +585,12 @@ export default function App() {
           </div>
         )}
 
-        {/* ПИТАНИЕ */}
+        {/* 3. ПИТАНИЕ (МОДУЛЬ) */}
         {activeTab === 'nutrition' && (
-          <div className="space-y-4">
-            <div className="bg-gradient-to-r from-amber-500/20 to-slate-900 p-3 rounded-2xl border border-amber-500/30 flex justify-between items-center">
-              <div>
-                <p className="text-xs font-bold text-amber-400">🥗 Модуль питания PRO</p>
-                <p className="text-[10px] text-slate-400">Бесплатный расчет рациона на время теста</p>
-              </div>
-              <span className="text-[10px] bg-amber-500 text-slate-950 px-2 py-0.5 rounded font-black">Free Trial</span>
-            </div>
-
-            <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-4">
-              <h2 className="text-sm font-bold text-white">Калькулятор рациона атлета</h2>
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">
-                  Вес тела: <span className="font-bold text-white">{weight} кг</span>
-                </label>
-                <input
-                  type="range"
-                  min="50"
-                  max="120"
-                  value={weight}
-                  onChange={e => setWeight(Number(e.target.value))}
-                  className="w-full accent-amber-500 cursor-pointer"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setGoal('muscle')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
-                    goal === 'muscle'
-                      ? 'bg-amber-500 text-slate-950 border-amber-500'
-                      : 'bg-slate-950 text-slate-400 border-slate-800'
-                  }`}
-                >
-                  Набор массы
-                </button>
-                <button
-                  onClick={() => setGoal('cut')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
-                    goal === 'cut'
-                      ? 'bg-amber-500 text-slate-950 border-amber-500'
-                      : 'bg-slate-950 text-slate-400 border-slate-800'
-                  }`}
-                >
-                  Сушка / Рельеф
-                </button>
-              </div>
-
-              <div className="grid grid-cols-4 gap-2 pt-2 text-center">
-                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                  <p className="text-[10px] text-slate-400 uppercase font-semibold">Ккал</p>
-                  <p className="text-sm font-black text-amber-400 mt-0.5">{calories}</p>
-                </div>
-                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                  <p className="text-[10px] text-slate-400 uppercase font-semibold">Белки</p>
-                  <p className="text-sm font-black text-emerald-400 mt-0.5">{protein}г</p>
-                </div>
-                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                  <p className="text-[10px] text-slate-400 uppercase font-semibold">Жиры</p>
-                  <p className="text-sm font-black text-sky-400 mt-0.5">{fat}г</p>
-                </div>
-                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                  <p className="text-[10px] text-slate-400 uppercase font-semibold">Углеводы</p>
-                  <p className="text-sm font-black text-purple-400 mt-0.5">{carbs}г</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-3 bg-slate-900/40 rounded-2xl border border-slate-800/60 text-[11px] text-slate-400">
-              ⚠️ <b>Внимание:</b> Расчет носит информационный характер.{' '}
-              <button
-                type="button"
-                onClick={() => setActiveDoc('disclaimer')}
-                className="text-amber-400 underline font-medium cursor-pointer"
-              >
-                Медицинский отказ от ответственности
-              </button>.
-            </div>
-          </div>
+          <NutritionTab onOpenDoc={setActiveDoc} />
         )}
 
-        {/* ПРОФИЛЬ + ТЕХПОДДЕРЖКА + ВСТРОЕННЫЕ ДОКУМЕНТЫ */}
+        {/* 4. ПРОФИЛЬ */}
         {activeTab === 'profile' && (
           <div className="space-y-4">
             <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-3">
@@ -820,7 +733,7 @@ export default function App() {
               </a>
             </div>
 
-            {/* ДОКУМЕНТЫ БЕЗ ТИЛЬДЫ (ВСТРОЕННЫЕ) */}
+            {/* ДОКУМЕНТЫ */}
             <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-2">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                 Документы и безопасность
