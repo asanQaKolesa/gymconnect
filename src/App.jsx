@@ -2,21 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
 
 export default function App() {
-  // Навигация: 'home' | 'gymbro' | 'nutrition' | 'profile'
   const [activeTab, setActiveTab] = useState('home');
   const [branches, setBranches] = useState([]);
   const [athletes, setAthletes] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Пользователь и доступ
   const [myProfile, setMyProfile] = useState(null);
   const [telegramUser, setTelegramUser] = useState({ id: null, username: '', first_name: '' });
 
-  // Фильтры в GymBro
   const [filterMatchOnly, setFilterMatchOnly] = useState(true);
   const [filterGender, setFilterGender] = useState('all');
 
-  // Форма анкеты
   const [formData, setFormData] = useState({
     name: '',
     gender: 'GymBro',
@@ -24,12 +20,13 @@ export default function App() {
     weekdayGym: '',
     weekendGym: '',
     split: 'Ноги / Спина (акцент на базу)',
-    timeSlot: '19:00 - 21:00'
+    timeSlot: '19:00 - 21:00',
+    instagram: '',
+    bio: ''
   });
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Калькулятор питания
   const [weight, setWeight] = useState(75);
   const [goal, setGoal] = useState('muscle');
 
@@ -81,7 +78,9 @@ export default function App() {
             weekdayGym: existingProfile.weekday_gym,
             weekendGym: existingProfile.weekend_gym,
             split: existingProfile.split,
-            timeSlot: existingProfile.time_slot
+            timeSlot: existingProfile.time_slot,
+            instagram: existingProfile.instagram || '',
+            bio: existingProfile.bio || ''
           });
         }
       }
@@ -122,7 +121,9 @@ export default function App() {
       weekday_gym: formData.weekdayGym || (branches[0]?.name ?? 'Invictus'),
       weekend_gym: formData.weekendGym || (branches[0]?.name ?? 'Invictus'),
       split: formData.split,
-      time_slot: formData.timeSlot
+      time_slot: formData.timeSlot,
+      instagram: formData.instagram.replace('@', '').trim(),
+      bio: formData.bio
     };
 
     if (myProfile) {
@@ -184,7 +185,7 @@ export default function App() {
     );
   }
 
-  // Экран первичной регистрации (Бесплатно)
+  // Регистрация
   if (!myProfile) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans p-5 max-w-md mx-auto">
@@ -319,7 +320,6 @@ export default function App() {
     );
   }
 
-  // Основное приложение (4 экрана)
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans pb-24 select-none">
       <header className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60 backdrop-blur sticky top-0 z-10">
@@ -341,7 +341,7 @@ export default function App() {
       </header>
 
       <main className="flex-1 p-4 max-w-md mx-auto w-full space-y-4">
-        {/* 1. ГЛАВНАЯ (БЕСПЛАТНО) */}
+        {/* ГЛАВНАЯ */}
         {activeTab === 'home' && (
           <div className="space-y-4">
             <div className="bg-gradient-to-br from-amber-500/15 via-slate-900 to-slate-900 p-4 rounded-3xl border border-amber-500/20 space-y-3">
@@ -358,6 +358,9 @@ export default function App() {
                 <p><span className="text-slate-400">🏢 Будни:</span> {myProfile.weekday_gym}</p>
                 <p><span className="text-slate-400">🏙 Выходные:</span> {myProfile.weekend_gym}</p>
                 <p><span className="text-slate-400">🎯 Фокус:</span> {myProfile.split}</p>
+                {myProfile.instagram && (
+                  <p><span className="text-slate-400">📸 Inst:</span> @{myProfile.instagram}</p>
+                )}
               </div>
             </div>
 
@@ -404,16 +407,10 @@ export default function App() {
                 Рассчитать свой рацион ➔
               </button>
             </div>
-
-            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center">
-              <p className="text-[11px] text-amber-300">
-                ⭐ <b>Тестовый период PRO активен:</b> функции поиска напарников и питания открыты бесплатно.
-              </p>
-            </div>
           </div>
         )}
 
-        {/* 2. ПОИСК GYMBRO (PRO) */}
+        {/* GYMBRO */}
         {activeTab === 'gymbro' && (
           <div className="space-y-4">
             <div className="bg-gradient-to-r from-amber-500/20 to-slate-900 p-3 rounded-2xl border border-amber-500/30 flex justify-between items-center">
@@ -517,40 +514,44 @@ export default function App() {
                       <p><span className="text-slate-500">🏢 Будни:</span> {bro.weekday_gym}</p>
                       <p><span className="text-slate-500">🏙 Выходные:</span> {bro.weekend_gym}</p>
                       <p><span className="text-slate-500">⏰ Время:</span> {bro.time_slot}</p>
+                      {bro.bio && <p className="text-slate-400 italic">«{bro.bio}»</p>}
                     </div>
 
-                    {bro.telegram_username ? (
-                      <a
-                        href={`https://t.me/${bro.telegram_username}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-full mt-1 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 no-underline shadow-md shadow-amber-500/10"
-                      >
-                        Написать в Telegram (@{bro.telegram_username}) 🤝
-                      </a>
-                    ) : (
-                      <button
-                        onClick={() => alert(`У ${bro.name} не указан публичный username в Telegram`)}
-                        className="w-full mt-1 bg-slate-800 text-slate-400 text-xs py-2 rounded-xl"
-                      >
-                        Username скрыт
-                      </button>
-                    )}
+                    <div className="flex gap-2">
+                      {bro.telegram_username && (
+                        <a
+                          href={`https://t.me/${bro.telegram_username}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs py-2 rounded-xl transition flex items-center justify-center gap-1.5 no-underline"
+                        >
+                          Telegram (@{bro.telegram_username}) 🤝
+                        </a>
+                      )}
+                      {bro.instagram && (
+                        <a
+                          href={`https://instagram.com/${bro.instagram}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-slate-800 hover:bg-slate-700 active:scale-95 text-pink-400 font-bold text-xs px-3 py-2 rounded-xl transition flex items-center justify-center no-underline border border-slate-700"
+                        >
+                          📸 Inst
+                        </a>
+                      )}
+                    </div>
                   </div>
                 ))
               ) : (
                 <div className="text-center py-8 bg-slate-900/40 rounded-2xl border border-dashed border-slate-800 p-4 space-y-1">
                   <p className="text-sm text-slate-300">В этом филиале пока нет других напарников</p>
-                  <p className="text-xs text-slate-500">
-                    Переключи на «Все залы» или пригласи тренироваться знакомых!
-                  </p>
+                  <p className="text-xs text-slate-500">Переключи на «Все залы» или пригласи друзей!</p>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* 3. ПИТАНИЕ & КБЖУ (PRO) */}
+        {/* ПИТАНИЕ */}
         {activeTab === 'nutrition' && (
           <div className="space-y-4">
             <div className="bg-gradient-to-r from-amber-500/20 to-slate-900 p-3 rounded-2xl border border-amber-500/30 flex justify-between items-center">
@@ -563,7 +564,6 @@ export default function App() {
 
             <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-4">
               <h2 className="text-sm font-bold text-white">Калькулятор рациона атлета</h2>
-
               <div>
                 <label className="text-xs text-slate-400 block mb-1">
                   Вес тела: <span className="font-bold text-white">{weight} кг</span>
@@ -620,43 +620,53 @@ export default function App() {
                 </div>
               </div>
             </div>
-
-            <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 space-y-1.5 text-xs text-slate-300">
-              <p className="font-semibold text-white">💡 Базовые ориентиры рациона:</p>
-              <p>• Зеленая чечевица + филе индейки или куриная грудка в аэрогриле.</p>
-              <p>• Спортпит: Креатин 5-10г ежедневно, цитруллин и бета-аланин за 30 мин до тренировки.</p>
-            </div>
           </div>
         )}
 
-        {/* 4. ПРОФИЛЬ АТЛЕТА (БЕСПЛАТНО) */}
+        {/* ПРОФИЛЬ АТЛЕТА */}
         {activeTab === 'profile' && (
           <div className="space-y-4">
-            <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3">
-              <div className="flex justify-between items-center">
-                <h2 className="text-sm font-bold text-white">Моя анкета</h2>
+            <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-3">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                <div>
+                  <h2 className="text-base font-bold text-white">Моя анкета</h2>
+                  <p className="text-[11px] text-slate-400">Так твою карточку видят напарники</p>
+                </div>
                 <button
                   onClick={() => setIsEditing(!isEditing)}
-                  className="text-xs text-amber-400 font-bold"
+                  className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-xl font-bold active:scale-95 transition"
                 >
                   {isEditing ? 'Отмена' : 'Изменить ✏️'}
                 </button>
               </div>
 
               {!isEditing ? (
-                <div className="text-xs space-y-2 text-slate-300">
-                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1.5">
-                    <p><span className="text-slate-500">Имя:</span> <b className="text-white">{myProfile.name}</b></p>
-                    <p><span className="text-slate-500">Роль:</span> {myProfile.gender}</p>
-                    <p><span className="text-slate-500">Уровень:</span> {myProfile.level}</p>
-                    <p><span className="text-slate-500">🏢 Будни:</span> {myProfile.weekday_gym}</p>
-                    <p><span className="text-slate-500">🏙 Выходные:</span> {myProfile.weekend_gym}</p>
-                    <p><span className="text-slate-500">🎯 Сплит:</span> {myProfile.split}</p>
-                    <p><span className="text-slate-500">⏰ Время:</span> {myProfile.time_slot}</p>
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-xl font-black text-slate-950 shadow-md">
+                      {myProfile.name[0]}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white">{myProfile.name}</h3>
+                      <p className="text-xs text-amber-400">{myProfile.gender} • {myProfile.level}</p>
+                    </div>
+                  </div>
+
+                  <div className="text-xs space-y-2 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80">
+                    <p><span className="text-slate-500">🏢 Будни:</span> <span className="text-slate-200 font-medium">{myProfile.weekday_gym}</span></p>
+                    <p><span className="text-slate-500">🏙 Выходные:</span> <span className="text-slate-200 font-medium">{myProfile.weekend_gym}</span></p>
+                    <p><span className="text-slate-500">🎯 Сплит:</span> <span className="text-slate-200 font-medium">{myProfile.split}</span></p>
+                    <p><span className="text-slate-500">⏰ Время:</span> <span className="text-slate-200 font-medium">{myProfile.time_slot}</span></p>
+                    {myProfile.instagram && (
+                      <p><span className="text-slate-500">📸 Instagram:</span> <a href={`https://instagram.com/${myProfile.instagram}`} target="_blank" rel="noreferrer" className="text-pink-400 font-medium no-underline">@{myProfile.instagram}</a></p>
+                    )}
+                    {myProfile.bio && (
+                      <p><span className="text-slate-500">💬 О себе:</span> <span className="text-slate-300 italic">{myProfile.bio}</span></p>
+                    )}
                   </div>
                 </div>
               ) : (
-                <form onSubmit={handleSaveProfile} className="space-y-3 pt-1">
+                <form onSubmit={handleSaveProfile} className="space-y-3 pt-2">
                   <div>
                     <label className="text-[11px] font-semibold text-slate-400 block mb-1">Имя</label>
                     <input
@@ -669,7 +679,29 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">Зал в будни</label>
+                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">📸 Instagram (без @)</label>
+                    <input
+                      type="text"
+                      value={formData.instagram}
+                      onChange={e => setFormData({ ...formData, instagram: e.target.value })}
+                      placeholder="твой_аккаунт"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">💬 О себе / Цель</label>
+                    <input
+                      type="text"
+                      value={formData.bio}
+                      onChange={e => setFormData({ ...formData, bio: e.target.value })}
+                      placeholder="Ищу страховку на тяжелый присед / жим"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">🏢 Зал в будни</label>
                     <select
                       value={formData.weekdayGym}
                       onChange={e => setFormData({ ...formData, weekdayGym: e.target.value })}
@@ -682,7 +714,7 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">Зал на выходных</label>
+                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">🏙 Зал на выходных</label>
                     <select
                       value={formData.weekendGym}
                       onChange={e => setFormData({ ...formData, weekendGym: e.target.value })}
@@ -695,7 +727,7 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">Удобное время</label>
+                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">⏰ Время тренировок</label>
                     <input
                       type="text"
                       value={formData.timeSlot}
@@ -707,7 +739,7 @@ export default function App() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="w-full bg-amber-500 text-slate-950 font-bold text-xs py-2.5 rounded-xl transition"
+                    className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs py-3 rounded-xl transition"
                   >
                     {saving ? 'Сохраняем...' : 'Сохранить изменения'}
                   </button>
@@ -715,20 +747,20 @@ export default function App() {
               )}
             </div>
 
-            <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-2">
+            <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-white">Статус подписки</span>
+                <span className="text-xs font-bold text-white">Статус доступа</span>
                 <span className="text-[10px] bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded">PRO Тест</span>
               </div>
               <p className="text-[11px] text-slate-400">
-                Тестовый период активен. В будущем доступ к GymBro и Плану питания будет стоить 2 990 ₸/мес.
+                Бесплатный тестовый доступ активен. Полный доступ к поиску и питанию после запуска: 2 990 ₸/мес.
               </p>
             </div>
           </div>
         )}
       </main>
 
-      {/* НИЖНЯЯ НАВИГАЦИЯ (4 ПЛАШКИ) */}
+      {/* НАВИГАЦИЯ */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/95 backdrop-blur border-t border-slate-800 flex justify-around py-2 z-20">
         <button
           onClick={() => setActiveTab('home')}
