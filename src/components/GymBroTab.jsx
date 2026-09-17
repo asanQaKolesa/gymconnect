@@ -15,18 +15,30 @@ export default function GymBroTab({
   isSaving
 }) {
   const [activeSubTab, setActiveSubTab] = useState('swipe'); // 'swipe' | 'friends'
-  const [isEditing, setIsEditing] = useState(!myCard);
+  const [isEditing, setIsEditing] = useState(false);
   const [filterGym, setFilterGym] = useState('Все');
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Форматируем карточки из базы под свайпы
-  const formattedProfiles = cards.map(c => ({
+  // Текущий Telegram ID пользователя (число или строка)
+  const currentTgId = String(user?.telegram_id || window?.Telegram?.WebApp?.initDataUnsafe?.user?.id || '');
+
+  // ИСКЛЮЧАЕМ СЕБЯ: фильтруем свои анкеты по ID и по username
+  const otherCards = cards.filter(c => {
+    const cardTgId = String(c.telegram_id || '');
+    if (currentTgId && cardTgId && cardTgId === currentTgId) return false;
+    if (user?.telegram_username && c.telegram_username && c.telegram_username.toLowerCase() === user.telegram_username.toLowerCase()) return false;
+    return true;
+  });
+
+  // Форматируем карточки других атлетов
+  const formattedProfiles = otherCards.map(c => ({
     user_id: c.telegram_id || c.id,
     full_name: c.name || 'Атлет',
-    age: c.age || 24,
+    age: c.age || '',
     gender: c.gender || 'Мужской',
     home_gym: c.weekday_gym || c.weekend_gym || ALMATY_GYMS[0],
     preferred_time: c.time_slot || 'Вечер (18:00 - 21:00)',
+    personality_type: c.personality_type || 'Амбиверт',
     experience_level: c.level || 'Средний (1-3 года)',
     bio: c.bio || '',
     goals: [c.split].filter(Boolean),
@@ -43,12 +55,12 @@ export default function GymBroTab({
     if (bro.telegram_contact) {
       window.open(`https://t.me/${bro.telegram_contact.replace('@', '')}`, '_blank');
     }
-    setCurrentIndex(prev => prev + 1);
+    setCurrentIndex(prev => Math.min(prev + 1, filteredProfiles.length));
   };
 
   return (
     <div className="space-y-4">
-      {/* Тумблер: Поиск напарников vs Мои настоящие друзья */}
+      {/* Верхний тумблер: Поиск напарника vs Мои друзья */}
       <div className="flex bg-[#121622] p-1 rounded-2xl border border-white/10">
         <button
           onClick={() => { setActiveSubTab('swipe'); setIsEditing(false); }}
@@ -82,10 +94,10 @@ export default function GymBroTab({
         </button>
       </div>
 
-      {/* Экран анкеты */}
+      {/* Экран редактирования анкеты */}
       {isEditing ? (
         <GymBroProfileForm
-          currentUserId={user?.telegram_id}
+          currentUserId={currentTgId}
           initialData={{
             full_name: myCard?.name || user?.name || '',
             gender: myCard?.gender || user?.gender || 'Мужской',
@@ -114,13 +126,13 @@ export default function GymBroTab({
             }
             setIsEditing(false);
           }}
-          onCancel={myCard ? () => setIsEditing(false) : null}
+          onCancel={() => setIsEditing(false)}
         />
       ) : activeSubTab === 'friends' ? (
-        /* Твой оригинальный рабочий экран друзей */
+        /* ТВОЙ РОДНОЙ ЭКРАН ДРУЗЕЙ */
         <FriendsTab user={user} />
       ) : (
-        /* Твой экран поиска и свайпов */
+        /* ТИНДЕР-СВАЙП С КНОПКОЙ ОТМОТКИ НАЗАД */
         <GymBroSwipeView
           profiles={filteredProfiles}
           currentIndex={currentIndex}
@@ -128,7 +140,8 @@ export default function GymBroTab({
           filterGym={filterGym}
           userHomeGym={myCard?.weekday_gym || ALMATY_GYMS[0]}
           onFilterChange={(g) => { setFilterGym(g); setCurrentIndex(0); }}
-          onSkip={() => setCurrentIndex(prev => prev + 1)}
+          onSkip={() => setCurrentIndex(prev => Math.min(prev + 1, filteredProfiles.length))}
+          onPrev={() => setCurrentIndex(prev => Math.max(prev - 1, 0))}
           onConnect={handleConnect}
         />
       )}
