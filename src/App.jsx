@@ -55,7 +55,6 @@ const Icons = {
   )
 };
 
-// Секретный резервный PIN-код для входа в админку с любого устройства
 const BACKUP_ADMIN_PIN = "7770";
 
 export default function App() {
@@ -71,11 +70,8 @@ export default function App() {
   const [saving, setSaving] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
 
-  // Оферта и соглашения
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [termsAgreed, setTermsAgreed] = useState(false);
-
-  // Секретный тап-счётчик для резервной админки
   const [logoTaps, setLogoTaps] = useState(0);
 
   useEffect(() => {
@@ -259,7 +255,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-sans pb-24 select-none">
-      {/* 1. Модалка юридической защиты (Оферта при первом входе) */}
+      {/* Юридическая оферта */}
       {showTermsModal && (
         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full p-5 space-y-4 shadow-2xl border border-white/10 rounded-3xl">
@@ -299,7 +295,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 2. Модальное окно подписки GymConnect PRO */}
+      {/* Пейволл PRO */}
       {showPaywallModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full p-5 space-y-4 shadow-2xl border border-white/10 rounded-3xl">
@@ -351,7 +347,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Верхний Header (Чистый, без лишних кнопок для PRO) */}
+      {/* Header */}
       <header className="px-5 py-3 border-b border-white/[0.08] flex justify-between items-center bg-[#0a0d14]/80 backdrop-blur-2xl sticky top-0 z-30">
         <div onClick={handleLogoTap} className="flex items-center gap-2.5 cursor-pointer active:scale-95 transition">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] flex items-center justify-center text-white shadow-lg shadow-[#FF5A1F]/25 flex-shrink-0">
@@ -364,7 +360,6 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Если есть PRO — чистый аккуратный бейдж, никаких продаж */}
           {currentUser?.is_pro ? (
             <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-[#FF5A1F]/20 border border-amber-500/30 px-3 py-1 rounded-full">
               <span className="text-xs">👑</span>
@@ -383,7 +378,6 @@ export default function App() {
       </header>
 
       <main className="flex-1 px-4 py-3.5 max-w-md mx-auto w-full space-y-4">
-        {/* ================= 1. ГЛАВНАЯ СТРАНИЦА ================= */}
         {activeTab === 'home' && (
           <div className="space-y-3.5">
             <div className="apple-glass-card p-3.5 flex justify-between items-center">
@@ -427,7 +421,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= 2. GYMBRO ================= */}
         {activeTab === 'gymbro' && (
           <GymBroTab
             myCard={myGymBroCard}
@@ -441,12 +434,10 @@ export default function App() {
           />
         )}
 
-        {/* ================= 3. ДРУЗЬЯ ================= */}
         {activeTab === 'friends' && (
           <FriendsTab user={currentUser} />
         )}
 
-        {/* ================= 4. ПИТАНИЕ ================= */}
         {activeTab === 'nutrition' && (
           <NutritionTab
             myProfile={currentUser}
@@ -456,16 +447,16 @@ export default function App() {
           />
         )}
 
-        {/* ================= 5. ПРОФИЛЬ ================= */}
         {activeTab === 'profile' && (
           <ProfileTab
             user={currentUser}
             onUpdateUser={(updated) => setCurrentUser({ ...currentUser, ...updated })}
+            onNavigateTab={(tabName) => setActiveTab(tabName)}
           />
         )}
       </main>
 
-      {/* Нативный нижний бар из 5 вкладок */}
+      {/* Нижнее меню */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto ios-nav-dock flex justify-around py-2.5 z-40">
         <button
           onClick={() => setActiveTab('home')}
