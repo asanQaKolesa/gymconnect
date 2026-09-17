@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
+import HomeTab from './components/home/HomeTab';
 import NutritionTab from './components/NutritionTab';
 import GymBroTab from './components/GymBroTab';
 import ProfileTab from './components/ProfileTab';
-import GymFeedTab from './components/GymFeedTab';
 
 const Icons = {
   Lightning: () => (
@@ -338,7 +338,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Шапка */}
+      {/* Header */}
       <header className="px-5 py-3 border-b border-white/[0.08] flex justify-between items-center bg-[#0a0d14]/80 backdrop-blur-2xl sticky top-0 z-30">
         <div onClick={handleLogoTap} className="flex items-center gap-2.5 cursor-pointer active:scale-95 transition">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] flex items-center justify-center text-white shadow-lg shadow-[#FF5A1F]/25 flex-shrink-0">
@@ -370,50 +370,16 @@ export default function App() {
 
       {/* Основной контент */}
       <main className="flex-1 px-4 py-3.5 max-w-md mx-auto w-full space-y-4">
+        {/* Главная вынесена в изолированный компонент HomeTab */}
         {activeTab === 'home' && (
-          <div className="space-y-3.5">
-            <div className="apple-glass-card p-3.5 flex justify-between items-center">
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className="w-11 h-11 rounded-2xl overflow-hidden bg-[#121622] border border-white/15 flex-shrink-0 flex items-center justify-center shadow-md">
-                  {currentUser?.avatar_url ? (
-                    <img src={currentUser.avatar_url} alt="Athlete" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-base font-bold text-white">{currentUser?.name?.[0] || 'A'}</span>
-                  )}
-                </div>
-                <div className="truncate">
-                  <div className="flex items-center gap-1.5">
-                    <h2 className="text-xs font-bold text-white tracking-tight truncate">
-                      {currentUser?.name || 'Атлет'}
-                    </h2>
-                    {currentUser?.is_pro && (
-                      <span className="text-[8px] bg-amber-500/25 text-amber-300 border border-amber-500/40 px-1 py-0.2 rounded font-black">
-                        PRO
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-slate-400 font-medium">
-                    {currentUser?.city || 'Алматы'} • {currentUser?.sport_type || 'Атлет'}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setActiveTab('profile')}
-                className="text-[10px] text-[#FF8C38] font-bold px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] cursor-pointer"
-              >
-                Профиль ➔
-              </button>
-            </div>
-
-            <GymFeedTab
-              user={currentUser}
-              onOpenPaywall={() => setShowPaywallModal(true)}
-            />
-          </div>
+          <HomeTab
+            currentUser={currentUser}
+            onNavigateTab={setActiveTab}
+            onOpenPaywall={() => setShowPaywallModal(true)}
+          />
         )}
 
-        {/* Раздел GymBro (включает поиск + твоих друзей внутри) */}
+        {/* GymBro */}
         {activeTab === 'gymbro' && (
           <GymBroTab
             myCard={myGymBroCard}
@@ -427,7 +393,7 @@ export default function App() {
           />
         )}
 
-        {/* Раздел Питание */}
+        {/* Питание */}
         {activeTab === 'nutrition' && (
           <NutritionTab
             myProfile={currentUser}
@@ -437,7 +403,7 @@ export default function App() {
           />
         )}
 
-        {/* Раздел Профиль */}
+        {/* Профиль */}
         {activeTab === 'profile' && (
           <ProfileTab
             user={currentUser}
@@ -447,7 +413,7 @@ export default function App() {
         )}
       </main>
 
-      {/* 4 чистые вкладки в нижнем баре */}
+      {/* Нижняя панель */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto ios-nav-dock flex justify-around py-2.5 z-40">
         <button
           onClick={() => setActiveTab('home')}
