@@ -8,75 +8,75 @@ export default function HomeTab() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] px-4 py-5 space-y-5 max-w-md mx-auto pb-28 font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text','Helvetica_Neue',sans-serif]">
+    <div className="min-h-screen bg-[#F2F2F7] text-[#000000] px-4 py-4 space-y-5 max-w-md mx-auto pb-28 font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text','Helvetica_Neue',sans-serif]">
       
-      {/* Шапка */}
-      <div className="flex items-center justify-between pt-1">
+      {/* iOS Шапка */}
+      <div className="flex items-end justify-between pt-3 pb-1">
         <div>
-          <p className="text-[11px] font-medium text-zinc-400 tracking-tight">Алматы • Весна 2026</p>
-          <h1 className="text-[26px] font-bold tracking-tight text-[#1D1D1F] leading-tight">Главная</h1>
+          <span className="text-[11px] font-medium text-[#8E8E93] uppercase tracking-wider">Алматы • Весна 2026</span>
+          <h1 className="text-[32px] font-bold tracking-tight text-[#000000] leading-none mt-1">Главная</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button className="w-8 h-8 rounded-full bg-white border border-black/[0.08] shadow-sm flex items-center justify-center text-zinc-800 hover:bg-zinc-50 active:scale-95 transition-all">
-            <span className="text-[13px] font-medium">?</span>
+          <button className="w-8 h-8 rounded-full bg-[#E3E3E8]/80 backdrop-blur-md flex items-center justify-center text-[#000000] hover:bg-[#D1D1D6] transition-all">
+            <span className="text-[14px] font-semibold">?</span>
           </button>
-          <button className="w-8 h-8 rounded-full bg-white border border-black/[0.08] shadow-sm flex items-center justify-center text-zinc-800 hover:bg-zinc-50 active:scale-95 transition-all">
-            <span className="text-[13px] font-medium">•••</span>
+          <button className="w-8 h-8 rounded-full bg-[#E3E3E8]/80 backdrop-blur-md flex items-center justify-center text-[#000000] hover:bg-[#D1D1D6] transition-all">
+            <span className="text-[14px] font-semibold tracking-widest pb-1">•••</span>
           </button>
         </div>
       </div>
 
-      {/* Карточка профиля */}
+      {/* Карточка профиля в стиле Apple Grouped Table / Widget */}
       <div className="space-y-2">
-        <h2 className="text-[12px] font-medium text-zinc-400 px-1 tracking-tight">Активный профиль</h2>
+        <h2 className="text-[13px] font-normal text-[#6C6C70] px-3 uppercase tracking-wide">Активный профиль</h2>
 
-        <div className="bg-white border border-black/[0.04] rounded-[22px] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-3.5">
+        <div className="bg-[#FFFFFF] rounded-[20px] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.04)] space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center text-lg shadow-sm">
+              <div className="w-11 h-11 rounded-[14px] bg-[#1C1C1E] text-white flex items-center justify-center text-lg shadow-sm">
                 💪
               </div>
               <div>
-                <h3 className="font-semibold text-[#1D1D1F] text-[15px] tracking-tight">Асанәли Ерікұлы</h3>
-                <p className="text-[12px] text-zinc-400 font-normal">Digital Marketer & GymBro</p>
+                <h3 className="font-semibold text-[#000000] text-[16px] tracking-tight">Асанәли Ерікұлы</h3>
+                <p className="text-[13px] text-[#8E8E93] font-normal">Digital Marketer & GymBro</p>
               </div>
             </div>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#34C759]"></span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-zinc-100">
+          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#F2F2F7]">
             {quickStats.map((stat, idx) => (
-              <div key={idx} className="bg-[#F8F9FA] rounded-xl p-2.5 text-center border border-black/[0.02]">
-                <div className="text-[10px] font-medium text-zinc-400 tracking-tight">{stat.label}</div>
-                <div className="text-[12px] font-semibold text-[#1D1D1F] mt-0.5 tracking-tight">{stat.value}</div>
+              <div key={idx} className="bg-[#F2F2F7]/60 rounded-[14px] p-2.5 text-center">
+                <div className="text-[10px] font-medium text-[#8E8E93] uppercase tracking-tight">{stat.label}</div>
+                <div className="text-[12px] font-semibold text-[#000000] mt-0.5 tracking-tight">{stat.value}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Блок быстрого доступа */}
+      {/* Блок инструментов */}
       <div className="space-y-2">
-        <h2 className="text-[12px] font-medium text-zinc-400 px-1 tracking-tight">Инструменты</h2>
-        <div className="bg-white border border-black/[0.04] rounded-[22px] p-3.5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex items-center justify-between">
+        <h2 className="text-[13px] font-normal text-[#6C6C70] px-3 uppercase tracking-wide">Инструменты</h2>
+        <div className="bg-[#FFFFFF] rounded-[20px] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-base">
+            <div className="w-10 h-10 rounded-[14px] bg-[#007AFF]/10 text-[#007AFF] flex items-center justify-center text-lg">
               ⚡
             </div>
             <div>
-              <h4 className="font-semibold text-[#1D1D1F] text-[14px] tracking-tight">GymBro Matchmaking</h4>
-              <p className="text-[12px] text-zinc-400 font-normal">Поиск напарников в Алматы</p>
+              <h4 className="font-semibold text-[#000000] text-[15px] tracking-tight">GymBro Matchmaking</h4>
+              <p className="text-[13px] text-[#8E8E93] font-normal">Поиск напарников в Алматы</p>
             </div>
           </div>
-          <span className="text-[11px] font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">Активно</span>
+          <span className="text-[12px] font-medium text-[#007AFF] bg-[#007AFF]/10 px-3 py-1 rounded-full">Активно</span>
         </div>
       </div>
 
-      {/* Кнопка действия */}
-      <div className="pt-1">
+      {/* Кнопка действия (Apple iOS System Blue) */}
+      <div className="pt-2">
         <button 
           onClick={() => alert('Функция в разработке!')}
-          className="w-full py-3.5 rounded-[18px] bg-[#007AFF] text-white font-semibold text-[15px] tracking-tight shadow-[0_6px_16px_rgba(0,122,255,0.25)] hover:bg-[#0062CC] active:scale-[0.98] transition-all"
+          className="w-full py-3.5 rounded-[16px] bg-[#007AFF] text-white font-semibold text-[16px] tracking-tight shadow-[0_4px_14px_rgba(0,122,255,0.3)] hover:bg-[#0056B3] active:scale-[0.98] transition-all"
         >
           + Начать новую тренировку
         </button>
