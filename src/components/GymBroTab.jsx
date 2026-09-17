@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { ALMATY_GYMS } from '../data/almatyGyms';
 import GymBroProfileForm from './gymbro/GymBroProfileForm';
-import GymBroFriendsView from './gymbro/GymBroFriendsView';
 import GymBroSwipeView from './gymbro/GymBroSwipeView';
+import FriendsTab from './FriendsTab';
 
 export const INVICTUS_CLUBS = ALMATY_GYMS;
 
-export default function GymBroTab({ session }) {
+export default function GymBroTab({ session, telegramUser, user }) {
   const [activeSubTab, setActiveSubTab] = useState('swipe');
   const [isEditing, setIsEditing] = useState(false);
   
@@ -16,12 +16,11 @@ export default function GymBroTab({ session }) {
   const [profiles, setProfiles] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [myBros, setMyBros] = useState([]);
   const [filterGym, setFilterGym] = useState('Все');
 
   const resolveUserId = () => {
-    const tgUser = window?.Telegram?.WebApp?.initDataUnsafe?.user;
-    if (tgUser?.id) return `tg_${tgUser.id}`;
+    const tg = telegramUser || user || window?.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (tg?.id) return String(tg.id);
     if (session?.user?.id) return session.user.id;
     let localId = localStorage.getItem('gymconnect_device_user_id');
     if (!localId) {
@@ -35,12 +34,12 @@ export default function GymBroTab({ session }) {
     const uid = resolveUserId();
     setCurrentUserId(uid);
     loadData(uid);
-  }, [session]);
+  }, [session, telegramUser, user]);
 
   const loadData = async (uid) => {
     setLoading(true);
     try {
-      // 1. Загрузка своей анкеты GymBro
+      // Загрузка анкеты GymBro
       const { data: myData } = await supabase
         .from('gymbro_profiles')
         .select('*')
@@ -50,71 +49,24 @@ export default function GymBroTab({ session }) {
       if (myData) {
         setUserProfile(myData);
       } else {
-        // Проверяем основной профиль приложения, если анкеты в gymbro еще нет
-        const { data: baseProfile } = await supabase
+        // Подтягиваем данные из базовой таблицы profiles если есть
+        const { data: baseProf } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', session?.user?.id || uid)
+          .eq('id', uid)
           .single();
 
-        if (baseProfile) {
+        if (baseProf) {
           setUserProfile({
-            full_name: baseProfile.username || baseProfile.full_name || '',
+            full_name: baseProf.full_name || baseProf.username || 'Атлет',
+            photo_url: baseProf.avatar_url || '',
             home_gym: ALMATY_GYMS[0],
-            telegram_contact: baseProfile.username || ''
+            telegram_contact: baseProf.username || ''
           });
-        } else {
-          setIsEditing(true);
         }
       }
 
-      // 2. Загрузка друзей из всех возможных старых источников базы
-      let loadedFriends = [];
-
-      // Проверяем старую таблицу 'friends'
-      try {
-        const { data: oldFriends } = await supabase
-          .from('friends')
-          .select('*');
-        if (oldFriends && oldFriends.length > 0) {
-          loadedFriends = [...loadedFriends, ...oldFriends];
-        }
-      } catch (e) {}
-
-      // Проверяем таблицу 'friendships'
-      try {
-        const { data: fs } = await supabase
-          .from('friendships')
-          .select('*');
-        if (fs && fs.length > 0) {
-          loadedFriends = [...loadedFriends, ...fs];
-        }
-      } catch (e) {}
-
-      // Проверяем локальный кэш
-      const cached = JSON.parse(localStorage.getItem('gymconnect_my_bros') || '[]');
-      cached.forEach(c => {
-        if (!loadedFriends.some(f => (f.user_id || f.id) === (c.user_id || c.id))) {
-          loadedFriends.push(c);
-        }
-      });
-
-      // Форматируем список друзей
-      const formatted = loadedFriends.map(f => ({
-        user_id: f.user_id || f.id || f.friend_id || Math.random().toString(),
-        full_name: f.full_name || f.name || f.username || 'Атлет',
-        age: f.age || 25,
-        home_gym: f.home_gym || f.gym || 'Invictus GO',
-        preferred_time: f.preferred_time || 'Вечер',
-        personality_type: f.personality_type || 'Амбиверт',
-        telegram_contact: f.telegram_contact || f.username || '',
-        photo_url: f.photo_url || f.avatar_url || ''
-      }));
-
-      setMyBros(formatted);
-      localStorage.setItem('gymconnect_my_bros', JSON.stringify(formatted));
-
-      // 3. Загрузка анкет для ленты
+      // Загрузка анкет других пользователей для ленты
       const { data: allProfiles } = await supabase
         .from('gymbro_profiles')
         .select('*')
@@ -129,21 +81,10 @@ export default function GymBroTab({ session }) {
   };
 
   const handleConnectBro = (bro) => {
-    if (!myBros.some(b => b.user_id === bro.user_id)) {
-      const updated = [bro, ...myBros];
-      setMyBros(updated);
-      localStorage.setItem('gymconnect_my_bros', JSON.stringify(updated));
-    }
     if (bro.telegram_contact) {
       window.open(`https://t.me/${bro.telegram_contact.replace('@', '')}`, '_blank');
     }
     setCurrentIndex(prev => prev + 1);
-  };
-
-  const handleRemoveBro = (uid) => {
-    const updated = myBros.filter(b => b.user_id !== uid);
-    setMyBros(updated);
-    localStorage.setItem('gymconnect_my_bros', JSON.stringify(updated));
   };
 
   const filteredProfiles = profiles.filter(p => {
@@ -175,7 +116,7 @@ export default function GymBroTab({ session }) {
               : 'text-gray-400 hover:text-white'
           }`}
         >
-          👥 Мои бро ({myBros.length})
+          👥 Мои бро
         </button>
         <button
           onClick={() => setIsEditing(!isEditing)}
@@ -189,6 +130,7 @@ export default function GymBroTab({ session }) {
         </button>
       </div>
 
+      {/* Контент */}
       {isEditing ? (
         <GymBroProfileForm
           currentUserId={currentUserId}
@@ -201,11 +143,8 @@ export default function GymBroTab({ session }) {
           onCancel={userProfile ? () => setIsEditing(false) : null}
         />
       ) : activeSubTab === 'friends' ? (
-        <GymBroFriendsView
-          friends={myBros}
-          onRemove={handleRemoveBro}
-          onFindMore={() => setActiveSubTab('swipe')}
-        />
+        /* ТВОЙ НАСТОЯЩИЙ ОРИГИНАЛЬНЫЙ КОМПОНЕНТ ДРУЗЕЙ */
+        <FriendsTab session={session} telegramUser={telegramUser || user} user={telegramUser || user} />
       ) : (
         <GymBroSwipeView
           profiles={filteredProfiles}
