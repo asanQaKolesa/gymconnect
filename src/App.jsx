@@ -4,16 +4,57 @@ import { LEGAL_DOCS } from './legalDocs';
 import NutritionTab from './components/NutritionTab';
 import GymBroTab from './components/GymBroTab';
 
-// Apple 3D Emojis в высоком разрешении
-const ICONS = {
-  lightning: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/High%20Voltage.png",
-  muscle: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/People%20with%20activities/Flexed%20Biceps.png",
-  handshake: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Handshake.png",
-  salad: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Green%20Salad.png",
-  crown: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Crown.png",
-  home: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/House.png",
-  user: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/People/Bust%20in%20Silhouette.png",
-  shield: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Shield.png",
+// Чистые Apple SF Symbols / Vector Icons (гарантированно не ломаются)
+const Icons = {
+  Lightning: () => (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>
+  ),
+  Biceps: () => (
+    <svg className="w-6 h-6 text-[#FF5A1F]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 16.5a3.5 3.5 0 0 0 5 0l1-1a3.5 3.5 0 0 1 5 0l2 2a3 3 0 0 0 4.2-4.2l-2-2a3.5 3.5 0 0 1 0-5l1-1a3.5 3.5 0 0 0 0-5l-2-2a3 3 0 0 0-4.2 0l-1 1a3.5 3.5 0 0 1-5 0l-2-2a3 3 0 0 0-4.2 4.2l1 1a3.5 3.5 0 0 1 0 5l-1 1a3.5 3.5 0 0 0 0 5l2 2a3 3 0 0 0 .2.3z" />
+    </svg>
+  ),
+  Users: () => (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  Salad: () => (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 21h10a5 5 0 0 0 5-5v-1H2v1a5 5 0 0 0 5 5z" />
+      <path d="M12 3v8" />
+      <path d="m8 6 8 8" />
+      <path d="m16 6-8 8" />
+    </svg>
+  ),
+  Crown: () => (
+    <svg className="w-3.5 h-3.5 text-[#FF5A1F]" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M2 19h20v2H2v-2zm1.5-4L6 6l4.5 5 4.5-5 2.5 9H3.5z" />
+    </svg>
+  ),
+  Home: () => (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  ),
+  User: () => (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  ),
+  ArrowRight: () => (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </svg>
+  )
 };
 
 export default function App() {
@@ -175,40 +216,44 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0c10] text-slate-100 flex items-center justify-center font-sans">
+      <div className="min-h-screen bg-[#07090e] text-slate-100 flex items-center justify-center font-sans">
         <div className="text-center space-y-3">
-          <img src={ICONS.lightning} alt="Loading" className="w-10 h-10 mx-auto animate-pulse" />
-          <p className="text-xs text-slate-400 font-medium tracking-wide">Синхронизация...</p>
+          <div className="w-10 h-10 rounded-2xl bg-[#FF5A1F]/15 text-[#FF5A1F] flex items-center justify-center mx-auto animate-pulse border border-[#FF5A1F]/30">
+            <Icons.Lightning />
+          </div>
+          <p className="text-xs text-slate-400 font-medium tracking-wide">Загрузка GymConnect...</p>
         </div>
       </div>
     );
   }
 
   const ModalDoc = activeDoc && (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="ios-card max-w-md w-full max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4">
+      <div className="apple-glass max-w-md w-full max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
         <div className="p-4 border-b border-white/10 flex justify-between items-center">
-          <h3 className="text-xs font-semibold text-white">{LEGAL_DOCS[activeDoc]?.title}</h3>
-          <button onClick={() => setActiveDoc(null)} className="text-slate-400 hover:text-white text-sm">✕</button>
+          <h3 className="text-xs font-semibold text-white tracking-tight">{LEGAL_DOCS[activeDoc]?.title}</h3>
+          <button onClick={() => setActiveDoc(null)} className="text-slate-400 hover:text-white text-base">✕</button>
         </div>
         <div className="p-4 overflow-y-auto text-xs text-slate-300 leading-relaxed whitespace-pre-line font-normal">
           {LEGAL_DOCS[activeDoc]?.content}
         </div>
-        <div className="p-3 border-t border-white/10 bg-black/20">
-          <button onClick={() => setActiveDoc(null)} className="w-full ios-button-secondary py-2.5 text-xs font-semibold">Понятно</button>
+        <div className="p-3 border-t border-white/10 bg-black/30">
+          <button onClick={() => setActiveDoc(null)} className="w-full gymshark-btn-glass py-2.5 text-xs">Понятно</button>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-slate-100 flex flex-col font-sans pb-24 select-none">
+    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-sans pb-24 select-none">
       {ModalDoc}
 
-      {/* Верхний Header в стиле Apple iOS */}
-      <header className="px-5 py-3.5 border-b border-white/[0.07] flex justify-between items-center bg-[#0d1017]/80 backdrop-blur-xl sticky top-0 z-30">
+      {/* Верхний Header Apple Frosted Glass */}
+      <header className="px-5 py-3.5 border-b border-white/[0.08] flex justify-between items-center bg-[#0a0d14]/75 backdrop-blur-2xl sticky top-0 z-30">
         <div className="flex items-center gap-2.5">
-          <img src={ICONS.lightning} alt="GymConnect" className="w-6 h-6 object-contain" />
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] flex items-center justify-center text-white shadow-lg shadow-[#FF5A1F]/20">
+            <Icons.Lightning />
+          </div>
           <div>
             <h1 className="text-[15px] font-bold text-white tracking-tight leading-tight">GymConnect</h1>
             <p className="text-[11px] text-slate-400 font-normal">{currentUser?.city || 'Алматы'} • Invictus</p>
@@ -217,13 +262,13 @@ export default function App() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => initApp()}
-            className="text-[10px] text-slate-400 hover:text-white px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] active:scale-95 transition"
+            className="text-[11px] text-slate-400 hover:text-white px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] active:scale-95 transition"
           >
             Обновить
           </button>
-          <div className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
-            <img src={ICONS.crown} alt="PRO" className="w-3 h-3 object-contain" />
-            <span className="text-[10px] font-semibold text-amber-400">PRO</span>
+          <div className="flex items-center gap-1 bg-[#FF5A1F]/10 border border-[#FF5A1F]/25 px-2.5 py-1 rounded-full">
+            <Icons.Crown />
+            <span className="text-[10px] font-bold text-[#FF5A1F] tracking-wide">PRO</span>
           </div>
         </div>
       </header>
@@ -232,50 +277,53 @@ export default function App() {
         {/* ================= 1. ГЛАВНАЯ СТРАНИЦА ================= */}
         {activeTab === 'home' && (
           <div className="space-y-3.5">
-            {/* Карточка профиля */}
-            <div className="ios-card-accent p-4 space-y-3">
+            {/* Карточка профиля в матовом стекле */}
+            <div className="apple-glass-card p-5 space-y-3.5">
               <div className="flex justify-between items-start">
-                <div>
-                  <span className="text-[10px] uppercase font-semibold text-amber-400/90 tracking-wider">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] uppercase font-bold text-[#FF5A1F] tracking-wider">
                     Аккаунт атлета
                   </span>
-                  <h2 className="text-lg font-bold text-white mt-0.5 tracking-tight">
+                  <h2 className="text-xl font-bold text-white tracking-tight">
                     {currentUser?.name || 'Атлет'}
                   </h2>
-                  <p className="text-xs text-slate-400 font-normal">
+                  <p className="text-xs text-slate-400 font-medium">
                     {currentUser?.city} • {currentUser?.gender}
                   </p>
                 </div>
-                <img src={ICONS.muscle} alt="Muscle" className="w-8 h-8 object-contain" />
+                <div className="w-11 h-11 rounded-2xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center shadow-inner">
+                  <Icons.Biceps />
+                </div>
               </div>
 
               {myGymBroCard ? (
-                <div className="text-xs bg-black/30 p-3 rounded-xl border border-white/[0.06] space-y-1">
-                  <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
-                    <span className="text-xs">●</span> Анкета GymBro опубликована
+                <div className="text-xs bg-black/40 backdrop-blur-md p-3 rounded-xl border border-white/[0.07] space-y-1">
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-semibold text-[11px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Анкета GymBro опубликована
                   </div>
-                  <p className="text-slate-300 font-normal text-[11px]">
+                  <p className="text-slate-300 font-normal text-[11px] pt-0.5">
                     <span className="text-slate-500">Зал:</span> {myGymBroCard.weekday_gym}
                   </p>
                   <p className="text-slate-300 font-normal text-[11px]">
-                    <span className="text-slate-500">Фокус:</span> {myGymBroCard.split}
+                    <span className="text-slate-500">Сплит:</span> {myGymBroCard.split}
                   </p>
                 </div>
               ) : (
-                <div className="text-xs bg-amber-500/5 p-3 rounded-xl border border-amber-500/20 space-y-1">
-                  <p className="text-amber-300 font-medium">Анкета GymBro не создана</p>
-                  <p className="text-[11px] text-slate-400 font-normal">Заполни анкету, чтобы напарники видели тебя в залах.</p>
+                <div className="text-xs bg-[#FF5A1F]/10 p-3 rounded-xl border border-[#FF5A1F]/20 space-y-1">
+                  <p className="text-[#FF8C38] font-semibold text-[11px]">Анкета поиска еще не заполнена</p>
+                  <p className="text-[11px] text-slate-400 font-normal">Заполни параметры залов, чтобы напарники видели тебя в ленте.</p>
                 </div>
               )}
             </div>
 
             {/* Блок Напарники (GymBro) */}
-            <div className="ios-card p-4 space-y-3">
+            <div className="apple-glass p-5 space-y-3.5">
               <div className="flex justify-between items-center">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm font-bold text-white">Поиск GymBro</h3>
-                    <span className="text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold">
+                    <h3 className="text-[15px] font-bold text-white tracking-tight">Поиск GymBro</h3>
+                    <span className="text-[9px] bg-[#FF5A1F]/15 text-[#FF5A1F] border border-[#FF5A1F]/30 px-1.5 py-0.5 rounded-md font-extrabold tracking-wide">
                       PRO
                     </span>
                   </div>
@@ -283,39 +331,45 @@ export default function App() {
                     В базе доступно {gymBroCards.length} анкет напарников
                   </p>
                 </div>
-                <img src={ICONS.handshake} alt="GymBro" className="w-7 h-7 object-contain" />
+                <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-[#FF5A1F]">
+                  <Icons.Users />
+                </div>
               </div>
 
               <button
                 onClick={() => setActiveTab('gymbro')}
-                className="w-full ios-button-primary py-3 text-xs font-semibold flex items-center justify-center gap-1.5"
+                className="w-full gymshark-btn-electric py-3 text-xs font-bold flex items-center justify-center gap-2"
               >
-                {myGymBroCard ? 'Открыть анкеты напарников' : 'Заполнить анкету поиска'} →
+                <span>{myGymBroCard ? 'Открыть анкеты напарников' : 'Заполнить анкету поиска'}</span>
+                <Icons.ArrowRight />
               </button>
             </div>
 
             {/* Блок Питание */}
-            <div className="ios-card p-4 space-y-3">
+            <div className="apple-glass p-5 space-y-3.5">
               <div className="flex justify-between items-center">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm font-bold text-white">Рацион & Питание</h3>
-                    <span className="text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold">
+                    <h3 className="text-[15px] font-bold text-white tracking-tight">Рацион & Питание</h3>
+                    <span className="text-[9px] bg-[#FF5A1F]/15 text-[#FF5A1F] border border-[#FF5A1F]/30 px-1.5 py-0.5 rounded-md font-extrabold tracking-wide">
                       PRO
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 font-normal">
-                    КБЖУ, меню на 7 дней и умная корзина
+                    КБЖУ, меню на 7 дней и недельная корзина
                   </p>
                 </div>
-                <img src={ICONS.salad} alt="Salad" className="w-7 h-7 object-contain" />
+                <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-[#FF5A1F]">
+                  <Icons.Salad />
+                </div>
               </div>
 
               <button
                 onClick={() => setActiveTab('nutrition')}
-                className="w-full ios-button-secondary py-3 text-xs font-medium flex items-center justify-center gap-1.5"
+                className="w-full gymshark-btn-glass py-3 text-xs font-semibold flex items-center justify-center gap-2"
               >
-                Конструктор рациона →
+                <span>Конструктор рациона</span>
+                <Icons.ArrowRight />
               </button>
             </div>
           </div>
@@ -348,23 +402,23 @@ export default function App() {
         {/* ================= 4. ПРОФИЛЬ ================= */}
         {activeTab === 'profile' && (
           <div className="space-y-3.5">
-            <div className="ios-card p-4 space-y-3">
-              <h2 className="text-sm font-bold text-white">Мой аккаунт</h2>
+            <div className="apple-glass p-5 space-y-3.5">
+              <h2 className="text-sm font-bold text-white tracking-tight">Мой аккаунт</h2>
 
-              <div className="flex items-center gap-3 pt-1">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-lg font-bold text-black shadow-lg shadow-amber-500/10">
+              <div className="flex items-center gap-3.5 pt-1">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] flex items-center justify-center text-lg font-black text-white shadow-lg shadow-[#FF5A1F]/20">
                   {currentUser?.name?.[0] || 'A'}
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white leading-tight">{currentUser?.name}</h3>
-                  <p className="text-xs text-slate-400 font-normal mt-0.5">{currentUser?.city} • {currentUser?.gender}</p>
+                  <p className="text-xs text-slate-400 font-medium mt-0.5">{currentUser?.city} • {currentUser?.gender}</p>
                 </div>
               </div>
 
               {myGymBroCard && (
-                <div className="text-xs space-y-1.5 bg-black/30 p-3 rounded-xl border border-white/[0.06] mt-2">
-                  <div className="flex justify-between items-center pb-1 border-b border-white/[0.05]">
-                    <span className="text-amber-400 font-medium">Анкета напарника активна</span>
+                <div className="text-xs space-y-1.5 bg-black/40 backdrop-blur-md p-3.5 rounded-xl border border-white/[0.07] mt-2">
+                  <div className="flex justify-between items-center pb-1.5 border-b border-white/[0.06]">
+                    <span className="text-[#FF8C38] font-semibold">Анкета GymBro активна</span>
                     <button
                       onClick={() => setActiveTab('gymbro')}
                       className="text-[11px] text-slate-400 hover:text-white"
@@ -380,29 +434,29 @@ export default function App() {
             </div>
 
             {/* Поддержка */}
-            <div className="ios-card p-4 space-y-2">
+            <div className="apple-glass p-4 space-y-2">
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Поддержка</h3>
               <a
                 href="https://t.me/asanali_kk"
                 target="_blank"
                 rel="noreferrer"
-                className="w-full ios-button-secondary py-2.5 text-xs font-medium flex items-center justify-center gap-2 no-underline text-amber-400"
+                className="w-full gymshark-btn-glass py-2.5 text-xs flex items-center justify-center gap-2 no-underline text-[#FF8C38]"
               >
                 Чат с основателем (@asanali_kk)
               </a>
             </div>
 
             {/* Документы */}
-            <div className="ios-card p-4 space-y-2">
+            <div className="apple-glass p-4 space-y-2">
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Документы</h3>
-              <div className="space-y-1 text-xs">
+              <div className="space-y-1.5 text-xs">
                 <button type="button" onClick={() => setActiveDoc('rules')} className="w-full text-left p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] text-slate-300 flex justify-between items-center">
                   <span>Правила сообщества</span>
-                  <span className="text-slate-500 text-xs">→</span>
+                  <Icons.ArrowRight />
                 </button>
                 <button type="button" onClick={() => setActiveDoc('offer')} className="w-full text-left p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] text-slate-300 flex justify-between items-center">
                   <span>Публичная оферта</span>
-                  <span className="text-slate-500 text-xs">→</span>
+                  <Icons.ArrowRight />
                 </button>
               </div>
             </div>
@@ -410,38 +464,38 @@ export default function App() {
         )}
       </main>
 
-      {/* Нативный нижний бар Apple TabBar с 3D-иконками */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto ios-tabbar flex justify-around py-2.5 z-40">
+      {/* Нативный нижний бар Apple TabBar с векторными иконками */}
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto ios-nav-dock flex justify-around py-2.5 z-40">
         <button
           onClick={() => setActiveTab('home')}
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'home' ? 'opacity-100 scale-105' : 'opacity-40'}`}
+          className={`flex flex-col items-center gap-1 transition ${activeTab === 'home' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
         >
-          <img src={ICONS.home} alt="Home" className="w-5 h-5 object-contain" />
-          <span className="text-[10px] font-medium tracking-tight">Главная</span>
+          <Icons.Home />
+          <span className="text-[10px] font-semibold tracking-tight">Главная</span>
         </button>
 
         <button
           onClick={() => setActiveTab('gymbro')}
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'gymbro' ? 'opacity-100 scale-105' : 'opacity-40'}`}
+          className={`flex flex-col items-center gap-1 transition ${activeTab === 'gymbro' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
         >
-          <img src={ICONS.handshake} alt="GymBro" className="w-5 h-5 object-contain" />
-          <span className="text-[10px] font-medium tracking-tight">GymBro</span>
+          <Icons.Users />
+          <span className="text-[10px] font-semibold tracking-tight">GymBro</span>
         </button>
 
         <button
           onClick={() => setActiveTab('nutrition')}
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'nutrition' ? 'opacity-100 scale-105' : 'opacity-40'}`}
+          className={`flex flex-col items-center gap-1 transition ${activeTab === 'nutrition' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
         >
-          <img src={ICONS.salad} alt="Nutrition" className="w-5 h-5 object-contain" />
-          <span className="text-[10px] font-medium tracking-tight">Питание</span>
+          <Icons.Salad />
+          <span className="text-[10px] font-semibold tracking-tight">Питание</span>
         </button>
 
         <button
           onClick={() => setActiveTab('profile')}
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'profile' ? 'opacity-100 scale-105' : 'opacity-40'}`}
+          className={`flex flex-col items-center gap-1 transition ${activeTab === 'profile' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
         >
-          <img src={ICONS.user} alt="Profile" className="w-5 h-5 object-contain" />
-          <span className="text-[10px] font-medium tracking-tight">Профиль</span>
+          <Icons.User />
+          <span className="text-[10px] font-semibold tracking-tight">Профиль</span>
         </button>
       </nav>
     </div>
