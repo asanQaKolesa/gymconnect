@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import AthleteStats from './profile/AthleteStats';
+import ProfileSettingsDrawer from './profile/ProfileSettingsDrawer';
 
 const ADMIN_USERNAMES = ['asanali_kk'];
 
@@ -13,7 +14,7 @@ const VIBE_OPTIONS = [
 
 export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
   const [activeTab, setActiveTab] = useState('card');
-  const [showSettingsSheet, setShowSettingsSheet] = useState(false);
+  const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [totalLikes, setTotalLikes] = useState(0);
@@ -25,8 +26,6 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
   const [showLikesModal, setShowLikesModal] = useState(false);
   const [likersList, setLikersList] = useState([]);
   const [loadingLikers, setLoadingLikers] = useState(false);
-
-  const [docModal, setDocModal] = useState(null);
 
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
@@ -187,9 +186,8 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
       if (!error && data) {
         onUpdateUser(data);
         setIsEditing(false);
-        setShowSettingsSheet(false);
       } else {
-        alert('Ошибка при сохранении: ' + (error?.message || ''));
+        alert('Ошибка сохранения: ' + (error?.message || ''));
       }
     } finally {
       setSaving(false);
@@ -240,162 +238,12 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
 
   return (
     <div className="space-y-3 pb-8">
-      {/* 1. БОКОВОЕ/НИЖНЕЕ МЕНЮ НАСТРОЕК (BOTTOM SHEET) */}
-      {showSettingsSheet && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end justify-center">
-          <div className="apple-glass w-full max-w-md rounded-t-3xl border-t border-white/10 p-5 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
-            <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                {isEditing ? 'Редактирование профиля' : 'Настройки & Сервис'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSettingsSheet(false);
-                  setIsEditing(false);
-                }}
-                className="text-slate-400 hover:text-white text-base px-2 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Внутри шторки: либо форма редактирования, либо ссылки сервиса */}
-            {isEditing ? (
-              <form onSubmit={handleSave} className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">Имя атлета</label>
-                  <input
-                    type="text"
-                    required
-                    value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                    className="w-full apple-input text-xs py-2"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-400 block mb-1">Город</label>
-                    <select
-                      value={form.city}
-                      onChange={e => setForm({ ...form, city: e.target.value })}
-                      className="w-full apple-input text-xs py-2"
-                    >
-                      <option value="Алматы">Алматы</option>
-                      <option value="Астана">Астана</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-400 block mb-1">Направление</label>
-                    <input
-                      type="text"
-                      value={form.sport_type}
-                      onChange={e => setForm({ ...form, sport_type: e.target.value })}
-                      className="w-full apple-input text-xs py-2"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">Instagram (@)</label>
-                  <input
-                    type="text"
-                    value={form.instagram}
-                    onChange={e => setForm({ ...form, instagram: e.target.value })}
-                    placeholder="username"
-                    className="w-full apple-input text-xs py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">О себе</label>
-                  <textarea
-                    rows={2}
-                    value={form.bio}
-                    onChange={e => setForm({ ...form, bio: e.target.value })}
-                    className="w-full apple-input text-xs py-2 resize-none"
-                  />
-                </div>
-
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-white/[0.04] text-xs font-semibold text-slate-300"
-                  >
-                    Назад
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="flex-1 gymshark-btn-electric py-2.5 text-xs font-bold"
-                  >
-                    {saving ? '...' : 'Сохранить'}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(true)}
-                  className="w-full p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] text-left text-xs font-semibold text-white flex justify-between items-center transition"
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>✏️</span>
-                    <span>Редактировать анкету</span>
-                  </span>
-                  <span className="text-slate-500">➔</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSettingsSheet(false);
-                    setDocModal('terms');
-                  }}
-                  className="w-full p-3 rounded-2xl bg-white/[0.02] hover:bg-white/[0.06] text-left text-xs text-slate-300 flex justify-between items-center transition"
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>📜</span>
-                    <span>Публичная оферта</span>
-                  </span>
-                  <span className="text-slate-500">➔</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSettingsSheet(false);
-                    setDocModal('privacy');
-                  }}
-                  className="w-full p-3 rounded-2xl bg-white/[0.02] hover:bg-white/[0.06] text-left text-xs text-slate-300 flex justify-between items-center transition"
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>🔒</span>
-                    <span>Политика конфиденциальности</span>
-                  </span>
-                  <span className="text-slate-500">➔</span>
-                </button>
-
-                <a
-                  href="https://t.me/asanali_kk"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full p-3 rounded-2xl bg-white/[0.02] hover:bg-white/[0.06] text-left text-xs text-[#FF8C38] flex justify-between items-center transition no-underline block"
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span>💬</span>
-                    <span>Поддержка / Основатель</span>
-                  </span>
-                  <span>↗</span>
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* 1. БОКОВАЯ ПЛАВАЮЩАЯ ПАНЕЛЬ НАСТРОЕК (ИЗОЛИРОВАННЫЙ КОМПОНЕНТ) */}
+      <ProfileSettingsDrawer
+        isOpen={showSettingsDrawer}
+        onClose={() => setShowSettingsDrawer(false)}
+        user={user}
+      />
 
       {/* 2. МОДАЛКА: КТО ПОСТАВИЛ ОГОНЬ 🔥 */}
       {showLikesModal && (
@@ -453,48 +301,7 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
         </div>
       )}
 
-      {/* 3. МОДАЛКА ДОКУМЕНТОВ */}
-      {docModal && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
-          <div className="apple-glass max-w-sm w-full p-4 space-y-3 border border-white/10 rounded-3xl max-h-[75vh] flex flex-col">
-            <div className="flex justify-between items-center pb-2 border-b border-white/10">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                {docModal === 'terms' ? 'Публичная оферта' : 'Политика конфиденциальности'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setDocModal(null)}
-                className="text-slate-400 hover:text-white text-sm px-1 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto text-[11px] text-slate-300 space-y-2 pr-1 leading-relaxed">
-              {docModal === 'terms' ? (
-                <>
-                  <p><strong>1. Общие положения:</strong> GymConnect — сервис для поиска напарников по залу и обмена тренировочным прогрессом.</p>
-                  <p><strong>2. Безопасность:</strong> Пользователь самостоятельно контролирует тренировочные нагрузки и состояние здоровья.</p>
-                  <p><strong>3. VIP доступ:</strong> Предоставляет полный функционал на 30 дней с момента подключения.</p>
-                </>
-              ) : (
-                <>
-                  <p><strong>1. Данные:</strong> Собираются базовые данные Telegram профиля для авторизации.</p>
-                  <p><strong>2. Защита:</strong> Данные хранятся в защищенной облачной БД и не передаются третьим лицам.</p>
-                </>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setDocModal(null)}
-              className="w-full gymshark-btn-electric py-2 text-xs font-bold"
-            >
-              Понятно
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 4. МОДАЛКА АДМИНКИ (ТОЛЬКО ДЛЯ ОСНОВАТЕЛЯ) */}
+      {/* 3. МОДАЛКА АДМИНКИ */}
       {showAdminModal && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="apple-glass w-full max-w-md h-[80vh] flex flex-col rounded-t-3xl sm:rounded-3xl border border-white/10 overflow-hidden">
@@ -559,7 +366,7 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
         </div>
       )}
 
-      {/* ТОНКАЯ МИНИМАЛИСТИЧНАЯ СТРОКА АДМИНА (ЕСЛИ ТЫ ОСНОВАТЕЛЬ) */}
+      {/* МИНИМАЛИСТИЧНАЯ СТРОКА АДМИНА */}
       {isAdmin && (
         <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.02] border border-white/[0.05]">
           <span className="text-[11px] text-slate-400 flex items-center gap-1.5">
@@ -575,7 +382,7 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
         </div>
       )}
 
-      {/* АККУРАТНЫЙ ПЕРЕКЛЮЧАТЕЛЬ ТАБОВ ПРОФИЛЯ */}
+      {/* ПЕРЕКЛЮЧАТЕЛЬ ТАБОВ ПРОФИЛЯ */}
       <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-black/40 border border-white/[0.05]">
         <button
           type="button"
@@ -599,54 +406,152 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
 
       {activeTab === 'card' && (
         <div className="space-y-3">
-          {/* ЧИСТАЯ ЭЛЕГАНТНАЯ КАРТОЧКА АТЛЕТА */}
-          <div className="apple-glass p-4 space-y-3.5 border border-white/[0.06]">
-            {/* Аватар, имя и иконка настроек */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-13 h-13 rounded-2xl overflow-hidden bg-[#121622] border border-white/10 flex items-center justify-center shadow-md">
-                    {form.avatar_url ? (
-                      <img src={form.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-lg font-black text-white">{form.name?.[0] || 'A'}</span>
-                    )}
+          {/* МОДАЛКА РЕДАКТИРОВАНИЯ АНКЕТЫ (ОТДЕЛЬНО) */}
+          {isEditing && (
+            <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="apple-glass w-full max-w-sm p-4 space-y-3 rounded-3xl border border-white/10 shadow-2xl">
+                <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                  <span className="text-xs font-bold text-white">Редактирование анкеты</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="text-slate-400 hover:text-white text-sm px-1 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <form onSubmit={handleSave} className="space-y-2.5">
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-400 block mb-1">Имя атлета</label>
+                    <input
+                      type="text"
+                      required
+                      value={form.name}
+                      onChange={e => setForm({ ...form, name: e.target.value })}
+                      className="w-full apple-input text-xs py-1.5"
+                    />
                   </div>
-                  <label className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#FF5A1F] text-white flex items-center justify-center cursor-pointer shadow">
-                    <span className="text-[9px]">📷</span>
-                    <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
-                  </label>
-                </div>
 
-                <div className="space-y-0.5 truncate">
-                  <h2 className="text-sm font-bold text-white truncate tracking-tight">
-                    {form.name || 'Атлет'}
-                  </h2>
-                  <p className="text-[11px] text-slate-400 font-normal truncate">
-                    {myTgUsername ? `@${myTgUsername}` : 'Без юзернейма'} • {form.city}
-                  </p>
-                  <p className="text-[10px] text-[#FF8C38] font-medium">
-                    {form.sport_type}
-                  </p>
-                </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-400 block mb-1">Город</label>
+                      <select
+                        value={form.city}
+                        onChange={e => setForm({ ...form, city: e.target.value })}
+                        className="w-full apple-input text-xs py-1.5"
+                      >
+                        <option value="Алматы">Алматы</option>
+                        <option value="Астана">Астана</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-slate-400 block mb-1">Направление</label>
+                      <input
+                        type="text"
+                        value={form.sport_type}
+                        onChange={e => setForm({ ...form, sport_type: e.target.value })}
+                        className="w-full apple-input text-xs py-1.5"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-400 block mb-1">Instagram (@)</label>
+                    <input
+                      type="text"
+                      value={form.instagram}
+                      onChange={e => setForm({ ...form, instagram: e.target.value })}
+                      placeholder="username"
+                      className="w-full apple-input text-xs py-1.5"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-400 block mb-1">О себе</label>
+                    <textarea
+                      rows={2}
+                      value={form.bio}
+                      onChange={e => setForm({ ...form, bio: e.target.value })}
+                      className="w-full apple-input text-xs py-1.5 resize-none"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(false)}
+                      className="flex-1 py-2 rounded-xl bg-white/[0.04] text-xs font-semibold text-slate-300 cursor-pointer"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="flex-1 gymshark-btn-electric py-2 text-xs font-bold cursor-pointer"
+                    >
+                      {saving ? '...' : 'Сохранить'}
+                    </button>
+                  </div>
+                </form>
               </div>
+            </div>
+          )}
 
-              {/* КНОПКА ШЕСТЕРЁНКИ (ОТКРЫВАЕТ НИЖНЮЮ ШТОРКУ) */}
+          {/* ВЕРТИКАЛЬНАЯ ЦЕНТРИРОВАННАЯ КАРТОЧКА АТЛЕТА */}
+          <div className="apple-glass p-4 space-y-3 border border-white/[0.06] relative">
+            {/* Иконки в правом верхнем углу: ✏️ Редактирование и ⚙️ Боковые Настройки */}
+            <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5 z-10">
               <button
                 type="button"
-                onClick={() => {
-                  setIsEditing(false);
-                  setShowSettingsSheet(true);
-                }}
-                className="w-8 h-8 rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer active:scale-95 flex-shrink-0"
-                title="Настройки"
+                onClick={() => setIsEditing(true)}
+                className="w-7 h-7 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white flex items-center justify-center text-xs transition cursor-pointer active:scale-95"
+                title="Редактировать анкету"
+              >
+                ✏️
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSettingsDrawer(true)}
+                className="w-7 h-7 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white flex items-center justify-center text-xs transition cursor-pointer active:scale-95"
+                title="Боковые настройки и документы"
               >
                 ⚙️
               </button>
             </div>
 
+            {/* Компактный аватар по центру */}
+            <div className="flex flex-col items-center text-center pt-1">
+              <div className="relative">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#121622] border-2 border-white/10 shadow-lg flex items-center justify-center">
+                  {form.avatar_url ? (
+                    <img src={form.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl font-black text-white">{form.name?.[0] || 'A'}</span>
+                  )}
+                </div>
+                <label className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#FF5A1F] text-white flex items-center justify-center cursor-pointer shadow-md hover:scale-105 active:scale-95 transition">
+                  <span className="text-[10px]">📷</span>
+                  <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+                </label>
+              </div>
+
+              {/* Имя и данные атлета ПОД ФОТО (на всю ширину без обрезок) */}
+              <div className="mt-2.5 space-y-0.5">
+                <h2 className="text-sm font-black text-white tracking-tight">
+                  {form.name || 'Атлет'}
+                </h2>
+                <p className="text-[11px] text-slate-400 font-normal">
+                  {myTgUsername ? `@${myTgUsername}` : 'Без юзернейма'} • {form.city}
+                </p>
+                <p className="text-[10px] text-[#FF8C38] font-semibold">
+                  {form.sport_type}
+                </p>
+              </div>
+            </div>
+
             {/* ВАЙБ АТЛЕТА */}
-            <div className="pt-2 border-t border-white/[0.05]">
+            <div className="pt-1 border-t border-white/[0.05]">
               <button
                 type="button"
                 onClick={() => setShowVibeDropdown(!showVibeDropdown)}
@@ -679,12 +584,12 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
               )}
             </div>
 
-            {/* МИНИМАЛИСТИЧНЫЕ МЕТРИКИ (ДРУЗЬЯ И ОГОНЬ) */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            {/* МЕТРИКИ (ДРУЗЬЯ И ОГОНЬ) */}
+            <div className="grid grid-cols-2 gap-2 pt-0.5">
               <button
                 type="button"
                 onClick={() => onNavigateTab && onNavigateTab('friends')}
-                className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/15 active:scale-95 transition cursor-pointer text-center"
+                className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/15 active:scale-95 transition cursor-pointer text-center"
               >
                 <span className="text-[10px] text-slate-500 font-medium block">Друзья</span>
                 <span className="text-base font-black text-white mt-0.5 block">{friendsCount}</span>
@@ -693,7 +598,7 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
               <button
                 type="button"
                 onClick={openLikesHistory}
-                className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-[#FF5A1F]/30 active:scale-95 transition cursor-pointer text-center"
+                className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-[#FF5A1F]/30 active:scale-95 transition cursor-pointer text-center"
               >
                 <span className="text-[10px] text-slate-500 font-medium block">Реакции</span>
                 <span className="text-base font-black text-[#FF8C38] mt-0.5 block">🔥 {totalLikes}</span>
