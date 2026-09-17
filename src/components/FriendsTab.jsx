@@ -8,83 +8,107 @@ export default function FriendsTab({
   onOpenProfile,
   onRefreshFriends
 }) {
-  const [gymBroMap, setGymBroMap] = useState({});
-  const [usersMap, setUsersMap] = useState({});
+  const [friendsList, setFriendsList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all' | 'gymbro'
 
   const myTgId = Number(user?.telegram_id || 0);
 
-  // Извлекаем все возможные ID друзей из входящего массива
-  const friendIds = friends.map(f => {
-    if (typeof f === 'number' || typeof f === 'string') return Number(f);
-    return Number(f.telegram_id || f.friend_id || f.id || (f.friend && f.friend.telegram_id) || 0);
-  }).filter(id => id && id !== myTgId);
+  // Самостоятельная гарантированная загрузка друзей напрямую из Supabase
+  async function fetchFriendsDirectly() {
+    if (!myTgId) return;
+    setLoading(true);
 
-  // Подгружаем недостающие профили и данные gymbro_cards напрямую из базы
-  useEffect(() => {
-    async function loadData() {
-      if (friendIds.length === 0) return;
+    try {
+      // 1. Ищем все подтвержденные связи, где я либо инициатор, либо получатель
+      const { data: outFriends, error: err1 } = await supabase
+        .from('friendships')
+        .select('friend_id')
+        .eq('user_id', myTgId)
+        .eq('status', 'accepted');
 
-      try {
-        // 1. Профили пользователей
-        const { data: userData } = await supabase
-          .from('users')
-          .select('telegram_id, telegram_username, name, avatar_url, city')
-          .in('telegram_id', friendIds);
+      const { data: inFriends, error: err2 } = await supabase
+        .from('friendships')
+        .select('user_id')
+        .eq('friend_id', myTgId)
+        .eq('status', 'accepted');
 
-        if (userData) {
-          const uMap = {};
-          userData.forEach(u => {
-            uMap[Number(u.telegram_id)] = u;
-          });
-          setUsersMap(uMap);
-        }
+      const ids = [
+        ...(outFriends || []).map(r => Number(r.friend_id)),
+        ...(inFriends || []).map(r => Number(r.user_id))
+      ].filter(id => id && id !== myTgId);
 
-        // 2. Карточки GymBro
-        const { data: cards } = await supabase
-          .from('gymbro_cards')
-          .select('telegram_id, weekday_gym, split, time_slot, search_goal')
-          .in('telegram_id', friendIds);
+      // Убираем дубликаты
+      const uniqueIds = [...new Set(ids)];
 
-        if (cards) {
-          const bMap = {};
-          cards.forEach(c => {
-            bMap[Number(c.telegram_id)] = c;
-          });
-          setGymBroMap(bMap);
-        }
-      } catch (err) {
-        console.error('Ошибка загрузки данных друзей:', err);
+      if (uniqueIds.length === 0) {
+        setFriendsList([]);
+        setLoading(false);
+        return;
       }
+
+      // 2. Получаем профили пользователей
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('telegram_id, telegram_username, name, avatar_url, city')
+        .in('telegram_id', uniqueIds);
+
+      // 3. Получаем их анкеты GymBro
+      const { data: gymbroData } = await supabase
+        .from('gymbro_cards')
+        .select('telegram_id, weekday_gym, split, time_slot, search_goal')
+        .in('telegram_id', uniqueIds);
+
+      const gymBroMap = {};
+      (gymbroData || []).forEach(c => {
+        gymBroMap[Number(c.telegram_id)] = c;
+      });
+
+      const fullList = uniqueIds.map(fId => {
+        const u = (usersData || []).find(item => Number(item.telegram_id) === fId) || {};
+        const g = gymBroMap[fId] || null;
+
+        return {
+          telegram_id: fId,
+          name: u.name || 'Атлет',
+          telegram_username: u.telegram_username || '',
+          avatar_url: u.avatar_url || '',
+          city: u.city || 'Алматы',
+          gymBroInfo: g,
+          isGymBro: Boolean(g)
+        };
+      });
+
+      setFriendsList(fullList);
+    } catch (err) {
+      console.error('Ошибка в FriendsTab:', err);
+    } finally {
+      setLoading(false);
     }
+  }
 
-    loadData();
-  }, [JSON.stringify(friendIds)]);
+  useEffect(() => {
+    fetchFriendsDirectly();
+  }, [myTgId]);
 
-  // Собираем нормализованный список друзей
-  const normalizedList = friendIds.map(fId => {
-    const rawFriend = friends.find(f => {
-      const id = typeof f === 'object' ? Number(f.telegram_id || f.friend_id || f.id || 0) : Number(f);
-      return id === fId;
-    });
+  async function handleRemove(targetTgId) {
+    if (!window.confirm('Удалить из друзей?')) return;
+    try {
+      await supabase
+        .from('friendships')
+        .delete()
+        .or(`and(user_id.eq.${myTgId},friend_id.eq.${targetTgId}),and(user_id.eq.${targetTgId},friend_id.eq.${myTgId})`);
 
-    const dbUser = usersMap[fId] || {};
-    const gymBroInfo = gymBroMap[fId] || null;
+      setFriendsList(prev => prev.filter(f => f.telegram_id !== targetTgId));
+      if (onRefreshFriends) onRefreshFriends();
+    } catch (e) {
+      console.error(e);
+    }
+  }
 
-    return {
-      telegram_id: fId,
-      name: dbUser.name || rawFriend?.name || 'Атлет',
-      telegram_username: dbUser.telegram_username || rawFriend?.telegram_username || '',
-      avatar_url: dbUser.avatar_url || rawFriend?.avatar_url || rawFriend?.photo_url || '',
-      city: dbUser.city || rawFriend?.city || 'Алматы',
-      gymBroInfo: gymBroInfo,
-      isGymBro: Boolean(gymBroInfo)
-    };
-  });
-
-  // Фильтруем по вкладкам и строке поиска
-  const displayedFriends = normalizedList.filter(item => {
+  // Фильтрация
+  const displayedFriends = friendsList.filter(item => {
     if (filterType === 'gymbro' && !item.isGymBro) return false;
 
     if (searchQuery.trim()) {
@@ -98,7 +122,7 @@ export default function FriendsTab({
     return true;
   });
 
-  const gymBroCount = normalizedList.filter(item => item.isGymBro).length;
+  const gymBroCount = friendsList.filter(item => item.isGymBro).length;
 
   function handleInviteWorkout(friend) {
     if (!friend.telegram_username) {
@@ -118,23 +142,21 @@ export default function FriendsTab({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-black text-white uppercase tracking-wider">
-            Твои контакты ({normalizedList.length})
+            Твои контакты ({friendsList.length})
           </h2>
           <p className="text-[10px] text-slate-400">
-            Напарники по залу и атлеты в твоей сети
+            Напарники по залу и друзья в GymConnect
           </p>
         </div>
 
-        {onRefreshFriends && (
-          <button
-            type="button"
-            onClick={onRefreshFriends}
-            className="p-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-slate-300 hover:text-white text-xs cursor-pointer active:scale-95 transition"
-            title="Обновить список"
-          >
-            🔄
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={fetchFriendsDirectly}
+          className="p-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-slate-300 hover:text-white text-xs cursor-pointer active:scale-95 transition"
+          title="Обновить список"
+        >
+          🔄
+        </button>
       </div>
 
       {/* Поиск и фильтры */}
@@ -168,7 +190,7 @@ export default function FriendsTab({
                 : 'bg-white/[0.03] border-white/[0.08] text-slate-400'
             }`}
           >
-            Все атлеты ({normalizedList.length})
+            Все атлеты ({friendsList.length})
           </button>
 
           <button
@@ -187,7 +209,11 @@ export default function FriendsTab({
       </div>
 
       {/* Список */}
-      {displayedFriends.length > 0 ? (
+      {loading ? (
+        <div className="p-8 text-center text-xs text-slate-400">
+          Загрузка напарников...
+        </div>
+      ) : displayedFriends.length > 0 ? (
         <div className="space-y-2.5">
           {displayedFriends.map(friend => {
             const isGymBro = friend.isGymBro;
@@ -246,7 +272,7 @@ export default function FriendsTab({
                         </span>
                       )}
 
-                      {/* Филиал и сплит */}
+                      {/* Филиал и сплит напарника */}
                       {isGymBro && gymBroInfo && (
                         <div className="pt-1.5 space-y-0.5">
                           <span className="text-[10px] text-amber-300 font-semibold block truncate">
@@ -260,20 +286,18 @@ export default function FriendsTab({
                     </div>
                   </div>
 
-                  {/* Удаление */}
-                  {onRemoveFriend && (
-                    <button
-                      type="button"
-                      onClick={() => onRemoveFriend(friend.telegram_id)}
-                      className="text-slate-500 hover:text-red-400 p-1 text-xs cursor-pointer transition flex-shrink-0"
-                      title="Удалить из друзей"
-                    >
-                      ✕
-                    </button>
-                  )}
+                  {/* Кнопка удаления */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(friend.telegram_id)}
+                    className="text-slate-500 hover:text-red-400 p-1 text-xs cursor-pointer transition flex-shrink-0"
+                    title="Удалить из друзей"
+                  >
+                    ✕
+                  </button>
                 </div>
 
-                {/* Кнопки вызова на тренировку */}
+                {/* Действия: позвать на тренировку и чат */}
                 <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center gap-2">
                   {friend.telegram_username ? (
                     <>
@@ -314,7 +338,7 @@ export default function FriendsTab({
             <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
               {filterType === 'gymbro'
                 ? 'Свайпай анкеты атлетов во вкладке GymBro, чтобы находить напарников по тренировкам!'
-                : 'Знакомься с атлетами через ленту GymBro или добавляй друзей по юзернейму.'}
+                : 'Знакомься с атлетами через ленту GymBro или принимай входящие запросы.'}
             </p>
           </div>
         </div>
