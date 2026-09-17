@@ -1,6 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
+// СТАНДАРТИЗИРОВАННЫЙ СПИСОК ФИЛИАЛОВ ДЛЯ ТОЧНОЙ ФИЛЬТРАЦИИ
+export const INVICTUS_CLUBS = [
+  'Invictus GO Abay (ул. Абая 165)',
+  'Invictus GO Atakent (Тимирязева 42)',
+  'Invictus GO Forum (Байтурсынова 179)',
+  'Invictus GO Fifty Four (ул. Маметова 54)',
+  'Invictus GO Mendikulov (Мендикулова)',
+  'Invictus GO Askarova (ул. Аскарова 4/3)',
+  'Invictus GO Aqsay (мкр. Аксай-5, 25)',
+  'Invictus GO Aport East (Кульджинский тракт)',
+  'Invictus GO Arena (мкр. Гажайып 11/1)',
+  'Invictus Fitness Gagarin (пр. Гагарина 286)',
+  'Invictus Fitness Sadu (пр. Аль-Фараби)',
+  'Invictus Fitness Dostyk (пр. Достык)',
+  // Астана
+  'Invictus GO Mangilik Yel (пр. Мангилик Ел 18, Астана)',
+  'Invictus GO Kenesary (ул. Кенесары 4, Астана)',
+  'Invictus GO Four Seasons (ул. Туран 39а, Астана)',
+  'Invictus GO Bukhar Zhyrau (Бухар Жырау 34а, Астана)',
+  'Invictus GO Emerald (БЦ Изумрудный, Астана)',
+  'Invictus Fitness Highvill (Байтурсынова 9, Астана)',
+  'Invictus Fitness Green Mall (Сыганак 17П, Астана)',
+  // Другие популярные сети
+  '1Fit Club (Единый абонемент)',
+  'FitnessBlitz Самал',
+  'FitnessBlitz Атакент',
+  'Другой зал'
+];
+
 const GOALS = [
   'Совместные тренировки',
   'Новая дружба & фитнес',
@@ -48,24 +77,24 @@ export default function GymBroTab({
 
   const myTgId = Number(user?.telegram_id || 0);
 
-  // Исключаем только тех, с кем РЕАЛЬНО есть активная связь в Supabase
   const [activeRelations, setActiveRelations] = useState([]);
   const [incomingLikers, setIncomingLikers] = useState([]);
-
-  // Локальные пропуски только в рамках текущей сессии
   const [sessionPassedIds, setSessionPassedIds] = useState([]);
   const [lastSwipedCard, setLastSwipedCard] = useState(null);
 
   // Фильтры
-  const [gymFilter, setGymFilter] = useState('all');
+  const [gymFilter, setGymFilter] = useState('all'); // 'all' | 'my_gym'
   const [goalFilter, setGoalFilter] = useState('all');
+
+  // Если выбран «Другой зал», позволяем ввести вручную
+  const [customGymName, setCustomGymName] = useState('');
 
   const [formData, setFormData] = useState({
     name: myCard?.name || user?.name || '',
     gender: myCard?.gender || user?.gender || 'Парень',
     city: myCard?.city || user?.city || 'Алматы',
-    weekday_gym: myCard?.weekday_gym || 'Invictus Fitness',
-    weekend_gym: myCard?.weekend_gym || '',
+    weekday_gym: myCard?.weekday_gym || INVICTUS_CLUBS[0],
+    weekend_gym: myCard?.weekend_gym || INVICTUS_CLUBS[0],
     search_goal: myCard?.search_goal || 'Совместные тренировки',
     search_scope: myCard?.search_scope || 'Только мой зал',
     split: myCard?.split || 'Грудные + Трицепс',
@@ -79,31 +108,26 @@ export default function GymBroTab({
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  // Очищаем старый застрявший localStorage с прошлых тестов
   useEffect(() => {
     if (myTgId) {
       localStorage.removeItem(`gym_passed_${myTgId}`);
     }
   }, [myTgId]);
 
-  // Загружаем связи напрямую из Supabase
   async function loadRelations() {
     if (!myTgId) return;
     try {
-      // 1. Мои исходящие (pending или accepted)
       const { data: myOut } = await supabase
         .from('friendships')
-        .select('friend_id, status')
+        .select('friend_id')
         .eq('user_id', myTgId);
 
-      // 2. Входящие подтвержденные (accepted)
       const { data: acceptedIn } = await supabase
         .from('friendships')
         .select('user_id')
         .eq('friend_id', myTgId)
         .eq('status', 'accepted');
 
-      // 3. Входящие ожидающие (pending) - они ДОЛЖНЫ показываться первыми
       const { data: pendingIn } = await supabase
         .from('friendships')
         .select('user_id')
@@ -160,7 +184,6 @@ export default function GymBroTab({
     reader.readAsDataURL(file);
   }
 
-  // Сброс истории текущей сессии
   function handleResetDeck() {
     setSessionPassedIds([]);
     setLastSwipedCard(null);
@@ -174,15 +197,12 @@ export default function GymBroTab({
     .filter(c => {
       const cardTgId = Number(c.telegram_id);
       if (cardTgId === myTgId) return false;
-
-      // Если в базе есть активная связь (уже друзья или отправлен запрос)
       if (activeRelations.includes(cardTgId)) return false;
-
-      // Если пропущен в текущей сессии
       if (sessionPassedIds.includes(cardTgId)) return false;
 
+      // ТОЧНЫЙ ФИЛЬТР ПО ЗАЛУ
       if (gymFilter === 'my_gym' && formData.weekday_gym) {
-        if (c.weekday_gym?.toLowerCase() !== formData.weekday_gym?.toLowerCase()) return false;
+        if (c.weekday_gym !== formData.weekday_gym) return false;
       }
 
       if (goalFilter !== 'all') {
@@ -192,7 +212,6 @@ export default function GymBroTab({
       return true;
     })
     .sort((a, b) => {
-      // Тот, кто лайкнул меня, всегда идет первым!
       const aLikesMe = incomingLikers.includes(Number(a.telegram_id));
       const bLikesMe = incomingLikers.includes(Number(b.telegram_id));
       if (aLikesMe && !bLikesMe) return -1;
@@ -220,7 +239,6 @@ export default function GymBroTab({
     }
   }
 
-  // Пропуск в рамках текущей сессии
   function handlePass() {
     if (!currentCard) return;
     const targetTgId = Number(currentCard.telegram_id);
@@ -233,7 +251,6 @@ export default function GymBroTab({
     }
   }
 
-  // Откат назад ↩️
   function handleRewind() {
     if (!lastSwipedCard) return;
     const targetTgId = Number(lastSwipedCard.card.telegram_id);
@@ -244,7 +261,6 @@ export default function GymBroTab({
     setCurrentIndex(0);
   }
 
-  // Коннект
   async function handleConnect() {
     if (!currentCard) return;
     const targetTgId = Number(currentCard.telegram_id);
@@ -254,7 +270,6 @@ export default function GymBroTab({
 
     try {
       if (isCurrentCardLikingMe) {
-        // ВЗАИМНЫЙ МЭТЧ!
         await supabase
           .from('friendships')
           .update({ status: 'accepted' })
@@ -267,7 +282,6 @@ export default function GymBroTab({
         });
         setIncomingLikers(prev => prev.filter(id => id !== targetTgId));
       } else {
-        // Односторонняя заявка
         await supabase.from('friendships').insert([
           { user_id: myTgId, friend_id: targetTgId, status: 'pending' }
         ]);
@@ -293,13 +307,24 @@ export default function GymBroTab({
   function handleSubmitForm(e) {
     e.preventDefault();
     if (!formData.name.trim()) return alert('Укажите ваше имя');
-    onSaveCard(formData);
+
+    const finalGym = formData.weekday_gym === 'Другой зал' && customGymName.trim()
+      ? customGymName.trim()
+      : formData.weekday_gym;
+
+    const dataToSave = {
+      ...formData,
+      weekday_gym: finalGym,
+      weekend_gym: finalGym
+    };
+
+    onSaveCard(dataToSave);
     setIsEditingCard(false);
   }
 
   return (
     <div className="space-y-3 pb-8 select-none">
-      {/* 1. ЭКРАН РЕЗУЛЬТАТА СВАЙПА */}
+      {/* 1. ЭКРАН МЭТЧА */}
       {matchResult && (
         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full p-6 text-center space-y-4 border border-white/10 rounded-3xl animate-in zoom-in-95 duration-200">
@@ -412,22 +437,21 @@ export default function GymBroTab({
               <span className="text-xs font-black text-white">{currentCard.search_goal || 'Совместные тренировки'}</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                <span className="text-[9px] text-slate-500 block">Зал:</span>
-                <span className="text-white font-semibold truncate block">{currentCard.weekday_gym}</span>
+            <div className="space-y-2 text-[11px]">
+              <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                <span className="text-[9px] text-slate-500 block">Домашний зал:</span>
+                <span className="text-white font-bold block mt-0.5">{currentCard.weekday_gym}</span>
               </div>
-              <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                <span className="text-[9px] text-slate-500 block">Сплит:</span>
-                <span className="text-white font-semibold truncate block">{currentCard.split}</span>
-              </div>
-              <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                <span className="text-[9px] text-slate-500 block">Время:</span>
-                <span className="text-white font-semibold truncate block">{currentCard.time_slot}</span>
-              </div>
-              <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                <span className="text-[9px] text-slate-500 block">Радиус:</span>
-                <span className="text-white font-semibold truncate block">{currentCard.search_scope || 'Мой зал'}</span>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                  <span className="text-[9px] text-slate-500 block">Сплит:</span>
+                  <span className="text-white font-semibold truncate block">{currentCard.split}</span>
+                </div>
+                <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                  <span className="text-[9px] text-slate-500 block">Время:</span>
+                  <span className="text-white font-semibold truncate block">{currentCard.time_slot}</span>
+                </div>
               </div>
             </div>
 
@@ -461,7 +485,7 @@ export default function GymBroTab({
         </div>
       )}
 
-      {/* 3. РЕДАКТИРОВАНИЕ АНКЕТЫ */}
+      {/* 3. АНКЕТА GYMBRO С ВЫБОРОМ ФИЛИАЛОВ INVICTUS */}
       {isEditingCard ? (
         <div className="apple-glass p-4 space-y-3.5 border border-white/[0.08] rounded-3xl">
           <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
@@ -469,7 +493,7 @@ export default function GymBroTab({
               <h3 className="text-xs font-black text-white uppercase tracking-wider">
                 {myCard ? 'Настройки анкеты GymBro' : 'Создание анкеты GymBro'}
               </h3>
-              <p className="text-[10px] text-slate-400">Заполни карточку, чтобы другие атлеты могли тебя найти</p>
+              <p className="text-[10px] text-slate-400">Выбери филиал Invictus или свой клуб</p>
             </div>
             {myCard && (
               <button
@@ -492,47 +516,60 @@ export default function GymBroTab({
                 )}
               </div>
               <div className="space-y-1.5 flex-1">
-                <span className="text-[11px] font-bold text-white block">Фото для карточки</span>
+                <span className="text-[11px] font-bold text-white block">Фото профиля</span>
                 <label className="inline-block px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-xs font-semibold text-slate-200 cursor-pointer active:scale-95 transition">
-                  <span>Выбрать из галереи 📷</span>
+                  <span>Выбрать фото 📷</span>
                   <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
                 </label>
               </div>
             </div>
 
+            {/* ВЫБОР ФИЛИАЛА ИЗ ГОТОВЫХ ПЛАШЕК */}
             <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                Цель поиска напарника
+              <label className="text-[10px] font-bold text-[#FF8C38] uppercase tracking-wider block mb-1">
+                📍 Твой филиал зала (Выбери из списка)
               </label>
               <select
-                value={formData.search_goal}
-                onChange={e => setFormData({ ...formData, search_goal: e.target.value })}
-                className="w-full apple-input text-xs py-2"
+                value={formData.weekday_gym}
+                onChange={e => setFormData({ ...formData, weekday_gym: e.target.value })}
+                className="w-full apple-input text-xs py-2.5 font-medium"
               >
-                {GOALS.map(g => (
-                  <option key={g} value={g}>{g}</option>
+                {INVICTUS_CLUBS.map(club => (
+                  <option key={club} value={club}>{club}</option>
                 ))}
               </select>
+
+              {formData.weekday_gym === 'Другой зал' && (
+                <input
+                  type="text"
+                  required
+                  placeholder="Введи точное название клуба..."
+                  value={customGymName}
+                  onChange={e => setCustomGymName(e.target.value)}
+                  className="w-full apple-input text-xs py-2 mt-2"
+                />
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Основной зал
+                  Цель поиска
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Invictus, Blitz..."
-                  value={formData.weekday_gym}
-                  onChange={e => setFormData({ ...formData, weekday_gym: e.target.value })}
+                <select
+                  value={formData.search_goal}
+                  onChange={e => setFormData({ ...formData, search_goal: e.target.value })}
                   className="w-full apple-input text-xs py-2"
-                />
+                >
+                  {GOALS.map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Радиус поиска
+                  Радиус
                 </label>
                 <select
                   value={formData.search_scope}
@@ -564,7 +601,7 @@ export default function GymBroTab({
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Время
+                  Время тренировок
                 </label>
                 <select
                   value={formData.time_slot}
@@ -601,7 +638,7 @@ export default function GymBroTab({
                 rows={2}
                 value={formData.bio}
                 onChange={e => setFormData({ ...formData, bio: e.target.value })}
-                placeholder="Жму 100 на 5, ищу напарника..."
+                placeholder="Жму 100 на 5, ищу напарника на страховку..."
                 className="w-full apple-input text-xs py-2 resize-none"
               />
             </div>
@@ -614,7 +651,6 @@ export default function GymBroTab({
               {isSaving ? 'Сохраняем анкету...' : 'Сохранить и начать поиск ➔'}
             </button>
 
-            {/* Кнопка сброса истории для тестирования */}
             <button
               type="button"
               onClick={handleResetDeck}
@@ -627,6 +663,7 @@ export default function GymBroTab({
       ) : (
         /* ================= 4. ЭКРАН СВАЙПОВ TINDER ================= */
         <div className="space-y-3">
+          {/* Верхняя строка фильтров */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
               <button
@@ -638,7 +675,7 @@ export default function GymBroTab({
                     : 'bg-white/[0.03] border-white/[0.08] text-slate-400'
                 }`}
               >
-                📍 {gymFilter === 'my_gym' ? 'Только мой зал' : 'Все залы'}
+                📍 {gymFilter === 'my_gym' ? 'Только мой филиал' : 'Все филиалы'}
               </button>
 
               <button
@@ -667,6 +704,7 @@ export default function GymBroTab({
             </button>
           </div>
 
+          {/* Карточка атлета */}
           {currentCard ? (
             <div className="space-y-3">
               <div
@@ -695,6 +733,7 @@ export default function GymBroTab({
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
 
+                {/* Верхние бейджи */}
                 <div className="absolute top-3.5 inset-x-3.5 flex justify-between items-start pointer-events-none gap-2">
                   {isCurrentCardLikingMe ? (
                     <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-[#FF5A1F] text-white shadow-lg shadow-amber-500/40 animate-pulse">
@@ -706,11 +745,12 @@ export default function GymBroTab({
                     </span>
                   )}
 
-                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-[#FF5A1F]/90 backdrop-blur-md text-white shadow-md flex-shrink-0">
-                    {currentCard.weekday_gym || 'Зал'}
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-[#FF5A1F]/90 backdrop-blur-md text-white shadow-md flex-shrink-0 max-w-[50%] truncate">
+                    {currentCard.weekday_gym ? currentCard.weekday_gym.split('(')[0].trim() : 'Зал'}
                   </span>
                 </div>
 
+                {/* Нижняя плашка */}
                 <div className="absolute bottom-4 inset-x-4 space-y-1.5 pointer-events-none">
                   <div className="flex items-baseline gap-2">
                     <h3 className="text-xl font-black text-white tracking-tight drop-shadow-md">
@@ -721,7 +761,11 @@ export default function GymBroTab({
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5 text-[10px] font-semibold text-slate-200">
+                  <div className="text-[11px] font-bold text-amber-300 truncate">
+                    📍 {currentCard.weekday_gym}
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5 text-[10px] font-semibold text-slate-200 pt-0.5">
                     <span className="px-2 py-0.5 rounded-lg bg-white/15 backdrop-blur-md">
                       💪 {currentCard.split}
                     </span>
@@ -791,7 +835,9 @@ export default function GymBroTab({
               <div className="space-y-1">
                 <h3 className="text-sm font-black text-white">Все доступные анкеты просмотрены!</h3>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  Все напарники, с которыми ты уже подружился, находятся во вкладке «Друзья».
+                  {gymFilter === 'my_gym'
+                    ? 'В выбранном филиале пока нет новых анкет. Попробуй включить «Все филиалы»!'
+                    : 'Все напарники, с которыми ты уже подружился, находятся во вкладке «Друзья».'}
                 </p>
               </div>
 
