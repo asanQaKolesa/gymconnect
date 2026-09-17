@@ -5,9 +5,10 @@ import AthleteStats from './profile/AthleteStats';
 
 const PROFILE_SECTIONS = [
   { id: 'athlete', label: 'Атлет', icon: '👤' },
+  { id: 'friends', label: 'Друзья', icon: '🤝' },
   { id: 'stats', label: 'Статистика', icon: '📊' },
   { id: 'support', label: 'Поддержка', icon: '💬' },
-  { id: 'legal', label: 'Документы', icon: '📄' }
+  { id: 'legal', label: 'Инфо', icon: '📄' }
 ];
 
 const SPORT_TYPES = [
@@ -30,19 +31,15 @@ export default function ProfileTab({ user, onUpdateUser }) {
   const [totalLikes, setTotalLikes] = useState(user?.likes_count || 0);
   const [friendsCount, setFriendsCount] = useState(0);
 
-  // Модальные окна
-  const [showFriendsModal, setShowFriendsModal] = useState(false);
+  // Список друзей и заявок
   const [friendsList, setFriendsList] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState([]);
   const [loadingFriends, setLoadingFriends] = useState(false);
 
-  // Просмотр чужого профиля
-  const [viewingProfile, setViewingProfile] = useState(null);
-  const [loadingViewProfile, setLoadingViewProfile] = useState(false);
+  // Детальный просмотр анкеты выбранного друга
+  const [inspectedFriend, setInspectedFriend] = useState(null);
 
-  // Входящие заявки
-  const [pendingRequests, setPendingRequests] = useState([]);
-
-  // Форма профиля
+  // Форма личных данных
   const [form, setForm] = useState({
     name: user?.name || window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || '',
     gender: user?.gender || 'Парень',
@@ -69,15 +66,16 @@ export default function ProfileTab({ user, onUpdateUser }) {
     }
   }, [user]);
 
+  // Загружаем данные при открытии
   useEffect(() => {
-    syncStats();
+    loadCommunityData();
   }, [myTgId, activeSection]);
 
-  async function syncStats() {
+  async function loadCommunityData() {
     if (!myTgId) return;
 
     try {
-      // 1. Лайки
+      // 1. Считаем реакции со всех постов
       const { data: postsData } = await supabase
         .from('feed_posts')
         .select('likes_count')
@@ -88,82 +86,81 @@ export default function ProfileTab({ user, onUpdateUser }) {
         setTotalLikes(sum);
       }
 
-      // 2. Подтвержденные друзья
-      const { data: friendships } = await supabase
-        .from('friendships')
-        .select('id')
-        .eq('status', 'accepted')
-        .or(`user_id.eq.${myTgId},friend_id.eq.${myTgId}`);
-
-      setFriendsCount(friendships?.length || 0);
-
-      // 3. Заявки
-      const { data: requests } = await supabase
+      // 2. Загружаем входящие заявки
+      const { data: reqs } = await supabase
         .from('friendships')
         .select('id, user_id, created_at')
         .eq('friend_id', myTgId)
         .eq('status', 'pending');
 
-      if (requests && requests.length > 0) {
-        const senderIds = requests.map(r => r.user_id);
-        const { data: senders } = await supabase
+      if (reqs && reqs.length > 0) {
+        const sIds = reqs.map(r => Number(r.user_id));
+        const { data: sUsers } = await supabase
           .from('users')
           .select('telegram_id, name, avatar_url, city, sport_type')
-          .in('telegram_id', senderIds);
+          .in('telegram_id', sIds);
 
-        setPendingRequests(
-          requests.map(req => ({
-            ...req,
-            sender: senders?.find(s => Number(s.telegram_id) === Number(req.user_id)) || {
-              name: 'Атлет',
-              city: 'Алматы',
-              sport_type: 'Атлет'
-            }
-          }))
-        );
+        const mergedReqs = reqs.map(r => ({
+          ...r,
+          sender: sUsers?.find(u => Number(u.telegram_id) === Number(r.user_id)) || {
+            name: 'Атлет',
+            city: 'Алматы',
+            sport_type: 'Атлет'
+          }
+        }));
+        setPendingRequests(mergedReqs);
       } else {
         setPendingRequests([]);
       }
-    } catch (err) {
-      console.error('Ошибка загрузки профиля:', err);
-    }
-  }
 
-  // Загрузка списка друзей
-  async function openFriends() {
-    setShowFriendsModal(true);
-    setLoadingFriends(true);
-
-    try {
-      const { data: friendships } = await supabase
+      // 3. Загружаем подтвержденных друзей
+      setLoadingFriends(true);
+      const { data: f1 } = await supabase
         .from('friendships')
-        .select('id, user_id, friend_id')
-        .eq('status', 'accepted')
-        .or(`user_id.eq.${myTgId},friend_id.eq.${myTgId}`);
+        .select('id, friend_id')
+        .eq('user_id', myTgId)
+        .eq('status', 'accepted');
 
-      if (friendships && friendships.length > 0) {
-        const friendIds = friendships.map(f =>
-          Number(f.user_id) === myTgId ? Number(f.friend_id) : Number(f.user_id)
-        );
+      const { data: f2 } = await supabase
+        .from('friendships')
+        .select('id, user_id')
+        .eq('friend_id', myTgId)
+        .eq('status', 'accepted');
 
+      const friendPairs = [
+        ...(f1 || []).map(x => ({ friendship_id: x.id, target_id: Number(x.friend_id) })),
+        ...(f2 || []).map(x => ({ friendship_id: x.id, target_id: Number(x.user_id) }))
+      ];
+
+      setFriendsCount(friendPairs.length);
+
+      if (friendPairs.length > 0) {
+        const targetIds = friendPairs.map(x => x.target_id);
         const { data: usersData } = await supabase
           .from('users')
           .select('telegram_id, telegram_username, name, avatar_url, city, sport_type, instagram, bio')
-          .in('telegram_id', friendIds);
+          .in('telegram_id', targetIds);
 
-        const list = friendships.map(f => {
-          const fid = Number(f.user_id) === myTgId ? Number(f.friend_id) : Number(f.user_id);
-          const u = usersData?.find(x => Number(x.telegram_id) === fid);
+        // Также подтянем анкеты GymBro этих друзей
+        const { data: cardsData } = await supabase
+          .from('gymbro_cards')
+          .select('*')
+          .in('telegram_id', targetIds);
+
+        const list = friendPairs.map(pair => {
+          const profile = usersData?.find(u => Number(u.telegram_id) === pair.target_id);
+          const card = cardsData?.find(c => Number(c.telegram_id) === pair.target_id);
           return {
-            friendship_id: f.id,
-            telegram_id: fid,
-            name: u?.name || 'Атлет GymConnect',
-            telegram_username: u?.telegram_username,
-            avatar_url: u?.avatar_url,
-            city: u?.city || 'Алматы',
-            sport_type: u?.sport_type || 'Атлет',
-            instagram: u?.instagram,
-            bio: u?.bio
+            friendship_id: pair.friendship_id,
+            telegram_id: pair.target_id,
+            name: profile?.name || 'Атлет GymConnect',
+            telegram_username: profile?.telegram_username || '',
+            avatar_url: profile?.avatar_url || '',
+            city: profile?.city || 'Алматы',
+            sport_type: profile?.sport_type || 'Атлет',
+            instagram: profile?.instagram || '',
+            bio: profile?.bio || '',
+            card: card || null
           };
         });
 
@@ -172,65 +169,43 @@ export default function ProfileTab({ user, onUpdateUser }) {
         setFriendsList([]);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Ошибка загрузки данных комьюнити:', err);
     } finally {
       setLoadingFriends(false);
     }
   }
 
-  // Открыть полный профиль любого атлета
-  async function inspectAthleteProfile(athleteTgId) {
-    setLoadingViewProfile(true);
-    try {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('telegram_id', athleteTgId)
-        .maybeSingle();
-
-      const { data: cardData } = await supabase
-        .from('gymbro_cards')
-        .select('*')
-        .eq('telegram_id', athleteTgId)
-        .maybeSingle();
-
-      setViewingProfile({
-        user: userData || { name: 'Атлет' },
-        card: cardData || null
-      });
-    } catch (e) {
-      alert('Не удалось загрузить анкету атлета');
-    } finally {
-      setLoadingViewProfile(false);
-    }
-  }
-
-  // Удаление из друзей
-  async function handleRemoveFriend(friendshipId) {
-    if (!window.confirm('Удалить из друзей?')) return;
-    await supabase.from('friendships').delete().eq('id', friendshipId);
-    setFriendsList(prev => prev.filter(f => f.friendship_id !== friendshipId));
-    setFriendsCount(prev => Math.max(0, prev - 1));
-  }
-
-  // Заявки
+  // Принять заявку
   async function handleAccept(id) {
     await supabase.from('friendships').update({ status: 'accepted' }).eq('id', id);
-    setPendingRequests(prev => prev.filter(r => r.id !== id));
-    setFriendsCount(prev => prev + 1);
+    await loadCommunityData();
   }
 
+  // Отклонить заявку
   async function handleDecline(id) {
     await supabase.from('friendships').delete().eq('id', id);
     setPendingRequests(prev => prev.filter(r => r.id !== id));
   }
 
+  // Заблокировать
   async function handleBlock(id) {
-    if (!window.confirm('Заблокировать этого пользователя?')) return;
+    if (!window.confirm('Заблокировать пользователя?')) return;
     await supabase.from('friendships').update({ status: 'blocked' }).eq('id', id);
     setPendingRequests(prev => prev.filter(r => r.id !== id));
   }
 
+  // Удалить из друзей
+  async function handleRemoveFriend(friendshipId) {
+    if (!window.confirm('Удалить атлета из друзей?')) return;
+    await supabase.from('friendships').delete().eq('id', friendshipId);
+    setFriendsList(prev => prev.filter(f => f.friendship_id !== friendshipId));
+    setFriendsCount(prev => Math.max(0, prev - 1));
+    if (inspectedFriend?.friendship_id === friendshipId) {
+      setInspectedFriend(null);
+    }
+  }
+
+  // Сжатие фото перед отправкой
   function handleAvatarUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -254,6 +229,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
     reader.readAsDataURL(file);
   }
 
+  // Сохранить профиль
   async function handleSave(e) {
     e.preventDefault();
     if (!form.name.trim()) return alert('Укажи имя');
@@ -276,6 +252,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
         .upsert(payload, { onConflict: 'telegram_id' })
         .select()
         .single();
+
       if (error) throw error;
       if (data) {
         onUpdateUser(data);
@@ -289,8 +266,9 @@ export default function ProfileTab({ user, onUpdateUser }) {
     }
   }
 
+  // Удалить аккаунт
   async function handleDeleteProfile() {
-    if (!window.confirm('Удалить анкету атлета?')) return;
+    if (!window.confirm('Удалить анкету атлета? Все данные будут удалены.')) return;
     setDeleting(true);
     try {
       await supabase.from('gymbro_cards').delete().eq('telegram_id', myTgId);
@@ -308,17 +286,17 @@ export default function ProfileTab({ user, onUpdateUser }) {
 
   return (
     <div className="space-y-4">
-      {/* 1. ПОЛНОЦЕННЫЙ ПРОСМОТР ПРОФИЛЯ ДРУГОГО АТЛЕТА */}
-      {viewingProfile && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4">
+      {/* 1. ДЕТАЛЬНЫЙ ПРОСМОТР АНКЕТЫ ДРУГА (МОДАЛКА) */}
+      {inspectedFriend && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full max-h-[85vh] flex flex-col shadow-2xl border border-white/10 overflow-hidden rounded-3xl">
             <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#0C101A]/95">
               <span className="text-[10px] font-bold text-[#FF8C38] uppercase tracking-wider">
-                Профиль атлета
+                Анкета напарника
               </span>
               <button
                 type="button"
-                onClick={() => setViewingProfile(null)}
+                onClick={() => setInspectedFriend(null)}
                 className="text-slate-400 hover:text-white text-base px-2 py-1 cursor-pointer"
               >
                 ✕
@@ -328,192 +306,96 @@ export default function ProfileTab({ user, onUpdateUser }) {
             <div className="flex-1 p-5 overflow-y-auto space-y-4 text-xs">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#151926] border border-white/10 flex items-center justify-center flex-shrink-0 text-2xl font-black text-white shadow-lg">
-                  {viewingProfile.user?.avatar_url ? (
-                    <img src={viewingProfile.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                  {inspectedFriend.avatar_url ? (
+                    <img src={inspectedFriend.avatar_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    viewingProfile.user?.name?.[0] || 'A'
+                    inspectedFriend.name?.[0] || 'A'
                   )}
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white leading-snug">
-                    {viewingProfile.user?.name}
+                    {inspectedFriend.name}
                   </h3>
                   <p className="text-slate-400">
-                    {viewingProfile.user?.city || 'Алматы'} • {viewingProfile.user?.sport_type || 'Атлет'}
+                    {inspectedFriend.city} • {inspectedFriend.sport_type}
                   </p>
-                  {viewingProfile.user?.instagram && (
+                  {inspectedFriend.instagram && (
                     <a
-                      href={`https://instagram.com/${viewingProfile.user.instagram}`}
+                      href={`https://instagram.com/${inspectedFriend.instagram}`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-[#FF8C38] font-semibold mt-1 inline-block"
                     >
-                      📸 @{viewingProfile.user.instagram}
+                      📸 @{inspectedFriend.instagram}
                     </a>
                   )}
                 </div>
               </div>
 
-              {viewingProfile.user?.bio && (
+              {inspectedFriend.bio && (
                 <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] text-slate-300">
                   <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">О себе</span>
-                  {viewingProfile.user.bio}
+                  {inspectedFriend.bio}
                 </div>
               )}
 
-              {/* Анкета GymBro атлета */}
-              {viewingProfile.card ? (
+              {/* Залы и сплит из GymBro */}
+              {inspectedFriend.card ? (
                 <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-2">
                   <span className="text-[10px] uppercase font-bold text-[#FF5A1F] block">
-                    Анкета GymBro
+                    Параметры тренировок
                   </span>
                   <div className="grid grid-cols-2 gap-2 text-[11px]">
                     <div>
-                      <span className="text-slate-500 block">Зал будни:</span>
-                      <span className="text-white font-medium">{viewingProfile.card.weekday_gym}</span>
+                      <span className="text-slate-500 block">Будни:</span>
+                      <span className="text-white font-medium">{inspectedFriend.card.weekday_gym}</span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block">Зал выходные:</span>
-                      <span className="text-white font-medium">{viewingProfile.card.weekend_gym || '—'}</span>
+                      <span className="text-slate-500 block">Выходные:</span>
+                      <span className="text-white font-medium">{inspectedFriend.card.weekend_gym || '—'}</span>
                     </div>
                     <div>
                       <span className="text-slate-500 block">Сплит:</span>
-                      <span className="text-white font-medium">{viewingProfile.card.split}</span>
+                      <span className="text-white font-medium">{inspectedFriend.card.split}</span>
                     </div>
                     <div>
                       <span className="text-slate-500 block">Время:</span>
-                      <span className="text-white font-medium">{viewingProfile.card.time_slot}</span>
+                      <span className="text-white font-medium">{inspectedFriend.card.time_slot}</span>
                     </div>
                   </div>
                 </div>
-              ) : (
-                <p className="text-[11px] text-slate-500 text-center py-2">
-                  Атлет пока не заполнил карту залов в GymBro
-                </p>
-              )}
+              ) : null}
 
-              {/* Связь в Telegram */}
-              {viewingProfile.user?.telegram_username ? (
+              {/* Кнопка диалога в Telegram */}
+              {inspectedFriend.telegram_username ? (
                 <a
-                  href={`https://t.me/${viewingProfile.user.telegram_username}`}
+                  href={`https://t.me/${inspectedFriend.telegram_username}`}
                   target="_blank"
                   rel="noreferrer"
                   className="w-full gymshark-btn-electric py-3 text-xs font-bold flex items-center justify-center gap-2 no-underline cursor-pointer shadow-lg shadow-[#FF5A1F]/20"
                 >
-                  <span>Написать в Telegram</span>
+                  <span>💬 Написать в Telegram (@{inspectedFriend.telegram_username})</span>
                   <span>➔</span>
                 </a>
               ) : (
                 <div className="text-center p-2 rounded-xl bg-white/[0.03] text-slate-400 text-[11px]">
-                  У атлета закрытый username в Telegram
+                  У атлета не указан публичный username в Telegram
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* 2. МОДАЛКА СПИСКА ДРУЗЕЙ */}
-      {showFriendsModal && (
-        <div className="fixed inset-0 z-40 bg-black/85 backdrop-blur-xl flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="apple-glass w-full max-w-md h-[80vh] flex flex-col rounded-t-3xl sm:rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
-            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#0C101A]/95">
-              <div className="flex items-center gap-2">
-                <span className="text-base">🤝</span>
-                <h3 className="text-sm font-bold text-white tracking-tight">
-                  Мои друзья ({friendsList.length})
-                </h3>
-              </div>
               <button
                 type="button"
-                onClick={() => setShowFriendsModal(false)}
-                className="text-slate-400 hover:text-white text-base px-2 py-1 cursor-pointer"
+                onClick={() => handleRemoveFriend(inspectedFriend.friendship_id)}
+                className="w-full text-center text-[11px] text-red-400 hover:text-red-300 py-1 cursor-pointer pt-2"
               >
-                ✕
-              </button>
-            </div>
-
-            <div className="flex-1 p-4 overflow-y-auto space-y-2.5">
-              {loadingFriends ? (
-                <div className="text-center py-10 text-xs text-slate-400">Загрузка друзей...</div>
-              ) : friendsList.length === 0 ? (
-                <div className="text-center py-14 space-y-2">
-                  <span className="text-3xl">👥</span>
-                  <h4 className="text-sm font-bold text-white">Список друзей пока пуст</h4>
-                  <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                    Отправляй заявки атлетам в ленте или через поиск GymBro!
-                  </p>
-                </div>
-              ) : (
-                friendsList.map(friend => (
-                  <div
-                    key={friend.friendship_id}
-                    className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between gap-3 hover:border-white/15 transition"
-                  >
-                    {/* Клик по всей области друга открывает его профиль */}
-                    <div
-                      onClick={() => inspectAthleteProfile(friend.telegram_id)}
-                      className="flex items-center gap-3 overflow-hidden flex-1 cursor-pointer active:opacity-75"
-                    >
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#FF5A1F]/20 to-[#FF8C38]/20 border border-white/10 flex items-center justify-center flex-shrink-0 text-sm font-bold text-white overflow-hidden">
-                        {friend.avatar_url ? (
-                          <img src={friend.avatar_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          friend.name?.[0] || 'A'
-                        )}
-                      </div>
-                      <div className="truncate">
-                        <h4 className="text-xs font-bold text-white truncate leading-snug">
-                          {friend.name}
-                        </h4>
-                        <p className="text-[10px] text-slate-400 truncate">
-                          {friend.city} • {friend.sport_type}
-                        </p>
-                        <span className="text-[9px] text-[#FF5A1F] font-semibold block">
-                          Открыть профиль ➔
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      {friend.telegram_username && (
-                        <a
-                          href={`https://t.me/${friend.telegram_username}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-2.5 py-1.5 rounded-xl bg-[#FF5A1F] text-white text-[11px] font-bold active:scale-95 transition no-underline flex items-center gap-1"
-                        >
-                          💬 Чат
-                        </a>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFriend(friend.friendship_id)}
-                        title="Удалить из друзей"
-                        className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-white/10 flex items-center justify-center text-xs active:scale-95 transition cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="p-3 border-t border-white/10 bg-[#0C101A]">
-              <button
-                type="button"
-                onClick={() => setShowFriendsModal(false)}
-                className="w-full gymshark-btn-electric py-2.5 text-xs font-bold cursor-pointer"
-              >
-                Закрыть
+                Удалить из друзей
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 3. МОДАЛКА ЮРИДИЧЕСКИХ ДОКУМЕНТОВ */}
+      {/* 2. МОДАЛКА ДОКУМЕНТОВ */}
       {selectedDoc && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full max-h-[80vh] flex flex-col shadow-2xl border border-white/10 overflow-hidden">
@@ -548,14 +430,14 @@ export default function ProfileTab({ user, onUpdateUser }) {
         </div>
       )}
 
-      {/* Верхний таб-бар профиля */}
-      <div className="apple-glass p-1.5 grid grid-cols-4 gap-1">
+      {/* ВЕРХНИЙ ТАБ-БАР ИЗ 5 КНОПОК: АТЛЕТ | ДРУЗЬЯ | СТАТИСТИКА | ПОДДЕРЖКА | ИНФО */}
+      <div className="apple-glass p-1.5 grid grid-cols-5 gap-1">
         {PROFILE_SECTIONS.map(section => (
           <button
             key={section.id}
             type="button"
             onClick={() => setActiveSection(section.id)}
-            className={`py-2 px-1 text-[11px] font-bold rounded-xl transition cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+            className={`py-2 px-1 text-[10px] font-bold rounded-xl transition cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
               activeSection === section.id
                 ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
                 : 'text-slate-400 hover:text-slate-200 bg-white/[0.02]'
@@ -567,10 +449,9 @@ export default function ProfileTab({ user, onUpdateUser }) {
         ))}
       </div>
 
-      {/* ================= 1. ПОДРАЗДЕЛ: АТЛЕТ ================= */}
+      {/* ================= 1. РАЗДЕЛ: АТЛЕТ ================= */}
       {activeSection === 'athlete' && (
         <div className="space-y-3.5">
-          {/* КАРТОЧКА ПРОФИЛЯ */}
           <div className="apple-glass p-5 space-y-4">
             <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
               <h2 className="text-sm font-bold text-white tracking-tight">Карточка атлета</h2>
@@ -664,12 +545,11 @@ export default function ProfileTab({ user, onUpdateUser }) {
                           form.gender === g
                             ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
                             : 'bg-white/[0.04] text-slate-400 border border-white/[0.06]'
-                        }`}
-                      >
-                        {g}
-                      </button>
-                    ))}
-                  </div>
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  ))}
                 </div>
 
                 <div>
@@ -776,18 +656,18 @@ export default function ProfileTab({ user, onUpdateUser }) {
             )}
           </div>
 
-          {/* НАДЕЖНЫЙ КЛИКАБЕЛЬНЫЙ БАР СЧЕТЧИКОВ (ОТДЕЛЬНЫЙ БЛОК) */}
+          {/* ВИДЖЕТЫ СЧЕТЧИКОВ (КЛИК ПО ДРУЗЬЯМ ПЕРЕКЛЮЧАЕТ НА ВКЛАДКУ ДРУЗЕЙ) */}
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={openFriends}
+              onClick={() => setActiveSection('friends')}
               className="p-3 rounded-2xl bg-[#0a0d14] border border-[#FF5A1F]/30 hover:border-[#FF5A1F] active:scale-95 transition cursor-pointer flex flex-col items-center justify-center shadow-lg"
             >
               <span className="text-[10px] text-[#FF8C38] font-bold uppercase tracking-wider">
                 Друзья ➔
               </span>
               <span className="text-xl font-black text-white mt-1">{friendsCount}</span>
-              <span className="text-[9px] text-slate-500 font-medium">Смотреть список</span>
+              <span className="text-[9px] text-slate-500 font-medium">Открыть список</span>
             </button>
 
             <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06] flex flex-col items-center justify-center">
@@ -804,15 +684,20 @@ export default function ProfileTab({ user, onUpdateUser }) {
               <span className="text-[9px] text-slate-500 font-medium">All Access</span>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* ВХОДЯЩИЕ ЗАЯВКИ В ДРУЗЬЯ */}
+      {/* ================= 2. РАЗДЕЛ: ДРУЗЬЯ (ПОЛНОЦЕННЫЙ ЭКРАН) ================= */}
+      {activeSection === 'friends' && (
+        <div className="space-y-3.5">
+          {/* Входящие заявки (если есть) */}
           {pendingRequests.length > 0 && (
             <div className="p-4 rounded-2xl bg-[#FF5A1F]/10 border border-[#FF5A1F]/25 space-y-3">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm">🤝</span>
                   <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-                    Заявки в друзья ({pendingRequests.length})
+                    Входящие заявки ({pendingRequests.length})
                   </h4>
                 </div>
                 <span className="text-[9px] bg-[#FF5A1F] text-white px-2 py-0.5 rounded-full font-bold">
@@ -826,10 +711,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
                     key={req.id}
                     className="p-3 rounded-xl bg-black/50 border border-white/[0.08] flex items-center justify-between gap-2"
                   >
-                    <div
-                      onClick={() => inspectAthleteProfile(req.user_id)}
-                      className="flex items-center gap-2.5 overflow-hidden flex-1 cursor-pointer active:opacity-75"
-                    >
+                    <div className="flex items-center gap-2.5 overflow-hidden flex-1">
                       <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">
                         {req.sender?.avatar_url ? (
                           <img src={req.sender.avatar_url} alt="" className="w-full h-full object-cover rounded-xl" />
@@ -851,7 +733,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
                         onClick={() => handleAccept(req.id)}
                         className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold active:scale-95 cursor-pointer"
                       >
-                        ✓
+                        ✓ Принять
                       </button>
                       <button
                         type="button"
@@ -873,13 +755,104 @@ export default function ProfileTab({ user, onUpdateUser }) {
               </div>
             </div>
           )}
+
+          {/* Список подтвержденных друзей */}
+          <div className="apple-glass p-5 space-y-3.5">
+            <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-tight">
+                  Подтверждённые друзья ({friendsList.length})
+                </h3>
+                <p className="text-[11px] text-slate-400">Нажми на карточку, чтобы открыть профиль атлета</p>
+              </div>
+              <button
+                type="button"
+                onClick={loadCommunityData}
+                className="text-[11px] text-[#FF5A1F] font-semibold hover:underline cursor-pointer"
+              >
+                Обновить
+              </button>
+            </div>
+
+            {loadingFriends ? (
+              <div className="text-center py-10 text-xs text-slate-400">Загрузка друзей...</div>
+            ) : friendsList.length === 0 ? (
+              <div className="text-center py-12 space-y-2">
+                <span className="text-3xl">👥</span>
+                <h4 className="text-sm font-bold text-white">Список друзей пуст</h4>
+                <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                  Переходи во вкладку <strong>Лента</strong> или <strong>GymBro</strong> и отправляй заявки атлетам своего зала!
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {friendsList.map(friend => (
+                  <div
+                    key={friend.friendship_id}
+                    className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between gap-3 hover:border-[#FF5A1F]/40 transition"
+                  >
+                    {/* Клик по другу открывает его анкету */}
+                    <div
+                      onClick={() => setInspectedFriend(friend)}
+                      className="flex items-center gap-3 overflow-hidden flex-1 cursor-pointer active:opacity-75"
+                    >
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#FF5A1F]/20 to-[#FF8C38]/20 border border-white/10 flex items-center justify-center flex-shrink-0 text-sm font-bold text-white overflow-hidden">
+                        {friend.avatar_url ? (
+                          <img src={friend.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          friend.name?.[0] || 'A'
+                        )}
+                      </div>
+                      <div className="truncate">
+                        <h4 className="text-xs font-bold text-white truncate leading-snug">
+                          {friend.name}
+                        </h4>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {friend.city} • {friend.sport_type}
+                        </p>
+                        <span className="text-[9px] text-[#FF5A1F] font-semibold block mt-0.5">
+                          Смотреть анкету ➔
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {friend.telegram_username ? (
+                        <a
+                          href={`https://t.me/${friend.telegram_username}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1.5 rounded-xl bg-[#FF5A1F] text-white text-[11px] font-bold active:scale-95 transition no-underline flex items-center gap-1 shadow-md shadow-[#FF5A1F]/20"
+                        >
+                          💬 Чат
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-slate-500 bg-white/[0.04] px-2 py-1 rounded-lg">
+                          В друзьях
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFriend(friend.friendship_id)}
+                        title="Удалить из друзей"
+                        className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-white/10 flex items-center justify-center text-xs active:scale-95 transition cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* ================= 2. СТАТИСТИКА ================= */}
+      {/* ================= 3. РАЗДЕЛ: СТАТИСТИКА ================= */}
       {activeSection === 'stats' && <AthleteStats user={user} />}
 
-      {/* ================= 3. ПОДДЕРЖКА ================= */}
+      {/* ================= 4. РАЗДЕЛ: ПОДДЕРЖКА ================= */}
       {activeSection === 'support' && (
         <div className="apple-glass p-5 space-y-4">
           <div className="pb-2 border-b border-white/[0.08]">
@@ -906,7 +879,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
         </div>
       )}
 
-      {/* ================= 4. ДОКУМЕНТЫ ================= */}
+      {/* ================= 5. РАЗДЕЛ: ИНФО (ДОКУМЕНТЫ) ================= */}
       {activeSection === 'legal' && (
         <div className="apple-glass p-5 space-y-3">
           <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
