@@ -55,7 +55,7 @@ export default function GymBroTab() {
   const currentProfile = profiles[currentIndex];
 
   return (
-    <div className={`min-h-screen bg-[${appleTheme.colors.bg}] text-[${appleTheme.colors.primaryText}] px-4 pt-3 pb-24 flex flex-col justify-between max-w-md mx-auto ${appleTheme.styles.fontFamily}`}>
+    <div className={`min-h-screen bg-[${appleTheme.colors.bg}] text-[${appleTheme.colors.primaryText}] px-4 pt-3 pb-24 flex flex-col max-w-md mx-auto ${appleTheme.styles.fontFamily}`}>
       
       {/* Верхние плашки навигации */}
       {activeSubTab === 'swipe' && (
@@ -96,13 +96,13 @@ export default function GymBroTab() {
       {activeSubTab === 'likes' && <GymBroLikes onBack={() => setActiveSubTab('swipe')} />}
       {activeSubTab === 'edit' && <GymBroEditProfile onBack={() => setActiveSubTab('swipe')} />}
 
-      {/* Основной экран свайпов */}
+      {/* Основной экран свайпов с плотной компоновкой */}
       {activeSubTab === 'swipe' && currentProfile && (
-        <div className="flex-1 flex flex-col justify-between my-auto animate-fadeIn py-1">
+        <div className="flex-1 flex flex-col justify-center space-y-3.5 my-auto animate-fadeIn pb-2">
           
-          {/* Аккуратная карточка с правильными отступами */}
+          {/* Сбалансированная карточка атлета */}
           <div className="bg-white rounded-[28px] shadow-[0_10px_32px_rgba(0,0,0,0.06)] border border-black/[0.05] overflow-hidden relative flex flex-col mx-auto w-full max-w-[370px]">
-            <div className="relative w-full aspect-[4/4.2] bg-zinc-900">
+            <div className="relative w-full aspect-[4/4.3] bg-zinc-900">
               <img src={currentProfile.avatar} alt={currentProfile.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent"></div>
               
@@ -134,10 +134,10 @@ export default function GymBroTab() {
             </div>
           </div>
 
-          {/* Единая нижняя плашка с равными крупными кнопками */}
-          <div className="mt-3.5 bg-white/90 backdrop-blur-xl border border-black/[0.06] rounded-[24px] px-6 py-3.5 shadow-[0_6px_24px_rgba(0,0,0,0.05)] flex items-center justify-between mx-auto w-full max-w-[370px]">
+          {/* Единая нижняя плашка с 4 одинаковыми крупными кругами */}
+          <div className="bg-white/90 backdrop-blur-xl border border-black/[0.06] rounded-[24px] px-6 py-3 shadow-[0_6px_24px_rgba(0,0,0,0.05)] flex items-center justify-between mx-auto w-full max-w-[370px]">
             
-            <button onClick={() => alert('Возврат последней анкеты')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_12px_rgba(0,0,0,0.05)] flex items-center justify-center text-zinc-700 hover:scale-105 active:scale-95 transition-all">
+            <button onClick={() => alert('Возврат последней анкеты')} className="w-14 h-14 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_12px_rgba(0,0,0,0.05)] flex items-center justify-center text-zinc-700 hover:scale-105 active:scale-95 transition-all">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
@@ -155,7 +155,7 @@ export default function GymBroTab() {
               </svg>
             </button>
 
-            <button onClick={() => alert('Буст анкеты!')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_12px_rgba(0,0,0,0.05)] flex items-center justify-center text-[#AF52DE] hover:scale-105 active:scale-95 transition-all">
+            <button onClick={() => alert('Буст анкеты!')} className="w-14 h-14 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_12px_rgba(0,0,0,0.05)] flex items-center justify-center text-[#AF52DE] hover:scale-105 active:scale-95 transition-all">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
