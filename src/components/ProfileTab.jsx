@@ -2,27 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import AthleteStats from './profile/AthleteStats';
 
-// Твой юзернейм основателя
 const ADMIN_USERNAMES = ['asanali_kk'];
 
-const STATUS_OPTIONS = [
-  { id: 'in_gym', label: '🟢 В зале', color: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400' },
-  { id: 'going', label: '🟡 Иду в зал', color: 'border-amber-500/40 bg-amber-500/10 text-amber-300' },
-  { id: 'rest', label: '⚪️ Отдых / Восстановление', color: 'border-slate-500/40 bg-white/[0.03] text-slate-400' },
+const VIBE_OPTIONS = [
+  { id: 'in_gym', label: '🟢 В зале (на пампе)', desc: 'Ебашу прямо сейчас' },
+  { id: 'going', label: '⚡️ Заряжен, иду в зал', desc: 'Буду через 20-30 минут' },
+  { id: 'want_gym', label: '💭 Хочу в зал (ищу напарника)', desc: 'Пишите, кто свободен' },
+  { id: 'rest', label: '🔋 Восстановление / Читмил', desc: 'Коплю гликоген' },
 ];
 
-export default function ProfileTab({ user, onUpdateUser }) {
-  const [activeTab, setActiveTab] = useState('card'); // 'card' | 'stats'
+export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
+  const [activeTab, setActiveTab] = useState('card');
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [totalLikes, setTotalLikes] = useState(0);
   const [friendsCount, setFriendsCount] = useState(0);
-  const [currentStatus, setCurrentStatus] = useState(user?.current_status || 'Отдых');
+  
+  const [currentVibe, setCurrentVibe] = useState(user?.current_status || '🟢 В зале (на пампе)');
+  const [showVibeDropdown, setShowVibeDropdown] = useState(false);
 
-  // Модалка оферты / документов
-  const [docModal, setDocModal] = useState(null); // 'terms' | 'privacy' | null
+  const [showLikesModal, setShowLikesModal] = useState(false);
+  const [likersList, setLikersList] = useState([]);
+  const [loadingLikers, setLoadingLikers] = useState(false);
 
-  // Стейты Админ-панели
+  const [docModal, setDocModal] = useState(null);
+
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,7 +57,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
         bio: user.bio || '',
         avatar_url: user.avatar_url || ''
       });
-      if (user.current_status) setCurrentStatus(user.current_status);
+      if (user.current_status) setCurrentVibe(user.current_status);
     }
   }, [user]);
 
@@ -61,7 +65,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
     async function loadStats() {
       if (!myTgId) return;
       try {
-        const { data: posts } = await supabase.from('feed_posts').select('likes_count').eq('user_id', myTgId);
+        const { data: posts } = await supabase.from('feed_posts').select('id, likes_count').eq('user_id', myTgId);
         if (posts) setTotalLikes(posts.reduce((acc, p) => acc + (p.likes_count || 0), 0));
 
         const { data: f1 } = await supabase.from('friendships').select('id').eq('user_id', myTgId).eq('status', 'accepted');
@@ -74,15 +78,57 @@ export default function ProfileTab({ user, onUpdateUser }) {
     loadStats();
   }, [myTgId]);
 
-  // Быстрая смена статуса (В зале / Иду / Отдых)
-  async function handleChangeStatus(newStatusText) {
-    setCurrentStatus(newStatusText);
-    if (!myTgId) return;
-    await supabase.from('users').update({ current_status: newStatusText }).eq('telegram_id', myTgId);
-    if (onUpdateUser) onUpdateUser({ current_status: newStatusText });
+  async function openLikesHistory() {
+    setShowLikesModal(true);
+    setLoadingLikers(true);
+    try {
+      const { data: posts } = await supabase.from('feed_posts').select('id').eq('user_id', myTgId);
+      if (posts && posts.length > 0) {
+        const postIds = posts.map(p => p.id);
+        const { data: likes } = await supabase
+          .from('post_likes')
+          .select('user_id, created_at')
+          .in('post_id', postIds)
+          .order('created_at', { ascending: false });
+
+        if (likes && likes.length > 0) {
+          const userIds = [...new Set(likes.map(l => l.user_id))];
+          const { data: usersData } = await supabase
+            .from('users')
+            .select('telegram_id, name, avatar_url, telegram_username, city')
+            .in('telegram_id', userIds);
+
+          const userMap = (usersData || []).reduce((acc, u) => {
+            acc[u.telegram_id] = u;
+            return acc;
+          }, {});
+
+          const formatted = likes.map(l => ({
+            ...l,
+            user: userMap[l.user_id] || { name: 'Атлет зала', telegram_username: '' }
+          }));
+
+          setLikersList(formatted);
+        } else {
+          setLikersList([]);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingLikers(false);
+    }
   }
 
-  // Загрузка аватарки с сжатием
+  async function handleSelectVibe(vibe) {
+    setCurrentVibe(vibe.label);
+    setShowVibeDropdown(false);
+    if (!myTgId) return;
+
+    await supabase.from('users').update({ current_status: vibe.label }).eq('telegram_id', myTgId);
+    if (onUpdateUser) onUpdateUser({ current_status: vibe.label });
+  }
+
   function handleAvatarUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -149,7 +195,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
     }
   }
 
-  // Админ-панель
   async function openAdminPanel() {
     setShowAdminModal(true);
     setLoadingUsers(true);
@@ -194,7 +239,77 @@ export default function ProfileTab({ user, onUpdateUser }) {
 
   return (
     <div className="space-y-4">
-      {/* 1. МОДАЛКА ЮРИДИЧЕСКИХ ДОКУМЕНТОВ */}
+      {/* 1. Модалка кто поставил огонь */}
+      {showLikesModal && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="apple-glass max-w-sm w-full p-5 space-y-4 border border-white/10 rounded-3xl max-h-[75vh] flex flex-col shadow-2xl">
+            <div className="flex justify-between items-center pb-2 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🔥</span>
+                <h3 className="text-sm font-black text-white">Реакции на пруфы</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLikesModal(false)}
+                className="text-slate-400 hover:text-white text-base px-2 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {loadingLikers ? (
+                <div className="text-center py-8 text-xs text-slate-400">Загрузка реакций...</div>
+              ) : likersList.length === 0 ? (
+                <div className="text-center py-8 text-xs text-slate-500">Пока никто не поставил реакцию</div>
+              ) : (
+                likersList.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0">
+                        {item.user?.avatar_url ? (
+                          <img src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-xs font-bold text-white">{item.user?.name?.[0] || 'A'}</span>
+                        )}
+                      </div>
+                      <div className="truncate">
+                        <p className="text-xs font-bold text-white truncate">{item.user?.name || 'Атлет'}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {item.user?.telegram_username ? `@${item.user.telegram_username}` : item.user?.city || 'Алматы'}
+                        </p>
+                      </div>
+                    </div>
+                    {item.user?.telegram_username && (
+                      <a
+                        href={`https://t.me/${item.user.telegram_username}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-bold text-[#FF8C38] px-2 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08] hover:bg-white/[0.1] no-underline flex-shrink-0"
+                      >
+                        Написать ↗
+                      </a>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowLikesModal(false)}
+              className="w-full gymshark-btn-electric py-2.5 text-xs font-bold cursor-pointer"
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Модалка документов */}
       {docModal && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full p-5 space-y-3.5 border border-white/10 rounded-3xl max-h-[80vh] flex flex-col">
@@ -240,7 +355,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
         </div>
       )}
 
-      {/* 2. МОДАЛЬНОЕ ОКНО АДМИН-ПАНЕЛИ (ТОЛЬКО ДЛЯ ТЕБЯ) */}
+      {/* 3. Админ-панель */}
       {showAdminModal && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="apple-glass w-full max-w-md h-[85vh] flex flex-col rounded-t-3xl sm:rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
@@ -330,7 +445,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
         </div>
       )}
 
-      {/* Верхний таб-бар: Визитка атлета / Статистика */}
+      {/* Верхний таб-бар */}
       <div className="apple-glass p-1.5 grid grid-cols-2 gap-1">
         <button
           type="button"
@@ -354,7 +469,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
 
       {activeTab === 'card' && (
         <div className="space-y-4">
-          {/* СЕКРЕТНЫЙ БЛОК АДМИНИСТРАТОРА (ТОЛЬКО ДЛЯ ТЕБЯ) */}
+          {/* Панель основателя */}
           {isAdmin && (
             <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-500/20 via-[#FF5A1F]/20 to-purple-500/20 border border-amber-500/40 flex items-center justify-between shadow-lg">
               <div className="flex items-center gap-2.5">
@@ -374,9 +489,8 @@ export default function ProfileTab({ user, onUpdateUser }) {
             </div>
           )}
 
-          {/* ОСНОВНАЯ КАРТОЧКА ПРОФИЛЯ */}
+          {/* Карточка профиля */}
           <div className="apple-glass p-5 space-y-4">
-            {/* Хедер визитки: Аватарка, Имя, Статус и кнопка Редактировать */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3.5">
                 <div className="relative group">
@@ -387,7 +501,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
                       <span className="text-2xl font-black text-white">{form.name?.[0] || 'A'}</span>
                     )}
                   </div>
-                  {/* Кнопка смены аватарки прямо с фото */}
                   <label className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#FF5A1F] text-white flex items-center justify-center cursor-pointer shadow-md hover:scale-105 active:scale-95 transition">
                     <span className="text-[11px]">📷</span>
                     <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
@@ -418,7 +531,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
                 </div>
               </div>
 
-              {/* Кнопка переключения режима Редактирования */}
               <button
                 type="button"
                 onClick={() => setIsEditing(!isEditing)}
@@ -433,40 +545,80 @@ export default function ProfileTab({ user, onUpdateUser }) {
               </button>
             </div>
 
-            {/* Быстрый статус атлета в зале */}
+            {/* Выпадающий список Мой вайб */}
             <div className="space-y-1.5 pt-1 border-t border-white/[0.06]">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
-                Мой статус сегодня:
-              </span>
-              <div className="grid grid-cols-3 gap-1.5">
-                {STATUS_OPTIONS.map(opt => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => handleChangeStatus(opt.label)}
-                    className={`py-1.5 px-1 rounded-xl text-[11px] font-bold border transition cursor-pointer text-center truncate ${
-                      currentStatus === opt.label
-                        ? opt.color + ' shadow-md scale-[1.02]'
-                        : 'bg-white/[0.02] border-white/[0.05] text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                  Мой вайб сегодня:
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">нажми для смены ▾</span>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setShowVibeDropdown(!showVibeDropdown)}
+                className="w-full p-2.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-white/20 flex items-center justify-between text-left transition cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-sm">{currentVibe.split(' ')[0]}</span>
+                  <span className="text-xs font-black text-white">{currentVibe.substring(2)}</span>
+                </div>
+                <span className="text-xs text-slate-400">
+                  {showVibeDropdown ? '▲' : '▼'}
+                </span>
+              </button>
+
+              {showVibeDropdown && (
+                <div className="p-1.5 bg-[#0e121c] border border-white/10 rounded-2xl space-y-1 mt-1.5 shadow-2xl">
+                  {VIBE_OPTIONS.map(v => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => handleSelectVibe(v)}
+                      className={`w-full p-2 rounded-xl text-left flex items-center justify-between transition cursor-pointer ${
+                        currentVibe === v.label
+                          ? 'bg-[#FF5A1F]/20 border border-[#FF5A1F]/40 text-white'
+                          : 'hover:bg-white/[0.04] text-slate-300'
+                      }`}
+                    >
+                      <div>
+                        <p className="text-xs font-bold">{v.label}</p>
+                        <p className="text-[10px] text-slate-400">{v.desc}</p>
+                      </div>
+                      {currentVibe === v.label && <span className="text-xs text-[#FF8C38]">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Статусные счетчики */}
+            {/* Счетчики */}
             <div className="grid grid-cols-3 gap-2 text-center pt-1">
-              <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06]">
-                <span className="text-[9px] text-slate-500 font-bold uppercase block">Друзья</span>
+              <button
+                type="button"
+                onClick={() => onNavigateTab && onNavigateTab('friends')}
+                className="p-3 rounded-2xl bg-black/40 border border-white/[0.06] hover:border-white/20 active:scale-95 transition cursor-pointer text-left block"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-slate-500 font-bold uppercase block">Друзья</span>
+                  <span className="text-[9px] text-[#FF8C38]">➔</span>
+                </div>
                 <span className="text-lg font-black text-white mt-0.5 block">{friendsCount}</span>
-              </div>
-              <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06]">
-                <span className="text-[9px] text-slate-500 font-bold uppercase block">Реакции</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={openLikesHistory}
+                className="p-3 rounded-2xl bg-black/40 border border-white/[0.06] hover:border-[#FF5A1F]/40 active:scale-95 transition cursor-pointer text-left block"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-slate-500 font-bold uppercase block">Реакции</span>
+                  <span className="text-[9px] text-[#FF8C38]">👥</span>
+                </div>
                 <span className="text-lg font-black text-[#FF8C38] mt-0.5 block">🔥 {totalLikes}</span>
-              </div>
-              <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06]">
+              </button>
+
+              <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06] flex flex-col justify-center">
                 <span className="text-[9px] text-slate-500 font-bold uppercase block">Тариф</span>
                 <span className="text-[11px] font-black text-emerald-400 mt-1.5 block truncate">
                   {user?.is_pro ? 'PRO Активен' : 'Бета-тест'}
@@ -474,7 +626,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
               </div>
             </div>
 
-            {/* РЕЖИМ 1: АККУРАТНАЯ ЧИСТАЯ ВИЗИТКА (ПО УМОЛЧАНИЮ) */}
             {!isEditing && (
               <div className="space-y-3 pt-2">
                 {form.bio && (
@@ -498,7 +649,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
               </div>
             )}
 
-            {/* РЕЖИМ 2: ФОРМА РЕДАКТИРОВАНИЯ (ОТКРЫВАЕТСЯ ТОЛЬКО ПО КНОПКЕ) */}
             {isEditing && (
               <form onSubmit={handleSave} className="space-y-3 pt-2 border-t border-white/[0.08]">
                 <div>
@@ -549,12 +699,12 @@ export default function ProfileTab({ user, onUpdateUser }) {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">О себе (сплит, цели)</label>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">О себе</label>
                   <textarea
                     rows={3}
                     value={form.bio}
                     onChange={e => setForm({ ...form, bio: e.target.value })}
-                    placeholder="Например: Жму 100 кг, сплит Пн/Ср/Пт, ищу напарника на день ног..."
+                    placeholder="Сплит, цели..."
                     className="w-full apple-input text-xs resize-none"
                   />
                 </div>
@@ -570,7 +720,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
             )}
           </div>
 
-          {/* БЛОК 3: ЮРИДИЧЕСКАЯ ИНФОРМАЦИЯ И ПОДДЕРЖКА */}
+          {/* Юр блок и поддержка */}
           <div className="apple-glass p-4 space-y-2.5">
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
               Сервис и поддержка
