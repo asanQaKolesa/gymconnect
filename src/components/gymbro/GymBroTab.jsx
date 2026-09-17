@@ -56,11 +56,11 @@ export default function GymBroTab() {
   const currentProfile = profiles[currentIndex];
 
   return (
-    <div className={`min-h-screen bg-[${appleTheme.colors.bg}] text-[${appleTheme.colors.primaryText}] px-4 pt-3 pb-28 flex flex-col max-w-md mx-auto ${appleTheme.styles.fontFamily}`}>
+    <div className={`min-h-screen bg-[${appleTheme.colors.bg}] text-[${appleTheme.colors.primaryText}] px-4 pt-3 pb-24 flex flex-col max-w-md mx-auto ${appleTheme.styles.fontFamily}`}>
       
       {/* Верхние плашки навигации */}
       {activeSubTab === 'swipe' && (
-        <div className="space-y-2.5 shrink-0 animate-fadeIn mb-2.5">
+        <div className="space-y-2.5 shrink-0 animate-fadeIn mb-2">
           <div className="grid grid-cols-3 gap-2">
             <button 
               onClick={() => setActiveSubTab('matches')}
@@ -124,13 +124,13 @@ export default function GymBroTab() {
       {activeSubTab === 'likes' && <GymBroLikes onBack={() => setActiveSubTab('swipe')} />}
       {activeSubTab === 'edit' && <GymBroEditProfile onBack={() => setActiveSubTab('swipe')} />}
 
-      {/* Основной экран свайпов с уменьшенной высотой карточки для безопасности снизу */}
+      {/* Основной экран свайпов: чуть компактнее снизу, чтобы кнопки поднялись над таббаром */}
       {activeSubTab === 'swipe' && currentProfile && (
-        <div className="flex-1 flex flex-col justify-center space-y-3 my-auto animate-fadeIn pb-3">
+        <div className="flex-1 flex flex-col justify-center space-y-2.5 my-auto animate-fadeIn pb-2">
           
-          {/* Компактная сбалансированная карточка атлета */}
-          <div className="bg-white rounded-[26px] shadow-[0_8px_28px_rgba(0,0,0,0.05)] border border-black/[0.05] overflow-hidden relative flex flex-col mx-auto w-full max-w-[370px]">
-            <div className="relative w-full aspect-[4/3.6] bg-zinc-900">
+          {/* Сбалансированная карточка атлета */}
+          <div className="bg-white rounded-[26px] shadow-[0_10px_30px_rgba(0,0,0,0.05)] border border-black/[0.05] overflow-hidden relative flex flex-col mx-auto w-full max-w-[370px]">
+            <div className="relative w-full aspect-[4/4.15] bg-zinc-900">
               <img src={currentProfile.avatar} alt={currentProfile.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent"></div>
               
@@ -140,7 +140,7 @@ export default function GymBroTab() {
 
               <div className="absolute bottom-3 left-3.5 right-3.5 text-white">
                 <div className="flex items-baseline gap-2">
-                  <h2 className="text-[24px] font-bold tracking-tight">{currentProfile.name}</h2>
+                  <h2 className="text-[25px] font-bold tracking-tight">{currentProfile.name}</h2>
                   <span className="text-[17px] font-medium text-zinc-300">{currentProfile.age}</span>
                 </div>
                 <div className="text-[11.5px] text-blue-300 font-medium mt-0.5">
@@ -162,28 +162,28 @@ export default function GymBroTab() {
             </div>
           </div>
 
-          {/* Нижняя плашка с кнопками поднята выше для защиты от наложения на таббар */}
-          <div className="bg-white/90 backdrop-blur-xl border border-black/[0.06] rounded-[22px] px-5 py-2.5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex items-center justify-between mx-auto w-full max-w-[370px]">
+          {/* Единая нижняя плашка с кнопками приподнята ровно на сколько нужно */}
+          <div className="bg-white/90 backdrop-blur-xl border border-black/[0.06] rounded-[22px] px-6 py-2.5 shadow-[0_6px_22px_rgba(0,0,0,0.05)] flex items-center justify-between mx-auto w-full max-w-[370px]">
             
-            <button onClick={() => alert('Возврат последней анкеты')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_2px_10px_rgba(0,0,0,0.04)] flex items-center justify-center text-zinc-700 hover:scale-105 active:scale-95 transition-all">
+            <button onClick={() => alert('Возврат последней анкеты')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_12px_rgba(0,0,0,0.05)] flex items-center justify-center text-zinc-700 hover:scale-105 active:scale-95 transition-all">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
             </button>
 
-            <button onClick={() => handleSwipe('dislike')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_14px_rgba(0,0,0,0.06)] flex items-center justify-center text-[#FF3B30] hover:scale-105 active:scale-95 transition-all">
+            <button onClick={() => handleSwipe('dislike')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex items-center justify-center text-[#FF3B30] hover:scale-105 active:scale-95 transition-all">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            <button onClick={() => handleSwipe('like')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_14px_rgba(0,0,0,0.06)] flex items-center justify-center text-[#34C759] hover:scale-105 active:scale-95 transition-all">
+            <button onClick={() => handleSwipe('like')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex items-center justify-center text-[#34C759] hover:scale-105 active:scale-95 transition-all">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </button>
 
-            <button onClick={() => alert('Буст анкеты!')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_2px_10px_rgba(0,0,0,0.04)] flex items-center justify-center text-[#AF52DE] hover:scale-105 active:scale-95 transition-all">
+            <button onClick={() => alert('Буст анкеты!')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_12px_rgba(0,0,0,0.05)] flex items-center justify-center text-[#AF52DE] hover:scale-105 active:scale-95 transition-all">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
