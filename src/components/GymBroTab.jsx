@@ -8,7 +8,7 @@ import GymBroSwipeView from './gymbro/GymBroSwipeView';
 export const INVICTUS_CLUBS = ALMATY_GYMS;
 
 export default function GymBroTab({ session }) {
-  const [activeSubTab, setActiveSubTab] = useState('swipe'); // 'swipe' | 'friends'
+  const [activeSubTab, setActiveSubTab] = useState('swipe');
   const [isEditing, setIsEditing] = useState(false);
   
   const [currentUserId, setCurrentUserId] = useState('');
@@ -34,16 +34,13 @@ export default function GymBroTab({ session }) {
   useEffect(() => {
     const uid = resolveUserId();
     setCurrentUserId(uid);
-
-    const saved = JSON.parse(localStorage.getItem('gymconnect_my_bros') || '[]');
-    setMyBros(saved);
-
     loadData(uid);
   }, [session]);
 
   const loadData = async (uid) => {
     setLoading(true);
     try {
+      // 1. Загрузка своей анкеты
       const { data: myData } = await supabase
         .from('gymbro_profiles')
         .select('*')
@@ -56,6 +53,40 @@ export default function GymBroTab({ session }) {
         setIsEditing(true);
       }
 
+      // 2. Загрузка существующих друзей из Supabase и локального кэша
+      let combinedFriends = [];
+      try {
+        const { data: dbFriendships } = await supabase
+          .from('friendships')
+          .select('*')
+          .or(`user_id.eq.${uid},friend_id.eq.${uid}`);
+
+        if (dbFriendships && dbFriendships.length > 0) {
+          const friendIds = dbFriendships.map(f => f.user_id === uid ? f.friend_id : f.user_id);
+          const { data: friendsProfiles } = await supabase
+            .from('gymbro_profiles')
+            .select('*')
+            .in('user_id', friendIds);
+
+          if (friendsProfiles) {
+            combinedFriends = friendsProfiles;
+          }
+        }
+      } catch (err) {
+        console.log('Поиск друзей через общую таблицу');
+      }
+
+      const cached = JSON.parse(localStorage.getItem('gymconnect_my_bros') || '[]');
+      cached.forEach(c => {
+        if (!combinedFriends.some(f => f.user_id === c.user_id)) {
+          combinedFriends.push(c);
+        }
+      });
+
+      setMyBros(combinedFriends);
+      localStorage.setItem('gymconnect_my_bros', JSON.stringify(combinedFriends));
+
+      // 3. Загрузка анкет для ленты
       const { data: allProfiles } = await supabase
         .from('gymbro_profiles')
         .select('*')
@@ -69,22 +100,45 @@ export default function GymBroTab({ session }) {
     }
   };
 
-  const handleConnectBro = (bro) => {
-    if (!myBros.some(b => b.user_id === bro.user_id)) {
-      const updated = [bro, ...myBros];
+  const handleConnectBro = async (bro) => {
+    const isAlreadySaved = myBros.some(b => b.user_id === bro.user_id);
+    let updated = myBros;
+    if (!isAlreadySaved) {
+      updated = [bro, ...myBros];
       setMyBros(updated);
       localStorage.setItem('gymconnect_my_bros', JSON.stringify(updated));
+
+      // Фиксируем дружбу в Supabase
+      try {
+        await supabase.from('friendships').insert({
+          user_id: currentUserId,
+          friend_id: bro.user_id,
+          status: 'accepted'
+        });
+      } catch (e) {
+        console.log('Связь сохранена');
+      }
     }
+
     if (bro.telegram_contact) {
       window.open(`https://t.me/${bro.telegram_contact.replace('@', '')}`, '_blank');
     }
     setCurrentIndex(prev => prev + 1);
   };
 
-  const handleRemoveBro = (uid) => {
+  const handleRemoveBro = async (uid) => {
     const updated = myBros.filter(b => b.user_id !== uid);
     setMyBros(updated);
     localStorage.setItem('gymconnect_my_bros', JSON.stringify(updated));
+
+    try {
+      await supabase
+        .from('friendships')
+        .delete()
+        .or(`and(user_id.eq.${currentUserId},friend_id.eq.${uid}),and(user_id.eq.${uid},friend_id.eq.${currentUserId})`);
+    } catch (e) {
+      console.log('Удалено локально');
+    }
   };
 
   const filteredProfiles = profiles.filter(p => {
@@ -96,7 +150,6 @@ export default function GymBroTab({ session }) {
 
   return (
     <div className="max-w-xl mx-auto p-4 pb-28 text-white">
-      {/* Навигационный тумблер */}
       <div className="flex bg-[#111827] p-1 rounded-2xl border border-gray-800 mb-4">
         <button
           onClick={() => { setActiveSubTab('swipe'); setIsEditing(false); }}
