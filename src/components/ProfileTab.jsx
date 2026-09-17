@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { LEGAL_DOCS_LIST } from '../legalDocs';
+import AthleteStats from './profile/AthleteStats';
 
 const PROFILE_SECTIONS = [
   { id: 'athlete', label: 'Атлет', icon: '👤' },
@@ -22,7 +23,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
     avatar_url: user?.avatar_url || ''
   });
 
-  // Загрузка фото
+  // Загрузка фото в Base64
   function handleAvatarUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -63,7 +64,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
 
   return (
     <div className="space-y-4">
-      {/* Внутренний Apple Segmented Control для профиля */}
+      {/* Apple Segmented Control для вкладок профиля */}
       <div className="apple-glass p-1.5 flex gap-1.5 overflow-x-auto no-scrollbar">
         {PROFILE_SECTIONS.map(section => (
           <button
@@ -115,7 +116,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
 
                 <div className="space-y-1.5">
                   <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-xs font-semibold text-slate-200 transition">
-                    <span>📸 Выбрать другое фото</span>
+                    <span>📸 Выбрать фото</span>
                     <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
                   </label>
 
@@ -213,52 +214,9 @@ export default function ProfileTab({ user, onUpdateUser }) {
         </div>
       )}
 
-      {/* ================= 2. ПОДРАЗДЕЛ: СТАТИСТИКА ================= */}
+      {/* ================= 2. ПОДРАЗДЕЛ: СТАТИСТИКА (INVICTUS STYLE) ================= */}
       {activeSection === 'stats' && (
-        <div className="apple-glass p-5 space-y-4">
-          <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
-            <h3 className="text-sm font-bold text-white tracking-tight">Фитнес-статистика</h3>
-            <span className="text-[10px] bg-[#FF5A1F]/15 text-[#FF8C38] border border-[#FF5A1F]/30 px-2 py-0.5 rounded-md font-bold">
-              В разработке
-            </span>
-          </div>
-
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Персональный трекинг формы: вес, замеры талии и бицепса, количество посещенных тренировок и силовые рекорды.
-          </p>
-
-          <div className="grid grid-cols-2 gap-2.5 pt-1">
-            <div className="p-3.5 rounded-2xl bg-black/30 border border-white/[0.06] space-y-1">
-              <span className="text-xs text-slate-500 font-medium">Тренировок в месяц</span>
-              <p className="text-xl font-black text-white">—</p>
-              <span className="text-[10px] text-emerald-400">Стрик активности</span>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-black/30 border border-white/[0.06] space-y-1">
-              <span className="text-xs text-slate-500 font-medium">Текущий вес</span>
-              <p className="text-xl font-black text-white">— кг</p>
-              <span className="text-[10px] text-slate-400">Цель: Рельеф / Масса</span>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-black/30 border border-white/[0.06] space-y-2">
-            <h4 className="text-xs font-semibold text-slate-300">Базовые силовые</h4>
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="p-2 rounded-xl bg-white/[0.02]">
-                <p className="text-[10px] text-slate-500">Жим</p>
-                <p className="font-bold text-white mt-0.5">—</p>
-              </div>
-              <div className="p-2 rounded-xl bg-white/[0.02]">
-                <p className="text-[10px] text-slate-500">Присед</p>
-                <p className="font-bold text-white mt-0.5">—</p>
-              </div>
-              <div className="p-2 rounded-xl bg-white/[0.02]">
-                <p className="text-[10px] text-slate-500">Тяга</p>
-                <p className="font-bold text-white mt-0.5">—</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AthleteStats user={user} />
       )}
 
       {/* ================= 3. ПОДРАЗДЕЛ: ПОДДЕРЖКА ================= */}
