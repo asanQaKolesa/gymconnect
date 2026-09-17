@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
-export default function GymFeedTab({ user, onOpenPaywall }) {
+export default function GymFeedTab({ user }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -11,6 +11,12 @@ export default function GymFeedTab({ user, onOpenPaywall }) {
   const [postPhoto, setPostPhoto] = useState('');
   const [caption, setCaption] = useState('');
   const [gymName, setGymName] = useState('Invictus Go');
+
+  // Модалка комментариев к посту
+  const [activePostComments, setActivePostComments] = useState(null);
+  const [commentsList, setCommentsList] = useState([]);
+  const [newCommentText, setNewCommentText] = useState('');
+  const [sendingComment, setSendingComment] = useState(false);
 
   useEffect(() => {
     loadFeed();
@@ -49,7 +55,8 @@ export default function GymFeedTab({ user, onOpenPaywall }) {
       gym_name: gymName,
       photo_url: postPhoto,
       caption: caption.trim() || 'Тренировка закрыта 💪',
-      likes_count: 0
+      likes_count: 0,
+      comments_count: 0
     };
 
     const { data, error } = await supabase
@@ -63,8 +70,6 @@ export default function GymFeedTab({ user, onOpenPaywall }) {
       setIsCreating(false);
       setPostPhoto('');
       setCaption('');
-      // Увеличиваем общий счетчик постов / реакций в users
-      await supabase.rpc('increment_likes', { x: 1 }).catch(() => {});
     } else {
       alert('Ошибка при публикации: ' + (error?.message || 'Попробуйте позже'));
     }
@@ -72,111 +77,110 @@ export default function GymFeedTab({ user, onOpenPaywall }) {
   }
 
   async function handleLike(postId, currentLikes) {
-    const nextLikes = currentLikes + 1;
+    const nextLikes = (currentLikes || 0) + 1;
     setPosts(posts.map(p => p.id === postId ? { ...p, likes_count: nextLikes } : p));
     await supabase.from('feed_posts').update({ likes_count: nextLikes }).eq('id', postId);
   }
 
   async function handleAddFriend(authorId) {
-    if (!user?.telegram_id) return;
+    if (!user?.telegram_id) return alert('Войдите в профиль');
+    if (authorId === user?.telegram_id) return alert('Это твой собственный профиль!');
+    
     await supabase.from('friendships').insert([
       { user_id: user.telegram_id, friend_id: authorId }
     ]);
     alert('Запрос в друзья отправлен атлету! 🤝');
   }
 
-  // ================= 1. ЕСЛИ НЕТ PRO: APPLE PAYWALL =================
-  if (!user?.is_pro) {
-    return (
-      <div className="space-y-4">
-        {/* Заблюренный тизер ленты на фоне */}
-        <div className="relative rounded-3xl overflow-hidden border border-white/10 apple-glass p-6 text-center space-y-4">
-          <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] flex items-center justify-center mx-auto text-3xl shadow-xl shadow-[#FF5A1F]/30">
-            🔥
-          </div>
+  // Загрузка комментариев к конкретному посту
+  async function openComments(post) {
+    setActivePostComments(post);
+    setCommentsList([]);
+    const { data } = await supabase
+      .from('feed_comments')
+      .select('*')
+      .eq('post_id', post.id)
+      .order('created_at', { ascending: true });
 
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF5A1F]">
-              Закрытый клуб атлетов
-            </span>
-            <h2 className="text-xl font-black text-white tracking-tight">
-              GymConnect Feed PRO
-            </h2>
-            <p className="text-xs text-slate-300 leading-relaxed max-w-xs mx-auto">
-              Публикуй форму после тренировки, находи фитнес-друзей в своем городе, обменивайся реакциями и держи дисциплину.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 text-center py-2">
-            <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06]">
-              <span className="text-lg">📸</span>
-              <p className="text-[10px] font-bold text-slate-300 mt-1">Пруфы зала</p>
-            </div>
-            <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06]">
-              <span className="text-lg">🤝</span>
-              <p className="text-[10px] font-bold text-slate-300 mt-1">Друзья</p>
-            </div>
-            <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06]">
-              <span className="text-lg">⚡</span>
-              <p className="text-[10px] font-bold text-slate-300 mt-1">Рейтинг</p>
-            </div>
-          </div>
-
-          <button
-            onClick={onOpenPaywall}
-            className="w-full gymshark-btn-electric py-3.5 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-xl shadow-[#FF5A1F]/25"
-          >
-            <span>Активировать доступ PRO</span>
-            <span>➔</span>
-          </button>
-          
-          <p className="text-[10px] text-slate-500">
-            Доступно по подписке GymConnect Club • Отмена в любой момент
-          </p>
-        </div>
-      </div>
-    );
+    if (data) setCommentsList(data);
   }
 
-  // ================= 2. ЕСЛИ ЕСТЬ PRO: ПОЛНОЦЕННАЯ ЛЕНТА =================
+  // Отправка комментария
+  async function handleSendComment(e) {
+    e.preventDefault();
+    if (!newCommentText.trim() || !activePostComments) return;
+    setSendingComment(true);
+
+    const commentPayload = {
+      post_id: activePostComments.id,
+      user_id: user?.telegram_id || 0,
+      author_name: user?.name || 'Атлет',
+      author_avatar: user?.avatar_url || null,
+      text: newCommentText.trim()
+    };
+
+    const { data, error } = await supabase
+      .from('feed_comments')
+      .insert([commentPayload])
+      .select()
+      .single();
+
+    if (!error && data) {
+      setCommentsList([...commentsList, data]);
+      setNewCommentText('');
+      
+      // Обновляем счетчик комментариев в посте
+      const nextCount = (activePostComments.comments_count || 0) + 1;
+      setPosts(posts.map(p => p.id === activePostComments.id ? { ...p, comments_count: nextCount } : p));
+      await supabase.from('feed_posts').update({ comments_count: nextCount }).eq('id', activePostComments.id);
+    } else {
+      alert('Не удалось отправить комментарий');
+    }
+    setSendingComment(false);
+  }
+
   return (
     <div className="space-y-4">
-      {/* Шапка ленты с кнопкой создания поста */}
+      {/* Шапка ленты с бейджем Beta */}
       <div className="apple-glass p-4 flex justify-between items-center">
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF5A1F]">
-            Комьюнити • {user?.city || 'Алматы'}
-          </span>
-          <h2 className="text-base font-black text-white tracking-tight">Лента тренировок</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-black text-white tracking-tight">Лента тренировок</h2>
+            <span className="text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+              Free Beta
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400 font-normal">
+            Делись пруфами из зала и поддерживай напарников
+          </p>
         </div>
         <button
           onClick={() => setIsCreating(!isCreating)}
-          className="gymshark-btn-electric px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+          className="gymshark-btn-electric px-3 py-2 text-xs font-bold flex items-center gap-1 cursor-pointer"
         >
-          <span>{isCreating ? '✕ Отмена' : '+ Выложить пруф'}</span>
+          <span>{isCreating ? '✕' : '+ Пруф'}</span>
         </button>
       </div>
 
-      {/* Окно публикации фото дня */}
+      {/* Окно публикации фото */}
       {isCreating && (
         <form onSubmit={handlePublishPost} className="apple-glass-card p-5 space-y-3.5 border border-[#FF5A1F]/30">
-          <h3 className="text-xs font-bold text-white uppercase tracking-wider">Новый пруф тренировки</h3>
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider">Опубликовать тренировку</h3>
           
-          {/* Превью фото */}
-          <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-black/50 border border-white/10 flex items-center justify-center">
+          <div className="relative w-full h-52 rounded-2xl overflow-hidden bg-black/50 border border-white/10 flex items-center justify-center">
             {postPhoto ? (
-              <img src={postPhoto} alt="Upload preview" className="w-full h-full object-cover" />
+              <img src={postPhoto} alt="Preview" className="w-full h-full object-cover" />
             ) : (
-              <label className="cursor-pointer flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-white transition">
+              <label className="cursor-pointer flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-white transition p-4 text-center">
                 <span className="text-3xl">📸</span>
-                <span className="text-xs font-semibold">Нажми, чтобы загрузить фото зала</span>
+                <span className="text-xs font-semibold">Нажми, чтобы загрузить фото из зала</span>
                 <input type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} />
               </label>
             )}
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Зал</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Фитнес-клуб / Зал</label>
             <input
               type="text"
               value={gymName}
@@ -187,12 +191,12 @@ export default function GymFeedTab({ user, onOpenPaywall }) {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Подпись / Сплит</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Сплит / Достижение</label>
             <input
               type="text"
               value={caption}
               onChange={e => setCaption(e.target.value)}
-              placeholder="Например: Закрыл тяжелый присед 140 кг 🔥"
+              placeholder="Например: Закрыл тяжелый день спины 🔥"
               className="w-full apple-input"
             />
           </div>
@@ -202,12 +206,12 @@ export default function GymFeedTab({ user, onOpenPaywall }) {
             disabled={uploading}
             className="w-full gymshark-btn-electric py-3 text-xs font-bold cursor-pointer"
           >
-            {uploading ? 'Публикуем...' : 'Опубликовать в клубную ленту 🚀'}
+            {uploading ? 'Публикуем...' : 'Выложить в клубную ленту 🚀'}
           </button>
         </form>
       )}
 
-      {/* Список постов */}
+      {/* Список постов ленты */}
       {loading ? (
         <div className="apple-glass p-8 text-center text-xs text-slate-400">
           Загрузка ленты...
@@ -215,8 +219,8 @@ export default function GymFeedTab({ user, onOpenPaywall }) {
       ) : posts.length === 0 ? (
         <div className="apple-glass p-8 text-center space-y-2">
           <span className="text-3xl">🏋️‍♂️</span>
-          <h3 className="text-sm font-bold text-white">Будь первым сегодня!</h3>
-          <p className="text-xs text-slate-400">Выложи фото тренировки и получи первые реакции клуба.</p>
+          <h3 className="text-sm font-bold text-white">В ленте пока пусто</h3>
+          <p className="text-xs text-slate-400">Будь первым, кто выложит пруф сегодняшней тренировки!</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -229,7 +233,7 @@ export default function GymFeedTab({ user, onOpenPaywall }) {
                     {post.author_avatar ? (
                       <img src={post.author_avatar} alt="Author" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-sm font-bold text-white">{post.author_name?.[0]}</span>
+                      <span className="text-sm font-bold text-white">{post.author_name?.[0] || 'A'}</span>
                     )}
                   </div>
                   <div>
@@ -249,28 +253,35 @@ export default function GymFeedTab({ user, onOpenPaywall }) {
               </div>
 
               {/* Фото зала */}
-              <div className="w-full aspect-square bg-black/60">
+              <div className="w-full aspect-square bg-black/60 overflow-hidden">
                 <img src={post.photo_url} alt="Workout" className="w-full h-full object-cover" />
               </div>
 
-              {/* Описание и реакции */}
+              {/* Действия и комментарии */}
               <div className="p-3.5 space-y-2">
-                <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  {/* Кнопка реакции 🔥 */}
                   <button
                     onClick={() => handleLike(post.id, post.likes_count)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-xs font-bold text-white hover:bg-white/[0.08] active:scale-95 transition cursor-pointer"
                   >
                     <span>🔥</span>
-                    <span>{post.likes_count}</span>
+                    <span>{post.likes_count || 0}</span>
                   </button>
 
-                  <span className="text-[10px] text-slate-500">
-                    {new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  {/* Кнопка открытия комментариев 💬 */}
+                  <button
+                    onClick={() => openComments(post)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-xs font-semibold text-slate-300 hover:text-white active:scale-95 transition cursor-pointer"
+                  >
+                    <span>💬</span>
+                    <span>{post.comments_count || 0}</span>
+                  </button>
                 </div>
 
+                {/* Подпись к посту */}
                 {post.caption && (
-                  <p className="text-xs text-slate-200 leading-relaxed font-normal">
+                  <p className="text-xs text-slate-200 leading-relaxed font-normal pt-1">
                     <span className="font-bold text-white mr-1.5">{post.author_name}</span>
                     {post.caption}
                   </p>
@@ -278,6 +289,79 @@ export default function GymFeedTab({ user, onOpenPaywall }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* МОДАЛЬНОЕ ОКНО КОММЕНТАРИЕВ В СТИЛЕ APPLE SHEET */}
+      {activePostComments && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="apple-glass w-full max-w-md h-[80vh] flex flex-col rounded-t-3xl sm:rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
+            {/* Хедер модалки */}
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#0C101A]/90">
+              <div>
+                <h3 className="text-xs font-bold text-white tracking-tight">
+                  Комментарии к посту
+                </h3>
+                <p className="text-[10px] text-slate-400">
+                  Атлет: {activePostComments.author_name}
+                </p>
+              </div>
+              <button
+                onClick={() => setActivePostComments(null)}
+                className="text-slate-400 hover:text-white text-base px-2 py-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Список комментариев с автоскроллом */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-3">
+              {commentsList.length === 0 ? (
+                <div className="text-center py-10 text-xs text-slate-500">
+                  Пока нет комментариев. Напиши первое слово поддержки! 💪
+                </div>
+              ) : (
+                commentsList.map(c => (
+                  <div key={c.id} className="flex gap-2.5 items-start bg-white/[0.02] p-2.5 rounded-xl border border-white/[0.04]">
+                    <div className="w-7 h-7 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">
+                      {c.author_avatar ? (
+                        <img src={c.author_avatar} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        c.author_name?.[0] || 'A'
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-0.5">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-[11px] font-bold text-white">{c.author_name}</span>
+                        <span className="text-[9px] text-slate-500">
+                          {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 leading-snug">{c.text}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Форма ввода комментария */}
+            <form onSubmit={handleSendComment} className="p-3 border-t border-white/10 bg-[#0C101A]/95 flex gap-2">
+              <input
+                type="text"
+                value={newCommentText}
+                onChange={e => setNewCommentText(e.target.value)}
+                placeholder="Написать комментарий..."
+                className="flex-1 apple-input text-xs"
+              />
+              <button
+                type="submit"
+                disabled={sendingComment || !newCommentText.trim()}
+                className="gymshark-btn-electric px-4 text-xs font-bold disabled:opacity-50 cursor-pointer"
+              >
+                {sendingComment ? '...' : '➔'}
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>
