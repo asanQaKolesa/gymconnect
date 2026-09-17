@@ -44,7 +44,9 @@ export default function GymBroTab({
   const [isEditingCard, setIsEditingCard] = useState(!myCard);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [matchSuccessUser, setMatchSuccessUser] = useState(null);
+
+  // Стейты результата свайпа
+  const [matchResult, setMatchResult] = useState(null); // { isMutual: boolean, targetUser: object }
 
   // Фильтры
   const [gymFilter, setGymFilter] = useState('all');
@@ -70,7 +72,6 @@ export default function GymBroTab({
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  // Загрузка фото с сжатием прямо в анкете GymBro
   function handlePhotoUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -144,23 +145,57 @@ export default function GymBroTab({
     }
   }
 
+  // Логика двойного согласия (Double Opt-In Match)
   async function handleConnect() {
     if (!currentCard) return;
 
-    try {
-      const myTgId = Number(user?.telegram_id);
-      const targetTgId = Number(currentCard.telegram_id);
+    const myTgId = Number(user?.telegram_id);
+    const targetTgId = Number(currentCard.telegram_id);
 
-      if (myTgId && targetTgId) {
+    if (!myTgId || !targetTgId) {
+      handlePass();
+      return;
+    }
+
+    try {
+      // 1. Проверяем, свайпал ли этот атлет меня ранее (входящая заявка)
+      const { data: incomingReq } = await supabase
+        .from('friendships')
+        .select('id, status')
+        .eq('user_id', targetTgId)
+        .eq('friend_id', myTgId)
+        .maybeSingle();
+
+      if (incomingReq) {
+        // ВЗАИМНЫЙ МЭТЧ: переводим статус в accepted
+        await supabase
+          .from('friendships')
+          .update({ status: 'accepted' })
+          .eq('id', incomingReq.id);
+
+        setMatchResult({
+          isMutual: true,
+          targetUser: currentCard
+        });
+      } else {
+        // ОДНОСТОРОННИЙ СВАЙП: создаем входящую заявку
         await supabase.from('friendships').insert([
           { user_id: myTgId, friend_id: targetTgId, status: 'pending' }
         ]);
+
+        setMatchResult({
+          isMutual: false,
+          targetUser: currentCard
+        });
       }
     } catch (e) {
       console.error(e);
+      setMatchResult({
+        isMutual: false,
+        targetUser: currentCard
+      });
     }
 
-    setMatchSuccessUser(currentCard);
     handlePass();
   }
 
@@ -173,45 +208,76 @@ export default function GymBroTab({
 
   return (
     <div className="space-y-3 pb-8 select-none">
-      {/* 1. ВСПЛЫВАЮЩЕЕ ОКНО УСПЕШНОГО КОННЕКТА */}
-      {matchSuccessUser && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
-          <div className="apple-glass max-w-sm w-full p-5 text-center space-y-4 border border-white/10 rounded-3xl animate-in zoom-in-95 duration-200">
-            <span className="text-4xl block">🤝🔥</span>
-            <div className="space-y-1">
-              <h3 className="text-base font-black text-white tracking-tight">Заявка отправлена!</h3>
-              <p className="text-xs text-slate-300">
-                Ты предложил законнектиться атлету <strong className="text-white">{matchSuccessUser.name}</strong>
-              </p>
-            </div>
+      {/* 1. ЭКРАН РЕЗУЛЬТАТА СВАЙПА (МЭТЧ / ЗАЯВКА) */}
+      {matchResult && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="apple-glass max-w-sm w-full p-6 text-center space-y-4 border border-white/10 rounded-3xl animate-in zoom-in-95 duration-200">
+            {matchResult.isMutual ? (
+              <>
+                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-[#FF5A1F] flex items-center justify-center text-3xl mx-auto shadow-xl shadow-[#FF5A1F]/30 animate-bounce">
+                  ⚡️
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black text-[#FF8C38] uppercase tracking-widest block">
+                    IT'S A GYMBRO MATCH!
+                  </span>
+                  <h3 className="text-lg font-black text-white tracking-tight">
+                    Вы оба готовы тренироваться!
+                  </h3>
+                  <p className="text-xs text-slate-300 pt-1">
+                    Симпатия взаимна. Вы с атлетом <strong className="text-white">{matchResult.targetUser.name}</strong> теперь напарники в GymConnect.
+                  </p>
+                </div>
 
-            <div className="p-3 bg-white/[0.03] border border-white/[0.06] rounded-2xl text-[11px] text-slate-400">
-              {matchSuccessUser.weekday_gym} • {matchSuccessUser.split}
-            </div>
+                <div className="p-3 bg-white/[0.03] border border-white/[0.08] rounded-2xl text-[11px] text-slate-300">
+                  📍 {matchResult.targetUser.weekday_gym} • 💪 {matchResult.targetUser.split}
+                </div>
 
-            {matchSuccessUser.telegram_username && (
-              <a
-                href={`https://t.me/${matchSuccessUser.telegram_username}`}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full gymshark-btn-electric py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 no-underline block"
-              >
-                <span>Написать сразу в Telegram ➔</span>
-              </a>
+                {matchResult.targetUser.telegram_username ? (
+                  <a
+                    href={`https://t.me/${matchResult.targetUser.telegram_username}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full gymshark-btn-electric py-3 text-xs font-bold flex items-center justify-center gap-1.5 no-underline block shadow-lg shadow-[#FF5A1F]/30"
+                  >
+                    <span>💬 Написать в Telegram (@{matchResult.targetUser.telegram_username}) ➔</span>
+                  </a>
+                ) : (
+                  <p className="text-[11px] text-slate-400">
+                    У напарника скрыт юзернейм, он добавлен в твои друзья.
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <span className="text-4xl block">🤝</span>
+                <div className="space-y-1">
+                  <h3 className="text-base font-black text-white tracking-tight">
+                    Запрос отправлен
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Заявка на тренировку ушла атлету <strong className="text-white">{matchResult.targetUser.name}</strong>.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-white/[0.02] border border-white/[0.05] rounded-2xl text-[11px] text-slate-400">
+                  🔒 Контакты Telegram откроются обоим, как только напарник ответит взаимным свайпом.
+                </div>
+              </>
             )}
 
             <button
               type="button"
-              onClick={() => setMatchSuccessUser(null)}
-              className="w-full py-2 text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
+              onClick={() => setMatchResult(null)}
+              className="w-full py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-semibold text-slate-300 cursor-pointer transition"
             >
-              Продолжить поиск
+              Продолжить поиск напарников
             </button>
           </div>
         </div>
       )}
 
-      {/* 2. ДЕТАЛЬНОЕ ДОСЬЕ ПРИ ТАПЕ НА КАРТОЧКУ */}
+      {/* 2. ДЕТАЛЬНОЕ ДОСЬЕ АТЛЕТА С ЗАЩИТОЙ КОНТАКТОВ */}
       {showDetailModal && currentCard && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full p-5 space-y-3.5 border border-white/10 rounded-3xl max-h-[85vh] overflow-y-auto">
@@ -222,7 +288,7 @@ export default function GymBroTab({
               <button
                 type="button"
                 onClick={() => setShowDetailModal(false)}
-                className="text-slate-400 hover:text-white text-base px-1"
+                className="text-slate-400 hover:text-white text-base px-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -273,6 +339,16 @@ export default function GymBroTab({
               </div>
             )}
 
+            {/* БЕЗОПАСНЫЙ БЛОК: TELEGRAM СКРЫТ ДО МЭТЧА */}
+            <div className="p-2.5 rounded-xl bg-black/40 border border-white/[0.06] text-center space-y-1">
+              <span className="text-[10px] text-slate-400 block flex items-center justify-center gap-1">
+                <span>🔒</span> Связь в Telegram: <strong className="text-slate-500">t.me/••••••••</strong>
+              </span>
+              <p className="text-[9px] text-slate-500">
+                Контакт станет доступен после взаимного свайпа
+              </p>
+            </div>
+
             <button
               type="button"
               onClick={() => {
@@ -287,7 +363,7 @@ export default function GymBroTab({
         </div>
       )}
 
-      {/* 3. РЕДАКТИРОВАНИЕ АНКЕТЫ GYMBRO С ЗАГРУЗКОЙ ФОТО */}
+      {/* 3. РЕДАКТИРОВАНИЕ АНКЕТЫ GYMBRO */}
       {isEditingCard ? (
         <div className="apple-glass p-4 space-y-3.5 border border-white/[0.08] rounded-3xl">
           <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
@@ -309,7 +385,6 @@ export default function GymBroTab({
           </div>
 
           <form onSubmit={handleSubmitForm} className="space-y-3">
-            {/* БЛОК ЗАГРУЗКИ ФОТО ДЛЯ GYMBRO */}
             <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
               <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#121622] border border-white/10 flex items-center justify-center flex-shrink-0 shadow-md">
                 {formData.photo_url ? (
@@ -445,7 +520,6 @@ export default function GymBroTab({
       ) : (
         /* ================= 4. ЭКРАН СВАЙПОВ TINDER ================= */
         <div className="space-y-3">
-          {/* Быстрые фильтры */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
               <button
@@ -486,7 +560,6 @@ export default function GymBroTab({
             </button>
           </div>
 
-          {/* Карточка атлета */}
           {currentCard ? (
             <div className="space-y-3">
               <div
