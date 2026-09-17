@@ -56,7 +56,7 @@ export default function GymBroTab() {
   const currentProfile = profiles[currentIndex];
 
   return (
-    <div className={`min-h-screen bg-[${appleTheme.colors.bg}] text-[${appleTheme.colors.primaryText}] px-4 pt-3 pb-24 flex flex-col max-w-md mx-auto ${appleTheme.styles.fontFamily}`}>
+    <div className={`min-h-screen bg-[${appleTheme.colors.bg}] text-[${appleTheme.colors.primaryText}] px-4 pt-3 pb-20 flex flex-col max-w-md mx-auto ${appleTheme.styles.fontFamily}`}>
       
       {/* Верхние плашки навигации */}
       {activeSubTab === 'swipe' && (
@@ -131,16 +131,15 @@ export default function GymBroTab() {
       {activeSubTab === 'likes' && <GymBroLikes onBack={() => setActiveSubTab('swipe')} />}
       {activeSubTab === 'edit' && <GymBroEditProfile onBack={() => setActiveSubTab('swipe')} />}
 
-      {/* Основной экран свайпов: утвержденный размер карточки и кнопок */}
+      {/* Основной экран свайпов: уменьшенный интервал между карточкой и кнопками (space-y-2) */}
       {activeSubTab === 'swipe' && currentProfile && (
-        <div className="flex-1 flex flex-col justify-center space-y-3.5 my-auto animate-fadeIn pb-2">
+        <div className="flex-1 flex flex-col justify-center space-y-2 my-auto animate-fadeIn pb-1">
           
           <div className="bg-white rounded-[28px] shadow-[0_10px_32px_rgba(0,0,0,0.06)] border border-black/[0.05] overflow-hidden relative flex flex-col mx-auto w-full max-w-[370px]">
             <div className="relative w-full aspect-[4/4.3] bg-zinc-900">
               <img src={currentProfile.avatar} alt={currentProfile.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent"></div>
               
-              {/* Возраст и статус наверху карточки */}
               <div className="absolute top-3.5 left-3.5 flex items-center gap-2">
                 <div className="bg-white/20 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1 rounded-full border border-white/20 tracking-wide">
                   {currentProfile.personality}
@@ -175,7 +174,7 @@ export default function GymBroTab() {
             </div>
           </div>
 
-          {/* Плашка с кнопками */}
+          {/* Плашка с кнопками исходного крупного размера, приподнятая ближе к карточке */}
           <div className="bg-white/90 backdrop-blur-xl border border-black/[0.06] rounded-[24px] px-6 py-3 shadow-[0_6px_24px_rgba(0,0,0,0.05)] flex items-center justify-between mx-auto w-full max-w-[370px]">
             
             <button onClick={() => alert('Возврат последней анкеты')} className="w-14 h-14 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_12px_rgba(0,0,0,0.05)] flex items-center justify-center text-zinc-700 hover:scale-105 active:scale-95 transition-all">
