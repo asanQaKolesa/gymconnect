@@ -52,14 +52,11 @@ const Icons = {
       <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
       <circle cx="12" cy="7" r="4" />
     </svg>
-  ),
-  ArrowRight: () => (
-    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
-    </svg>
   )
 };
+
+// Секретный резервный PIN-код для входа в админку с любого устройства
+const BACKUP_ADMIN_PIN = "7770";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
@@ -73,6 +70,13 @@ export default function App() {
   const [gymBroCards, setGymBroCards] = useState([]);
   const [saving, setSaving] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
+
+  // Оферта и соглашения
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
+
+  // Секретный тап-счётчик для резервной админки
+  const [logoTaps, setLogoTaps] = useState(0);
 
   useEffect(() => {
     initApp();
@@ -105,6 +109,9 @@ export default function App() {
 
       if (userData) {
         setCurrentUser(userData);
+        if (!userData.terms_accepted) {
+          setShowTermsModal(true);
+        }
       } else {
         const initialName = tgName || (tgUser ? `@${tgUser}` : 'Новый атлет');
         const newPayload = {
@@ -113,7 +120,9 @@ export default function App() {
           name: initialName,
           gender: 'Парень',
           city: 'Алматы',
-          sport_type: 'Атлет'
+          sport_type: 'Атлет',
+          is_pro: false,
+          terms_accepted: false
         };
 
         const { data: createdUser } = await supabase
@@ -124,6 +133,7 @@ export default function App() {
 
         if (createdUser) {
           setCurrentUser(createdUser);
+          setShowTermsModal(true);
         } else {
           setCurrentUser(newPayload);
         }
@@ -153,6 +163,35 @@ export default function App() {
     if (data) {
       const filtered = currentTgId ? data.filter(c => c.telegram_id !== currentTgId) : data;
       setGymBroCards(filtered);
+    }
+  }
+
+  async function handleAcceptTerms() {
+    if (!termsAgreed) return alert('Пожалуйста, подтвердите согласие с правилами сервиса');
+    const tgId = telegramUser.id || currentUser?.telegram_id;
+    if (!tgId) return;
+
+    await supabase
+      .from('users')
+      .update({ terms_accepted: true, terms_accepted_at: new Date().toISOString() })
+      .eq('telegram_id', tgId);
+
+    setCurrentUser(prev => ({ ...prev, terms_accepted: true }));
+    setShowTermsModal(false);
+  }
+
+  function handleLogoTap() {
+    const nextTaps = logoTaps + 1;
+    setLogoTaps(nextTaps);
+    if (nextTaps >= 4) {
+      setLogoTaps(0);
+      const pin = prompt('Введите резервный PIN администратора:');
+      if (pin === BACKUP_ADMIN_PIN) {
+        setCurrentUser(prev => ({ ...prev, is_admin: true }));
+        alert('Резервный режим администратора активирован! 👑');
+      } else if (pin !== null) {
+        alert('Неверный PIN-код');
+      }
     }
   }
 
@@ -220,14 +259,54 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-sans pb-24 select-none">
-      {/* Модальное окно подписки GymConnect PRO */}
+      {/* 1. Модалка юридической защиты (Оферта при первом входе) */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="apple-glass max-w-sm w-full p-5 space-y-4 shadow-2xl border border-white/10 rounded-3xl">
+            <div className="text-center space-y-1.5">
+              <span className="text-3xl">⚖️</span>
+              <h3 className="text-sm font-black text-white uppercase tracking-wider">Добро пожаловать в GymConnect</h3>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Для доступа к поиску напарников и клубной ленте, подтвердите согласие с правилами сервиса.
+              </p>
+            </div>
+
+            <div className="p-3 bg-white/[0.02] border border-white/[0.06] rounded-2xl space-y-2 text-[11px] text-slate-300">
+              <p>• Сервис предназначен для совершеннолетних атлетов.</p>
+              <p>• Соблюдайте этикет и безопасность в фитнес-клубах.</p>
+              <p>• Вы сами несёте ответственность за своё здоровье во время тренировок.</p>
+            </div>
+
+            <label className="flex items-start gap-2.5 cursor-pointer text-[11px] text-slate-300 pt-1">
+              <input
+                type="checkbox"
+                checked={termsAgreed}
+                onChange={e => setTermsAgreed(e.target.checked)}
+                className="mt-0.5 rounded border-white/20 text-[#FF5A1F] focus:ring-0"
+              />
+              <span>Я принимаю условия Публичной оферты и Политику конфиденциальности GymConnect</span>
+            </label>
+
+            <button
+              type="button"
+              onClick={handleAcceptTerms}
+              disabled={!termsAgreed}
+              className="w-full gymshark-btn-electric py-3 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Начать тренировки ➔
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Модальное окно подписки GymConnect PRO */}
       {showPaywallModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4">
-          <div className="apple-glass max-w-sm w-full p-5 space-y-4 shadow-2xl border border-white/10">
+          <div className="apple-glass max-w-sm w-full p-5 space-y-4 shadow-2xl border border-white/10 rounded-3xl">
             <div className="flex justify-between items-center pb-2 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <Icons.Crown />
-                <h3 className="text-sm font-bold text-white tracking-tight">Подписка GymConnect PRO</h3>
+                <h3 className="text-sm font-bold text-white tracking-tight">GymConnect VIP PRO</h3>
               </div>
               <button
                 onClick={() => setShowPaywallModal(false)}
@@ -243,21 +322,17 @@ export default function App() {
                 <span className="text-xs text-slate-400 font-medium"> / месяц</span>
               </div>
 
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Единая подписка открывает доступ ко всей экосистеме:
-              </p>
-
               <div className="space-y-2 text-left text-xs text-slate-200">
                 <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                  <span className="text-[#FF5A1F] font-black">✓</span>
-                  <span><strong>GymBro</strong> — Безлимитный поиск напарников и контакты</span>
+                  <span className="text-[#FF5A1F] font-black">👑</span>
+                  <span><strong>GymBro</strong> — Безлимитный поиск напарников и прямые контакты</span>
                 </div>
                 <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                  <span className="text-[#FF5A1F] font-black">✓</span>
-                  <span><strong>Лента зала</strong> — Публикация пруфов, реакции и комьюнити</span>
+                  <span className="text-[#FF5A1F] font-black">👑</span>
+                  <span><strong>Лента зала</strong> — Публикация пруфов формы и реакции</span>
                 </div>
                 <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                  <span className="text-[#FF5A1F] font-black">✓</span>
+                  <span className="text-[#FF5A1F] font-black">👑</span>
                   <span><strong>Рационы и КБЖУ</strong> — Меню на 7 дней и продуктовая корзина</span>
                 </div>
               </div>
@@ -268,67 +343,70 @@ export default function App() {
                 rel="noreferrer"
                 className="w-full gymshark-btn-electric py-3 text-xs font-bold flex items-center justify-center gap-2 no-underline cursor-pointer shadow-lg shadow-[#FF5A1F]/20 mt-3"
               >
-                <span>Оформить доступ (Kaspi Pay)</span>
+                <span>Оформить VIP-доступ (Kaspi Pay)</span>
                 <span>➔</span>
               </a>
-
-              <p className="text-[10px] text-slate-500">
-                Моментальная активация после подтверждения транзакции
-              </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Верхний Header */}
-      <header className="px-5 py-3.5 border-b border-white/[0.08] flex justify-between items-center bg-[#0a0d14]/80 backdrop-blur-2xl sticky top-0 z-30">
-        <div className="flex items-center gap-2.5">
+      {/* Верхний Header (Чистый, без лишних кнопок для PRO) */}
+      <header className="px-5 py-3 border-b border-white/[0.08] flex justify-between items-center bg-[#0a0d14]/80 backdrop-blur-2xl sticky top-0 z-30">
+        <div onClick={handleLogoTap} className="flex items-center gap-2.5 cursor-pointer active:scale-95 transition">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] flex items-center justify-center text-white shadow-lg shadow-[#FF5A1F]/25 flex-shrink-0">
             <Icons.Lightning />
           </div>
           <div>
-            <h1 className="text-[15px] font-bold text-white tracking-tight leading-tight">GymConnect</h1>
-            <p className="text-[11px] text-slate-400 font-normal">{currentUser?.city || 'Алматы'} • Club</p>
+            <h1 className="text-[14px] font-bold text-white tracking-tight leading-tight">GymConnect</h1>
+            <p className="text-[10px] text-slate-400 font-normal">{currentUser?.city || 'Алматы'} • Club</p>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => initApp()}
-            className="text-[11px] text-slate-400 hover:text-white px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] active:scale-95 transition cursor-pointer"
-          >
-            Обновить
-          </button>
-          <button
-            onClick={() => setShowPaywallModal(true)}
-            className="flex items-center gap-1 bg-[#FF5A1F]/15 border border-[#FF5A1F]/30 px-2.5 py-1 rounded-full cursor-pointer active:scale-95 transition"
-          >
-            <Icons.Crown />
-            <span className="text-[10px] font-bold text-[#FF5A1F] tracking-wide">
-              {currentUser?.is_pro ? 'PRO' : '3 000 ₸'}
-            </span>
-          </button>
+          {/* Если есть PRO — чистый аккуратный бейдж, никаких продаж */}
+          {currentUser?.is_pro ? (
+            <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-[#FF5A1F]/20 border border-amber-500/30 px-3 py-1 rounded-full">
+              <span className="text-xs">👑</span>
+              <span className="text-[10px] font-black text-amber-400 tracking-wider uppercase">VIP</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowPaywallModal(true)}
+              className="flex items-center gap-1 bg-[#FF5A1F]/15 border border-[#FF5A1F]/30 px-2.5 py-1 rounded-full cursor-pointer active:scale-95 transition"
+            >
+              <Icons.Crown />
+              <span className="text-[10px] font-bold text-[#FF5A1F] tracking-wide">3 000 ₸</span>
+            </button>
+          )}
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-4 max-w-md mx-auto w-full space-y-4">
-        {/* ================= 1. ГЛАВНАЯ СТРАНИЦА: ПРОФИЛЬ + ЖИВАЯ ЛЕНТА КЛУБА ================= */}
+      <main className="flex-1 px-4 py-3.5 max-w-md mx-auto w-full space-y-4">
+        {/* ================= 1. ГЛАВНАЯ СТРАНИЦА ================= */}
         {activeTab === 'home' && (
-          <div className="space-y-4">
-            {/* Компактный статус атлета */}
-            <div className="apple-glass-card p-4 flex justify-between items-center">
-              <div className="flex items-center gap-3.5 overflow-hidden">
-                <div className="w-12 h-12 rounded-2xl overflow-hidden bg-[#121622] border border-white/15 flex-shrink-0 flex items-center justify-center shadow-lg">
+          <div className="space-y-3.5">
+            <div className="apple-glass-card p-3.5 flex justify-between items-center">
+              <div className="flex items-center gap-3 overflow-hidden">
+                <div className="w-11 h-11 rounded-2xl overflow-hidden bg-[#121622] border border-white/15 flex-shrink-0 flex items-center justify-center shadow-md">
                   {currentUser?.avatar_url ? (
                     <img src={currentUser.avatar_url} alt="Athlete" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-lg font-bold text-white">{currentUser?.name?.[0] || 'A'}</span>
+                    <span className="text-base font-bold text-white">{currentUser?.name?.[0] || 'A'}</span>
                   )}
                 </div>
                 <div className="truncate">
-                  <h2 className="text-sm font-bold text-white tracking-tight truncate">
-                    {currentUser?.name || 'Атлет'}
-                  </h2>
-                  <p className="text-[11px] text-slate-400 font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <h2 className="text-xs font-bold text-white tracking-tight truncate">
+                      {currentUser?.name || 'Атлет'}
+                    </h2>
+                    {currentUser?.is_pro && (
+                      <span className="text-[8px] bg-amber-500/25 text-amber-300 border border-amber-500/40 px-1 py-0.2 rounded font-black">
+                        PRO
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium">
                     {currentUser?.city || 'Алматы'} • {currentUser?.sport_type || 'Атлет'}
                   </p>
                 </div>
@@ -336,13 +414,12 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab('profile')}
-                className="text-[11px] text-[#FF8C38] font-bold px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] cursor-pointer"
+                className="text-[10px] text-[#FF8C38] font-bold px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] cursor-pointer"
               >
-                Мой профиль ➔
+                Профиль ➔
               </button>
             </div>
 
-            {/* Живая лента тренировок клуба */}
             <GymFeedTab
               user={currentUser}
               onOpenPaywall={() => setShowPaywallModal(true)}
@@ -350,7 +427,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= 2. GYMBRO: ПОИСК НАПАРНИКОВ ================= */}
+        {/* ================= 2. GYMBRO ================= */}
         {activeTab === 'gymbro' && (
           <GymBroTab
             myCard={myGymBroCard}
@@ -364,7 +441,7 @@ export default function App() {
           />
         )}
 
-        {/* ================= 3. ДРУЗЬЯ (ОТДЕЛЬНЫЙ ЭКРАН) ================= */}
+        {/* ================= 3. ДРУЗЬЯ ================= */}
         {activeTab === 'friends' && (
           <FriendsTab user={currentUser} />
         )}
@@ -383,12 +460,12 @@ export default function App() {
         {activeTab === 'profile' && (
           <ProfileTab
             user={currentUser}
-            onUpdateUser={(updated) => setCurrentUser(updated)}
+            onUpdateUser={(updated) => setCurrentUser({ ...currentUser, ...updated })}
           />
         )}
       </main>
 
-      {/* Нативный нижний бар из 5 равных вкладок */}
+      {/* Нативный нижний бар из 5 вкладок */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto ios-nav-dock flex justify-around py-2.5 z-40">
         <button
           onClick={() => setActiveTab('home')}
