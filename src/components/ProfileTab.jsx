@@ -23,6 +23,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
   const [activeSection, setActiveSection] = useState('athlete');
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState(null);
 
   // Живые счетчики реакций и друзей
@@ -40,12 +41,11 @@ export default function ProfileTab({ user, onUpdateUser }) {
     bio: user?.bio || ''
   });
 
-  // Автоматический подсчет всех реакций и друзей из базы Supabase
+  // Автоматический пересчет счетчиков
   useEffect(() => {
     async function syncCommunityStats() {
       if (!user?.telegram_id) return;
 
-      // 1. Суммируем все реакции 🔥 со всех постов пользователя
       const { data: postsData } = await supabase
         .from('feed_posts')
         .select('likes_count')
@@ -58,7 +58,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
         setTotalLikes(0);
       }
 
-      // 2. Считаем количество друзей
       const { count } = await supabase
         .from('friendships')
         .select('*', { count: 'exact', head: true })
@@ -72,49 +71,117 @@ export default function ProfileTab({ user, onUpdateUser }) {
     syncCommunityStats();
   }, [user?.telegram_id, activeSection]);
 
+  // Клиентское сжатие фото перед загрузкой (чтобы не зависало на тяжелых фото со смартфона)
   function handleAvatarUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setForm(prev => ({ ...prev, avatar_url: reader.result }));
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 600;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Сжатие в качественный WebP/JPEG
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.82);
+        setForm(prev => ({ ...prev, avatar_url: compressedBase64 }));
+      };
+      img.src = event.target.result;
     };
     reader.readAsDataURL(file);
   }
 
+  // Надежное сохранение (ищет по telegram_id либо по id)
   async function handleSave(e) {
     e.preventDefault();
-    if (!form.name.trim()) return alert('Укажи имя');
+    if (!form.name.trim()) return alert('Укажи имя атлета');
 
     setSaving(true);
-    const { data, error } = await supabase
-      .from('users')
-      .update({
-        name: form.name.trim(),
-        gender: form.gender,
-        city: form.city,
-        sport_type: form.sport_type,
-        avatar_url: form.avatar_url || null,
-        instagram: form.instagram ? form.instagram.replace('@', '').trim() : null,
-        bio: form.bio ? form.bio.trim() : null
-      })
-      .eq('id', user.id)
-      .select()
-      .single();
+    const tgId = user?.telegram_id;
+
+    const updatePayload = {
+      name: form.name.trim(),
+      gender: form.gender,
+      city: form.city,
+      sport_type: form.sport_type,
+      avatar_url: form.avatar_url || null,
+      instagram: form.instagram ? form.instagram.replace('@', '').trim() : null,
+      bio: form.bio ? form.bio.trim() : null
+    };
+
+    let query = supabase.from('users').update(updatePayload);
+
+    if (tgId) {
+      query = query.eq('telegram_id', tgId);
+    } else if (user?.id) {
+      query = query.eq('id', user.id);
+    } else {
+      setSaving(false);
+      return alert('Ошибка идентификации аккаунта. Перезапустите бота.');
+    }
+
+    const { data, error } = await query.select().single();
 
     if (!error && data) {
       onUpdateUser(data);
       setIsEditing(false);
     } else {
-      alert('Ошибка при сохранении: ' + (error?.message || 'Попробуй позже'));
+      alert('Ошибка при сохранении: ' + (error?.message || 'Попробуйте снова'));
     }
     setSaving(false);
   }
 
+  // Полное удаление анкеты атлета
+  async function handleDeleteProfile() {
+    const confirmed = window.confirm(
+      'Вы уверены, что хотите удалить свою анкету атлета? Все данные профиля и анкеты будут безвозвратно удалены.'
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    const tgId = user?.telegram_id;
+
+    try {
+      if (tgId) {
+        // Удаляем связанные данные
+        await supabase.from('gymbro_cards').delete().eq('telegram_id', tgId);
+        await supabase.from('feed_posts').delete().eq('user_id', tgId);
+        await supabase.from('users').delete().eq('telegram_id', tgId);
+      } else if (user?.id) {
+        await supabase.from('users').delete().eq('id', user.id);
+      }
+
+      alert('Анкета успешно удалена.');
+      window.location.reload();
+    } catch (err) {
+      alert('Ошибка при удалении: ' + err.message);
+    }
+    setDeleting(false);
+  }
+
   return (
     <div className="space-y-4">
-      {/* Модальное окно просмотра документов внутри Telegram */}
+      {/* Модальное окно просмотра документов */}
       {selectedDoc && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full max-h-[80vh] flex flex-col shadow-2xl border border-white/10 overflow-hidden">
@@ -149,7 +216,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
         </div>
       )}
 
-      {/* Верхний таб-бар профиля (4 равные кнопки) */}
+      {/* Верхний таб-бар профиля */}
       <div className="apple-glass p-1.5 grid grid-cols-4 gap-1">
         {PROFILE_SECTIONS.map(section => (
           <button
@@ -197,7 +264,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
             <form onSubmit={handleSave} className="space-y-3.5 pt-1">
               {/* Фото аватара */}
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center flex-shrink-0">
+                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center flex-shrink-0 shadow-md">
                   {form.avatar_url ? (
                     <img src={form.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
@@ -327,6 +394,18 @@ export default function ProfileTab({ user, onUpdateUser }) {
               >
                 {saving ? 'Сохраняем...' : 'Сохранить изменения'}
               </button>
+
+              {/* Опасная зона: Удаление анкеты */}
+              <div className="pt-3 border-t border-red-500/20 text-center">
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={handleDeleteProfile}
+                  className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer underline active:opacity-70 transition"
+                >
+                  {deleting ? 'Удаление...' : '🗑 Удалить мою анкету атлета'}
+                </button>
+              </div>
             </form>
           ) : (
             <div className="space-y-4 pt-1">
@@ -368,7 +447,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
                 </div>
               )}
 
-              {/* ДИНАМИЧЕСКИЕ СЧЕТЧИКИ: ДРУЗЬЯ И СУММА РЕАКЦИЙ 🔥 С ЛЕНТЫ */}
+              {/* Счетчики */}
               <div className="grid grid-cols-3 gap-2 pt-1 text-center">
                 <div className="p-2.5 rounded-xl bg-black/30 border border-white/[0.05]">
                   <p className="text-[10px] text-slate-500 font-bold uppercase">Друзья</p>
