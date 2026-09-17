@@ -101,10 +101,17 @@ export default function ProfileTab({ user, onUpdateUser }) {
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const MAX = 500;
-        let w = img.width, h = img.height;
-        if (w > h && w > MAX) { h *= MAX / w; w = MAX; }
-        else if (h > MAX) { w *= MAX / h; h = MAX; }
-        canvas.width = w; canvas.height = h;
+        let w = img.width;
+        let h = img.height;
+        if (w > h && w > MAX) {
+          h *= MAX / w;
+          w = MAX;
+        } else if (h > MAX) {
+          w *= MAX / h;
+          h = MAX;
+        }
+        canvas.width = w;
+        canvas.height = h;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, w, h);
         setForm(prev => ({ ...prev, avatar_url: canvas.toDataURL('image/jpeg', 0.8) }));
@@ -141,10 +148,10 @@ export default function ProfileTab({ user, onUpdateUser }) {
       if (data) {
         onUpdateUser(data);
         setIsEditing(false);
-        alert('Профиль успешно сохранен! ✅');
+        alert('Профиль сохранен! ✅');
       }
     } catch (err) {
-      alert('Ошибка при сохранении: ' + err.message);
+      alert('Ошибка: ' + err.message);
     } finally {
       setSaving(false);
     }
