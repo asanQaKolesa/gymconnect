@@ -7,8 +7,19 @@ import ProfileTab from './components/ProfileTab';
 export default function App() {
   const [session, setSession] = useState(null);
   const [activeTab, setActiveTab] = useState('home');
+  const [telegramUser, setTelegramUser] = useState(null);
 
   useEffect(() => {
+    // Получаем реальные данные пользователя Telegram
+    const tg = window?.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      if (tg.initDataUnsafe?.user) {
+        setTelegramUser(tg.initDataUnsafe.user);
+      }
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
@@ -31,7 +42,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0b0f19] text-white flex flex-col font-sans select-none">
-      {/* Шапка приложения */}
+      {/* Шапка */}
       <header className="px-5 py-3.5 border-b border-gray-800/80 flex items-center justify-between bg-[#0b0f19]/90 backdrop-blur-md sticky top-0 z-40">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-black text-black text-base shadow-lg shadow-emerald-500/20">
@@ -47,18 +58,16 @@ export default function App() {
         </div>
       </header>
 
-      {/* Основной контент */}
+      {/* Контент экранов с передачей session и telegramUser */}
       <main className="flex-1 w-full max-w-lg mx-auto overflow-y-auto">
         {activeTab === 'home' && (
           <div className="p-5 space-y-5">
-            {/* Мотивационный блок дня */}
             <div className="bg-gradient-to-br from-[#131d31] to-[#0f172a] border border-gray-800 p-5 rounded-3xl relative overflow-hidden shadow-xl">
               <div className="text-xs font-bold text-emerald-400 tracking-wider uppercase mb-1">Фокус дня</div>
               <h2 className="text-lg font-black leading-snug">«Дисциплина бьёт мотивацию в 100% случаев»</h2>
               <p className="text-xs text-gray-400 mt-2">Каждый подход приближает тебя к лучшей форме.</p>
             </div>
 
-            {/* Быстрые действия */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setActiveTab('gymbro')}
@@ -66,7 +75,7 @@ export default function App() {
               >
                 <span className="text-2xl block group-hover:scale-110 transition-transform">🤝</span>
                 <div className="font-bold text-sm text-white">Найти напарника</div>
-                <div className="text-[11px] text-gray-400">Поиск GymBro в твоем зале</div>
+                <div className="text-[11px] text-gray-400">Tinder в твоем зале</div>
               </button>
 
               <button
@@ -79,7 +88,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Точка входа в тренеров (B2B направление) */}
             <div className="bg-[#111827] border border-gray-800 p-5 rounded-3xl space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">Новый сервис</span>
@@ -93,17 +101,23 @@ export default function App() {
           </div>
         )}
 
-        {/* Раздел GymBro (Tinder-свайпы + друзья внутри) */}
-        {activeTab === 'gymbro' && <GymBroTab session={session} />}
+        {/* Раздел GymBro */}
+        {activeTab === 'gymbro' && (
+          <GymBroTab session={session} telegramUser={telegramUser} user={telegramUser} />
+        )}
 
         {/* Раздел Питание */}
-        {activeTab === 'nutrition' && <NutritionTab session={session} />}
+        {activeTab === 'nutrition' && (
+          <NutritionTab session={session} telegramUser={telegramUser} user={telegramUser} />
+        )}
 
         {/* Раздел Профиль */}
-        {activeTab === 'profile' && <ProfileTab session={session} />}
+        {activeTab === 'profile' && (
+          <ProfileTab session={session} telegramUser={telegramUser} user={telegramUser} />
+        )}
       </main>
 
-      {/* Нижний бар навигации (4 вкладки) */}
+      {/* Нижний бар навигации */}
       <nav className="fixed bottom-0 inset-x-0 bg-[#0b0f19]/95 backdrop-blur-xl border-t border-gray-800/80 py-2 px-4 z-40">
         <div className="max-w-md mx-auto flex items-center justify-around">
           {NAV_ITEMS.map((tab) => {
