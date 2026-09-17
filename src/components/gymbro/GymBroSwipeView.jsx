@@ -11,148 +11,174 @@ export default function GymBroSwipeView({
   onPrev,
   onConnect
 }) {
+  const currentProfile = profiles && profiles[currentIndex];
+
   return (
-    <div className="space-y-4">
-      {/* Фильтр по залу */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
-        <span className="text-slate-400 shrink-0">Зал:</span>
+    <div className="flex flex-col items-center w-full max-w-sm mx-auto select-none">
+      {/* Селектор залов в стиле чипсов */}
+      <div className="w-full flex items-center gap-1.5 overflow-x-auto pb-2 mb-2 no-scrollbar">
         <button
           onClick={() => onFilterChange('Все')}
-          className={`px-3 py-1 rounded-full border whitespace-nowrap font-medium transition ${
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
             filterGym === 'Все'
-              ? 'bg-white text-black border-white'
-              : 'bg-[#121622] text-slate-300 border-white/10'
+              ? 'bg-white text-black shadow-md shadow-white/10'
+              : 'bg-white/[0.05] text-slate-400 border border-white/10 hover:text-white'
           }`}
         >
           Все залы
         </button>
         <button
           onClick={() => onFilterChange(userHomeGym)}
-          className={`px-3 py-1 rounded-full border whitespace-nowrap font-medium transition ${
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
             filterGym === userHomeGym
-              ? 'bg-[#FF5A1F] text-white border-[#FF5A1F]'
-              : 'bg-[#121622] text-slate-300 border-white/10'
+              ? 'bg-[#FF5A1F] text-white shadow-md shadow-[#FF5A1F]/30'
+              : 'bg-white/[0.05] text-slate-400 border border-white/10 hover:text-white'
           }`}
         >
-          Только мой филиал
+          📍 Мой филиал
         </button>
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-slate-400 text-xs">Загрузка атлетов...</div>
-      ) : profiles.length > 0 && currentIndex < profiles.length ? (
-        <div className="bg-[#111827] border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative">
-          <div className="w-full h-80 bg-gray-900 relative">
-            {profiles[currentIndex].photo_url ? (
+        <div className="h-[480px] w-full flex items-center justify-center text-slate-400 text-xs">
+          Поиск атлетов рядом...
+        </div>
+      ) : currentProfile ? (
+        <div className="w-full flex flex-col items-center">
+          {/* Главная карточка Tinder */}
+          <div className="relative w-full h-[470px] rounded-[32px] overflow-hidden bg-[#121622] border border-white/10 shadow-2xl transition-all duration-300">
+            {/* Фото атлета */}
+            {currentProfile.photo_url ? (
               <img
-                src={profiles[currentIndex].photo_url}
-                alt={profiles[currentIndex].full_name}
-                className="w-full h-full object-cover"
+                src={currentProfile.photo_url}
+                alt={currentProfile.full_name}
+                className="w-full h-full object-cover object-center pointer-events-none"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-t from-black/80 to-transparent">
-                🏋️‍♂️
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#181d2d] to-[#0d1017] text-slate-500">
+                <span className="text-6xl mb-2">🏋️‍♂️</span>
+                <span className="text-xs font-medium text-slate-400">Фото пока не добавлено</span>
               </div>
             )}
 
-            {/* Психотип */}
-            <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-bold text-white flex items-center gap-1.5">
-              <span>
-                {profiles[currentIndex].personality_type === 'Интроверт' ? '🤫' : 
-                 profiles[currentIndex].personality_type === 'Экстраверт' ? '⚡' : '⚖️'}
-              </span>
-              <span>{profiles[currentIndex].personality_type || 'Амбиверт'}</span>
-            </div>
+            {/* Мягкий глубокий градиент Tinder поверх фото */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#090c13] via-[#090c13]/40 to-transparent pointer-events-none" />
 
-            {/* Имя и локация */}
-            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-[#111827] via-[#111827]/85 to-transparent p-5">
-              <h3 className="text-2xl font-black text-white">
-                {profiles[currentIndex].full_name}{profiles[currentIndex].age ? `, ${profiles[currentIndex].age}` : ''}
-              </h3>
-              <p className="text-[#FF8C38] font-semibold text-xs mt-0.5 truncate">
-                📍 {profiles[currentIndex].home_gym}
-              </p>
-            </div>
-          </div>
-
-          <div className="p-5 pt-2 space-y-3">
-            <div className="flex flex-wrap gap-2 text-xs">
-              <span className="bg-white/[0.05] border border-white/10 px-2.5 py-1 rounded-lg text-slate-300">
-                ⏱ {profiles[currentIndex].preferred_time || 'Вечер'}
+            {/* Верхние плашки: Психотип и Время */}
+            <div className="absolute top-4 left-4 right-4 flex justify-between items-center pointer-events-none">
+              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-black/50 backdrop-blur-md text-white border border-white/15 flex items-center gap-1.5 shadow-lg">
+                <span>{currentProfile.personality_type === 'Интроверт' ? '🤫' : currentProfile.personality_type === 'Экстраверт' ? '⚡' : '⚖️'}</span>
+                <span>{currentProfile.personality_type || 'Амбиверт'}</span>
               </span>
-              <span className="bg-white/[0.05] border border-white/10 px-2.5 py-1 rounded-lg text-slate-300">
-                💪 {profiles[currentIndex].experience_level}
+
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-black/50 backdrop-blur-md text-slate-300 border border-white/10">
+                ⏱ {currentProfile.preferred_time ? currentProfile.preferred_time.split(' ')[0] : 'Вечер'}
               </span>
             </div>
 
-            {profiles[currentIndex].bio && (
-              <p className="text-xs text-slate-300 bg-white/[0.02] p-3 rounded-xl border border-white/[0.06] leading-relaxed">
-                «{profiles[currentIndex].bio}»
-              </p>
-            )}
-
-            {profiles[currentIndex].goals?.length > 0 && (
-              <div>
-                <div className="text-[11px] text-slate-400 font-medium mb-1">Цели:</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {profiles[currentIndex].goals.map((g, i) => (
-                    <span key={i} className="text-[11px] bg-[#FF5A1F]/15 border border-[#FF5A1F]/30 text-[#FF8C38] px-2 py-0.5 rounded-md font-semibold">
-                      {g}
-                    </span>
-                  ))}
-                </div>
+            {/* Нижняя информация о человеке */}
+            <div className="absolute bottom-4 left-0 right-0 px-5 space-y-2 pointer-events-none">
+              <div className="flex items-baseline gap-2.5">
+                <h2 className="text-2xl font-black text-white tracking-tight drop-shadow-md">
+                  {currentProfile.full_name}
+                </h2>
+                {currentProfile.age && (
+                  <span className="text-xl font-medium text-slate-300">
+                    {currentProfile.age}
+                  </span>
+                )}
               </div>
-            )}
+
+              {/* Зал */}
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-[#FF8C38] truncate drop-shadow">
+                <span>📍</span>
+                <span className="truncate">{currentProfile.home_gym}</span>
+              </div>
+
+              {/* Био */}
+              {currentProfile.bio && (
+                <p className="text-[12px] text-slate-200 line-clamp-2 leading-snug drop-shadow-sm">
+                  {currentProfile.bio}
+                </p>
+              )}
+
+              {/* Теги / Цели */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-white/15 backdrop-blur-md text-white border border-white/10">
+                  💪 {currentProfile.experience_level}
+                </span>
+                {currentProfile.goals && currentProfile.goals.map((goal, idx) => (
+                  <span key={idx} className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-[#FF5A1F]/25 backdrop-blur-md text-[#FF9E66] border border-[#FF5A1F]/30">
+                    {goal}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Панель кнопок: Назад, Пропустить, Тренить вместе */}
-          <div className="flex items-center border-t border-white/10 bg-[#0c101a]">
-            {/* Кнопка отмотать назад */}
+          {/* Tinder Action Buttons Bar */}
+          <div className="flex items-center justify-center gap-5 mt-4 w-full">
+            {/* Кнопка Назад (Rewind) */}
             <button
               onClick={onPrev}
               disabled={currentIndex === 0}
-              className="px-4 py-4 text-slate-400 hover:text-white disabled:opacity-25 border-r border-white/10 transition text-sm flex items-center justify-center"
               title="Отмотать назад"
+              className="w-12 h-12 rounded-full bg-[#161b29] border border-white/10 flex items-center justify-center text-amber-400 shadow-xl active:scale-90 disabled:opacity-30 disabled:scale-100 transition-all cursor-pointer hover:bg-white/[0.08]"
             >
-              ↩
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+              </svg>
             </button>
 
-            {/* Пропустить */}
+            {/* Кнопка Пропустить (Pass) */}
             <button
               onClick={onSkip}
-              className="flex-1 py-4 text-center font-bold text-slate-400 hover:text-rose-400 border-r border-white/10 transition text-xs"
+              title="Пропустить"
+              className="w-16 h-16 rounded-full bg-[#161b29] border border-rose-500/20 flex items-center justify-center text-rose-500 shadow-2xl shadow-rose-500/10 active:scale-90 transition-all cursor-pointer hover:bg-rose-500/10 hover:border-rose-500/40"
             >
-              ✕ Пропустить
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
 
-            {/* Тренить вместе */}
+            {/* Кнопка Тренить вместе (Match / Super Like) */}
             <button
-              onClick={() => onConnect(profiles[currentIndex])}
-              className="flex-1 py-4 text-center font-bold text-[#FF5A1F] hover:text-[#FF8C38] transition text-xs flex items-center justify-center gap-1"
+              onClick={() => onConnect(currentProfile)}
+              title="Тренить вместе"
+              className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] flex items-center justify-center text-white shadow-2xl shadow-[#FF5A1F]/35 active:scale-90 transition-all cursor-pointer hover:brightness-110"
             >
-              <span>⚡</span> Тренить вместе
+              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
             </button>
           </div>
         </div>
       ) : (
-        <div className="bg-[#111827] border border-white/10 rounded-2xl p-8 text-center space-y-3">
-          <div className="text-3xl">🏁</div>
-          <h4 className="font-bold text-white text-sm">Анкеты просмотрены</h4>
-          <p className="text-xs text-slate-400">Смени фильтр залов или отмотай назад!</p>
-          <div className="flex justify-center gap-2">
+        /* Экран завершения анкет */
+        <div className="w-full h-[460px] rounded-[32px] bg-[#121622] border border-white/10 p-8 flex flex-col items-center justify-center text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-white/[0.04] border border-white/10 flex items-center justify-center text-3xl">
+            🏁
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white">Все анкеты просмотрены</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-[220px]">
+              Новые атлеты скоро появятся. Попробуй сменить фильтр залов!
+            </p>
+          </div>
+          <div className="flex gap-2 pt-2">
             {currentIndex > 0 && (
               <button
                 onClick={onPrev}
-                className="px-4 py-2 bg-white/10 rounded-xl text-xs font-semibold text-white border border-white/20"
+                className="px-4 py-2 rounded-2xl bg-white/10 text-white text-xs font-semibold hover:bg-white/15 transition cursor-pointer"
               >
-                ↩ На шаг назад
+                ↩ Отмотать назад
               </button>
             )}
             <button
-              onClick={() => { onFilterChange('Все'); }}
-              className="px-4 py-2 bg-[#FF5A1F] rounded-xl text-xs font-bold text-white"
+              onClick={() => onFilterChange('Все')}
+              className="px-4 py-2 rounded-2xl bg-[#FF5A1F] text-white text-xs font-bold shadow-lg shadow-[#FF5A1F]/25 hover:brightness-110 transition cursor-pointer"
             >
-              Все залы
+              Все залы Алматы
             </button>
           </div>
         </div>
