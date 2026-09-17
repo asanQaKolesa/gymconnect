@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { appleTheme } from '../../ui/AppleTheme';
+import GymBroMatches from './GymBroMatches';
+import GymBroLikes from './GymBroLikes';
+import GymBroEditProfile from './GymBroEditProfile';
 
 export default function GymBroTab() {
-  // Мок-база анкет атлетов Алматы
   const [profiles, setProfiles] = useState([
     {
       id: 1,
       name: "Алексей",
       age: 26,
-      personality: "Экстраверт 🔥",
+      personality: "Экстраверт",
       gym: "Invictus Go (Навои)",
       experience: "Стаж 3 года",
       time: "Вечер (18:00 - 20:00)",
@@ -19,7 +21,7 @@ export default function GymBroTab() {
       id: 2,
       name: "Дильназ",
       age: 24,
-      personality: "Амбиверт ⚡",
+      personality: "Амбиверт",
       gym: "Workout (Достык)",
       experience: "Стаж 1.5 года",
       time: "Утро (08:00 - 10:00)",
@@ -30,7 +32,7 @@ export default function GymBroTab() {
       id: 3,
       name: "Санжар",
       age: 28,
-      personality: "Интроверт 🎧",
+      personality: "Интроверт",
       gym: "Fidelity (Самал)",
       experience: "Стаж 5 лет",
       time: "День (14:00)",
@@ -42,82 +44,74 @@ export default function GymBroTab() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeSubTab, setActiveSubTab] = useState('swipe'); // 'swipe' | 'matches' | 'likes' | 'edit'
 
-  // Обработка свайпов / кнопок
   const handleSwipe = (action) => {
-    // action: 'dislike' | 'like' | 'superlike'
     if (currentIndex < profiles.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      setCurrentIndex(0); // Круг почета по анкетам
+      setCurrentIndex(0);
     }
   };
 
   const currentProfile = profiles[currentIndex];
 
   return (
-    <div className={`min-h-screen bg-[${appleTheme.colors.bg}] text-[${appleTheme.colors.primaryText}] px-4 py-3 space-y-3 max-w-md mx-auto pb-32 ${appleTheme.styles.fontFamily}`}>
+    <div className={`min-h-screen bg-[${appleTheme.colors.bg}] text-[${appleTheme.colors.primaryText}] px-4 py-3 flex flex-col justify-between max-w-md mx-auto pb-28 ${appleTheme.styles.fontFamily}`}>
       
-      {/* Шапка / 3 управляющие плашки */}
-      <div className="grid grid-cols-3 gap-2 pt-1">
-        <button 
-          onClick={() => setActiveSubTab('matches')}
-          className={`py-2 px-3 rounded-[14px] text-[12px] font-bold tracking-tight transition-all border ${
-            activeSubTab === 'matches' 
-              ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-sm' 
-              : 'bg-white text-zinc-800 border-black/[0.04]'
-          }`}
-        >
-          👥 Мэтчи (3)
-        </button>
+      {/* Верхние плашки отображаются только на главном экране */}
+      {activeSubTab === 'swipe' && (
+        <div className="grid grid-cols-3 gap-2 pt-1 shrink-0 animate-fadeIn">
+          <button 
+            onClick={() => setActiveSubTab('matches')}
+            className="py-3 px-2 rounded-[16px] text-[13px] font-bold tracking-tight transition-all border bg-white text-zinc-800 border-black/[0.04] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-center gap-1.5 hover:bg-zinc-50"
+          >
+            <svg className="w-4 h-4 text-[#007AFF]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Мэтчи (3)
+          </button>
 
-        <button 
-          onClick={() => setActiveSubTab('likes')}
-          className={`py-2 px-3 rounded-[14px] text-[12px] font-bold tracking-tight transition-all border ${
-            activeSubTab === 'likes' 
-              ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-sm' 
-              : 'bg-white text-zinc-800 border-black/[0.04]'
-          }`}
-        >
-          ❤️ Лайки (5)
-        </button>
+          <button 
+            onClick={() => setActiveSubTab('likes')}
+            className="py-3 px-2 rounded-[16px] text-[13px] font-bold tracking-tight transition-all border bg-white text-zinc-800 border-black/[0.04] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-center gap-1.5 hover:bg-zinc-50"
+          >
+            <svg className="w-4 h-4 text-[#FF3B30]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            Лайки (5)
+          </button>
 
-        <button 
-          onClick={() => setActiveSubTab('edit')}
-          className={`py-2 px-3 rounded-[14px] text-[12px] font-bold tracking-tight transition-all border ${
-            activeSubTab === 'edit' 
-              ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-sm' 
-              : 'bg-white text-zinc-800 border-black/[0.04]'
-          }`}
-        >
-          ✏️ Моя анкета
-        </button>
-      </div>
+          <button 
+            onClick={() => setActiveSubTab('edit')}
+            className="py-3 px-2 rounded-[16px] text-[13px] font-bold tracking-tight transition-all border bg-white text-zinc-800 border-black/[0.04] shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-center gap-1.5 hover:bg-zinc-50"
+          >
+            <svg className="w-4 h-4 text-[#34C759]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Моя анкета
+          </button>
+        </div>
+      )}
 
-      {/* ОСНОВНОЙ КОНТЕНТ В ВКЛАДКЕ СВАЙПОВ */}
+      {/* Рендер экранов */}
+      {activeSubTab === 'matches' && <GymBroMatches onBack={() => setActiveSubTab('swipe')} />}
+      {activeSubTab === 'likes' && <GymBroLikes onBack={() => setActiveSubTab('swipe')} />}
+      {activeSubTab === 'edit' && <GymBroEditProfile onBack={() => setActiveSubTab('swipe')} />}
+
       {activeSubTab === 'swipe' && currentProfile && (
-        <div className="space-y-3">
+        <div className="my-auto space-y-3.5 py-2 animate-fadeIn">
           
-          {/* КОМПАКТНАЯ КАРТОЧКА В СТИЛЕ ТИНДЕРА */}
-          <div className="bg-white rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-black/[0.05] overflow-hidden relative flex flex-col">
-            
-            {/* Фото атлета */}
-            <div className="relative w-full h-[320px] bg-zinc-900">
-              <img 
-                src={currentProfile.avatar} 
-                alt={currentProfile.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+          <div className="bg-white rounded-[24px] shadow-[0_8px_28px_rgba(0,0,0,0.06)] border border-black/[0.05] overflow-hidden relative flex flex-col">
+            <div className="relative w-full h-[340px] bg-zinc-900">
+              <img src={currentProfile.avatar} alt={currentProfile.name} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent"></div>
               
-              {/* Тип личности сверху */}
-              <div className="absolute top-3 left-3 bg-white/20 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/20">
+              <div className="absolute top-3 left-3 bg-white/20 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1 rounded-full border border-white/20 tracking-wide">
                 {currentProfile.personality}
               </div>
 
-              {/* Имя и возраст внизу фото */}
               <div className="absolute bottom-3 left-4 right-4 text-white">
                 <div className="flex items-baseline gap-2">
-                  <h2 className="text-[24px] font-bold tracking-tight">{currentProfile.name}</h2>
+                  <h2 className="text-[26px] font-bold tracking-tight">{currentProfile.name}</h2>
                   <span className="text-[18px] font-medium text-zinc-300">{currentProfile.age}</span>
                 </div>
                 <div className="text-[12px] text-blue-300 font-medium mt-0.5">
@@ -126,113 +120,49 @@ export default function GymBroTab() {
               </div>
             </div>
 
-            {/* Описание и стаж под фото */}
-            <div className="p-4 space-y-2.5 bg-white">
-              <div className="flex items-center gap-2 text-[12px] text-[#8E8E93] font-semibold uppercase tracking-wider">
-                <span>💪 {currentProfile.experience}</span>
+            <div className="p-4 space-y-2 bg-white">
+              <div className="flex items-center gap-1.5 text-[11px] text-[#8E8E93] font-bold uppercase tracking-wider">
+                <svg className="w-4 h-4 text-[#007AFF]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                {currentProfile.experience}
               </div>
-              <p className="text-[13px] text-zinc-800 leading-snug">
+              <p className="text-[13px] text-zinc-700 leading-snug">
                 "{currentProfile.goal}"
               </p>
             </div>
           </div>
 
-          {/* ПАНЕЛЬ КНОПОК УПРАВЛЕНИЯ (ТИДЕР-СТИЛЬ) */}
           <div className="flex items-center justify-center gap-4 pt-1">
-            {/* Возврат */}
-            <button 
-              onClick={() => alert('Возврат последней анкеты')}
-              className="w-12 h-12 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_12px_rgba(0,0,0,0.04)] flex items-center justify-center text-amber-500 hover:scale-105 active:scale-95 transition-all text-xl"
-            >
-              🔄
+            <button onClick={() => alert('Возврат последней анкеты')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_14px_rgba(0,0,0,0.04)] flex items-center justify-center text-zinc-700 hover:scale-105 active:scale-95 transition-all">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+              </svg>
             </button>
 
-            {/* Дизлайк */}
-            <button 
-              onClick={() => handleSwipe('dislike')}
-              className="w-14 h-14 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_16px_rgba(0,0,0,0.04)] flex items-center justify-center text-red-500 hover:scale-105 active:scale-95 transition-all text-2xl font-bold"
-            >
-              ✕
+            <button onClick={() => handleSwipe('dislike')} className="w-14 h-14 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_16px_rgba(0,0,0,0.04)] flex items-center justify-center text-[#FF3B30] hover:scale-105 active:scale-95 transition-all">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
 
-            {/* Суперлайк */}
-            <button 
-              onClick={() => handleSwipe('superlike')}
-              className="w-12 h-12 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_12px_rgba(0,0,0,0.04)] flex items-center justify-center text-blue-500 hover:scale-105 active:scale-95 transition-all text-xl"
-            >
-              ⭐
+            <button onClick={() => handleSwipe('like')} className="w-14 h-14 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_16px_rgba(0,0,0,0.04)] flex items-center justify-center text-[#34C759] hover:scale-105 active:scale-95 transition-all">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
             </button>
 
-            {/* Лайк */}
-            <button 
-              onClick={() => handleSwipe('like')}
-              className="w-16 h-16 rounded-full bg-[#34C759] shadow-[0_6px_20px_rgba(52,199,89,0.3)] flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all text-2xl font-bold"
-            >
-              ✓
-            </button>
-
-            {/* Буст */}
-            <button 
-              onClick={() => alert('Буст анкеты: поднимите свой профиль в топ Алматы на 30 минут!')}
-              className="w-12 h-12 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_12px_rgba(0,0,0,0.04)] flex items-center justify-center text-purple-600 hover:scale-105 active:scale-95 transition-all text-xl"
-            >
-              ⚡
+            <button onClick={() => alert('Буст анкеты!')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_14px_rgba(0,0,0,0.04)] flex items-center justify-center text-[#AF52DE] hover:scale-105 active:scale-95 transition-all">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
             </button>
           </div>
 
         </div>
       )}
 
-      {/* РАЗДЕЛ: МЭТЧИ */}
-      {activeSubTab === 'matches' && (
-        <div className="bg-white rounded-[20px] p-5 shadow-[0_4px_16px_rgba(0,0,0,0.03)] border border-black/[0.04] space-y-3">
-          <h3 className="font-bold text-black text-[16px]">Ваши взаимные мэтчи (3)</h3>
-          <p className="text-[13px] text-[#8E8E93]">Эти атлеты тоже хотят тренироваться с вами в одних залах Алматы. Напишите им в Telegram!</p>
-          <div className="space-y-2 pt-2">
-            <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-[14px]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold">А</div>
-                <div>
-                  <div className="font-bold text-sm">Алексей</div>
-                  <div className="text-[11px] text-[#8E8E93]">Invictus Go • Взаимный лайк</div>
-                </div>
-              </div>
-              <button onClick={() => alert('Открытие чата с Алексеем')} className="px-3 py-1.5 bg-[#007AFF] text-white rounded-lg text-xs font-semibold">Написать</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* РАЗДЕЛ: ЛАЙКИ */}
-      {activeSubTab === 'likes' && (
-        <div className="bg-white rounded-[20px] p-5 shadow-[0_4px_16px_rgba(0,0,0,0.03)] border border-black/[0.04] space-y-3">
-          <h3 className="font-bold text-black text-[16px]">Кто вас лайкнул (5)</h3>
-          <p className="text-[13px] text-[#8E8E93]">Ответьте взаимностью, чтобы образовался мэтч и открылся чат для совместной тренировки.</p>
-          <div className="p-4 bg-blue-50/50 rounded-[14px] text-center text-xs text-[#007AFF] font-medium">
-            🔒 Оформите PRO-подписку GymConnect, чтобы видеть всех, кто вас лайкнул без ожидания!
-          </div>
-        </div>
-      )}
-
-      {/* РАЗДЕЛ: МОЯ АНКЕТА */}
-      {activeSubTab === 'edit' && (
-        <div className="bg-white rounded-[20px] p-5 shadow-[0_4px_16px_rgba(0,0,0,0.03)] border border-black/[0.04] space-y-4">
-          <h3 className="font-bold text-black text-[16px]">Редактировать анкету GymBro</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="text-[11px] font-bold text-[#8E8E93] uppercase">Ваш основной зал</label>
-              <input type="text" defaultValue="Invictus Go (Навои)" className="w-full mt-1 p-3 bg-zinc-50 border border-zinc-200 rounded-[12px] text-sm font-medium" />
-            </div>
-            <div>
-              <label className="text-[11px] font-bold text-[#8E8E93] uppercase">Цель и описание</label>
-              <textarea defaultValue="Качаю массу, ищу напарника..." className="w-full mt-1 p-3 bg-zinc-50 border border-zinc-200 rounded-[12px] text-sm font-medium h-20" />
-            </div>
-            <button onClick={() => alert('Анкета успешно сохранена!')} className={appleTheme.styles.buttonPrimary}>
-              Сохранить изменения
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="h-4 shrink-0"></div>
 
     </div>
   );
