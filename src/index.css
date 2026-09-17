@@ -1,15 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Оригинальный нативный стек Apple SF Pro */
-  --apple-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
-  --bg-deep: #0a0c10;
-  --card-glass: rgba(18, 22, 32, 0.65);
-  --border-glass: rgba(255, 255, 255, 0.08);
+  --apple-font: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+  --bg-deep: #07090e;
+  --volt: #D2FD3A; /* Фирменный неоновый акцент Gymshark Apex */
+  --orange-electric: #FF5A1F; /* Премиальный насыщенный оранжевый вместо блеклой охры */
 }
 
 * {
@@ -21,65 +20,77 @@ body {
   margin: 0;
   padding: 0;
   background-color: var(--bg-deep);
-  color: #f8fafc;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(255, 90, 31, 0.08) 0%, transparent 60%),
+    radial-gradient(circle at 100% 60%, rgba(210, 253, 58, 0.04) 0%, transparent 40%);
+  color: #F3F4F6;
   font-family: var(--apple-font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   overflow-x: hidden;
 }
 
-/* iOS Card Style */
-.ios-card {
-  background: var(--card-glass);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  border: 1px solid var(--border-glass);
-  border-radius: 20px;
-  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.3);
-}
-
-.ios-card-accent {
-  background: linear-gradient(145deg, rgba(245, 158, 11, 0.08) 0%, rgba(18, 22, 32, 0.7) 100%);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  border-radius: 20px;
-  box-shadow: 0 8px 30px -5px rgba(245, 158, 11, 0.1);
-}
-
-/* Кнопка в стиле Apple */
-.ios-button-primary {
-  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
-  color: #000000;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.ios-button-primary:active {
-  transform: scale(0.97);
-  opacity: 0.9;
-}
-
-.ios-button-secondary {
-  background: rgba(255, 255, 255, 0.05);
+/* Настоящее Apple Frosted Glass (матовое объемное стекло) */
+.apple-glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  background-color: rgba(14, 18, 27, 0.65);
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #f1f5f9;
-  font-weight: 500;
-  border-radius: 14px;
-  transition: all 0.15s ease;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
-.ios-button-secondary:active {
+
+.apple-glass-card {
+  background: linear-gradient(135deg, rgba(255, 90, 31, 0.09) 0%, rgba(14, 18, 27, 0.7) 100%);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255, 90, 31, 0.25);
+  border-top: 1px solid rgba(255, 90, 31, 0.4);
+  border-radius: 22px;
+  box-shadow: 0 20px 40px -15px rgba(255, 90, 31, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Кнопка Gymshark Apex Electric (Apple Haptic Touch) */
+.gymshark-btn-electric {
+  background: linear-gradient(180deg, #FF6A2B 0%, #E0480A 100%);
+  color: #FFFFFF;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  border-radius: 16px;
+  box-shadow: 0 8px 25px -4px rgba(255, 90, 31, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.gymshark-btn-electric:active {
+  transform: scale(0.97);
+  box-shadow: 0 3px 12px -2px rgba(255, 90, 31, 0.3);
+  filter: brightness(0.92);
+}
+
+/* Вторичная стеклянная кнопка Apple */
+.gymshark-btn-glass {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(16px);
+  color: #F3F4F6;
+  font-weight: 600;
+  border-radius: 16px;
+  transition: all 0.18s ease;
+}
+.gymshark-btn-glass:active {
   transform: scale(0.97);
   background: rgba(255, 255, 255, 0.09);
 }
 
-/* Навигационный бар iOS Frosted Glass */
-.ios-tabbar {
-  background: rgba(12, 15, 22, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+/* Нативный навигационный стеклянный Dock в стиле iOS */
+.ios-nav-dock {
+  background: rgba(10, 13, 20, 0.78);
+  backdrop-filter: blur(35px) saturate(210%);
+  -webkit-backdrop-filter: blur(35px) saturate(210%);
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
 }
