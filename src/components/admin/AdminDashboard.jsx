@@ -7,32 +7,35 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Загружаем реальных пользователей из базы данных Supabase при открытии админки
   useEffect(() => {
     async function fetchUsers() {
       try {
         setLoading(true);
-        // Пробуем сделать запрос к таблице users (или profiles) в Supabase
-        let { data, error } = await supabase
-          .from('users') 
-          .select('*');
+        setErrorMsg('');
 
-        if (error) {
-          // Если таблицы users нет, попробуем альтернативное название profiles
-          const altQuery = await supabase.from('profiles').select('*');
-          if (altQuery.error) {
-            throw error; // если и там ошибка, показываем её
+        // Проверяем разные возможные варианты названий таблиц в Supabase
+        const tableNames = ['users', 'profiles', 'athletes', 'clients', 'registrations'];
+        let foundData = null;
+        let lastError = null;
+
+        for (const tableName of tableNames) {
+          const { data, error } = await supabase.from(tableName).select('*');
+          if (!error && data) {
+            foundData = data;
+            break;
           } else {
-            data = altQuery.data;
+            lastError = error;
           }
         }
 
-        if (data) {
-          setUsers(data);
+        if (foundData) {
+          setUsers(foundData);
+        } else {
+          throw lastError || new Error('Таблицы не найдены');
         }
       } catch (err) {
-        console.error('Ошибка загрузки пользователей:', err.message);
-        setErrorMsg('Не удалось загрузить данные из таблицы. Проверьте название таблицы в Supabase.');
+        console.error('Ошибка загрузки:', err.message);
+        setErrorMsg('Не удалось найти таблицы в Supabase. Создайте таблицу пользователей в вашей базе данных.');
       } finally {
         setLoading(false);
       }
@@ -70,7 +73,7 @@ export default function AdminDashboard() {
 
       {errorMsg && (
         <div className="mb-6 bg-amber-500/10 border border-amber-500/30 text-amber-300 p-4 rounded-xl text-xs">
-          ⚠️ {errorMsg} (Убедитесь, что таблица с пользователями создана в вашем проекте Supabase).
+          ⚠️ {errorMsg}
         </div>
       )}
 
@@ -85,7 +88,7 @@ export default function AdminDashboard() {
             <div className="p-8 text-center text-zinc-500 text-sm">Загрузка данных из базы...</div>
           ) : users.length === 0 ? (
             <div className="p-8 text-center text-zinc-500 text-sm">
-              В таблице пока нет записей или пользователь зарегистрировался через встроенную Auth-систему Supabase.
+              Таблица найдена, но в ней пока нет записей.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -93,7 +96,7 @@ export default function AdminDashboard() {
                 <thead className="bg-zinc-900 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
                   <tr>
                     <th className="p-4">ID / Имя</th>
-                    <th className="p-4">Email / Телефон</th>
+                    <th className="p-4">Email / Контакт</th>
                     <th className="p-4">Данные анкеты</th>
                     <th className="p-4 text-right">Действия</th>
                   </tr>
@@ -101,10 +104,10 @@ export default function AdminDashboard() {
                 <tbody className="divide-y divide-zinc-800/50">
                   {users.map((u, index) => (
                     <tr key={u.id || index} className="hover:bg-zinc-800/30 transition-colors">
-                      <td className="p-4 font-medium">{u.name || u.full_name || `Пользователь #${index + 1}`}</td>
+                      <td className="p-4 font-medium">{u.name || u.full_name || u.username || `Пользователь #${index + 1}`}</td>
                       <td className="p-4 text-zinc-400">{u.email || u.phone || 'Не указан'}</td>
-                      <td className="p-4 text-zinc-400 text-xs">
-                        {JSON.stringify(u).slice(0, 60)}...
+                      <td className="p-4 text-zinc-400 text-xs font-mono">
+                        {JSON.stringify(u)}
                       </td>
                       <td className="p-4 text-right">
                         <button className="text-xs text-zinc-400 hover:text-white bg-zinc-800 px-3 py-1 rounded-lg transition-colors">
