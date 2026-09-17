@@ -1,5 +1,6 @@
 import React from 'react';
-import DietPlan from './DietPlan'; // Исправленный путь: файлы лежат в одной папке src/components/nutrition/
+import DietPlan from './DietPlan';
+import KbjuCalculator from './KbjuCalculator';
 
 export default function NutritionTab() {
   return (
@@ -13,7 +14,7 @@ export default function NutritionTab() {
         </p>
       </div>
 
-      {/* Подключаем блок плана питания */}
+      <KbjuCalculator />
       <DietPlan />
     </div>
   );
