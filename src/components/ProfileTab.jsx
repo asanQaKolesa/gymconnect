@@ -46,32 +46,36 @@ export default function ProfileTab({ user, onUpdateUser }) {
     async function syncCommunityStats() {
       if (!user?.telegram_id) return;
 
-      const { data: postsData } = await supabase
-        .from('feed_posts')
-        .select('likes_count')
-        .eq('user_id', user.telegram_id);
+      try {
+        const { data: postsData } = await supabase
+          .from('feed_posts')
+          .select('likes_count')
+          .eq('user_id', user.telegram_id);
 
-      if (postsData && postsData.length > 0) {
-        const sum = postsData.reduce((acc, curr) => acc + (curr.likes_count || 0), 0);
-        setTotalLikes(sum);
-      } else {
-        setTotalLikes(0);
-      }
+        if (postsData && postsData.length > 0) {
+          const sum = postsData.reduce((acc, curr) => acc + (curr.likes_count || 0), 0);
+          setTotalLikes(sum);
+        } else {
+          setTotalLikes(0);
+        }
 
-      const { count } = await supabase
-        .from('friendships')
-        .select('*', { count: 'exact', head: true })
-        .or(`user_id.eq.${user.telegram_id},friend_id.eq.${user.telegram_id}`);
+        const { count } = await supabase
+          .from('friendships')
+          .select('*', { count: 'exact', head: true })
+          .or(`user_id.eq.${user.telegram_id},friend_id.eq.${user.telegram_id}`);
 
-      if (count !== null) {
-        setFriendsCount(count);
+        if (count !== null) {
+          setFriendsCount(count);
+        }
+      } catch (err) {
+        console.error('Ошибка синхронизации статистики:', err);
       }
     }
 
     syncCommunityStats();
   }, [user?.telegram_id, activeSection]);
 
-  // Клиентское сжатие фото перед загрузкой (чтобы не зависало на тяжелых фото со смартфона)
+  // Сжатие фото перед загрузкой (до 500x500px, чтобы не висло)
   function handleAvatarUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -81,7 +85,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_SIZE = 600;
+        const MAX_SIZE = 500;
         let width = img.width;
         let height = img.height;
 
@@ -102,8 +106,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Сжатие в качественный WebP/JPEG
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.82);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
         setForm(prev => ({ ...prev, avatar_url: compressedBase64 }));
       };
       img.src = event.target.result;
@@ -111,15 +114,21 @@ export default function ProfileTab({ user, onUpdateUser }) {
     reader.readAsDataURL(file);
   }
 
-  // Надежное сохранение (ищет по telegram_id либо по id)
+  // Безотказный upsert с try/finally
   async function handleSave(e) {
     e.preventDefault();
     if (!form.name.trim()) return alert('Укажи имя атлета');
 
     setSaving(true);
-    const tgId = user?.telegram_id;
+    const tgId = user?.telegram_id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
 
-    const updatePayload = {
+    if (!tgId) {
+      setSaving(false);
+      return alert('Ошибка: Telegram ID не найден. Перезапусти приложение через бота.');
+    }
+
+    const payload = {
+      telegram_id: tgId,
       name: form.name.trim(),
       gender: form.gender,
       city: form.city,
@@ -129,32 +138,33 @@ export default function ProfileTab({ user, onUpdateUser }) {
       bio: form.bio ? form.bio.trim() : null
     };
 
-    let query = supabase.from('users').update(updatePayload);
+    try {
+      // upsert гарантированно обновляет или создает запись без зависаний
+      const { data, error } = await supabase
+        .from('users')
+        .upsert(payload, { onConflict: 'telegram_id' })
+        .select()
+        .single();
 
-    if (tgId) {
-      query = query.eq('telegram_id', tgId);
-    } else if (user?.id) {
-      query = query.eq('id', user.id);
-    } else {
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        onUpdateUser(data);
+        setIsEditing(false);
+      }
+    } catch (err) {
+      alert('Ошибка при сохранении: ' + (err.message || 'Попробуйте снова'));
+    } finally {
       setSaving(false);
-      return alert('Ошибка идентификации аккаунта. Перезапустите бота.');
     }
-
-    const { data, error } = await query.select().single();
-
-    if (!error && data) {
-      onUpdateUser(data);
-      setIsEditing(false);
-    } else {
-      alert('Ошибка при сохранении: ' + (error?.message || 'Попробуйте снова'));
-    }
-    setSaving(false);
   }
 
-  // Полное удаление анкеты атлета
+  // Удаление профиля
   async function handleDeleteProfile() {
     const confirmed = window.confirm(
-      'Вы уверены, что хотите удалить свою анкету атлета? Все данные профиля и анкеты будут безвозвратно удалены.'
+      'Вы уверены, что хотите удалить свою анкету? Все данные профиля будут удалены.'
     );
     if (!confirmed) return;
 
@@ -163,20 +173,17 @@ export default function ProfileTab({ user, onUpdateUser }) {
 
     try {
       if (tgId) {
-        // Удаляем связанные данные
         await supabase.from('gymbro_cards').delete().eq('telegram_id', tgId);
         await supabase.from('feed_posts').delete().eq('user_id', tgId);
         await supabase.from('users').delete().eq('telegram_id', tgId);
-      } else if (user?.id) {
-        await supabase.from('users').delete().eq('id', user.id);
       }
-
       alert('Анкета успешно удалена.');
       window.location.reload();
     } catch (err) {
       alert('Ошибка при удалении: ' + err.message);
+    } finally {
+      setDeleting(false);
     }
-    setDeleting(false);
   }
 
   return (
@@ -492,7 +499,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
             <div className="p-3.5 rounded-2xl bg-black/30 border border-white/[0.06] space-y-1 text-xs">
               <p className="font-semibold text-slate-200">Время ответа:</p>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                Отвечаем в течение 15–30 минут с 09:00 до 22:00 по времени Алматы/Астаны.
+                Отвечаем лично в течение 15–30 минут с 09:00 до 22:00 по времени Алматы/Астаны.
               </p>
             </div>
           </div>
