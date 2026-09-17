@@ -60,7 +60,7 @@ export default function GymBroTab() {
       
       {/* Верхние плашки навигации */}
       {activeSubTab === 'swipe' && (
-        <div className="space-y-2.5 shrink-0 animate-fadeIn mb-2">
+        <div className="space-y-2.5 shrink-0 animate-fadeIn mb-3">
           <div className="grid grid-cols-3 gap-2">
             <button 
               onClick={() => setActiveSubTab('matches')}
@@ -124,66 +124,66 @@ export default function GymBroTab() {
       {activeSubTab === 'likes' && <GymBroLikes onBack={() => setActiveSubTab('swipe')} />}
       {activeSubTab === 'edit' && <GymBroEditProfile onBack={() => setActiveSubTab('swipe')} />}
 
-      {/* Основной экран свайпов: чуть компактнее снизу, чтобы кнопки поднялись над таббаром */}
+      {/* Основной экран свайпов: идеальный размер карточки и полноценные крупные кнопки (w-14 h-14) */}
       {activeSubTab === 'swipe' && currentProfile && (
-        <div className="flex-1 flex flex-col justify-center space-y-2.5 my-auto animate-fadeIn pb-2">
+        <div className="flex-1 flex flex-col justify-center space-y-3.5 my-auto animate-fadeIn pb-2">
           
           {/* Сбалансированная карточка атлета */}
-          <div className="bg-white rounded-[26px] shadow-[0_10px_30px_rgba(0,0,0,0.05)] border border-black/[0.05] overflow-hidden relative flex flex-col mx-auto w-full max-w-[370px]">
-            <div className="relative w-full aspect-[4/4.15] bg-zinc-900">
+          <div className="bg-white rounded-[28px] shadow-[0_10px_32px_rgba(0,0,0,0.06)] border border-black/[0.05] overflow-hidden relative flex flex-col mx-auto w-full max-w-[370px]">
+            <div className="relative w-full aspect-[4/4.3] bg-zinc-900">
               <img src={currentProfile.avatar} alt={currentProfile.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent"></div>
               
-              <div className="absolute top-3 left-3 bg-white/20 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1 rounded-full border border-white/20 tracking-wide">
+              <div className="absolute top-3.5 left-3.5 bg-white/20 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1 rounded-full border border-white/20 tracking-wide">
                 {currentProfile.personality}
               </div>
 
-              <div className="absolute bottom-3 left-3.5 right-3.5 text-white">
+              <div className="absolute bottom-3.5 left-4 right-4 text-white">
                 <div className="flex items-baseline gap-2">
-                  <h2 className="text-[25px] font-bold tracking-tight">{currentProfile.name}</h2>
-                  <span className="text-[17px] font-medium text-zinc-300">{currentProfile.age}</span>
+                  <h2 className="text-[26px] font-bold tracking-tight">{currentProfile.name}</h2>
+                  <span className="text-[18px] font-medium text-zinc-300">{currentProfile.age}</span>
                 </div>
-                <div className="text-[11.5px] text-blue-300 font-medium mt-0.5">
+                <div className="text-[12px] text-blue-300 font-medium mt-0.5">
                   📍 {currentProfile.gym} • {currentProfile.time}
                 </div>
               </div>
             </div>
 
-            <div className="p-3.5 space-y-1 bg-white">
-              <div className="flex items-center gap-1.5 text-[10.5px] text-[#8E8E93] font-bold uppercase tracking-wider">
-                <svg className="w-3.5 h-3.5 text-[#007AFF]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <div className="p-4 space-y-1.5 bg-white">
+              <div className="flex items-center gap-1.5 text-[11px] text-[#8E8E93] font-bold uppercase tracking-wider">
+                <svg className="w-4 h-4 text-[#007AFF]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 {currentProfile.experience}
               </div>
-              <p className="text-[12.5px] text-zinc-700 leading-snug">
+              <p className="text-[13px] text-zinc-700 leading-snug">
                 "{currentProfile.goal}"
               </p>
             </div>
           </div>
 
-          {/* Единая нижняя плашка с кнопками приподнята ровно на сколько нужно */}
-          <div className="bg-white/90 backdrop-blur-xl border border-black/[0.06] rounded-[22px] px-6 py-2.5 shadow-[0_6px_22px_rgba(0,0,0,0.05)] flex items-center justify-between mx-auto w-full max-w-[370px]">
+          {/* Единая нижняя плашка: крупные кнопки w-14 h-14 и аккуратный отступ сверху */}
+          <div className="bg-white/90 backdrop-blur-xl border border-black/[0.06] rounded-[24px] px-6 py-3 shadow-[0_6px_24px_rgba(0,0,0,0.05)] flex items-center justify-between mx-auto w-full max-w-[370px]">
             
-            <button onClick={() => alert('Возврат последней анкеты')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_12px_rgba(0,0,0,0.05)] flex items-center justify-center text-zinc-700 hover:scale-105 active:scale-95 transition-all">
+            <button onClick={() => alert('Возврат последней анкеты')} className="w-14 h-14 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_12px_rgba(0,0,0,0.05)] flex items-center justify-center text-zinc-700 hover:scale-105 active:scale-95 transition-all">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
             </button>
 
-            <button onClick={() => handleSwipe('dislike')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex items-center justify-center text-[#FF3B30] hover:scale-105 active:scale-95 transition-all">
+            <button onClick={() => handleSwipe('dislike')} className="w-14 h-14 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex items-center justify-center text-[#FF3B30] hover:scale-105 active:scale-95 transition-all">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            <button onClick={() => handleSwipe('like')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex items-center justify-center text-[#34C759] hover:scale-105 active:scale-95 transition-all">
+            <button onClick={() => handleSwipe('like')} className="w-14 h-14 rounded-full bg-white border border-black/[0.06] shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex items-center justify-center text-[#34C759] hover:scale-105 active:scale-95 transition-all">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </button>
 
-            <button onClick={() => alert('Буст анкеты!')} className="w-13 h-13 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_12px_rgba(0,0,0,0.05)] flex items-center justify-center text-[#AF52DE] hover:scale-105 active:scale-95 transition-all">
+            <button onClick={() => alert('Буст анкеты!')} className="w-14 h-14 rounded-full bg-white border border-black/[0.06] shadow-[0_3px_12px_rgba(0,0,0,0.05)] flex items-center justify-center text-[#AF52DE] hover:scale-105 active:scale-95 transition-all">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
