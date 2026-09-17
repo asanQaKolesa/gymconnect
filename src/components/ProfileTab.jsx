@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import AthleteStats from './profile/AthleteStats';
 import ProfileSettingsDrawer from './profile/ProfileSettingsDrawer';
+import AdminCRM from './AdminCRM';
 
 const ADMIN_USERNAMES = ['asanali_kk'];
 
@@ -27,11 +28,8 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
   const [likersList, setLikersList] = useState([]);
   const [loadingLikers, setLoadingLikers] = useState(false);
 
-  const [showAdminModal, setShowAdminModal] = useState(false);
-  const [allUsers, setAllUsers] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [updatingUserId, setUpdatingUserId] = useState(null);
+  // CRM ПАНЕЛЬ УПРАВЛЕНИЯ
+  const [showAdminCRM, setShowAdminCRM] = useState(false);
 
   const [form, setForm] = useState({
     name: user?.name || '',
@@ -194,58 +192,21 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
     }
   }
 
-  async function openAdminPanel() {
-    setShowAdminModal(true);
-    setLoadingUsers(true);
-    const { data } = await supabase
-      .from('users')
-      .select('id, telegram_id, telegram_username, name, city, is_pro, created_at')
-      .order('created_at', { ascending: false });
-
-    if (data) setAllUsers(data);
-    setLoadingUsers(false);
-  }
-
-  async function toggleProAccess(targetUser) {
-    setUpdatingUserId(targetUser.id);
-    const newStatus = !targetUser.is_pro;
-
-    const { error } = await supabase
-      .from('users')
-      .update({ is_pro: newStatus })
-      .eq('id', targetUser.id);
-
-    if (!error) {
-      setAllUsers(prev =>
-        prev.map(u => (u.id === targetUser.id ? { ...u, is_pro: newStatus } : u))
-      );
-      if (user?.id === targetUser.id || Number(user?.telegram_id) === Number(targetUser.telegram_id)) {
-        onUpdateUser({ is_pro: newStatus });
-      }
-    } else {
-      alert('Ошибка обновления: ' + error.message);
-    }
-    setUpdatingUserId(null);
-  }
-
-  const filteredUsers = allUsers.filter(u => {
-    const q = searchQuery.toLowerCase();
-    return (
-      (u.name && u.name.toLowerCase().includes(q)) ||
-      (u.telegram_username && u.telegram_username.toLowerCase().includes(q))
-    );
-  });
-
   return (
     <div className="space-y-3 pb-8">
-      {/* 1. БОКОВАЯ ПЛАВАЮЩАЯ ПАНЕЛЬ НАСТРОЕК (ИЗОЛИРОВАННЫЙ КОМПОНЕНТ) */}
+      {/* 1. БОКОВАЯ ПЛАВАЮЩАЯ ПАНЕЛЬ НАСТРОЕК */}
       <ProfileSettingsDrawer
         isOpen={showSettingsDrawer}
         onClose={() => setShowSettingsDrawer(false)}
         user={user}
       />
 
-      {/* 2. МОДАЛКА: КТО ПОСТАВИЛ ОГОНЬ 🔥 */}
+      {/* 2. ПОЛНОЦЕННАЯ CRM ПАНЕЛЬ УПРАВЛЕНИЯ КОМЬЮНИТИ */}
+      {showAdminCRM && (
+        <AdminCRM onClose={() => setShowAdminCRM(false)} />
+      )}
+
+      {/* 3. МОДАЛКА: КТО ПОСТАВИЛ ОГОНЬ 🔥 */}
       {showLikesModal && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full p-4 space-y-3 border border-white/10 rounded-3xl max-h-[70vh] flex flex-col">
@@ -301,83 +262,18 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
         </div>
       )}
 
-      {/* 3. МОДАЛКА АДМИНКИ */}
-      {showAdminModal && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="apple-glass w-full max-w-md h-[80vh] flex flex-col rounded-t-3xl sm:rounded-3xl border border-white/10 overflow-hidden">
-            <div className="p-3.5 border-b border-white/10 flex justify-between items-center bg-[#0C101A]/95">
-              <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <span>👑</span> Управление VIP PRO
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowAdminModal(false)}
-                className="text-slate-400 hover:text-white text-sm px-2 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-2.5 border-b border-white/10 bg-[#0C101A]/60">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Поиск по имени или @username..."
-                className="w-full apple-input text-xs py-1.5"
-              />
-            </div>
-
-            <div className="flex-1 p-3 overflow-y-auto space-y-2">
-              {loadingUsers ? (
-                <div className="text-center py-6 text-xs text-slate-400">Загрузка...</div>
-              ) : filteredUsers.length === 0 ? (
-                <div className="text-center py-6 text-xs text-slate-500">Не найдено</div>
-              ) : (
-                filteredUsers.map(u => (
-                  <div
-                    key={u.id}
-                    className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between gap-2"
-                  >
-                    <div className="truncate">
-                      <p className="text-xs font-bold text-white truncate">{u.name || 'Без имени'}</p>
-                      <p className="text-[10px] text-slate-400">
-                        {u.telegram_username ? `@${u.telegram_username}` : `ID: ${u.telegram_id}`}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={updatingUserId === u.id}
-                      onClick={() => toggleProAccess(u)}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold active:scale-95 transition cursor-pointer flex-shrink-0 ${
-                        u.is_pro
-                          ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                          : 'bg-emerald-500 text-white'
-                      }`}
-                    >
-                      {updatingUserId === u.id ? '...' : u.is_pro ? 'Выключить' : 'Включить'}
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* МИНИМАЛИСТИЧНАЯ СТРОКА АДМИНА */}
+      {/* СТРОКА АДМИНИСТРАТОРА: ВЫЗОВ CRM С БАЗОЙ И МЕТРИКАМИ */}
       {isAdmin && (
-        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-          <span className="text-[11px] text-slate-400 flex items-center gap-1.5">
-            <span>👑</span> Панель основателя
+        <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-gradient-to-r from-amber-500/15 via-black/40 to-[#FF5A1F]/15 border border-amber-500/30 shadow-md">
+          <span className="text-xs text-white font-bold flex items-center gap-1.5">
+            <span>👑</span> Панель основателя (CRM)
           </span>
           <button
             type="button"
-            onClick={openAdminPanel}
-            className="text-[10px] text-[#FF8C38] font-bold hover:underline cursor-pointer"
+            onClick={() => setShowAdminCRM(true)}
+            className="px-2.5 py-1 rounded-xl gymshark-btn-electric text-[10px] font-black cursor-pointer shadow-sm"
           >
-            Управление ➔
+            Открыть базу ➔
           </button>
         </div>
       )}
@@ -406,7 +302,7 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
 
       {activeTab === 'card' && (
         <div className="space-y-3">
-          {/* МОДАЛКА РЕДАКТИРОВАНИЯ АНКЕТЫ (ОТДЕЛЬНО) */}
+          {/* МОДАЛКА РЕДАКТИРОВАНИЯ АНКЕТЫ */}
           {isEditing && (
             <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
               <div className="apple-glass w-full max-w-sm p-4 space-y-3 rounded-3xl border border-white/10 shadow-2xl">
@@ -500,7 +396,6 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
 
           {/* ВЕРТИКАЛЬНАЯ ЦЕНТРИРОВАННАЯ КАРТОЧКА АТЛЕТА */}
           <div className="apple-glass p-4 space-y-3 border border-white/[0.06] relative">
-            {/* Иконки в правом верхнем углу: ✏️ Редактирование и ⚙️ Боковые Настройки */}
             <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5 z-10">
               <button
                 type="button"
@@ -520,7 +415,6 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
               </button>
             </div>
 
-            {/* Компактный аватар по центру */}
             <div className="flex flex-col items-center text-center pt-1">
               <div className="relative">
                 <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#121622] border-2 border-white/10 shadow-lg flex items-center justify-center">
@@ -536,7 +430,6 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
                 </label>
               </div>
 
-              {/* Имя и данные атлета ПОД ФОТО (на всю ширину без обрезок) */}
               <div className="mt-2.5 space-y-0.5">
                 <h2 className="text-sm font-black text-white tracking-tight">
                   {form.name || 'Атлет'}
