@@ -9,6 +9,7 @@ export default function GymBroTab({ session }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState('');
   
   // Модальные окна
   const [gymSearch, setGymSearch] = useState('');
@@ -26,9 +27,9 @@ export default function GymBroTab({ session }) {
   ];
 
   const PERSONALITY_TYPES = [
-    { label: 'Интроверт', emoji: '🤫', desc: 'В наушниках, без лишних разговоров, чистый фокус' },
-    { label: 'Экстраверт', emoji: '⚡', desc: 'Драйв, взаимная мотивация и общение' },
-    { label: 'Амбиверт', emoji: '⚖️', desc: 'Баланс: по делу и под настроение' }
+    { label: 'Интроверт', emoji: '🤫', desc: 'В наушниках, фокус' },
+    { label: 'Экстраверт', emoji: '⚡', desc: 'Драйв и общение' },
+    { label: 'Амбиверт', emoji: '⚖️', desc: 'Под настроение' }
   ];
 
   const GOALS_LIST = ['Набор массы', 'Похудение / Сушка', 'Пауэрлифтинг', 'Поддержание формы', 'Кроссфит', 'Выносливость'];
@@ -50,25 +51,43 @@ export default function GymBroTab({ session }) {
     telegram_contact: ''
   });
 
-  useEffect(() => {
-    initTab();
-  }, [session]);
-
-  const getEffectiveUserId = async () => {
-    if (session?.user?.id) return session.user.id;
-    const { data: { user } } = await supabase.auth.getUser();
-    return user?.id || null;
-  };
-
-  const initTab = async () => {
-    const uid = await getEffectiveUserId();
-    if (uid) {
-      await loadUserProfile(uid);
-      await loadBroProfiles(uid);
-    } else {
-      setLoading(false);
+  // Получение надежного идентификатора пользователя (Telegram ID -> Supabase Auth -> LocalStorage)
+  const resolveUserId = () => {
+    // 1. Проверяем Telegram Mini App
+    const tgUser = window?.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (tgUser?.id) {
+      return `tg_${tgUser.id}`;
     }
+    // 2. Проверяем сессию Supabase
+    if (session?.user?.id) {
+      return session.user.id;
+    }
+    // 3. Создаем постоянный локальный ID устройства
+    let localId = localStorage.getItem('gymconnect_device_user_id');
+    if (!localId) {
+      localId = 'usr_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
+      localStorage.setItem('gymconnect_device_user_id', localId);
+    }
+    return localId;
   };
+
+  useEffect(() => {
+    const uid = resolveUserId();
+    setCurrentUserId(uid);
+
+    // Автоподстановка имени и юзернейма из Telegram
+    const tgUser = window?.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (tgUser) {
+      setFormData(prev => ({
+        ...prev,
+        full_name: prev.full_name || [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' '),
+        telegram_contact: prev.telegram_contact || tgUser.username || ''
+      }));
+    }
+
+    loadUserProfile(uid);
+    loadBroProfiles(uid);
+  }, [session]);
 
   const loadUserProfile = async (uid) => {
     try {
@@ -138,12 +157,7 @@ export default function GymBroTab({ session }) {
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     try {
-      const uid = await getEffectiveUserId();
-      if (!uid) {
-        alert('Пожалуйста, авторизуйтесь в приложении заново.');
-        return;
-      }
-
+      const uid = currentUserId || resolveUserId();
       if (!formData.telegram_contact.trim()) {
         alert('Укажите ваш Telegram username для связи');
         return;
@@ -162,6 +176,7 @@ export default function GymBroTab({ session }) {
         .upsert(payload, { onConflict: 'user_id' });
 
       if (error) throw error;
+      alert('✅ Анкета успешно сохранена!');
       setIsEditing(false);
       loadBroProfiles(uid);
     } catch (err) {
@@ -191,7 +206,6 @@ export default function GymBroTab({ session }) {
     g.toLowerCase().includes(gymSearch.toLowerCase())
   );
 
-  // Фильтрация анкет по полу и выбранному залу
   const displayedProfiles = profiles.filter(p => {
     if (filterGym !== 'Все' && p.home_gym !== filterGym) return false;
     if (formData.looking_for_gender === 'Парней' && p.gender !== 'Мужской') return false;
@@ -215,10 +229,10 @@ export default function GymBroTab({ session }) {
       </div>
 
       {isEditing ? (
-        /* ЭКРАН СОЗДАНИЯ / РЕДАКТИРОВАНИЯ АНКЕТЫ */
+        /* РЕДАКТИРОВАНИЕ АНКЕТЫ */
         <form onSubmit={handleSaveProfile} className="space-y-4 bg-[#111827] p-5 rounded-2xl border border-gray-800">
           
-          {/* ЮРИДИЧЕСКАЯ ПЛАШКА СОГЛАСИЯ И ПРАВИЛ */}
+          {/* ЮРИДИЧЕСКАЯ ПЛАШКА */}
           <div 
             onClick={() => setIsRulesModalOpen(true)}
             className="cursor-pointer bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/30 rounded-xl p-3.5 flex items-start gap-3 transition"
@@ -229,12 +243,12 @@ export default function GymBroTab({ session }) {
                 Правила сообщества и согласие на публикацию
               </p>
               <p className="text-gray-400">
-                Заполняя анкету, вы даете согласие на размещение профиля в сервисе GymBro. Нажмите, чтобы прочесть условия.
+                Заполняя анкету, вы даете согласие на размещение профиля в GymBro. Нажмите, чтобы прочесть.
               </p>
             </div>
           </div>
 
-          {/* ЗАГРУЗКА ФОТОГРАФИИ */}
+          {/* ФОТО */}
           <div className="flex items-center gap-4 bg-[#1f2937]/70 p-3 rounded-2xl border border-gray-700/60">
             <div className="w-20 h-20 rounded-2xl bg-gray-800 border-2 border-dashed border-gray-600 overflow-hidden flex items-center justify-center shrink-0">
               {formData.photo_url ? (
@@ -305,7 +319,7 @@ export default function GymBroTab({ session }) {
             </div>
           </div>
 
-          {/* КОГО ИЩЕШЬ В ДЖИМБРО */}
+          {/* КОГО ИЩЕТ */}
           <div>
             <label className="text-xs text-gray-400 font-medium mb-1.5 block">
               Кого ты ищешь для тренировок?
@@ -446,10 +460,10 @@ export default function GymBroTab({ session }) {
             />
           </div>
 
-          {/* ТОЛЬКО TELEGRAM USERNAME (БЕЗ WHATSAPP) */}
+          {/* TELEGRAM USERNAME */}
           <div>
             <label className="text-xs text-gray-400 font-medium">
-              Telegram Username (для связи с напарником)
+              Telegram Username (для связи)
             </label>
             <div className="relative mt-1">
               <span className="absolute left-3.5 top-2.5 text-gray-500 text-sm">@</span>
@@ -462,9 +476,6 @@ export default function GymBroTab({ session }) {
                 placeholder="username"
               />
             </div>
-            <p className="text-[11px] text-gray-500 mt-1">
-              🔒 Мы не собираем и не раскрываем ваш личный номер телефона.
-            </p>
           </div>
 
           <button
@@ -614,7 +625,7 @@ export default function GymBroTab({ session }) {
         </div>
       )}
 
-      {/* МОДАЛЬНОЕ ОКНО ПРАВИЛ И ЮРИДИЧЕСКОГО СОГЛАСИЯ */}
+      {/* МОДАЛКА ПРАВИЛ */}
       {isRulesModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#0f172a] border border-gray-800 rounded-3xl w-full max-w-lg p-5 space-y-4 shadow-2xl">
@@ -633,16 +644,13 @@ export default function GymBroTab({ session }) {
 
             <div className="space-y-3 text-xs text-gray-300 leading-relaxed max-h-[60vh] overflow-y-auto pr-1">
               <p>
-                1. <strong>Согласие на публикацию</strong>: Заполняя и сохраняя анкету в разделе GymBro, вы добровольно делаете свои указанные данные (имя, возраст, цели, зал, Telegram username и фото) видимыми другим участникам сервиса GymConnect для взаимного спортивного нетворкинга.
+                1. <strong>Согласие на публикацию</strong>: Заполняя и сохраняя анкету в разделе GymBro, вы добровольно делаете свои данные (имя, возраст, цели, зал, Telegram username и фото) открытыми для других участников GymConnect.
               </p>
               <p>
-                2. <strong>Защита персональных данных</strong>: Сервис не запрашивает и не раскрывает ваш личный номер телефона. Единственный открытый контакт — публичный никнейм в Telegram.
+                2. <strong>Конфиденциальность</strong>: Номер телефона не собирается. Единственный открытый канал связи — никнейм в Telegram.
               </p>
               <p>
-                3. <strong>Взаимное уважение</strong>: В сообществе запрещены спам, реклама, домогательства и токсичное поведение. Аккаунты нарушителей блокируются без возможности восстановления.
-              </p>
-              <p>
-                4. <strong>Управление профилем</strong>: Вы можете в любой момент изменить или скрыть свою анкету, обновив данные в этом разделе.
+                3. <strong>Взаимное уважение</strong>: Спам, навязчивая реклама и токсичность влекут перманентный бан.
               </p>
             </div>
 
