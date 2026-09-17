@@ -3,12 +3,10 @@ import { supabase } from '../supabaseClient';
 import { ALMATY_GYMS } from '../data/almatyGyms';
 import GymBroProfileForm from './gymbro/GymBroProfileForm';
 import GymBroSwipeView from './gymbro/GymBroSwipeView';
-import FriendsTab from './FriendsTab';
 
 export const INVICTUS_CLUBS = ALMATY_GYMS;
 
-export default function GymBroTab({ session, telegramUser, user }) {
-  const [activeSubTab, setActiveSubTab] = useState('swipe');
+export default function GymBroTab({ session, telegramUser, user, currentUser }) {
   const [isEditing, setIsEditing] = useState(false);
   
   const [currentUserId, setCurrentUserId] = useState('');
@@ -19,7 +17,7 @@ export default function GymBroTab({ session, telegramUser, user }) {
   const [filterGym, setFilterGym] = useState('Все');
 
   const resolveUserId = () => {
-    const tg = telegramUser || user || window?.Telegram?.WebApp?.initDataUnsafe?.user;
+    const tg = telegramUser || user || currentUser || window?.Telegram?.WebApp?.initDataUnsafe?.user;
     if (tg?.id) return String(tg.id);
     if (session?.user?.id) return session.user.id;
     let localId = localStorage.getItem('gymconnect_device_user_id');
@@ -34,12 +32,12 @@ export default function GymBroTab({ session, telegramUser, user }) {
     const uid = resolveUserId();
     setCurrentUserId(uid);
     loadData(uid);
-  }, [session, telegramUser, user]);
+  }, [session, telegramUser, user, currentUser]);
 
   const loadData = async (uid) => {
     setLoading(true);
     try {
-      // Загрузка анкеты GymBro
+      // 1. Загрузка своей анкеты
       const { data: myData } = await supabase
         .from('gymbro_profiles')
         .select('*')
@@ -49,30 +47,67 @@ export default function GymBroTab({ session, telegramUser, user }) {
       if (myData) {
         setUserProfile(myData);
       } else {
-        // Подтягиваем данные из базовой таблицы profiles если есть
-        const { data: baseProf } = await supabase
+        // Подтягиваем из profiles CRM если еще нет анкеты в gymbro
+        const { data: crmUser } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', uid)
+          .or(`id.eq.${uid},telegram_id.eq.${uid}`)
           .single();
 
-        if (baseProf) {
+        if (crmUser) {
           setUserProfile({
-            full_name: baseProf.full_name || baseProf.username || 'Атлет',
-            photo_url: baseProf.avatar_url || '',
+            full_name: crmUser.full_name || crmUser.username || 'Атлет',
+            photo_url: crmUser.avatar_url || '',
             home_gym: ALMATY_GYMS[0],
-            telegram_contact: baseProf.username || ''
+            telegram_contact: crmUser.username || ''
           });
         }
       }
 
-      // Загрузка анкет других пользователей для ленты
-      const { data: allProfiles } = await supabase
+      // 2. Загрузка ВСЕХ пользователей из CRM базы (profiles), исключая себя
+      let allUsers = [];
+
+      // Сначала читаем анкеты GymBro
+      const { data: gymbroData } = await supabase
         .from('gymbro_profiles')
         .select('*')
         .neq('user_id', uid);
 
-      if (allProfiles) setProfiles(allProfiles);
+      if (gymbroData && gymbroData.length > 0) {
+        allUsers = [...gymbroData];
+      }
+
+      // Догружаем людей из общей таблицы profiles CRM, если их нет в gymbro_profiles
+      const { data: crmProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .neq('id', uid)
+        .neq('telegram_id', uid);
+
+      if (crmProfiles && crmProfiles.length > 0) {
+        crmProfiles.forEach(cp => {
+          const cpId = String(cp.telegram_id || cp.id);
+          if (cpId !== uid && !allUsers.some(u => String(u.user_id) === cpId)) {
+            allUsers.push({
+              user_id: cpId,
+              full_name: cp.full_name || cp.username || 'Атлет CRM',
+              age: cp.age || 24,
+              gender: cp.gender || 'Мужской',
+              experience_level: cp.experience_level || 'Средний (1-3 года)',
+              goals: cp.goals || ['Набор массы', 'Поддержание формы'],
+              preferred_days: ['Пн', 'Ср', 'Пт'],
+              preferred_time: 'Вечер (18:00 - 21:00)',
+              personality_type: 'Амбиверт',
+              home_gym: cp.home_gym || ALMATY_GYMS[0],
+              bio: cp.bio || 'Тренируюсь в зале, ищу напарника!',
+              photo_url: cp.avatar_url || '',
+              telegram_contact: cp.username || ''
+            });
+          }
+        });
+      }
+
+      setProfiles(allUsers);
     } catch (e) {
       console.error(e);
     } finally {
@@ -96,41 +131,26 @@ export default function GymBroTab({ session, telegramUser, user }) {
 
   return (
     <div className="max-w-xl mx-auto p-4 pb-28 text-white">
-      {/* Навигационный тумблер */}
-      <div className="flex bg-[#111827] p-1 rounded-2xl border border-gray-800 mb-4">
-        <button
-          onClick={() => { setActiveSubTab('swipe'); setIsEditing(false); }}
-          className={`flex-1 py-2 rounded-xl font-bold text-xs transition ${
-            activeSubTab === 'swipe' && !isEditing
-              ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          🔥 Поиск
-        </button>
-        <button
-          onClick={() => { setActiveSubTab('friends'); setIsEditing(false); }}
-          className={`flex-1 py-2 rounded-xl font-bold text-xs transition ${
-            activeSubTab === 'friends' && !isEditing
-              ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          👥 Мои бро
-        </button>
+      {/* Верхняя панель GymBro */}
+      <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-3">
+        <div>
+          <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
+            🔥 GymBro Tinder
+          </h2>
+          <p className="text-[11px] text-gray-400">Найдено атлетов: {filteredProfiles.length}</p>
+        </div>
         <button
           onClick={() => setIsEditing(!isEditing)}
-          className={`px-3.5 py-2 rounded-xl font-bold text-xs transition border ${
+          className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition border ${
             isEditing
               ? 'bg-gray-800 text-white border-gray-600'
-              : 'text-gray-400 border-transparent hover:text-white'
+              : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30'
           }`}
         >
-          ⚙️ Анкета
+          {isEditing ? 'Смотреть анкеты' : '⚙️ Моя анкета'}
         </button>
       </div>
 
-      {/* Контент */}
       {isEditing ? (
         <GymBroProfileForm
           currentUserId={currentUserId}
@@ -142,9 +162,6 @@ export default function GymBroTab({ session, telegramUser, user }) {
           }}
           onCancel={userProfile ? () => setIsEditing(false) : null}
         />
-      ) : activeSubTab === 'friends' ? (
-        /* ТВОЙ НАСТОЯЩИЙ ОРИГИНАЛЬНЫЙ КОМПОНЕНТ ДРУЗЕЙ */
-        <FriendsTab session={session} telegramUser={telegramUser || user} user={telegramUser || user} />
       ) : (
         <GymBroSwipeView
           profiles={filteredProfiles}
