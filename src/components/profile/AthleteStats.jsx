@@ -1,177 +1,264 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../supabaseClient';
+
+const MONTH_NAMES = [
+  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+];
+
+const WEEK_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 export default function AthleteStats({ user }) {
-  // Реальная цель атлета: 181 из 220 тренировок
-  const [completedWorkouts, setCompletedWorkouts] = useState(181);
-  const targetWorkouts = 220;
+  const myTgId = Number(user?.telegram_id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 0);
 
-  // Интерактивный трекер текущей недели
-  const [weekDays, setWeekDays] = useState([
-    { day: 'ПН', done: true, label: 'Ноги / Спина' },
-    { day: 'ВТ', done: true, label: 'Грудь / Руки' },
-    { day: 'СР', done: false, label: 'Отдых' },
-    { day: 'ЧТ', done: true, label: 'База / Ноги' },
-    { day: 'ПТ', done: true, label: 'Спина / Дельты' },
-    { day: 'СБ', done: false, label: 'Восстановление' },
-    { day: 'ВС', done: false, label: 'Кардио' },
-  ]);
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth(); // 0-11
+  const todayDate = today.getDate();
 
-  const toggleDay = (index) => {
-    const updated = [...weekDays];
-    const wasDone = updated[index].done;
-    updated[index].done = !wasDone;
-    setWeekDays(updated);
-    setCompletedWorkouts(prev => wasDone ? prev - 1 : prev + 1);
-  };
+  // Цель на месяц (дефолт 16 тренировок: 4 раза в неделю)
+  const [monthlyTarget, setMonthlyTarget] = useState(16);
+  const [isSettingTarget, setIsSettingTarget] = useState(false);
 
-  const percent = Math.min(100, Math.round((completedWorkouts / targetWorkouts) * 100));
-  const remaining = Math.max(0, targetWorkouts - completedWorkouts);
+  // Массив дней с тренировками в текущем месяце: [1, 3, 5, 8, ...]
+  const [loggedDays, setLoggedDays] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Расчет кругового SVG прогресс-бара Apple
-  const radius = 62;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (percent / 100) * circumference;
+  // Загрузка отметок из Supabase (или localStorage при оффлайне)
+  useEffect(() => {
+    async function loadWorkouts() {
+      if (!myTgId) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+
+      const storageKey = `gym_workouts_${myTgId}_${currentYear}_${currentMonth}`;
+      const localSaved = localStorage.getItem(storageKey);
+      if (localSaved) {
+        try {
+          const parsed = JSON.parse(localSaved);
+          setLoggedDays(parsed.days || []);
+          if (parsed.target) setMonthlyTarget(parsed.target);
+        } catch (e) {}
+      }
+
+      // Пытаемся подтянуть из базы users.stats_data если колонка доступна
+      try {
+        const { data } = await supabase
+          .from('users')
+          .select('target_weight, bio')
+          .eq('telegram_id', myTgId)
+          .maybeSingle();
+
+        // Если локально пусто, даем 4 дефолтных дня для наглядности
+        if (!localSaved) {
+          const initialDays = [2, 4, 7, 9, 11, 14, 16].filter(d => d <= todayDate);
+          setLoggedDays(initialDays);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadWorkouts();
+  }, [myTgId, currentYear, currentMonth, todayDate]);
+
+  // Сохранение дней
+  function saveState(newDays, newTarget = monthlyTarget) {
+    setLoggedDays(newDays);
+    const storageKey = `gym_workouts_${myTgId}_${currentYear}_${currentMonth}`;
+    localStorage.setItem(storageKey, JSON.stringify({ days: newDays, target: newTarget }));
+  }
+
+  // Переключение дня (был / не был)
+  function toggleDay(dayNum) {
+    if (dayNum > todayDate) {
+      alert('Нельзя отметить тренировку в будущем дне! 💪');
+      return;
+    }
+    let updated;
+    if (loggedDays.includes(dayNum)) {
+      updated = loggedDays.filter(d => d !== dayNum);
+    } else {
+      updated = [...loggedDays, dayNum].sort((a, b) => a - b);
+    }
+    saveState(updated);
+  }
+
+  // Генерация календаря на месяц
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  // День недели первого числа месяца (0 - Вс, 1 - Пн ... 6 - Сб)
+  let firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+  // Приводим к Пн = 0, Вс = 6
+  firstDayIndex = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+
+  const totalCompleted = loggedDays.length;
+  const progressPercent = Math.min(100, Math.round((totalCompleted / monthlyTarget) * 100));
+
+  // Считаем тренировки за последние 7 дней
+  const last7DaysCount = loggedDays.filter(d => d >= todayDate - 6 && d <= todayDate).length;
 
   return (
-    <div className="space-y-4">
-      {/* 1. ГЛАВНЫЙ ВИДЖЕТ: ГОДОВАЯ ЦЕЛЬ В СТИЛЕ APPLE FITNESS RINGS */}
-      <div className="apple-glass p-5 space-y-4">
-        <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
+    <div className="space-y-3 pb-8">
+      {/* 1. КАРТОЧКА ЦЕЛИ НА МЕСЯЦ */}
+      <div className="apple-glass p-4 space-y-3 border border-white/[0.06]">
+        <div className="flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF5A1F]">
-              Сезон 2026 • Годовой таргет
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+              {MONTH_NAMES[currentMonth]} {currentYear}
             </span>
-            <h3 className="text-base font-black text-white tracking-tight mt-0.5">
-              Силовые тренировки
+            <h3 className="text-sm font-black text-white tracking-tight mt-0.5">
+              Цель: {monthlyTarget} тренировок
             </h3>
           </div>
-          <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
-            Опережает план
-          </span>
+
+          <button
+            type="button"
+            onClick={() => setIsSettingTarget(!isSettingTarget)}
+            className="text-[10px] font-bold text-[#FF8C38] px-2.5 py-1 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.08] cursor-pointer"
+          >
+            {isSettingTarget ? 'Готово' : '⚙️ Сменить план'}
+          </button>
         </div>
 
-        {/* Круговой индикатор прогресса */}
-        <div className="flex items-center justify-around pt-1">
-          <div className="relative w-36 h-36 flex items-center justify-center">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 144 144">
-              {/* Фоновая дорожка кольца */}
-              <circle
-                cx="72"
-                cy="72"
-                r={radius}
-                className="text-white/[0.06]"
-                strokeWidth="11"
-                stroke="currentColor"
-                fill="transparent"
-              />
-              {/* Заполненное кольцо прогресса GymConnect */}
-              <circle
-                cx="72"
-                cy="72"
-                r={radius}
-                stroke="url(#gymconnectGradient)"
-                strokeWidth="11"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                fill="transparent"
-                style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}
-              />
-              <defs>
-                <linearGradient id="gymconnectGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#FF7A3D" />
-                  <stop offset="100%" stopColor="#FF4500" />
-                </linearGradient>
-              </defs>
-            </svg>
-
-            <div className="absolute flex flex-col items-center justify-center text-center">
-              <span className="text-2xl font-black text-white tracking-tight leading-none">
-                {percent}%
-              </span>
-              <span className="text-[10px] font-semibold text-slate-400 mt-0.5">ВЫПОЛНЕНО</span>
+        {/* Выбор цели */}
+        {isSettingTarget && (
+          <div className="p-2.5 rounded-xl bg-black/40 border border-white/[0.08] flex items-center justify-between gap-2">
+            <span className="text-[10px] text-slate-400">Тренировок в месяц:</span>
+            <div className="flex gap-1.5">
+              {[12, 16, 20].map(val => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => {
+                    setMonthlyTarget(val);
+                    saveState(loggedDays, val);
+                    setIsSettingTarget(false);
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    monthlyTarget === val
+                      ? 'bg-[#FF5A1F] text-white'
+                      : 'bg-white/[0.05] text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {val} ({val / 4}/нед)
+                </button>
+              ))}
             </div>
           </div>
+        )}
 
-          {/* Цифры таргета */}
-          <div className="space-y-3">
-            <div>
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Выполнено</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-white">{completedWorkouts}</span>
-                <span className="text-xs text-slate-400 font-medium">/ {targetWorkouts}</span>
-              </div>
-            </div>
-
-            <div>
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Осталось закрыть</span>
-              <span className="text-lg font-bold text-[#FF8C38]">{remaining} сессий</span>
-            </div>
+        {/* Прогресс-бар */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex justify-between text-xs">
+            <span className="font-semibold text-slate-300">
+              Выполнено <strong className="text-white font-black">{totalCompleted}</strong> из {monthlyTarget}
+            </span>
+            <span className="font-bold text-[#FF8C38]">{progressPercent}%</span>
           </div>
-        </div>
 
-        {/* Линейный суб-бар с расчетом ритма */}
-        <div className="bg-black/30 p-3 rounded-xl border border-white/[0.05] space-y-1 text-xs">
-          <div className="flex justify-between text-[11px]">
-            <span className="text-slate-400">Текущий темп</span>
-            <span className="text-emerald-400 font-semibold">4.2 тренировки / нед</span>
+          <div className="w-full h-2 rounded-full bg-white/[0.05] overflow-hidden border border-white/[0.05]">
+            <div
+              className="h-full bg-gradient-to-r from-amber-500 to-[#FF5A1F] rounded-full transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
           </div>
-          <p className="text-[10px] text-slate-500">
-            При сохранении темпа цель в 220 тренировок закроется в ноябре.
-          </p>
         </div>
       </div>
 
-      {/* 2. НЕДЕЛЬНЫЙ СПЛИТ-ТРЕКЕР (АКТУАЛЬНЫЙ РИТМ) */}
-      <div className="apple-glass p-5 space-y-3.5">
-        <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
-          <div>
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider">Недельный сплит</h3>
-            <p className="text-[11px] text-slate-400">Нажми на день, чтобы отметить тренировку</p>
-          </div>
-          <span className="text-[11px] font-bold text-[#FF8C38]">
-            {weekDays.filter(d => d.done).length} / 4 норма
+      {/* 2. ИНТЕРАКТИВНЫЙ КАЛЕНДАРЬ МЕСЯЦА */}
+      <div className="apple-glass p-4 space-y-3 border border-white/[0.06]">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span>📅</span> Календарь тренировок
           </span>
+          <span className="text-[10px] text-slate-400">нажми на день для отметки</span>
         </div>
 
-        <div className="grid grid-cols-7 gap-1.5 pt-1">
-          {weekDays.map((item, idx) => (
-            <button
-              key={item.day}
-              type="button"
-              onClick={() => toggleDay(idx)}
-              className={`py-3 px-1 rounded-xl flex flex-col items-center justify-between min-h-[64px] border transition active:scale-95 cursor-pointer ${
-                item.done
-                  ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white border-[#FF5A1F] shadow-md shadow-[#FF5A1F]/20'
-                  : 'bg-white/[0.02] text-slate-400 border-white/[0.05] hover:border-white/[0.1]'
-              }`}
-            >
-              <span className="text-[10px] font-bold">{item.day}</span>
-              <span className="text-xs font-bold">{item.done ? '✓' : '—'}</span>
-              <span className={`text-[8px] font-medium leading-none ${item.done ? 'text-white/80' : 'text-slate-500'}`}>
-                {item.done ? 'Зал' : 'Отдых'}
-              </span>
-            </button>
+        {/* Дни недели */}
+        <div className="grid grid-cols-7 gap-1 text-center">
+          {WEEK_DAYS.map(day => (
+            <span key={day} className="text-[10px] font-bold text-slate-500 uppercase py-0.5">
+              {day}
+            </span>
           ))}
         </div>
-      </div>
 
-      {/* 3. КАРТОЧКИ КЛЮЧЕВЫХ МЕТРИК GYMCONNECT */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <div className="apple-glass p-4 space-y-1">
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-            Суммарный объем
-          </span>
-          <p className="text-xl font-black text-white tracking-tight">284 тонны</p>
-          <span className="text-[10px] text-emerald-400 font-semibold block">Базовые сплиты</span>
+        {/* Сетка дат */}
+        <div className="grid grid-cols-7 gap-1">
+          {/* Пустые ячейки до 1 числа */}
+          {Array.from({ length: firstDayIndex }).map((_, i) => (
+            <div key={`empty-${i}`} className="h-9 rounded-xl bg-transparent" />
+          ))}
+
+          {/* Дни месяца */}
+          {Array.from({ length: daysInMonth }).map((_, i) => {
+            const dayNum = i + 1;
+            const isDone = loggedDays.includes(dayNum);
+            const isToday = dayNum === todayDate;
+            const isFuture = dayNum > todayDate;
+
+            return (
+              <button
+                key={dayNum}
+                type="button"
+                disabled={isFuture}
+                onClick={() => toggleDay(dayNum)}
+                className={`h-9 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition active:scale-95 cursor-pointer relative ${
+                  isDone
+                    ? 'bg-gradient-to-b from-[#FF5A1F] to-[#e04812] text-white shadow-md shadow-[#FF5A1F]/20'
+                    : isToday
+                    ? 'bg-white/[0.08] border border-[#FF5A1F]/60 text-white'
+                    : isFuture
+                    ? 'bg-white/[0.01] text-slate-600 opacity-40 cursor-not-allowed'
+                    : 'bg-white/[0.02] border border-white/[0.04] text-slate-300 hover:bg-white/[0.05]'
+                }`}
+              >
+                <span>{dayNum}</span>
+                {isDone && <span className="text-[8px] leading-none mt-0.5">🔥</span>}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="apple-glass p-4 space-y-1">
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-            Средняя длительность
+        <div className="flex items-center justify-between pt-2 border-t border-white/[0.05] text-[10px] text-slate-400">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-md bg-[#FF5A1F] inline-block" />
+            <span>Тренировка</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-md border border-[#FF5A1F]/60 inline-block" />
+            <span>Сегодня</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-md bg-white/[0.04] inline-block" />
+            <span>Отдых</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. ПОНЯТНЫЕ СПОРТИВНЫЕ МЕТРИКИ ВМЕСТО ТОНН */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="p-3 rounded-2xl apple-glass border border-white/[0.06] text-center">
+          <span className="text-[9px] text-slate-500 font-bold uppercase block">За 7 дней</span>
+          <span className="text-xl font-black text-white mt-0.5 block">
+            {last7DaysCount} <span className="text-xs font-normal text-slate-400">тренировки</span>
           </span>
-          <p className="text-xl font-black text-white tracking-tight">72 мин</p>
-          <span className="text-[10px] text-slate-400 font-medium block">Высокая плотность</span>
+          <p className="text-[9px] text-emerald-400 font-medium mt-0.5">
+            {last7DaysCount >= 3 ? '⚡️ Отличный темп' : 'Надо поднажать'}
+          </p>
+        </div>
+
+        <div className="p-3 rounded-2xl apple-glass border border-white/[0.06] text-center">
+          <span className="text-[9px] text-slate-500 font-bold uppercase block">Осталось в плане</span>
+          <span className="text-xl font-black text-[#FF8C38] mt-0.5 block">
+            {Math.max(0, monthlyTarget - totalCompleted)} <span className="text-xs font-normal text-slate-400">сессий</span>
+          </span>
+          <p className="text-[9px] text-slate-400 font-medium mt-0.5">
+            до закрытия месяца
+          </p>
         </div>
       </div>
     </div>
