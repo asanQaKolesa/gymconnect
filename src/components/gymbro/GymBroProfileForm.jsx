@@ -3,46 +3,41 @@ import { supabase } from '../../supabaseClient';
 import { ALMATY_GYMS } from '../../data/almatyGyms';
 
 export default function GymBroProfileForm({ currentUserId, initialData, onSaved, onCancel }) {
-  const [formData, setFormData] = useState(initialData || {
-    full_name: '',
-    age: '',
-    gender: 'Мужской',
-    looking_for_gender: 'Всех',
-    experience_level: 'Средний (1-3 года)',
-    goals: [],
-    preferred_days: [],
-    preferred_time: 'Вечер (18:00 - 21:00)',
-    personality_type: 'Амбиверт',
-    home_gym: ALMATY_GYMS[0],
-    bio: '',
-    photo_url: '',
-    telegram_contact: ''
+  const gymsList = Array.isArray(ALMATY_GYMS) && ALMATY_GYMS.length > 0 
+    ? ALMATY_GYMS 
+    : ['Invictus Go | Навои', 'Adrenaline | Абая', 'Банзай | Сейфуллина'];
+
+  const [formData, setFormData] = useState({
+    full_name: initialData?.full_name || '',
+    gender: initialData?.gender || 'Мужской',
+    looking_for_gender: initialData?.looking_for_gender || 'Всех',
+    home_gym: initialData?.home_gym || gymsList[0],
+    preferred_time: initialData?.preferred_time || 'Вечер (18:00 - 21:00)',
+    personality_type: initialData?.personality_type || 'Амбиверт',
+    experience_level: initialData?.experience_level || 'Средний (1-3 года)',
+    bio: initialData?.bio || '',
+    photo_url: initialData?.photo_url || '',
+    telegram_contact: initialData?.telegram_contact || ''
   });
 
   const [gymSearch, setGymSearch] = useState('');
   const [isGymModalOpen, setIsGymModalOpen] = useState(false);
-  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
 
-  const TIME_SLOTS = [
-    'Утро (06:00 - 10:00)',
-    'Обед (12:00 - 15:00)',
-    'После обеда (15:00 - 18:00)',
+  const TIME_OPTIONS = [
+    'Утро (07:00 - 10:00)',
+    'День (12:00 - 16:00)',
     'Вечер (18:00 - 21:00)',
-    'Поздний вечер (21:00+)',
-    'Плавающий график / В любое время'
+    'Поздний вечер (21:00+)'
   ];
 
-  const PERSONALITY_TYPES = [
+  const PERSONALITY_OPTIONS = [
     { label: 'Интроверт', emoji: '🤫' },
-    { label: 'Экстраверт', emoji: '⚡' },
-    { label: 'Амбиверт', emoji: '⚖️' }
+    { label: 'Амбиверт', emoji: '⚖️' },
+    { label: 'Экстраверт', emoji: '⚡' }
   ];
 
-  const GOALS_LIST = ['Набор массы', 'Похудение / Сушка', 'Пауэрлифтинг', 'Поддержание формы', 'Кроссфит', 'Выносливость'];
-  const DAYS_LIST = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         alert('Максимальный размер фото — 5 МБ');
@@ -56,290 +51,180 @@ export default function GymBroProfileForm({ currentUserId, initialData, onSaved,
     }
   };
 
-  const handleSave = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.telegram_contact.trim()) {
-      alert('Укажите ваш Telegram username для связи');
+    if (!formData.full_name.trim()) {
+      alert('Пожалуйста, укажите имя');
       return;
     }
 
-    try {
-      const payload = {
-        user_id: currentUserId,
-        ...formData,
-        telegram_contact: formData.telegram_contact.replace('@', '').trim(),
-        age: parseInt(formData.age, 10) || null,
-        updated_at: new Date().toISOString()
-      };
-
-      const { error } = await supabase
-        .from('gymbro_profiles')
-        .upsert(payload, { onConflict: 'user_id' });
-
-      if (error) throw error;
-      alert('✅ Анкета сохранена!');
-      if (onSaved) onSaved(payload);
-    } catch (err) {
-      alert('Ошибка при сохранении: ' + err.message);
+    if (onSaved) {
+      onSaved(formData);
     }
   };
 
-  const toggleGoal = (g) => {
-    setFormData(p => ({
-      ...p,
-      goals: p.goals.includes(g) ? p.goals.filter(x => x !== g) : [...p.goals, g]
-    }));
-  };
-
-  const toggleDay = (d) => {
-    setFormData(p => ({
-      ...p,
-      preferred_days: p.preferred_days.includes(d) ? p.preferred_days.filter(x => x !== d) : [...p.preferred_days, d]
-    }));
-  };
-
-  const filteredGyms = ALMATY_GYMS.filter(g =>
+  const filteredGyms = gymsList.filter(g =>
     g.toLowerCase().includes(gymSearch.toLowerCase())
   );
 
   return (
-    <form onSubmit={handleSave} className="space-y-4 bg-[#111827] p-5 rounded-2xl border border-gray-800">
-      {/* Согласие / Правила */}
-      <div 
-        onClick={() => setIsRulesModalOpen(true)}
-        className="cursor-pointer bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/30 rounded-xl p-3 flex items-start gap-3 transition"
-      >
-        <span className="text-base shrink-0">🛡️</span>
-        <div className="text-xs">
-          <p className="font-bold text-emerald-300">Правила сообщества и согласие</p>
-          <p className="text-gray-400 text-[11px]">Нажмите, чтобы прочитать условия публикации профиля</p>
-        </div>
-      </div>
-
-      {/* Фото */}
-      <div className="flex items-center gap-4 bg-[#1f2937]/60 p-3 rounded-2xl border border-gray-700/60">
-        <div className="w-16 h-16 rounded-2xl bg-gray-800 border border-gray-600 overflow-hidden flex items-center justify-center shrink-0">
-          {formData.photo_url ? (
-            <img src={formData.photo_url} alt="Profile" className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-2xl">📸</span>
-          )}
-        </div>
-        <div className="flex-1 space-y-1">
-          <label className="text-xs font-semibold text-gray-300 block">Фото анкеты</label>
-          <label className="inline-block px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 text-xs font-bold cursor-pointer transition">
-            <span>📁 Загрузить фото</span>
-            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-          </label>
-        </div>
-      </div>
-
-      <div>
-        <label className="text-xs text-gray-400 font-medium">Имя и фамилия</label>
-        <input
-          type="text"
-          required
-          value={formData.full_name}
-          onChange={e => setFormData({ ...formData, full_name: e.target.value })}
-          className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm mt-1 text-white focus:border-emerald-500 focus:outline-none"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs text-gray-400 font-medium">Возраст</label>
-          <input
-            type="number"
-            required
-            value={formData.age}
-            onChange={e => setFormData({ ...formData, age: e.target.value })}
-            className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm mt-1 text-white focus:border-emerald-500 focus:outline-none"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-gray-400 font-medium">Твой пол</label>
-          <select
-            value={formData.gender}
-            onChange={e => setFormData({ ...formData, gender: e.target.value })}
-            className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm mt-1 text-white focus:border-emerald-500 focus:outline-none"
-          >
-            <option value="Мужской">Мужской</option>
-            <option value="Женский">Женский</option>
-          </select>
-        </div>
-      </div>
-
-      <div>
-        <label className="text-xs text-gray-400 font-medium mb-1 block">Кого ищешь для тренировок?</label>
-        <div className="grid grid-cols-3 gap-2">
-          {['Парней', 'Девушек', 'Всех'].map(target => (
-            <button
-              key={target}
-              type="button"
-              onClick={() => setFormData({ ...formData, looking_for_gender: target })}
-              className={`py-2 rounded-xl border text-xs font-bold transition ${
-                formData.looking_for_gender === target
-                  ? 'bg-emerald-500 text-black border-emerald-400'
-                  : 'bg-[#1f2937] text-gray-300 border-gray-700'
-              }`}
-            >
-              {target}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="text-xs text-gray-400 font-medium mb-1 block">Психотип (вайб)</label>
-        <div className="grid grid-cols-3 gap-2">
-          {PERSONALITY_TYPES.map(p => (
-            <button
-              key={p.label}
-              type="button"
-              onClick={() => setFormData({ ...formData, personality_type: p.label })}
-              className={`p-2 rounded-xl border text-center transition flex flex-col items-center gap-0.5 ${
-                formData.personality_type === p.label
-                  ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 font-bold'
-                  : 'bg-[#1f2937] border-gray-700 text-gray-400'
-              }`}
-            >
-              <span>{p.emoji}</span>
-              <span className="text-xs">{p.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="text-xs text-gray-400 font-medium">Время тренировок</label>
-        <select
-          value={formData.preferred_time}
-          onChange={e => setFormData({ ...formData, preferred_time: e.target.value })}
-          className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm mt-1 text-white focus:border-emerald-500 focus:outline-none"
-        >
-          {TIME_SLOTS.map(slot => (
-            <option key={slot} value={slot}>{slot}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-xs text-gray-400 font-medium">Твой фитнес-клуб / филиал</label>
-        <button
-          type="button"
-          onClick={() => setIsGymModalOpen(true)}
-          className="w-full bg-[#1f2937] border border-gray-700 hover:border-emerald-500 rounded-xl px-3.5 py-2.5 text-left flex items-center justify-between text-white transition"
-        >
-          <span className="truncate text-xs font-medium text-emerald-300">
-            {formData.home_gym || 'Выбрать зал из списка...'}
-          </span>
-          <span className="text-xs text-gray-400 ml-2 shrink-0">🔍 Найти</span>
-        </button>
-      </div>
-
-      <div>
-        <label className="text-xs text-gray-400 font-medium mb-1 block">Цели</label>
-        <div className="flex flex-wrap gap-1.5">
-          {GOALS_LIST.map(g => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => toggleGoal(g)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold border transition ${
-                formData.goals.includes(g)
-                  ? 'bg-emerald-500 text-black border-emerald-400'
-                  : 'bg-gray-800 text-gray-300 border-gray-700'
-              }`}
-            >
-              {g}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="text-xs text-gray-400 font-medium mb-1 block">Дни тренировок</label>
-        <div className="flex gap-1">
-          {DAYS_LIST.map(d => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => toggleDay(d)}
-              className={`flex-1 py-1 rounded-lg text-xs font-semibold border transition ${
-                formData.preferred_days.includes(d)
-                  ? 'bg-emerald-500 text-black border-emerald-400'
-                  : 'bg-gray-800 text-gray-400 border-gray-700'
-              }`}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="text-xs text-gray-400 font-medium">О себе</label>
-        <textarea
-          rows="2"
-          value={formData.bio}
-          onChange={e => setFormData({ ...formData, bio: e.target.value })}
-          className="w-full bg-[#1f2937] border border-gray-700 rounded-xl p-3 text-xs mt-1 text-white focus:border-emerald-500 focus:outline-none"
-          placeholder="Ищу напарника для базы, страховка на жиме..."
-        />
-      </div>
-
-      <div>
-        <label className="text-xs text-gray-400 font-medium">Telegram Username</label>
-        <div className="relative mt-1">
-          <span className="absolute left-3.5 top-2.5 text-gray-500 text-sm">@</span>
-          <input
-            type="text"
-            required
-            value={formData.telegram_contact}
-            onChange={e => setFormData({ ...formData, telegram_contact: e.target.value.replace('@', '') })}
-            className="w-full bg-[#1f2937] border border-gray-700 rounded-xl pl-8 pr-3.5 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
-            placeholder="username"
-          />
-        </div>
-      </div>
-
-      <div className="flex gap-2 pt-2">
+    <div className="w-full max-w-sm mx-auto bg-[#121622] border border-white/10 rounded-3xl p-5 shadow-2xl space-y-4">
+      {/* Шапка формы с кнопкой выхода */}
+      <div className="flex items-center justify-between pb-2 border-b border-white/10">
+        <h3 className="text-sm font-black text-white tracking-tight flex items-center gap-1.5">
+          <span>⚙️</span> Моя анкета GymBro
+        </h3>
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="w-1/3 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs"
+            className="w-7 h-7 rounded-full bg-white/10 text-slate-300 hover:text-white flex items-center justify-center text-xs font-bold cursor-pointer"
           >
-            Отмена
+            ✕
           </button>
         )}
-        <button
-          type="submit"
-          className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-sm transition shadow-lg shadow-emerald-500/20"
-        >
-          💾 Сохранить анкету
-        </button>
       </div>
 
-      {/* Модалка зала */}
+      <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+        {/* Фото */}
+        <div className="flex items-center gap-3.5 bg-white/[0.02] p-3 rounded-2xl border border-white/5">
+          <div className="w-14 h-14 rounded-2xl bg-black/40 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">
+            {formData.photo_url ? (
+              <img src={formData.photo_url} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-xl">📸</span>
+            )}
+          </div>
+          <div className="flex-1">
+            <span className="block text-slate-400 font-medium mb-1">Фото в карточке</span>
+            <label className="inline-block px-3 py-1.5 rounded-xl bg-[#FF5A1F]/15 hover:bg-[#FF5A1F]/25 text-[#FF8C38] border border-[#FF5A1F]/30 font-bold cursor-pointer transition">
+              <span>Загрузить фото</span>
+              <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+            </label>
+          </div>
+        </div>
+
+        {/* Имя */}
+        <div>
+          <label className="text-slate-400 font-medium block mb-1">Имя</label>
+          <input
+            type="text"
+            required
+            value={formData.full_name}
+            onChange={e => setFormData({ ...formData, full_name: e.target.value })}
+            className="w-full bg-[#181d2d] border border-white/10 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-[#FF5A1F]"
+            placeholder="Твое имя"
+          />
+        </div>
+
+        {/* Психотип */}
+        <div>
+          <label className="text-slate-400 font-medium block mb-1">Вайб (психотип)</label>
+          <div className="grid grid-cols-3 gap-1.5">
+            {PERSONALITY_OPTIONS.map(p => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => setFormData({ ...formData, personality_type: p.label })}
+                className={`py-2 rounded-xl border text-center transition flex flex-col items-center gap-0.5 cursor-pointer ${
+                  formData.personality_type === p.label
+                    ? 'bg-[#FF5A1F] text-white border-[#FF5A1F] font-bold shadow-md shadow-[#FF5A1F]/25'
+                    : 'bg-[#181d2d] border-white/10 text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>{p.emoji}</span>
+                <span className="text-[10px]">{p.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Время */}
+        <div>
+          <label className="text-slate-400 font-medium block mb-1">Время тренировок</label>
+          <select
+            value={formData.preferred_time}
+            onChange={e => setFormData({ ...formData, preferred_time: e.target.value })}
+            className="w-full bg-[#181d2d] border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-[#FF5A1F]"
+          >
+            {TIME_OPTIONS.map(t => (
+              <option key={t} value={t} className="bg-[#121622]">{t}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Зал */}
+        <div>
+          <label className="text-slate-400 font-medium block mb-1">Твой фитнес-клуб</label>
+          <button
+            type="button"
+            onClick={() => setIsGymModalOpen(true)}
+            className="w-full bg-[#181d2d] border border-white/10 hover:border-[#FF5A1F] rounded-xl px-3 py-2 text-left flex items-center justify-between text-white transition cursor-pointer"
+          >
+            <span className="truncate text-[#FF8C38] font-medium">
+              {formData.home_gym || 'Выбрать зал...'}
+            </span>
+            <span className="text-[10px] text-slate-400 ml-2 shrink-0">🔍 Поиск</span>
+          </button>
+        </div>
+
+        {/* Био */}
+        <div>
+          <label className="text-slate-400 font-medium block mb-1">О себе</label>
+          <textarea
+            rows="2"
+            value={formData.bio}
+            onChange={e => setFormData({ ...formData, bio: e.target.value })}
+            className="w-full bg-[#181d2d] border border-white/10 rounded-xl p-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-[#FF5A1F]"
+            placeholder="Ищу бро на жим, базу, сушку..."
+          />
+        </div>
+
+        {/* Кнопки сохранения и отмены */}
+        <div className="flex gap-2 pt-2">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="w-1/3 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 font-bold transition cursor-pointer"
+            >
+              Отмена
+            </button>
+          )}
+          <button
+            type="submit"
+            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#FF5A1F] to-[#FF8C38] text-white font-black shadow-lg shadow-[#FF5A1F]/25 hover:brightness-110 transition cursor-pointer"
+          >
+            Сохранить
+          </button>
+        </div>
+      </form>
+
+      {/* Модалка выбора зала */}
       {isGymModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-[#0f172a] border border-gray-800 rounded-t-3xl sm:rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col p-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-800">
-              <h3 className="text-xs font-bold text-white">📍 Выберите зал ({filteredGyms.length})</h3>
-              <button type="button" onClick={() => setIsGymModalOpen(false)} className="text-gray-400 text-xs font-bold">✕</button>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-[#121622] border border-white/10 rounded-t-3xl sm:rounded-3xl w-full max-w-sm max-h-[75vh] flex flex-col p-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <h4 className="font-bold text-white text-xs">📍 Выберите зал ({filteredGyms.length})</h4>
+              <button
+                type="button"
+                onClick={() => setIsGymModalOpen(false)}
+                className="text-slate-400 hover:text-white font-bold px-2 py-1 cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
             <div className="py-2">
               <input
                 type="text"
                 value={gymSearch}
                 onChange={e => setGymSearch(e.target.value)}
-                placeholder="Поиск зала (Invictus, Абая, Blitz...)"
-                className="w-full bg-[#1e293b] border border-gray-700 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                placeholder="Поиск зала (Invictus, Абая...)"
+                className="w-full bg-[#181d2d] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF5A1F]"
                 autoFocus
               />
             </div>
-            <div className="overflow-y-auto flex-1 space-y-1 pr-1 divide-y divide-gray-800/40">
+            <div className="overflow-y-auto flex-1 space-y-1 divide-y divide-white/5">
               {filteredGyms.map((gym, idx) => (
                 <button
                   key={idx}
@@ -348,7 +233,7 @@ export default function GymBroProfileForm({ currentUserId, initialData, onSaved,
                     setFormData(prev => ({ ...prev, home_gym: gym }));
                     setIsGymModalOpen(false);
                   }}
-                  className="w-full text-left p-2.5 rounded-lg text-xs text-gray-200 hover:bg-gray-800 transition"
+                  className="w-full text-left p-2 rounded-lg text-xs text-slate-200 hover:bg-white/[0.06] transition cursor-pointer"
                 >
                   {gym}
                 </button>
@@ -357,25 +242,6 @@ export default function GymBroProfileForm({ currentUserId, initialData, onSaved,
           </div>
         </div>
       )}
-
-      {/* Модалка правил */}
-      {isRulesModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-gray-800 rounded-2xl w-full max-w-md p-5 space-y-3">
-            <h3 className="text-sm font-bold text-white">🛡️ Правила сообщества</h3>
-            <p className="text-xs text-gray-300 leading-relaxed">
-              Заполняя анкету, вы даете согласие на размещение вашего профиля в каталоге GymBro. Номера телефонов не распространяются, связь идет через Telegram username.
-            </p>
-            <button
-              type="button"
-              onClick={() => setIsRulesModalOpen(false)}
-              className="w-full py-2 bg-emerald-500 text-black font-bold text-xs rounded-xl"
-            >
-              Понятно
-            </button>
-          </div>
-        </div>
-      )}
-    </form>
+    </div>
   );
 }
