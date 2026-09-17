@@ -1,42 +1,20 @@
-import React, { useState } from 'react';
-import DailyFuel from '../DailyFuel';
-import DietPlan from './DietPlan';
+import React from 'react';
+import DietPlan from './DietPlan'; // Исправленный путь: файлы лежат в одной папке src/components/nutrition/
 
-export default function NutritionTab({ myProfile, onUpdateProfile }) {
-  const [activeSubTab, setActiveSubTab] = useState('fuel'); // 'fuel' | 'diet'
-
+export default function NutritionTab() {
   return (
-    <div className="space-y-4 select-none">
-      {/* Переключатель режимов питания */}
-      <div className="flex bg-[#121622] p-1 rounded-2xl border border-white/10">
-        <button
-          onClick={() => setActiveSubTab('fuel')}
-          className={`flex-1 py-2 rounded-xl font-bold text-xs transition cursor-pointer ${
-            activeSubTab === 'fuel'
-              ? 'bg-[#FF5A1F] text-white shadow-lg shadow-[#FF5A1F]/25'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          🥗 КБЖУ & Баланс
-        </button>
-        <button
-          onClick={() => setActiveSubTab('diet')}
-          className={`flex-1 py-2 rounded-xl font-bold text-xs transition cursor-pointer ${
-            activeSubTab === 'diet'
-              ? 'bg-[#FF5A1F] text-white shadow-lg shadow-[#FF5A1F]/25'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          📋 Рацион на 7 дней
-        </button>
+    <div className="p-4 max-w-4xl mx-auto space-y-6">
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
+        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+          Питание и КБЖУ
+        </h2>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Контроль калорий, макронутриентов и персональный план питания под ваши цели.
+        </p>
       </div>
 
-      {/* Отображаем выбранный подраздел */}
-      {activeSubTab === 'fuel' ? (
-        <DailyFuel myProfile={myProfile} onUpdateProfile={onUpdateProfile} />
-      ) : (
-        <DietPlan />
-      )}
+      {/* Подключаем блок плана питания */}
+      <DietPlan />
     </div>
   );
 }
