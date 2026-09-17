@@ -6,56 +6,66 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  
+  // Состояние для добавления нового пользователя
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newGym, setNewGym] = useState('Invictus Go');
 
-  const fetchAllUsers = async () => {
+  const fetchUsers = async () => {
     try {
       setLoading(true);
       setErrorMsg('');
 
-      let allRecords = [];
-
-      // 1. Пробуем собрать данные из обычных таблиц (users, profiles, athletes, clients)
-      const tableNames = ['users', 'profiles', 'athletes', 'clients', 'registrations'];
-      for (const tableName of tableNames) {
-        const { data, error } = await supabase.from(tableName).select('*');
-        if (!error && data && data.length > 0) {
-          allRecords = [...allRecords, ...data];
+      const { data, error } = await supabase.from('users').select('*');
+      
+      if (error) {
+        // Пробуем альтернативную таблицу profiles
+        const alt = await supabase.from('profiles').select('*');
+        if (!alt.error && alt.data) {
+          setUsers(alt.data);
+        } else {
+          setUsers([]);
         }
+      } else {
+        setUsers(data || []);
       }
-
-      // 2. Пробуем получить пользователей из таблицы авторизации Supabase Auth (если есть права)
-      try {
-        const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-        if (!authError && authData && authData.users) {
-          const formattedAuthUsers = authData.users.map(u => ({
-            id: u.id,
-            name: u.user_metadata?.name || u.email?.split('@')[0] || 'Auth User',
-            email: u.email,
-            phone: u.phone || 'Не указан',
-            created_at: u.created_at,
-            source: 'Supabase Auth'
-          }));
-          allRecords = [...allRecords, ...formattedAuthUsers];
-        }
-      } catch (e) {
-        // Административный метод Auth API может требовать service_role ключ, это нормально
-      }
-
-      // Убираем дубликаты, если они есть
-      const uniqueUsers = Array.from(new Map(allRecords.map(item => [item.id || item.email, item])).values());
-      setUsers(uniqueUsers);
-
     } catch (err) {
       console.error('Ошибка:', err.message);
-      setErrorMsg('Не удалось выгрузить пользователей. Проверьте подключение.');
+      setErrorMsg('Не удалось загрузить пользователей.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAllUsers();
+    fetchUsers();
   }, []);
+
+  // Функция добавления пользователя в базу
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('users').insert([
+        { name: newName, email: newEmail, gym: newGym, status: 'Active' }
+      ]);
+
+      if (error) {
+        // Пробуем в profiles если таблица users выдала ошибку
+        await supabase.from('profiles').insert([
+          { name: newName, email: newEmail, gym: newGym, status: 'Active' }
+        ]);
+      }
+
+      setShowAddModal(false);
+      setNewName('');
+      setNewEmail('');
+      fetchUsers(); // Обновляем список
+    } catch (err) {
+      alert('Ошибка при добавлении: ' + err.message);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6">
@@ -66,16 +76,79 @@ export default function AdminDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <button 
-            onClick={fetchAllUsers}
+            onClick={() => setShowAddModal(true)}
+            className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors"
+          >
+            + Добавить атлета
+          </button>
+          <button 
+            onClick={fetchUsers}
             className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
           >
-            🔄 Обновить данные
+            🔄 Обновить
           </button>
           <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-xs text-emerald-400 font-mono">
             LIVE_SUPABASE: CONNECTED
           </div>
         </div>
       </div>
+
+      {/* Модальное окно добавления */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-md w-full space-y-4">
+            <h3 className="text-lg font-bold">Добавить нового пользователя</h3>
+            <form onSubmit={handleAddUser} className="space-y-3">
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Имя / Фамилия</label>
+                <input 
+                  type="text" 
+                  value={newName} 
+                  onChange={(e) => setNewName(e.target.value)} 
+                  required
+                  placeholder="Например: Асанәли"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Email / Телефон</label>
+                <input 
+                  type="text" 
+                  value={newEmail} 
+                  onChange={(e) => setNewEmail(e.target.value)} 
+                  placeholder="asan@mail.com"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 block mb-1">Фитнес-зал</label>
+                <input 
+                  type="text" 
+                  value={newGym} 
+                  onChange={(e) => setNewGym(e.target.value)} 
+                  placeholder="Invictus Go"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 bg-zinc-800 text-zinc-300 rounded-xl text-xs hover:bg-zinc-700"
+                >
+                  Отмена
+                </button>
+                <button 
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-500 text-zinc-950 font-bold rounded-xl text-xs hover:bg-emerald-400"
+                >
+                  Сохранить в базу
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-4 mb-6">
         <button 
@@ -108,32 +181,36 @@ export default function AdminDashboard() {
           {loading ? (
             <div className="p-8 text-center text-zinc-500 text-sm">Загрузка данных из базы...</div>
           ) : users.length === 0 ? (
-            <div className="p-8 text-center text-zinc-500 text-sm">
-              В базе пока нет записей. Если пользователь зарегистрировался, убедитесь, что он записался в таблицу базы данных.
+            <div className="p-8 text-center text-zinc-500 text-sm space-y-3">
+              <p>В таблице пока нет записей.</p>
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-xl font-medium hover:bg-emerald-500/20"
+              >
+                + Добавить первого пользователя вручную
+              </button>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-zinc-900 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
                   <tr>
-                    <th className="p-4">Имя / Профиль</th>
-                    <th className="p-4">Email / Контакт</th>
-                    <th className="p-4">Данные / Источник</th>
-                    <th className="p-4 text-right">Действия</th>
+                    <th className="p-4">Имя / Атлет</th>
+                    <th className="p-4">Контакт</th>
+                    <th className="p-4">Зал / Цель</th>
+                    <th className="p-4 text-right">Статус</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/50">
                   {users.map((u, index) => (
                     <tr key={u.id || index} className="hover:bg-zinc-800/30 transition-colors">
-                      <td className="p-4 font-medium">{u.name || u.full_name || u.username || 'Без имени'}</td>
+                      <td className="p-4 font-medium">{u.name || u.full_name || 'Без имени'}</td>
                       <td className="p-4 text-zinc-400">{u.email || u.phone || 'Не указан'}</td>
-                      <td className="p-4 text-zinc-400 text-xs font-mono">
-                        {u.source ? `Источник: ${u.source}` : JSON.stringify(u).slice(0, 50)}
-                      </td>
+                      <td className="p-4 text-zinc-400 text-xs">{u.gym || 'Не указан'}</td>
                       <td className="p-4 text-right">
-                        <button className="text-xs text-zinc-400 hover:text-white bg-zinc-800 px-3 py-1 rounded-lg transition-colors">
-                          Детали
-                        </button>
+                        <span className="px-2 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          {u.status || 'Active'}
+                        </span>
                       </td>
                     </tr>
                   ))}
