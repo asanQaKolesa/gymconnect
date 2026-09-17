@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import FriendsTab from './FriendsTab';
+import GymBroFriendsView from './gymbro/GymBroFriendsView';
 import GymBroSwipeView from './gymbro/GymBroSwipeView';
 import GymBroProfileForm from './gymbro/GymBroProfileForm';
 import { ALMATY_GYMS } from '../data/almatyGyms';
@@ -19,10 +19,9 @@ export default function GymBroTab({
   const [filterGym, setFilterGym] = useState('Все');
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Текущий Telegram ID пользователя (число или строка)
   const currentTgId = String(user?.telegram_id || window?.Telegram?.WebApp?.initDataUnsafe?.user?.id || '');
 
-  // ИСКЛЮЧАЕМ СЕБЯ: фильтруем свои анкеты по ID и по username
+  // Исключаем себя из ленты свайпов
   const otherCards = cards.filter(c => {
     const cardTgId = String(c.telegram_id || '');
     if (currentTgId && cardTgId && cardTgId === currentTgId) return false;
@@ -30,7 +29,6 @@ export default function GymBroTab({
     return true;
   });
 
-  // Форматируем карточки других атлетов
   const formattedProfiles = otherCards.map(c => ({
     user_id: c.telegram_id || c.id,
     full_name: c.name || 'Атлет',
@@ -59,12 +57,12 @@ export default function GymBroTab({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Верхний тумблер: Поиск напарника vs Мои друзья */}
+    <div className="space-y-4 select-none">
+      {/* Верхний переключатель режимов GymBro */}
       <div className="flex bg-[#121622] p-1 rounded-2xl border border-white/10">
         <button
           onClick={() => { setActiveSubTab('swipe'); setIsEditing(false); }}
-          className={`flex-1 py-2 rounded-xl font-bold text-xs transition ${
+          className={`flex-1 py-2 rounded-xl font-bold text-xs transition cursor-pointer ${
             activeSubTab === 'swipe' && !isEditing
               ? 'bg-[#FF5A1F] text-white shadow-lg shadow-[#FF5A1F]/25'
               : 'text-slate-400 hover:text-white'
@@ -74,7 +72,7 @@ export default function GymBroTab({
         </button>
         <button
           onClick={() => { setActiveSubTab('friends'); setIsEditing(false); }}
-          className={`flex-1 py-2 rounded-xl font-bold text-xs transition ${
+          className={`flex-1 py-2 rounded-xl font-bold text-xs transition cursor-pointer ${
             activeSubTab === 'friends' && !isEditing
               ? 'bg-[#FF5A1F] text-white shadow-lg shadow-[#FF5A1F]/25'
               : 'text-slate-400 hover:text-white'
@@ -84,7 +82,7 @@ export default function GymBroTab({
         </button>
         <button
           onClick={() => setIsEditing(!isEditing)}
-          className={`px-3 py-2 rounded-xl font-bold text-xs transition border ${
+          className={`px-3 py-2 rounded-xl font-bold text-xs transition border cursor-pointer ${
             isEditing
               ? 'bg-white/10 text-white border-white/20'
               : 'text-slate-400 border-transparent hover:text-white'
@@ -94,7 +92,7 @@ export default function GymBroTab({
         </button>
       </div>
 
-      {/* Экран редактирования анкеты */}
+      {/* Контент в зависимости от выбранного режима */}
       {isEditing ? (
         <GymBroProfileForm
           currentUserId={currentTgId}
@@ -129,10 +127,8 @@ export default function GymBroTab({
           onCancel={() => setIsEditing(false)}
         />
       ) : activeSubTab === 'friends' ? (
-        /* ТВОЙ РОДНОЙ ЭКРАН ДРУЗЕЙ */
-        <FriendsTab user={user} />
+        <GymBroFriendsView user={user} />
       ) : (
-        /* ТИНДЕР-СВАЙП С КНОПКОЙ ОТМОТКИ НАЗАД */
         <GymBroSwipeView
           profiles={filteredProfiles}
           currentIndex={currentIndex}
