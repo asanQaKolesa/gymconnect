@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
-import { LEGAL_DOCS_LIST } from './legalDocs';
 import NutritionTab from './components/NutritionTab';
 import GymBroTab from './components/GymBroTab';
+import ProfileTab from './components/ProfileTab';
 
-// Векторные Apple SF Symbols
 const Icons = {
   Lightning: () => (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -62,13 +61,16 @@ export default function App() {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // 1. Базовый профиль
   const [currentUser, setCurrentUser] = useState(null);
   const [telegramUser, setTelegramUser] = useState({ id: null, username: '', first_name: '' });
 
+  // 2. Анкета GymBro
   const [myGymBroCard, setMyGymBroCard] = useState(null);
   const [gymBroCards, setGymBroCards] = useState([]);
   const [saving, setSaving] = useState(false);
 
+  // Форма первой регистрации
   const [regForm, setRegForm] = useState({
     name: '',
     gender: 'Парень',
@@ -136,6 +138,7 @@ export default function App() {
     }
   }
 
+  // Создание профиля
   async function handleRegisterUser(e) {
     e.preventDefault();
     if (!regForm.name.trim()) return alert('Укажите имя');
@@ -164,6 +167,7 @@ export default function App() {
     setSaving(false);
   }
 
+  // Сохранение анкеты GymBro
   async function handleSaveGymBroCard(cardData) {
     setSaving(true);
     const tgId = telegramUser.id || (currentUser ? currentUser.telegram_id : Date.now());
@@ -182,7 +186,8 @@ export default function App() {
       split: cardData.split,
       time_slot: cardData.time_slot,
       instagram: cardData.instagram,
-      bio: cardData.bio
+      bio: cardData.bio,
+      photo_url: cardData.photo_url || null
     };
 
     if (myGymBroCard) {
@@ -253,24 +258,32 @@ export default function App() {
       </header>
 
       <main className="flex-1 px-4 py-4 max-w-md mx-auto w-full space-y-3.5">
-        {/* ================= 1. ГЛАВНАЯ СТРАНИЦА ================= */}
+        {/* ================= 1. ГЛАВНАЯ ================= */}
         {activeTab === 'home' && (
           <div className="space-y-3.5">
-            {/* Карточка профиля */}
             <div className="apple-glass-card p-5 space-y-3.5">
               <div className="flex justify-between items-start">
-                <div className="space-y-0.5">
-                  <span className="text-[10px] uppercase font-bold text-[#FF5A1F] tracking-wider">
-                    Аккаунт атлета
-                  </span>
-                  <h2 className="text-xl font-bold text-white tracking-tight">
-                    {currentUser?.name || 'Атлет'}
-                  </h2>
-                  <p className="text-xs text-slate-400 font-medium">
-                    {currentUser?.city} • {currentUser?.gender}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-13 h-13 rounded-2xl overflow-hidden bg-white/[0.06] border border-white/10 flex items-center justify-center flex-shrink-0 shadow-md">
+                    {currentUser?.avatar_url ? (
+                      <img src={currentUser.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xl font-black text-white">{currentUser?.name?.[0] || 'A'}</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-[#FF5A1F] tracking-wider">
+                      Аккаунт атлета
+                    </span>
+                    <h2 className="text-lg font-bold text-white tracking-tight leading-tight">
+                      {currentUser?.name || 'Атлет'}
+                    </h2>
+                    <p className="text-xs text-slate-400 font-medium">
+                      {currentUser?.city} • {currentUser?.gender}
+                    </p>
+                  </div>
                 </div>
-                <div className="w-11 h-11 rounded-2xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center shadow-inner">
+                <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
                   <Icons.Biceps />
                 </div>
               </div>
@@ -285,7 +298,7 @@ export default function App() {
                     <span className="text-slate-500">Зал:</span> {myGymBroCard.weekday_gym}
                   </p>
                   <p className="text-slate-300 font-normal text-[11px]">
-                    <span className="text-slate-500">Фокус:</span> {myGymBroCard.split}
+                    <span className="text-slate-500">Сплит:</span> {myGymBroCard.split}
                   </p>
                 </div>
               ) : (
@@ -296,7 +309,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Блок Напарники (GymBro) */}
             <div className="apple-glass p-5 space-y-3.5">
               <div className="flex justify-between items-center">
                 <div className="space-y-0.5">
@@ -324,7 +336,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Блок Питание */}
             <div className="apple-glass p-5 space-y-3.5">
               <div className="flex justify-between items-center">
                 <div className="space-y-0.5">
@@ -354,7 +365,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= 2. GYMBRO ================= */}
+        {/* ================= 2. GYMBRO (МОДУЛЬ) ================= */}
         {activeTab === 'gymbro' && (
           <GymBroTab
             myCard={myGymBroCard}
@@ -367,7 +378,7 @@ export default function App() {
           />
         )}
 
-        {/* ================= 3. ПИТАНИЕ ================= */}
+        {/* ================= 3. ПИТАНИЕ (МОДУЛЬ) ================= */}
         {activeTab === 'nutrition' && (
           <NutritionTab
             myProfile={currentUser}
@@ -377,78 +388,12 @@ export default function App() {
           />
         )}
 
-        {/* ================= 4. ПРОФИЛЬ ================= */}
+        {/* ================= 4. ПРОФИЛЬ (ПОЛНОСТЬЮ ОТДЕЛЬНЫЙ МОДУЛЬ) ================= */}
         {activeTab === 'profile' && (
-          <div className="space-y-3.5">
-            <div className="apple-glass p-5 space-y-3.5">
-              <h2 className="text-sm font-bold text-white tracking-tight">Мой аккаунт</h2>
-
-              <div className="flex items-center gap-3.5 pt-1">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] flex items-center justify-center text-lg font-black text-white shadow-lg shadow-[#FF5A1F]/20">
-                  {currentUser?.name?.[0] || 'A'}
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white leading-tight">{currentUser?.name}</h3>
-                  <p className="text-xs text-slate-400 font-medium mt-0.5">{currentUser?.city} • {currentUser?.gender}</p>
-                </div>
-              </div>
-
-              {myGymBroCard && (
-                <div className="text-xs space-y-1.5 bg-black/40 backdrop-blur-md p-3.5 rounded-xl border border-white/[0.07] mt-2">
-                  <div className="flex justify-between items-center pb-1.5 border-b border-white/[0.06]">
-                    <span className="text-[#FF8C38] font-semibold">Анкета GymBro активна</span>
-                    <button
-                      onClick={() => setActiveTab('gymbro')}
-                      className="text-[11px] text-slate-400 hover:text-white"
-                    >
-                      Редактировать
-                    </button>
-                  </div>
-                  <p className="text-slate-300 text-[11px]"><span className="text-slate-500">Будни:</span> {myGymBroCard.weekday_gym}</p>
-                  <p className="text-slate-300 text-[11px]"><span className="text-slate-500">Выходные:</span> {myGymBroCard.weekend_gym}</p>
-                  <p className="text-slate-300 text-[11px]"><span className="text-slate-500">Сплит:</span> {myGymBroCard.split}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Поддержка */}
-            <div className="apple-glass p-4 space-y-2">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Поддержка</h3>
-              <a
-                href="https://t.me/asanali_kk"
-                target="_blank"
-                rel="noreferrer"
-                className="w-full gymshark-btn-glass py-2.5 text-xs flex items-center justify-center gap-2 no-underline text-[#FF8C38]"
-              >
-                Чат с основателем (@asanali_kk)
-              </a>
-            </div>
-
-            {/* Все 7 документов с gymconnect.kz */}
-            <div className="apple-glass p-4 space-y-2">
-              <div className="flex justify-between items-center mb-1">
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Правовая информация</h3>
-                <span className="text-[10px] text-slate-500 font-medium">gymconnect.kz</span>
-              </div>
-              <div className="space-y-1.5 text-xs">
-                {LEGAL_DOCS_LIST && LEGAL_DOCS_LIST.map((doc) => (
-                  <a
-                    key={doc.id}
-                    href={doc.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full text-left p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.12] text-slate-300 flex justify-between items-center no-underline active:scale-[0.99] transition"
-                  >
-                    <div className="flex items-center gap-2 pr-2">
-                      <span className="text-sm">{doc.icon}</span>
-                      <span className="leading-snug text-[11px] font-medium">{doc.title}</span>
-                    </div>
-                    <Icons.ArrowRight />
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
+          <ProfileTab
+            user={currentUser}
+            onUpdateUser={(updated) => setCurrentUser(updated)}
+          />
         )}
       </main>
 
@@ -456,7 +401,7 @@ export default function App() {
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto ios-nav-dock flex justify-around py-2.5 z-40">
         <button
           onClick={() => setActiveTab('home')}
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'home' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
+          className={`flex flex-col items-center gap-1 transition cursor-pointer ${activeTab === 'home' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
         >
           <Icons.Home />
           <span className="text-[10px] font-semibold tracking-tight">Главная</span>
@@ -464,7 +409,7 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('gymbro')}
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'gymbro' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
+          className={`flex flex-col items-center gap-1 transition cursor-pointer ${activeTab === 'gymbro' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
         >
           <Icons.Users />
           <span className="text-[10px] font-semibold tracking-tight">GymBro</span>
@@ -472,7 +417,7 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('nutrition')}
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'nutrition' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
+          className={`flex flex-col items-center gap-1 transition cursor-pointer ${activeTab === 'nutrition' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
         >
           <Icons.Salad />
           <span className="text-[10px] font-semibold tracking-tight">Питание</span>
@@ -480,7 +425,7 @@ export default function App() {
 
         <button
           onClick={() => setActiveTab('profile')}
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'profile' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
+          className={`flex flex-col items-center gap-1 transition cursor-pointer ${activeTab === 'profile' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
         >
           <Icons.User />
           <span className="text-[10px] font-semibold tracking-tight">Профиль</span>
