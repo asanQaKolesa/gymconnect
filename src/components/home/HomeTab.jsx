@@ -8,7 +8,7 @@ export default function HomeTab() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F2F2F7] text-[#000000] px-4 py-4 space-y-5 max-w-md mx-auto pb-28 font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text','Helvetica_Neue',sans-serif]">
+    <div className="min-h-screen bg-[#F2F2F7] text-[#000000] px-4 py-4 space-y-5 max-w-md mx-auto pb-32 font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text','Helvetica_Neue',sans-serif]">
       
       {/* iOS Шапка */}
       <div className="flex items-end justify-between pt-3 pb-1">
@@ -26,7 +26,7 @@ export default function HomeTab() {
         </div>
       </div>
 
-      {/* Карточка профиля в стиле Apple Grouped Table / Widget */}
+      {/* Карточка профиля */}
       <div className="space-y-2">
         <h2 className="text-[13px] font-normal text-[#6C6C70] px-3 uppercase tracking-wide">Активный профиль</h2>
 
@@ -72,7 +72,7 @@ export default function HomeTab() {
         </div>
       </div>
 
-      {/* Кнопка действия (Apple iOS System Blue) */}
+      {/* Кнопка действия */}
       <div className="pt-2">
         <button 
           onClick={() => alert('Функция в разработке!')}
@@ -80,6 +80,26 @@ export default function HomeTab() {
         >
           + Начать новую тренировку
         </button>
+      </div>
+
+      {/* iOS TabBar (Плавающая панель навигации внизу со стеклянным размытием) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-[#F9F9FB]/85 backdrop-blur-xl border-t border-[#3C3C43]/15 px-6 py-2 flex items-center justify-between z-50 max-w-md mx-auto">
+        <div className="flex flex-col items-center text-[#007AFF] cursor-pointer">
+          <span className="text-xl">🏠</span>
+          <span className="text-[10px] font-semibold mt-0.5 tracking-tight">Главная</span>
+        </div>
+        <div className="flex flex-col items-center text-[#8E8E93] cursor-pointer hover:text-[#000000] transition-colors">
+          <span className="text-xl">🤝</span>
+          <span className="text-[10px] font-medium mt-0.5 tracking-tight">GymBro</span>
+        </div>
+        <div className="flex flex-col items-center text-[#8E8E93] cursor-pointer hover:text-[#000000] transition-colors">
+          <span className="text-xl">🥗</span>
+          <span className="text-[10px] font-medium mt-0.5 tracking-tight">Питание</span>
+        </div>
+        <div className="flex flex-col items-center text-[#8E8E93] cursor-pointer hover:text-[#000000] transition-colors">
+          <span className="text-xl">👤</span>
+          <span className="text-[10px] font-medium mt-0.5 tracking-tight">Профиль</span>
+        </div>
       </div>
 
     </div>
