@@ -169,7 +169,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
 
   return (
     <div className="space-y-4">
-      {/* Модальное окно просмотра документов */}
       {selectedDoc && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full max-h-[80vh] flex flex-col shadow-2xl border border-white/10 overflow-hidden">
@@ -204,7 +203,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
         </div>
       )}
 
-      {/* Верхний таб-бар профиля */}
       <div className="apple-glass p-1.5 grid grid-cols-4 gap-1">
         {PROFILE_SECTIONS.map(section => (
           <button
@@ -223,7 +221,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
         ))}
       </div>
 
-      {/* 1. ПОДРАЗДЕЛ: АТЛЕТ */}
       {activeSection === 'athlete' && (
         <div className="space-y-3.5">
           <div className="apple-glass p-5 space-y-4">
@@ -319,11 +316,12 @@ export default function ProfileTab({ user, onUpdateUser }) {
                           form.gender === g
                             ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
                             : 'bg-white/[0.04] text-slate-400 border border-white/[0.06]'
-                      }`}
-                    >
-                      {g}
-                    </button>
-                  ))}
+                        }`}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div>
@@ -338,11 +336,12 @@ export default function ProfileTab({ user, onUpdateUser }) {
                           form.city === c
                             ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
                             : 'bg-white/[0.04] text-slate-400 border border-white/[0.06]'
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div>
@@ -429,7 +428,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
             )}
           </div>
 
-          {/* Плашки счетчиков */}
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06] flex flex-col items-center justify-center">
               <span className="text-[10px] text-slate-500 font-bold uppercase">Друзья</span>
@@ -451,10 +449,8 @@ export default function ProfileTab({ user, onUpdateUser }) {
         </div>
       )}
 
-      {/* 2. ПОДРАЗДЕЛ: СТАТИСТИКА */}
       {activeSection === 'stats' && <AthleteStats user={user} />}
 
-      {/* 3. ПОДРАЗДЕЛ: ПОДДЕРЖКА */}
       {activeSection === 'support' && (
         <div className="apple-glass p-5 space-y-4">
           <div className="pb-2 border-b border-white/[0.08]">
@@ -475,7 +471,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
         </div>
       )}
 
-      {/* 4. ПОДРАЗДЕЛ: ИНФО */}
       {activeSection === 'legal' && (
         <div className="apple-glass p-5 space-y-3">
           <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
