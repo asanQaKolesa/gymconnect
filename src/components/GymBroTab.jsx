@@ -1,1050 +1,482 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import DailyFuel from './DailyFuel';
+import { ALMATY_GYMS } from '../data/almatyGyms';
 
-const CHANNEL_INVITE_URL = 'https://t.me/+QRvCVzzxHUpkMjAy';
+export const INVICTUS_CLUBS = ALMATY_GYMS;
 
-// СТАНДАРТИЗИРОВАННЫЙ СПИСОК ФИЛИАЛОВ ДЛЯ ТОЧНОЙ ФИЛЬТРАЦИИ
-export const INVICTUS_CLUBS = [
-  'Invictus GO Abay (ул. Абая 165)',
-  'Invictus GO Atakent (Тимирязева 42)',
-  'Invictus GO Forum (Байтурсынова 179)',
-  'Invictus GO Fifty Four (ул. Маметова 54)',
-  'Invictus GO Mendikulov (Мендикулова)',
-  'Invictus GO Askarova (ул. Аскарова 4/3)',
-  'Invictus GO Aqsay (мкр. Аксай-5, 25)',
-  'Invictus GO Aport East (Кульджинский тракт)',
-  'Invictus GO Arena (мкр. Гажайып 11/1)',
-  'Invictus Fitness Gagarin (пр. Гагарина 286)',
-  'Invictus Fitness Sadu (пр. Аль-Фараби)',
-  'Invictus Fitness Dostyk (пр. Достык)',
-  // Астана
-  'Invictus GO Mangilik Yel (пр. Мангилик Ел 18, Астана)',
-  'Invictus GO Kenesary (ул. Кенесары 4, Астана)',
-  'Invictus GO Four Seasons (ул. Туран 39а, Астана)',
-  'Invictus GO Bukhar Zhyrau (Бухар Жырау 34а, Астана)',
-  'Invictus GO Emerald (БЦ Изумрудный, Астана)',
-  'Invictus Fitness Highvill (Байтурсынова 9, Астана)',
-  'Invictus Fitness Green Mall (Сыганак 17П, Астана)',
-  // Другие популярные сети
-  '1Fit Club (Единый абонемент)',
-  'FitnessBlitz Самал',
-  'FitnessBlitz Атакент',
-  'Другой зал'
-];
-
-const GOALS = [
-  'Совместные тренировки',
-  'Новая дружба & фитнес',
-  'Поиск комьюнити'
-];
-
-const SCOPES = [
-  'Только мой зал',
-  'Любой зал в городе'
-];
-
-const SPLITS = [
-  'Грудные + Трицепс',
-  'Спина + Бицепс',
-  'День ног + Плечи',
-  'Тяни-Толкай (Push-Pull)',
-  'Фулбоди (Fullbody)'
-];
-
-const TIME_SLOTS = [
-  'Утро (07:00 – 11:00)',
-  'День (12:00 – 16:00)',
-  'Вечер (18:00 – 22:00)'
-];
-
-const LEVELS = [
-  'Новичок (до 1 года)',
-  'Любитель (1–3 года)',
-  'Опытный (3+ года / База)'
-];
-
-export default function GymBroTab({
-  myCard,
-  user,
-  cards = [],
-  onSaveCard,
-  onRefreshCards,
-  onOpenPaywall,
-  isSaving
-}) {
-  const [isEditingCard, setIsEditingCard] = useState(!myCard);
+export default function GymBroTab({ session }) {
+  const [profiles, setProfiles] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [matchResult, setMatchResult] = useState(null);
-
-  // Модальное окно приглашения в канал
-  const [showChannelModal, setShowChannelModal] = useState(false);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
-
-  const myTgId = Number(user?.telegram_id || 0);
-
-  const [activeRelations, setActiveRelations] = useState([]);
-  const [incomingLikers, setIncomingLikers] = useState([]);
-  const [sessionPassedIds, setSessionPassedIds] = useState([]);
-  const [lastSwipedCard, setLastSwipedCard] = useState(null);
-
-  // Фильтры ленты
-  const [gymFilter, setGymFilter] = useState('all');
-  const [goalFilter, setGoalFilter] = useState('all');
-
-  // Поиск зала внутри формы анкеты
-  const [gymSearchQuery, setGymSearchQuery] = useState('');
-  const [isGymDropdownOpen, setIsGymDropdownOpen] = useState(false);
-  const [customGymName, setCustomGymName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  
+  // Поиск и выбор зала
+  const [gymSearch, setGymSearch] = useState('');
+  const [isGymModalOpen, setIsGymModalOpen] = useState(false);
+  const [filterGym, setFilterGym] = useState('Все');
 
   const [formData, setFormData] = useState({
-    name: myCard?.name || user?.name || '',
-    gender: myCard?.gender || user?.gender || 'Парень',
-    city: myCard?.city || user?.city || 'Алматы',
-    weekday_gym: myCard?.weekday_gym || INVICTUS_CLUBS[0],
-    weekend_gym: myCard?.weekend_gym || INVICTUS_CLUBS[0],
-    search_goal: myCard?.search_goal || 'Совместные тренировки',
-    search_scope: myCard?.search_scope || 'Только мой зал',
-    split: myCard?.split || 'Грудные + Трицепс',
-    time_slot: myCard?.time_slot || 'Вечер (18:00 – 22:00)',
-    level: myCard?.level || 'Любитель (1–3 года)',
-    bio: myCard?.bio || user?.bio || '',
-    instagram: myCard?.instagram || user?.instagram || '',
-    photo_url: myCard?.photo_url || user?.avatar_url || ''
+    full_name: '',
+    age: '',
+    gender: 'Мужской',
+    experience_level: 'Средний (1-3 года)',
+    goals: [],
+    preferred_days: [],
+    preferred_time: 'Вечер (18:00 - 21:00)',
+    home_gym: ALMATY_GYMS[0],
+    bio: '',
+    photo_url: '',
+    telegram_contact: '',
+    whatsapp_contact: ''
   });
 
-  const touchStartX = useRef(0);
-  const touchEndX = useRef(0);
+  const GOALS_LIST = ['Набор массы', 'Похудение / Сушка', 'Пауэрлифтинг', 'Поддержание формы', 'Кроссфит', 'Выносливость'];
+  const DAYS_LIST = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
   useEffect(() => {
-    if (myTgId) {
-      localStorage.removeItem(`gym_passed_${myTgId}`);
+    if (session?.user?.id) {
+      loadUserProfile();
+      loadBroProfiles();
     }
-  }, [myTgId]);
+  }, [session]);
 
-  async function loadRelations() {
-    if (!myTgId) return;
+  const loadUserProfile = async () => {
     try {
-      const { data: myOut } = await supabase
-        .from('friendships')
-        .select('friend_id')
-        .eq('user_id', myTgId);
+      const { data, error } = await supabase
+        .from('gymbro_profiles')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .single();
 
-      const { data: acceptedIn } = await supabase
-        .from('friendships')
-        .select('user_id')
-        .eq('friend_id', myTgId)
-        .eq('status', 'accepted');
-
-      const { data: pendingIn } = await supabase
-        .from('friendships')
-        .select('user_id')
-        .eq('friend_id', myTgId)
-        .eq('status', 'pending');
-
-      const excluded = [
-        ...(myOut || []).map(r => Number(r.friend_id)),
-        ...(acceptedIn || []).map(r => Number(r.user_id))
-      ];
-
-      setActiveRelations(excluded);
-
-      if (pendingIn) {
-        setIncomingLikers(pendingIn.map(d => Number(d.user_id)));
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  useEffect(() => {
-    loadRelations();
-  }, [myTgId]);
-
-  function handlePhotoUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX = 600;
-        let w = img.width;
-        let h = img.height;
-        if (w > h && w > MAX) {
-          h = Math.round((h * MAX) / w);
-          w = MAX;
-        } else if (h > MAX) {
-          w = Math.round((w * MAX) / h);
-          h = MAX;
-        }
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        const compressed = canvas.toDataURL('image/jpeg', 0.82);
-        setFormData(prev => ({ ...prev, photo_url: compressed }));
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function handleResetDeck() {
-    setSessionPassedIds([]);
-    setLastSwipedCard(null);
-    setCurrentIndex(0);
-    loadRelations();
-    if (onRefreshCards) onRefreshCards();
-  }
-
-  const searchedClubs = INVICTUS_CLUBS.filter(club =>
-    club.toLowerCase().includes(gymSearchQuery.toLowerCase().trim())
-  );
-
-  const activeDeck = cards
-    .filter(c => {
-      const cardTgId = Number(c.telegram_id);
-      if (cardTgId === myTgId) return false;
-      if (activeRelations.includes(cardTgId)) return false;
-      if (sessionPassedIds.includes(cardTgId)) return false;
-
-      if (gymFilter === 'my_gym' && formData.weekday_gym) {
-        if (c.weekday_gym !== formData.weekday_gym) return false;
-      }
-
-      if (goalFilter !== 'all') {
-        if (c.search_goal !== goalFilter) return false;
-      }
-
-      return true;
-    })
-    .sort((a, b) => {
-      const aLikesMe = incomingLikers.includes(Number(a.telegram_id));
-      const bLikesMe = incomingLikers.includes(Number(b.telegram_id));
-      if (aLikesMe && !bLikesMe) return -1;
-      if (!aLikesMe && bLikesMe) return 1;
-      return 0;
-    });
-
-  const currentCard = activeDeck[currentIndex];
-  const isCurrentCardLikingMe = currentCard ? incomingLikers.includes(Number(currentCard.telegram_id)) : false;
-
-  function handleTouchStart(e) {
-    touchStartX.current = e.targetTouches[0].clientX;
-  }
-
-  function handleTouchMove(e) {
-    touchEndX.current = e.targetTouches[0].clientX;
-  }
-
-  function handleTouchEnd() {
-    const diff = touchStartX.current - touchEndX.current;
-    if (diff > 60) {
-      handlePass();
-    } else if (diff < -60) {
-      handleConnect();
-    }
-  }
-
-  function handlePass() {
-    if (!currentCard) return;
-    const targetTgId = Number(currentCard.telegram_id);
-
-    setLastSwipedCard({ card: currentCard, action: 'pass' });
-    setSessionPassedIds(prev => [...prev, targetTgId]);
-
-    if (currentIndex >= activeDeck.length - 1) {
-      setCurrentIndex(0);
-    }
-  }
-
-  function handleRewind() {
-    if (!lastSwipedCard) return;
-    const targetTgId = Number(lastSwipedCard.card.telegram_id);
-
-    setSessionPassedIds(prev => prev.filter(id => id !== targetTgId));
-    setActiveRelations(prev => prev.filter(id => id !== targetTgId));
-    setLastSwipedCard(null);
-    setCurrentIndex(0);
-  }
-
-  async function handleConnect() {
-    if (!currentCard) return;
-    const targetTgId = Number(currentCard.telegram_id);
-
-    setLastSwipedCard({ card: currentCard, action: 'connect' });
-    setActiveRelations(prev => [...prev, targetTgId]);
-
-    try {
-      if (isCurrentCardLikingMe) {
-        await supabase
-          .from('friendships')
-          .update({ status: 'accepted' })
-          .eq('user_id', targetTgId)
-          .eq('friend_id', myTgId);
-
-        setMatchResult({
-          isMutual: true,
-          targetUser: currentCard
+      if (data) {
+        setFormData({
+          full_name: data.full_name || '',
+          age: data.age || '',
+          gender: data.gender || 'Мужской',
+          experience_level: data.experience_level || 'Средний (1-3 года)',
+          goals: data.goals || [],
+          preferred_days: data.preferred_days || [],
+          preferred_time: data.preferred_time || 'Вечер (18:00 - 21:00)',
+          home_gym: data.home_gym || ALMATY_GYMS[0],
+          bio: data.bio || '',
+          photo_url: data.photo_url || '',
+          telegram_contact: data.telegram_contact || '',
+          whatsapp_contact: data.whatsapp_contact || ''
         });
-        setIncomingLikers(prev => prev.filter(id => id !== targetTgId));
       } else {
-        await supabase.from('friendships').insert([
-          { user_id: myTgId, friend_id: targetTgId, status: 'pending' }
-        ]);
-
-        setMatchResult({
-          isMutual: false,
-          targetUser: currentCard
-        });
+        setIsEditing(true);
       }
     } catch (e) {
       console.error(e);
-      setMatchResult({
-        isMutual: false,
-        targetUser: currentCard
-      });
     }
+  };
 
-    if (currentIndex >= activeDeck.length - 1) {
-      setCurrentIndex(0);
+  const loadBroProfiles = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('gymbro_profiles')
+        .select('*')
+        .neq('user_id', session.user.id);
+
+      if (data) {
+        setProfiles(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  function handleSubmitForm(e) {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) return alert('Укажите ваше имя');
+    try {
+      const payload = {
+        user_id: session.user.id,
+        ...formData,
+        age: parseInt(formData.age, 10) || null,
+        updated_at: new Date().toISOString()
+      };
 
-    const finalGym = formData.weekday_gym === 'Другой зал' && customGymName.trim()
-      ? customGymName.trim()
-      : formData.weekday_gym;
+      const { error } = await supabase
+        .from('gymbro_profiles')
+        .upsert(payload, { onConflict: 'user_id' });
 
-    const dataToSave = {
-      ...formData,
-      weekday_gym: finalGym,
-      weekend_gym: finalGym
-    };
+      if (error) throw error;
+      setIsEditing(false);
+      loadBroProfiles();
+    } catch (err) {
+      alert('Ошибка при сохранении анкеты: ' + err.message);
+    }
+  };
 
-    onSaveCard(dataToSave);
-    setIsEditingCard(false);
+  const toggleGoal = (goal) => {
+    setFormData(prev => ({
+      ...prev,
+      goals: prev.goals.includes(goal)
+        ? prev.goals.filter(g => g !== goal)
+        : [...prev.goals, goal]
+    }));
+  };
 
-    // Сразу открываем всплывающее окно вступления в канал
-    setShowChannelModal(true);
-  }
+  const toggleDay = (day) => {
+    setFormData(prev => ({
+      ...prev,
+      preferred_days: prev.preferred_days.includes(day)
+        ? prev.preferred_days.filter(d => d !== day)
+        : [...prev.preferred_days, day]
+    }));
+  };
+
+  const filteredGymsModal = ALMATY_GYMS.filter(g =>
+    g.toLowerCase().includes(gymSearch.toLowerCase())
+  );
+
+  const displayedProfiles = profiles.filter(p => {
+    if (filterGym === 'Все') return true;
+    return p.home_gym === filterGym;
+  });
 
   return (
-    <div className="space-y-3 pb-8 select-none">
-      {/* 1. ПРИВЕТСТВЕННОЕ ОКНО ВСТУПЛЕНИЯ В TELEGRAM-КАНАЛ ПОСЛЕ СОХРАНЕНИЯ */}
-      {showChannelModal && (
-        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
-          <div className="apple-glass max-w-sm w-full p-6 text-center space-y-4 border border-[#FF5A1F]/40 rounded-3xl animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-[#FF5A1F] to-amber-500 flex items-center justify-center text-3xl mx-auto shadow-xl shadow-[#FF5A1F]/30 animate-pulse">
-              📢
+    <div className="max-w-xl mx-auto p-4 pb-28 text-white">
+      {/* Верхняя панель */}
+      <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-3">
+        <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
+          🔥 GymBro Tinder
+        </h2>
+        <button
+          onClick={() => setIsEditing(!isEditing)}
+          className="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs font-semibold border border-gray-700"
+        >
+          {isEditing ? 'Смотреть анкеты' : 'Моя анкета'}
+        </button>
+      </div>
+
+      {isEditing ? (
+        /* РЕГИСТРАЦИЯ И РЕДАКТИРОВАНИЕ АНКЕТЫ */
+        <form onSubmit={handleSaveProfile} className="space-y-4 bg-[#111827] p-5 rounded-2xl border border-gray-800">
+          <h3 className="text-base font-bold text-emerald-400">Настройка твоей карточки</h3>
+
+          <div>
+            <label className="text-xs text-gray-400 font-medium">Имя и фамилия</label>
+            <input
+              type="text"
+              required
+              value={formData.full_name}
+              onChange={e => setFormData({ ...formData, full_name: e.target.value })}
+              className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm mt-1 text-white focus:outline-none focus:border-emerald-500"
+              placeholder="Арман Ахметов"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-400 font-medium">Возраст</label>
+              <input
+                type="number"
+                required
+                value={formData.age}
+                onChange={e => setFormData({ ...formData, age: e.target.value })}
+                className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm mt-1 text-white focus:outline-none focus:border-emerald-500"
+                placeholder="24"
+              />
             </div>
-
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-black text-[#FF8C38] uppercase tracking-widest block">
-                ТЫ В ИГРЕ!
-              </span>
-              <h3 className="text-lg font-black text-white tracking-tight">
-                Вступай в канал GymConnect
-              </h3>
-              <p className="text-xs text-slate-300 leading-relaxed pt-1">
-                Все совместные открытые тренировки в Invictus, анонсы сходок и закрытые ивенты комьюнити публикуются здесь.
-              </p>
+            <div>
+              <label className="text-xs text-gray-400 font-medium">Пол</label>
+              <select
+                value={formData.gender}
+                onChange={e => setFormData({ ...formData, gender: e.target.value })}
+                className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm mt-1 text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value="Мужской">Мужской</option>
+                <option value="Женский">Женский</option>
+              </select>
             </div>
+          </div>
 
-            <a
-              href={CHANNEL_INVITE_URL}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => setShowChannelModal(false)}
-              className="w-full gymshark-btn-electric py-3 text-xs font-bold flex items-center justify-center gap-2 no-underline block shadow-lg shadow-[#FF5A1F]/30"
-            >
-              <span>🚀 Вступить в канал комьюнити ➔</span>
-            </a>
-
+          {/* КНОПКА ВЫБОРА ЗАЛА С ОКНОМ ПОИСКА */}
+          <div className="space-y-1">
+            <label className="text-xs text-gray-400 font-medium">Твой фитнес-клуб / филиал</label>
             <button
               type="button"
-              onClick={() => setShowChannelModal(false)}
-              className="w-full py-2 text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
+              onClick={() => setIsGymModalOpen(true)}
+              className="w-full bg-[#1f2937] border border-gray-700 hover:border-emerald-500 rounded-xl px-3.5 py-2.5 text-left flex items-center justify-between text-white transition-colors"
             >
-              Перейти к поиску GymBro
+              <span className="truncate text-sm font-medium text-emerald-300">
+                {formData.home_gym || 'Выбрать зал из 230 клубов...'}
+              </span>
+              <span className="text-xs text-gray-400 ml-2 shrink-0">🔍 Найти</span>
             </button>
           </div>
-        </div>
-      )}
 
-      {/* 2. ЭКРАН МЭТЧА */}
-      {matchResult && (
-        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
-          <div className="apple-glass max-w-sm w-full p-6 text-center space-y-4 border border-white/10 rounded-3xl animate-in zoom-in-95 duration-200">
-            {matchResult.isMutual ? (
-              <>
-                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-[#FF5A1F] flex items-center justify-center text-3xl mx-auto shadow-xl shadow-[#FF5A1F]/30 animate-bounce">
-                  ⚡️
-                </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black text-[#FF8C38] uppercase tracking-widest block">
-                    IT'S A GYMBRO MATCH!
+          <div>
+            <label className="text-xs text-gray-400 font-medium">Стаж тренировок</label>
+            <select
+              value={formData.experience_level}
+              onChange={e => setFormData({ ...formData, experience_level: e.target.value })}
+              className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm mt-1 text-white focus:outline-none focus:border-emerald-500"
+            >
+              <option value="Новичок (< 1 года)">Новичок (&lt; 1 года)</option>
+              <option value="Средний (1-3 года)">Средний (1-3 года)</option>
+              <option value="Опытный (3-5 лет)">Опытный (3-5 лет)</option>
+              <option value="Профи (5+ лет)">Профи (5+ лет)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 font-medium mb-1 block">Цели тренировок</label>
+            <div className="flex flex-wrap gap-1.5">
+              {GOALS_LIST.map(g => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => toggleGoal(g)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    formData.goals.includes(g)
+                      ? 'bg-emerald-500 text-black border-emerald-400'
+                      : 'bg-gray-800 text-gray-300 border-gray-700'
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 font-medium mb-1 block">Дни тренировок</label>
+            <div className="flex gap-1">
+              {DAYS_LIST.map(d => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => toggleDay(d)}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    formData.preferred_days.includes(d)
+                      ? 'bg-emerald-500 text-black border-emerald-400'
+                      : 'bg-gray-800 text-gray-400 border-gray-700'
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 font-medium">О себе / кого ищешь</label>
+            <textarea
+              rows="3"
+              value={formData.bio}
+              onChange={e => setFormData({ ...formData, bio: e.target.value })}
+              className="w-full bg-[#1f2937] border border-gray-700 rounded-xl p-3 text-sm mt-1 text-white focus:outline-none focus:border-emerald-500"
+              placeholder="Ищу напарника на жим и присед по вечерам, взаимная страховка..."
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-400 font-medium">Telegram (@username)</label>
+              <input
+                type="text"
+                value={formData.telegram_contact}
+                onChange={e => setFormData({ ...formData, telegram_contact: e.target.value })}
+                className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3 py-2 text-xs mt-1 text-white focus:outline-none focus:border-emerald-500"
+                placeholder="@username"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 font-medium">WhatsApp</label>
+              <input
+                type="text"
+                value={formData.whatsapp_contact}
+                onChange={e => setFormData({ ...formData, whatsapp_contact: e.target.value })}
+                className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3 py-2 text-xs mt-1 text-white focus:outline-none focus:border-emerald-500"
+                placeholder="+7 707..."
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-sm transition-transform active:scale-95 shadow-lg shadow-emerald-500/20"
+          >
+            💾 Сохранить анкету
+          </button>
+        </form>
+      ) : (
+        /* ЛЕНТА СВАЙПОВ ТИНДЕРА */
+        <div className="space-y-4">
+          {/* Фильтр по залу */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
+            <span className="text-gray-400 shrink-0">Зал:</span>
+            <button
+              onClick={() => setFilterGym('Все')}
+              className={`px-3 py-1 rounded-full border whitespace-nowrap font-medium ${
+                filterGym === 'Все'
+                  ? 'bg-white text-black border-white'
+                  : 'bg-gray-800 text-gray-300 border-gray-700'
+              }`}
+            >
+              Все залы
+            </button>
+            <button
+              onClick={() => setFilterGym(formData.home_gym)}
+              className={`px-3 py-1 rounded-full border whitespace-nowrap font-medium ${
+                filterGym === formData.home_gym
+                  ? 'bg-emerald-500 text-black border-emerald-400'
+                  : 'bg-gray-800 text-gray-300 border-gray-700'
+              }`}
+            >
+              Только мой филиал
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="p-12 text-center text-gray-400">Загрузка бро...</div>
+          ) : displayedProfiles.length > 0 && currentIndex < displayedProfiles.length ? (
+            <div className="bg-[#111827] border border-gray-800 rounded-3xl overflow-hidden shadow-2xl relative">
+              <div className="p-6 space-y-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-2xl font-black text-white">
+                      {displayedProfiles[currentIndex].full_name}, {displayedProfiles[currentIndex].age}
+                    </h3>
+                    <p className="text-emerald-400 font-semibold text-xs mt-0.5">
+                      📍 {displayedProfiles[currentIndex].home_gym}
+                    </p>
+                  </div>
+                  <span className="text-xs bg-gray-800 border border-gray-700 px-2.5 py-1 rounded-lg text-gray-300">
+                    {displayedProfiles[currentIndex].experience_level}
                   </span>
-                  <h3 className="text-lg font-black text-white tracking-tight">
-                    Вы оба готовы тренироваться!
-                  </h3>
-                  <p className="text-xs text-slate-300 pt-1">
-                    Вы с атлетом <strong className="text-white">{matchResult.targetUser.name}</strong> теперь напарники в GymConnect.
-                  </p>
                 </div>
 
-                <div className="p-3 bg-white/[0.03] border border-white/[0.08] rounded-2xl text-[11px] text-slate-300">
-                  📍 {matchResult.targetUser.weekday_gym} • 💪 {matchResult.targetUser.split}
-                </div>
-
-                {matchResult.targetUser.telegram_username ? (
-                  <a
-                    href={`https://t.me/${matchResult.targetUser.telegram_username}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full gymshark-btn-electric py-3 text-xs font-bold flex items-center justify-center gap-1.5 no-underline block shadow-lg shadow-[#FF5A1F]/30"
-                  >
-                    <span>💬 Написать в Telegram (@{matchResult.targetUser.telegram_username}) ➔</span>
-                  </a>
-                ) : (
-                  <p className="text-[11px] text-slate-400">
-                    У напарника скрыт юзернейм, он добавлен в твои друзья.
+                {displayedProfiles[currentIndex].bio && (
+                  <p className="text-sm text-gray-300 bg-gray-900/80 p-3.5 rounded-xl border border-gray-800 leading-relaxed">
+                    «{displayedProfiles[currentIndex].bio}»
                   </p>
                 )}
-              </>
-            ) : (
-              <>
-                <span className="text-4xl block">🤝</span>
-                <div className="space-y-1">
-                  <h3 className="text-base font-black text-white tracking-tight">
-                    Запрос отправлен
-                  </h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Заявка на тренировку ушла атлету <strong className="text-white">{matchResult.targetUser.name}</strong>.
-                  </p>
+
+                <div>
+                  <div className="text-xs text-gray-400 font-medium mb-1.5">Цели:</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {displayedProfiles[currentIndex].goals?.map((g, i) => (
+                      <span key={i} className="text-xs bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2.5 py-1 rounded-lg">
+                        {g}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="p-3 bg-white/[0.02] border border-white/[0.05] rounded-2xl text-[11px] text-slate-400">
-                  🔒 Контакты Telegram откроются обоим, как только напарник ответит взаимным свайпом.
+                <div className="pt-2 flex gap-3">
+                  {displayedProfiles[currentIndex].telegram_contact && (
+                    <a
+                      href={`https://t.me/${displayedProfiles[currentIndex].telegram_contact.replace('@', '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 py-2.5 bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 rounded-xl text-center text-xs font-bold"
+                    >
+                      ✈️ Telegram
+                    </a>
+                  )}
+                  {displayedProfiles[currentIndex].whatsapp_contact && (
+                    <a
+                      href={`https://wa.me/${displayedProfiles[currentIndex].whatsapp_contact.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 rounded-xl text-center text-xs font-bold"
+                    >
+                      💬 WhatsApp
+                    </a>
+                  )}
                 </div>
-              </>
-            )}
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setMatchResult(null)}
-              className="w-full py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-semibold text-slate-300 cursor-pointer transition"
-            >
-              Продолжить поиск напарников
-            </button>
-          </div>
+              {/* Кнопки листания */}
+              <div className="flex border-t border-gray-800 bg-[#0b0f19]">
+                <button
+                  onClick={() => setCurrentIndex(prev => Math.min(prev + 1, displayedProfiles.length))}
+                  className="flex-1 py-4 text-center font-bold text-gray-400 hover:text-rose-400 border-r border-gray-800 transition-colors"
+                >
+                  ✕ Пропустить
+                </button>
+                <button
+                  onClick={() => {
+                    alert('Контакт открыт в карточке!');
+                    setCurrentIndex(prev => Math.min(prev + 1, displayedProfiles.length));
+                  }}
+                  className="flex-1 py-4 text-center font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
+                >
+                  ⚡ Тренить вместе
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-[#111827] border border-gray-800 rounded-2xl p-10 text-center space-y-3">
+              <div className="text-3xl">🏁</div>
+              <h4 className="font-bold text-white text-base">Анкеты подошли к концу</h4>
+              <p className="text-xs text-gray-400">Смени фильтр залов или вернись чуть позже!</p>
+              <button
+                onClick={() => { setFilterGym('Все'); setCurrentIndex(0); }}
+                className="px-4 py-2 bg-gray-800 rounded-xl text-xs font-semibold text-white border border-gray-700"
+              >
+                Сбросить на «Все залы»
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* 3. ДЕТАЛЬНОЕ ДОСЬЕ АТЛЕТА */}
-      {showDetailModal && currentCard && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
-          <div className="apple-glass max-w-sm w-full p-5 space-y-3.5 border border-white/10 rounded-3xl max-h-[85vh] overflow-y-auto">
-            <div className="flex justify-between items-center pb-2 border-b border-white/10">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                Досье кандидата GymBro
-              </span>
+      {/* МОДАЛЬНОЕ ОКНО ПОИСКА ПО 230 ЗАЛАМ */}
+      {isGymModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-[#0f172a] border border-gray-800 rounded-t-3xl sm:rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col p-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-800">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                📍 Выберите зал ({filteredGymsModal.length})
+              </h3>
               <button
                 type="button"
-                onClick={() => setShowDetailModal(false)}
-                className="text-slate-400 hover:text-white text-base px-1 cursor-pointer"
+                onClick={() => setIsGymModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-gray-800 text-gray-400 hover:text-white flex items-center justify-center text-xs font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <div className="flex flex-col items-center text-center space-y-1">
-              <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#121622] border-2 border-white/10 shadow-lg">
-                {currentCard.photo_url ? (
-                  <img src={currentCard.photo_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl font-black text-white">
-                    {currentCard.name?.[0] || 'A'}
-                  </div>
-                )}
-              </div>
-              <h3 className="text-base font-black text-white">{currentCard.name}</h3>
-              <p className="text-xs text-slate-400">{currentCard.city} • {currentCard.level}</p>
-            </div>
-
-            {isCurrentCardLikingMe && (
-              <div className="p-2.5 rounded-2xl bg-gradient-to-r from-amber-500/20 to-[#FF5A1F]/20 border border-amber-500/40 text-center">
-                <span className="text-xs font-black text-amber-300 flex items-center justify-center gap-1.5">
-                  <span>🔥</span> Этот атлет уже хочет тренироваться с тобой!
-                </span>
-              </div>
-            )}
-
-            <div className="p-2.5 rounded-2xl bg-[#FF5A1F]/10 border border-[#FF5A1F]/30 text-center">
-              <span className="text-[9px] text-[#FF8C38] font-bold uppercase block">Цель знакомства:</span>
-              <span className="text-xs font-black text-white">{currentCard.search_goal || 'Совместные тренировки'}</span>
-            </div>
-
-            <div className="space-y-2 text-[11px]">
-              <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                <span className="text-[9px] text-slate-500 block">Домашний зал:</span>
-                <span className="text-white font-bold block mt-0.5">{currentCard.weekday_gym}</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                  <span className="text-[9px] text-slate-500 block">Сплит:</span>
-                  <span className="text-white font-semibold truncate block">{currentCard.split}</span>
-                </div>
-                <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                  <span className="text-[9px] text-slate-500 block">Время:</span>
-                  <span className="text-white font-semibold truncate block">{currentCard.time_slot}</span>
-                </div>
-              </div>
-            </div>
-
-            {currentCard.bio && (
-              <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                <span className="text-[9px] text-slate-500 font-bold uppercase block mb-1">О себе</span>
-                <p className="text-xs text-slate-300 whitespace-pre-wrap">{currentCard.bio}</p>
-              </div>
-            )}
-
-            <div className="p-2.5 rounded-xl bg-black/40 border border-white/[0.06] text-center space-y-1">
-              <span className="text-[10px] text-slate-400 block flex items-center justify-center gap-1">
-                <span>🔒</span> Связь в Telegram: <strong className="text-slate-500">t.me/••••••••</strong>
-              </span>
-              <p className="text-[9px] text-slate-500">
-                Контакт станет доступен после взаимного свайпа
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setShowDetailModal(false);
-                handleConnect();
-              }}
-              className="w-full gymshark-btn-electric py-3 text-xs font-bold cursor-pointer"
-            >
-              {isCurrentCardLikingMe ? 'Взаимный мэтч! 🤝🔥' : 'Предложить тренировку 🤝'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 4. АНКЕТА GYMBRO */}
-      {isEditingCard ? (
-        <div className="apple-glass p-4 space-y-3.5 border border-white/[0.08] rounded-3xl">
-          <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
-            <div>
-              <h3 className="text-xs font-black text-white uppercase tracking-wider">
-                {myCard ? 'Настройки анкеты GymBro' : 'Создание анкеты GymBro'}
-              </h3>
-              <p className="text-[10px] text-slate-400">Укажи зал для точного поиска напарников</p>
-            </div>
-            {myCard && (
-              <button
-                type="button"
-                onClick={() => setIsEditingCard(false)}
-                className="text-xs text-slate-400 hover:text-white px-2 py-1 cursor-pointer"
-              >
-                ✕ Отмена
-              </button>
-            )}
-          </div>
-
-          {/* Плашка приглашения в канал прямо в настройках */}
-          <div className="p-3 rounded-2xl bg-gradient-to-r from-[#FF5A1F]/20 via-black/40 to-[#FF5A1F]/10 border border-[#FF5A1F]/30 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📢</span>
-              <div>
-                <span className="text-xs font-bold text-white block">Канал комьюнити</span>
-                <span className="text-[10px] text-slate-400 block">Анонсы тренировок и сходок</span>
-              </div>
-            </div>
-            <a
-              href={CHANNEL_INVITE_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-1.5 rounded-xl gymshark-btn-electric text-[11px] font-bold no-underline whitespace-nowrap"
-            >
-              Вступить ➔
-            </a>
-          </div>
-
-          <form onSubmit={handleSubmitForm} className="space-y-3">
-            <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#121622] border border-white/10 flex items-center justify-center flex-shrink-0 shadow-md">
-                {formData.photo_url ? (
-                  <img src={formData.photo_url} alt="GymBro" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-2xl">📸</span>
-                )}
-              </div>
-              <div className="space-y-1.5 flex-1">
-                <span className="text-[11px] font-bold text-white block">Фото профиля</span>
-                <label className="inline-block px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-xs font-semibold text-slate-200 cursor-pointer active:scale-95 transition">
-                  <span>Выбрать фото 📷</span>
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-                </label>
-              </div>
-            </div>
-
-            {/* БЛОК ВЫБОРА ЗАЛА С ПОИСКОМ */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-[#FF8C38] uppercase tracking-wider block">
-                📍 Твой домашний зал
-              </label>
-
-              <div className="p-2 rounded-xl bg-[#FF5A1F]/10 border border-[#FF5A1F]/20 flex items-start gap-1.5 text-[10px] text-slate-300">
-                <span className="text-xs">💡</span>
-                <span>Выбирай точный филиал, чтобы напарники нашли тебя в фильтрах!</span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsGymDropdownOpen(!isGymDropdownOpen)}
-                className="w-full p-2.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-[#FF5A1F]/40 flex items-center justify-between text-left transition cursor-pointer"
-              >
-                <span className="text-xs font-bold text-white truncate">
-                  📍 {formData.weekday_gym}
-                </span>
-                <span className="text-slate-400 text-xs ml-2">
-                  {isGymDropdownOpen ? '▲' : '▼'}
-                </span>
-              </button>
-
-              {isGymDropdownOpen && (
-                <div className="p-2.5 rounded-2xl bg-[#0e121c] border border-white/15 space-y-2 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      autoFocus
-                      placeholder="🔍 Введи название (Абая, Forum, Atakent)..."
-                      value={gymSearchQuery}
-                      onChange={e => setGymSearchQuery(e.target.value)}
-                      className="w-full apple-input text-xs py-2 pl-3 pr-8 bg-black/50"
-                    />
-                    {gymSearchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setGymSearchQuery('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-                    {searchedClubs.length > 0 ? (
-                      searchedClubs.map(club => {
-                        const isSelected = formData.weekday_gym === club;
-                        return (
-                          <button
-                            key={club}
-                            type="button"
-                            onClick={() => {
-                              setFormData({ ...formData, weekday_gym: club });
-                              setIsGymDropdownOpen(false);
-                              setGymSearchQuery('');
-                            }}
-                            className={`w-full text-left px-3 py-2 rounded-xl text-xs transition cursor-pointer flex items-center justify-between ${
-                              isSelected
-                                ? 'bg-[#FF5A1F] text-white font-bold shadow'
-                                : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
-                            }`}
-                          >
-                            <span className="truncate">{club}</span>
-                            {isSelected && <span className="text-xs ml-1">✓</span>}
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <div className="p-3 text-center space-y-2">
-                        <p className="text-xs text-slate-400">Филиал не найден в списке</p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormData({ ...formData, weekday_gym: 'Другой зал' });
-                            setCustomGymName(gymSearchQuery);
-                            setIsGymDropdownOpen(false);
-                          }}
-                          className="px-3 py-1.5 rounded-xl bg-white/[0.06] border border-white/10 text-xs font-bold text-amber-300 hover:bg-white/[0.1] cursor-pointer"
-                        >
-                          ➕ Использовать как «{gymSearchQuery}»
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {formData.weekday_gym === 'Другой зал' && (
-                <div className="pt-1">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Напиши точное название своего зала..."
-                    value={customGymName}
-                    onChange={e => setCustomGymName(e.target.value)}
-                    className="w-full apple-input text-xs py-2 border-amber-500/40"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Цель поиска
-                </label>
-                <select
-                  value={formData.search_goal}
-                  onChange={e => setFormData({ ...formData, search_goal: e.target.value })}
-                  className="w-full apple-input text-xs py-2"
-                >
-                  {GOALS.map(g => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Радиус
-                </label>
-                <select
-                  value={formData.search_scope}
-                  onChange={e => setFormData({ ...formData, search_scope: e.target.value })}
-                  className="w-full apple-input text-xs py-2"
-                >
-                  {SCOPES.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Сплит
-                </label>
-                <select
-                  value={formData.split}
-                  onChange={e => setFormData({ ...formData, split: e.target.value })}
-                  className="w-full apple-input text-xs py-2"
-                >
-                  {SPLITS.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Время
-                </label>
-                <select
-                  value={formData.time_slot}
-                  onChange={e => setFormData({ ...formData, time_slot: e.target.value })}
-                  className="w-full apple-input text-xs py-2"
-                >
-                  {TIME_SLOTS.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                Уровень подготовки
-              </label>
-              <select
-                value={formData.level}
-                onChange={e => setFormData({ ...formData, level: e.target.value })}
-                className="w-full apple-input text-xs py-2"
-              >
-                {LEVELS.map(l => (
-                  <option key={l} value={l}>{l}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                О себе в зале
-              </label>
-              <textarea
-                rows={2}
-                value={formData.bio}
-                onChange={e => setFormData({ ...formData, bio: e.target.value })}
-                placeholder="Жму 100 на 5, ищу напарника на страховку..."
-                className="w-full apple-input text-xs py-2 resize-none"
+            <div className="py-3">
+              <input
+                type="text"
+                value={gymSearch}
+                onChange={e => setGymSearch(e.target.value)}
+                placeholder="Поиск зала (Invictus, Абая, Blitz, Самал...)"
+                className="w-full bg-[#1e293b] border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                autoFocus
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="w-full gymshark-btn-electric py-3 text-xs font-bold shadow-lg shadow-[#FF5A1F]/20 cursor-pointer"
-            >
-              {isSaving ? 'Сохраняем анкету...' : 'Сохранить и начать поиск ➔'}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleResetDeck}
-              className="w-full py-2 text-[10px] font-semibold text-slate-500 hover:text-slate-300 text-center cursor-pointer block pt-2"
-            >
-              🔄 Сбросить историю просмотров (для тестов)
-            </button>
-          </form>
-        </div>
-      ) : (
-        /* ================= 5. ЭКРАН СВАЙПОВ TINDER ================= */
-        <div className="space-y-3">
-          {/* МОТИВАЦИЯ ДНЯ (DAILY FUEL) */}
-          <DailyFuel />
-
-          {/* КОМПАКТНЫЙ БАННЕР ВЕРХУ ЛЕНТЫ СВАЙПОВ */}
-          {!bannerDismissed && (
-            <div className="relative p-3 rounded-2xl bg-gradient-to-r from-[#FF5A1F]/15 via-black/40 to-[#FF5A1F]/10 border border-[#FF5A1F]/30 backdrop-blur-xl flex items-center justify-between gap-3 shadow-lg">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF5A1F] to-amber-500 flex items-center justify-center text-base shadow flex-shrink-0">
-                  📢
-                </div>
-                <div className="min-w-0">
-                  <h4 className="text-xs font-black text-white truncate">Канал GymConnect</h4>
-                  <p className="text-[10px] text-slate-400 truncate">Анонсы тренировок и сходок Invictus</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <a
-                  href={CHANNEL_INVITE_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-1.5 rounded-xl gymshark-btn-electric text-[11px] font-bold no-underline whitespace-nowrap shadow-sm"
-                >
-                  Вступить ➔
-                </a>
+            <div className="overflow-y-auto flex-1 space-y-1 pr-1 divide-y divide-gray-800/40">
+              {filteredGymsModal.map((gym, idx) => (
                 <button
+                  key={idx}
                   type="button"
-                  onClick={() => setBannerDismissed(true)}
-                  className="p-1 text-slate-500 hover:text-slate-300 text-xs cursor-pointer"
-                  title="Скрыть"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-              <button
-                type="button"
-                onClick={() => setGymFilter(gymFilter === 'all' ? 'my_gym' : 'all')}
-                className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border transition cursor-pointer flex-shrink-0 ${
-                  gymFilter === 'my_gym'
-                    ? 'bg-[#FF5A1F] border-[#FF5A1F] text-white shadow-sm'
-                    : 'bg-white/[0.03] border-white/[0.08] text-slate-400'
-                }`}
-              >
-                📍 {gymFilter === 'my_gym' ? 'Только мой филиал' : 'Все филиалы'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (goalFilter === 'all') setGoalFilter('Совместные тренировки');
-                  else if (goalFilter === 'Совместные тренировки') setGoalFilter('Новая дружба & фитнес');
-                  else setGoalFilter('all');
-                }}
-                className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border transition cursor-pointer flex-shrink-0 ${
-                  goalFilter !== 'all'
-                    ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
-                    : 'bg-white/[0.03] border-white/[0.08] text-slate-400'
-                }`}
-              >
-                🎯 {goalFilter === 'all' ? 'Все цели' : goalFilter}
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsEditingCard(true)}
-              className="px-2.5 py-1 rounded-xl bg-white/[0.03] border border-white/[0.08] text-[10px] font-bold text-[#FF8C38] flex-shrink-0 hover:bg-white/[0.06] cursor-pointer"
-            >
-              Моя анкета ✏️
-            </button>
-          </div>
-
-          {currentCard ? (
-            <div className="space-y-3">
-              <div
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                onClick={() => setShowDetailModal(true)}
-                className={`relative w-full h-[420px] rounded-3xl overflow-hidden bg-[#10141f] border shadow-2xl cursor-pointer active:scale-[0.99] transition duration-200 ${
-                  isCurrentCardLikingMe
-                    ? 'border-amber-500/80 ring-2 ring-amber-500/30 shadow-amber-500/20'
-                    : 'border-white/10'
-                }`}
-              >
-                {currentCard.photo_url ? (
-                  <img
-                    src={currentCard.photo_url}
-                    alt={currentCard.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#141926] to-[#0a0d14] text-slate-500">
-                    <span className="text-6xl">🏋️‍♂️</span>
-                    <span className="text-xs mt-2 font-medium">Фото не загружено</span>
-                  </div>
-                )}
-
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
-
-                <div className="absolute top-3.5 inset-x-3.5 flex justify-between items-start pointer-events-none gap-2">
-                  {isCurrentCardLikingMe ? (
-                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-[#FF5A1F] text-white shadow-lg shadow-amber-500/40 animate-pulse">
-                      ⚡️ Хочет тренироваться с тобой!
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white truncate">
-                      🎯 {currentCard.search_goal || 'Тренировки'}
-                    </span>
-                  )}
-
-                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-[#FF5A1F]/90 backdrop-blur-md text-white shadow-md flex-shrink-0 max-w-[50%] truncate">
-                    {currentCard.weekday_gym ? currentCard.weekday_gym.split('(')[0].trim() : 'Зал'}
-                  </span>
-                </div>
-
-                <div className="absolute bottom-4 inset-x-4 space-y-1.5 pointer-events-none">
-                  <div className="flex items-baseline gap-2">
-                    <h3 className="text-xl font-black text-white tracking-tight drop-shadow-md">
-                      {currentCard.name}
-                    </h3>
-                    <span className="text-xs font-semibold text-slate-300">
-                      {currentCard.city}
-                    </span>
-                  </div>
-
-                  <div className="text-[11px] font-bold text-amber-300 truncate">
-                    📍 {currentCard.weekday_gym}
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5 text-[10px] font-semibold text-slate-200 pt-0.5">
-                    <span className="px-2 py-0.5 rounded-lg bg-white/15 backdrop-blur-md">
-                      💪 {currentCard.split}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-lg bg-white/15 backdrop-blur-md">
-                      ⏰ {currentCard.time_slot?.split(' ')[0]}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-lg bg-white/15 backdrop-blur-md">
-                      ⚡️ {currentCard.level?.split(' ')[0]}
-                    </span>
-                  </div>
-
-                  {currentCard.bio && (
-                    <p className="text-xs text-slate-300 line-clamp-2 pt-0.5 drop-shadow">
-                      {currentCard.bio}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* 4 КНОПКИ ДЕЙСТВИЙ */}
-              <div className="flex items-center justify-center gap-4 pt-1">
-                <button
-                  type="button"
-                  disabled={!lastSwipedCard}
-                  onClick={handleRewind}
-                  className="w-11 h-11 rounded-full bg-white/[0.04] border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 flex items-center justify-center text-base shadow active:scale-90 transition cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
-                  title="Вернуть предыдущую анкету"
-                >
-                  ↩️
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handlePass}
-                  className="w-14 h-14 rounded-full bg-white/[0.04] border border-white/10 hover:border-red-500/50 hover:bg-red-500/10 text-red-400 flex items-center justify-center text-xl shadow-lg active:scale-90 transition cursor-pointer"
-                  title="Пропустить"
-                >
-                  ✕
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowDetailModal(true)}
-                  className="w-11 h-11 rounded-full bg-white/[0.04] border border-white/10 text-slate-300 flex items-center justify-center text-sm shadow active:scale-90 transition cursor-pointer"
-                  title="Подробнее"
-                >
-                  ℹ️
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleConnect}
-                  className={`w-14 h-14 rounded-full text-white flex items-center justify-center text-2xl shadow-xl active:scale-90 transition cursor-pointer ${
-                    isCurrentCardLikingMe
-                      ? 'bg-gradient-to-tr from-amber-500 via-[#FF5A1F] to-emerald-400 ring-4 ring-amber-500/30 animate-pulse'
-                      : 'bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] shadow-[#FF5A1F]/30'
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, home_gym: gym }));
+                    setIsGymModalOpen(false);
+                    setGymSearch('');
+                  }}
+                  className={`w-full text-left p-3 rounded-xl transition-all text-xs flex flex-col ${
+                    formData.home_gym === gym
+                      ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 font-semibold'
+                      : 'hover:bg-gray-800/60 text-gray-200'
                   }`}
-                  title="Законнектиться"
                 >
-                  🤝
+                  {gym}
                 </button>
-              </div>
+              ))}
             </div>
-          ) : (
-            <div className="p-8 text-center apple-glass border border-white/[0.08] rounded-3xl space-y-3 py-14">
-              <span className="text-4xl block">🏋️‍♂️🏁</span>
-              <div className="space-y-1">
-                <h3 className="text-sm font-black text-white">Все доступные анкеты просмотрены!</h3>
-                <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  {gymFilter === 'my_gym'
-                    ? 'В выбранном филиале пока нет новых анкет. Попробуй переключить на «Все филиалы»!'
-                    : 'Все напарники, с которыми ты уже подружился, находятся во вкладке «Друзья».'}
-                </p>
-              </div>
-
-              <div className="pt-2 flex justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleResetDeck}
-                  className="gymshark-btn-electric px-4 py-2 text-xs font-bold cursor-pointer"
-                >
-                  Обновить ленту 🔄
-                </button>
-                {lastSwipedCard && (
-                  <button
-                    type="button"
-                    onClick={handleRewind}
-                    className="px-4 py-2 rounded-xl bg-white/[0.04] border border-amber-500/30 text-xs font-semibold text-amber-400 hover:text-white cursor-pointer"
-                  >
-                    Вернуть последнюю ↩️
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       )}
     </div>
