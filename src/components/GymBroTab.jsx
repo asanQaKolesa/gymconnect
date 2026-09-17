@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
+import DailyFuel from './DailyFuel';
 
 const CHANNEL_INVITE_URL = 'https://t.me/+QRvCVzzxHUpkMjAy';
 
@@ -813,6 +814,9 @@ export default function GymBroTab({
       ) : (
         /* ================= 5. ЭКРАН СВАЙПОВ TINDER ================= */
         <div className="space-y-3">
+          {/* МОТИВАЦИЯ ДНЯ (DAILY FUEL) */}
+          <DailyFuel />
+
           {/* КОМПАКТНЫЙ БАННЕР ВЕРХУ ЛЕНТЫ СВАЙПОВ */}
           {!bannerDismissed && (
             <div className="relative p-3 rounded-2xl bg-gradient-to-r from-[#FF5A1F]/15 via-black/40 to-[#FF5A1F]/10 border border-[#FF5A1F]/30 backdrop-blur-xl flex items-center justify-between gap-3 shadow-lg">
