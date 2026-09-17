@@ -48,11 +48,12 @@ export default function GymBroTab({
 
   const myTgId = Number(user?.telegram_id || 0);
 
-  // Хранилище исключенных ID (лайкнутые, принятые и локально дизлайкнутые)
-  const [excludedIds, setExcludedIds] = useState([]);
+  // Исключаем только тех, с кем РЕАЛЬНО есть активная связь в Supabase
+  const [activeRelations, setActiveRelations] = useState([]);
   const [incomingLikers, setIncomingLikers] = useState([]);
 
-  // История последнего действия для кнопки отката назад ↩️
+  // Локальные пропуски только в рамках текущей сессии
+  const [sessionPassedIds, setSessionPassedIds] = useState([]);
   const [lastSwipedCard, setLastSwipedCard] = useState(null);
 
   // Фильтры
@@ -78,54 +79,54 @@ export default function GymBroTab({
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  // Загружаем постоянные исключения: friendships + локальные дизлайки
+  // Очищаем старый застрявший localStorage с прошлых тестов
   useEffect(() => {
-    async function loadExclusions() {
-      if (!myTgId) return;
-
-      // 1. Дизлайки из localStorage устройства
-      let localPassed = [];
-      try {
-        const savedPasses = localStorage.getItem(`gym_passed_${myTgId}`);
-        if (savedPasses) localPassed = JSON.parse(savedPasses);
-      } catch (e) {}
-
-      // 2. Исходящие заявки и друзья из Supabase
-      try {
-        const { data: myOut } = await supabase
-          .from('friendships')
-          .select('friend_id')
-          .eq('user_id', myTgId);
-
-        const { data: acceptedIn } = await supabase
-          .from('friendships')
-          .select('user_id')
-          .eq('friend_id', myTgId)
-          .eq('status', 'accepted');
-
-        const { data: pendingIn } = await supabase
-          .from('friendships')
-          .select('user_id')
-          .eq('friend_id', myTgId)
-          .eq('status', 'pending');
-
-        const dbExcluded = [
-          ...(myOut || []).map(r => Number(r.friend_id)),
-          ...(acceptedIn || []).map(r => Number(r.user_id))
-        ];
-
-        // Объединяем без дублей
-        const allExcluded = [...new Set([...localPassed, ...dbExcluded])];
-        setExcludedIds(allExcluded);
-
-        if (pendingIn) {
-          setIncomingLikers(pendingIn.map(d => Number(d.user_id)));
-        }
-      } catch (err) {
-        console.error(err);
-      }
+    if (myTgId) {
+      localStorage.removeItem(`gym_passed_${myTgId}`);
     }
-    loadExclusions();
+  }, [myTgId]);
+
+  // Загружаем связи напрямую из Supabase
+  async function loadRelations() {
+    if (!myTgId) return;
+    try {
+      // 1. Мои исходящие (pending или accepted)
+      const { data: myOut } = await supabase
+        .from('friendships')
+        .select('friend_id, status')
+        .eq('user_id', myTgId);
+
+      // 2. Входящие подтвержденные (accepted)
+      const { data: acceptedIn } = await supabase
+        .from('friendships')
+        .select('user_id')
+        .eq('friend_id', myTgId)
+        .eq('status', 'accepted');
+
+      // 3. Входящие ожидающие (pending) - они ДОЛЖНЫ показываться первыми
+      const { data: pendingIn } = await supabase
+        .from('friendships')
+        .select('user_id')
+        .eq('friend_id', myTgId)
+        .eq('status', 'pending');
+
+      const excluded = [
+        ...(myOut || []).map(r => Number(r.friend_id)),
+        ...(acceptedIn || []).map(r => Number(r.user_id))
+      ];
+
+      setActiveRelations(excluded);
+
+      if (pendingIn) {
+        setIncomingLikers(pendingIn.map(d => Number(d.user_id)));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  useEffect(() => {
+    loadRelations();
   }, [myTgId]);
 
   function handlePhotoUpload(e) {
@@ -159,13 +160,26 @@ export default function GymBroTab({
     reader.readAsDataURL(file);
   }
 
-  // Фильтрация колоды: СТРОГО исключаем всех просмотренных
+  // Сброс истории текущей сессии
+  function handleResetDeck() {
+    setSessionPassedIds([]);
+    setLastSwipedCard(null);
+    setCurrentIndex(0);
+    loadRelations();
+    if (onRefreshCards) onRefreshCards();
+  }
+
+  // Фильтрация колоды
   const activeDeck = cards
     .filter(c => {
       const cardTgId = Number(c.telegram_id);
       if (cardTgId === myTgId) return false;
-      // Если уже лайкнут, дизлайкнут или в друзьях — больше НЕ показываем
-      if (excludedIds.includes(cardTgId)) return false;
+
+      // Если в базе есть активная связь (уже друзья или отправлен запрос)
+      if (activeRelations.includes(cardTgId)) return false;
+
+      // Если пропущен в текущей сессии
+      if (sessionPassedIds.includes(cardTgId)) return false;
 
       if (gymFilter === 'my_gym' && formData.weekday_gym) {
         if (c.weekday_gym?.toLowerCase() !== formData.weekday_gym?.toLowerCase()) return false;
@@ -178,6 +192,7 @@ export default function GymBroTab({
       return true;
     })
     .sort((a, b) => {
+      // Тот, кто лайкнул меня, всегда идет первым!
       const aLikesMe = incomingLikers.includes(Number(a.telegram_id));
       const bLikesMe = incomingLikers.includes(Number(b.telegram_id));
       if (aLikesMe && !bLikesMe) return -1;
@@ -205,52 +220,37 @@ export default function GymBroTab({
     }
   }
 
-  // ДИЗЛАЙК (ПРОПУСК): навсегда запоминаем в localStorage, чтобы не повторялся
+  // Пропуск в рамках текущей сессии
   function handlePass() {
     if (!currentCard) return;
     const targetTgId = Number(currentCard.telegram_id);
 
     setLastSwipedCard({ card: currentCard, action: 'pass' });
+    setSessionPassedIds(prev => [...prev, targetTgId]);
 
-    // Сохраняем в локальные исключения навсегда
-    const updated = [...new Set([...excludedIds, targetTgId])];
-    setExcludedIds(updated);
-    try {
-      localStorage.setItem(`gym_passed_${myTgId}`, JSON.stringify(updated));
-    } catch (e) {}
-
-    // Сдвигаем карточку
     if (currentIndex >= activeDeck.length - 1) {
       setCurrentIndex(0);
     }
   }
 
-  // ОТКАТ СВАЙПА НАЗАД ↩️ (REWIND)
+  // Откат назад ↩️
   function handleRewind() {
     if (!lastSwipedCard) return;
     const targetTgId = Number(lastSwipedCard.card.telegram_id);
 
-    // Удаляем из исключений
-    const updated = excludedIds.filter(id => id !== targetTgId);
-    setExcludedIds(updated);
-    try {
-      localStorage.setItem(`gym_passed_${myTgId}`, JSON.stringify(updated));
-    } catch (e) {}
-
+    setSessionPassedIds(prev => prev.filter(id => id !== targetTgId));
+    setActiveRelations(prev => prev.filter(id => id !== targetTgId));
     setLastSwipedCard(null);
     setCurrentIndex(0);
   }
 
-  // КОННЕКТ (ЛАЙК)
+  // Коннект
   async function handleConnect() {
     if (!currentCard) return;
     const targetTgId = Number(currentCard.telegram_id);
 
     setLastSwipedCard({ card: currentCard, action: 'connect' });
-
-    // Добавляем в исключения навсегда
-    const updated = [...new Set([...excludedIds, targetTgId])];
-    setExcludedIds(updated);
+    setActiveRelations(prev => [...prev, targetTgId]);
 
     try {
       if (isCurrentCardLikingMe) {
@@ -613,6 +613,15 @@ export default function GymBroTab({
             >
               {isSaving ? 'Сохраняем анкету...' : 'Сохранить и начать поиск ➔'}
             </button>
+
+            {/* Кнопка сброса истории для тестирования */}
+            <button
+              type="button"
+              onClick={handleResetDeck}
+              className="w-full py-2 text-[10px] font-semibold text-slate-500 hover:text-slate-300 text-center cursor-pointer block pt-2"
+            >
+              🔄 Сбросить историю просмотров (для тестов)
+            </button>
           </form>
         </div>
       ) : (
@@ -732,9 +741,8 @@ export default function GymBroTab({
                 </div>
               </div>
 
-              {/* 4 ПОСТОЯННЫЕ КНОПКИ ДЕЙСТВИЙ */}
+              {/* 4 КНОПКИ ДЕЙСТВИЙ */}
               <div className="flex items-center justify-center gap-4 pt-1">
-                {/* 1. КНОПКА ОТКАТА НАЗАД ↩️ (REWIND) */}
                 <button
                   type="button"
                   disabled={!lastSwipedCard}
@@ -745,7 +753,6 @@ export default function GymBroTab({
                   ↩️
                 </button>
 
-                {/* 2. КНОПКА ПРОПУСТИТЬ ✕ */}
                 <button
                   type="button"
                   onClick={handlePass}
@@ -755,7 +762,6 @@ export default function GymBroTab({
                   ✕
                 </button>
 
-                {/* 3. КНОПКА ИНФО ℹ️ */}
                 <button
                   type="button"
                   onClick={() => setShowDetailModal(true)}
@@ -765,7 +771,6 @@ export default function GymBroTab({
                   ℹ️
                 </button>
 
-                {/* 4. КНОПКА КОННЕКТ 🤝 */}
                 <button
                   type="button"
                   onClick={handleConnect}
@@ -781,27 +786,33 @@ export default function GymBroTab({
               </div>
             </div>
           ) : (
-            /* ЭКРАН ЗАВЕРШЕНИЯ (БЕЗ ДУРАЦКИХ ПОВТОРОВ) */
             <div className="p-8 text-center apple-glass border border-white/[0.08] rounded-3xl space-y-3 py-14">
               <span className="text-4xl block">🏋️‍♂️🏁</span>
               <div className="space-y-1">
                 <h3 className="text-sm font-black text-white">Все доступные анкеты просмотрены!</h3>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  Все, кому ты отправил запрос, находятся в ожидании ответа. Новые анкеты появятся по мере регистрации атлетов.
+                  Все напарники, с которыми ты уже подружился, находятся во вкладке «Друзья».
                 </p>
               </div>
 
-              {lastSwipedCard && (
-                <div className="pt-2 flex justify-center">
+              <div className="pt-2 flex justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleResetDeck}
+                  className="gymshark-btn-electric px-4 py-2 text-xs font-bold cursor-pointer"
+                >
+                  Обновить ленту 🔄
+                </button>
+                {lastSwipedCard && (
                   <button
                     type="button"
                     onClick={handleRewind}
-                    className="px-4 py-2 rounded-xl bg-white/[0.04] border border-amber-500/30 text-xs font-semibold text-amber-400 hover:text-white cursor-pointer active:scale-95 transition"
+                    className="px-4 py-2 rounded-xl bg-white/[0.04] border border-amber-500/30 text-xs font-semibold text-amber-400 hover:text-white cursor-pointer"
                   >
-                    Вернуть последнюю анкету ↩️
+                    Вернуть последнюю ↩️
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
         </div>
