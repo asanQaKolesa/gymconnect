@@ -22,6 +22,16 @@ export default function AppleTabBar({ activeTab, setActiveTab }) {
       ) 
     },
     { 
+      id: 'reviews', 
+      label: 'Отзывы', 
+      isCenter: true,
+      icon: (active) => (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={active ? "2.2" : "1.8"} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ) 
+    },
+    { 
       id: 'nutrition', 
       label: 'Питание', 
       icon: (active) => (
@@ -42,9 +52,29 @@ export default function AppleTabBar({ activeTab, setActiveTab }) {
   ];
 
   return (
-    <div className={`fixed bottom-0 left-0 right-0 bg-[#F9F9FB]/85 backdrop-blur-xl border-t border-[#3C3C43]/15 px-6 py-2.5 flex items-center justify-between z-50 max-w-md mx-auto ${appleTheme.styles.fontFamily}`}>
+    <div className={`fixed bottom-0 left-0 right-0 bg-[#F9F9FB]/85 backdrop-blur-xl border-t border-[#3C3C43]/15 px-4 py-2 flex items-center justify-between z-50 max-w-md mx-auto ${appleTheme.styles.fontFamily}`}>
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
+        
+        if (tab.isCenter) {
+          return (
+            <div 
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className="flex flex-col items-center cursor-pointer -mt-4 group"
+            >
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all ${
+                isActive ? 'bg-[#007AFF] text-white scale-105' : 'bg-[#1C1C1E] text-white hover:bg-black'
+              }`}>
+                {tab.icon(isActive)}
+              </div>
+              <span className={`text-[10px] mt-1 tracking-tight ${isActive ? 'font-bold text-[#007AFF]' : 'font-semibold text-zinc-700'}`}>
+                {tab.label}
+              </span>
+            </div>
+          );
+        }
+
         return (
           <div 
             key={tab.id}
