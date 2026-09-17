@@ -9,7 +9,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [isAdminRoute, setIsAdminRoute] = useState(false);
 
-  // Проверяем, открыта ли секретная админ-панель (по ссылке с #admin)
   useEffect(() => {
     const checkRoute = () => {
       if (window.location.hash === '#admin') {
@@ -18,17 +17,14 @@ export default function App() {
         setIsAdminRoute(false);
       }
     };
-
     checkRoute();
     window.addEventListener('hashchange', checkRoute);
     return () => window.removeEventListener('hashchange', checkRoute);
   }, []);
 
-  // Если в ссылке есть #admin — показываем полноценную CRM-панель
   if (isAdminRoute) {
     return (
       <div>
-        {/* Кнопка выхода обратно в обычное приложение */}
         <div className="bg-zinc-900 border-b border-zinc-800 px-4 py-2 flex justify-between items-center text-xs">
           <span className="text-emerald-400 font-mono font-bold">🔒 Режим администратора CRM</span>
           <button 
@@ -45,7 +41,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-20">
-      {/* Основной контент в зависимости от вкладки */}
       <main className="max-w-md mx-auto">
         {activeTab === 'home' && <HomeTab />}
         {activeTab === 'gymbro' && <GymBroTab />}
@@ -53,7 +48,6 @@ export default function App() {
         {activeTab === 'profile' && <ProfileTab />}
       </main>
 
-      {/* Нижняя навигационная панель */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-zinc-900/90 backdrop-blur-md border-t border-zinc-800 flex justify-around p-3 z-50">
         <button 
           onClick={() => setActiveTab('home')}
