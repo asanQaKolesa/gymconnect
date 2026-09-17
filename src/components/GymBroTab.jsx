@@ -10,9 +10,10 @@ export default function GymBroTab({ session }) {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   
-  // Поиск и фильтрация зала
+  // Модальные окна
   const [gymSearch, setGymSearch] = useState('');
   const [isGymModalOpen, setIsGymModalOpen] = useState(false);
+  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [filterGym, setFilterGym] = useState('Все');
 
   const TIME_SLOTS = [
@@ -26,7 +27,7 @@ export default function GymBroTab({ session }) {
 
   const PERSONALITY_TYPES = [
     { label: 'Интроверт', emoji: '🤫', desc: 'В наушниках, без лишних разговоров, чистый фокус' },
-    { label: 'Экстраверт', emoji: '⚡', desc: 'Драйв, громкая музыка, взаимная мотивация и общение' },
+    { label: 'Экстраверт', emoji: '⚡', desc: 'Драйв, взаимная мотивация и общение' },
     { label: 'Амбиверт', emoji: '⚖️', desc: 'Баланс: по делу и под настроение' }
   ];
 
@@ -37,6 +38,7 @@ export default function GymBroTab({ session }) {
     full_name: '',
     age: '',
     gender: 'Мужской',
+    looking_for_gender: 'Всех',
     experience_level: 'Средний (1-3 года)',
     goals: [],
     preferred_days: [],
@@ -45,23 +47,35 @@ export default function GymBroTab({ session }) {
     home_gym: ALMATY_GYMS[0],
     bio: '',
     photo_url: '',
-    telegram_contact: '',
-    whatsapp_contact: ''
+    telegram_contact: ''
   });
 
   useEffect(() => {
-    if (session?.user?.id) {
-      loadUserProfile();
-      loadBroProfiles();
-    }
+    initTab();
   }, [session]);
 
-  const loadUserProfile = async () => {
+  const getEffectiveUserId = async () => {
+    if (session?.user?.id) return session.user.id;
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id || null;
+  };
+
+  const initTab = async () => {
+    const uid = await getEffectiveUserId();
+    if (uid) {
+      await loadUserProfile(uid);
+      await loadBroProfiles(uid);
+    } else {
+      setLoading(false);
+    }
+  };
+
+  const loadUserProfile = async (uid) => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('gymbro_profiles')
         .select('*')
-        .eq('user_id', session.user.id)
+        .eq('user_id', uid)
         .single();
 
       if (data) {
@@ -69,6 +83,7 @@ export default function GymBroTab({ session }) {
           full_name: data.full_name || '',
           age: data.age || '',
           gender: data.gender || 'Мужской',
+          looking_for_gender: data.looking_for_gender || 'Всех',
           experience_level: data.experience_level || 'Средний (1-3 года)',
           goals: data.goals || [],
           preferred_days: data.preferred_days || [],
@@ -77,8 +92,7 @@ export default function GymBroTab({ session }) {
           home_gym: data.home_gym || ALMATY_GYMS[0],
           bio: data.bio || '',
           photo_url: data.photo_url || '',
-          telegram_contact: data.telegram_contact || '',
-          whatsapp_contact: data.whatsapp_contact || ''
+          telegram_contact: data.telegram_contact || ''
         });
       } else {
         setIsEditing(true);
@@ -88,14 +102,14 @@ export default function GymBroTab({ session }) {
     }
   };
 
-  const loadBroProfiles = async () => {
+  const loadBroProfiles = async (uid) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('gymbro_profiles')
-        .select('*')
-        .neq('user_id', session.user.id);
-
+      let query = supabase.from('gymbro_profiles').select('*');
+      if (uid) {
+        query = query.neq('user_id', uid);
+      }
+      const { data } = await query;
       if (data) {
         setProfiles(data);
       }
@@ -106,12 +120,11 @@ export default function GymBroTab({ session }) {
     }
   };
 
-  // Обработка загрузки фотографии локально через FileReader
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert('Размер фото не должен превышать 5 МБ');
+        alert('Максимальный размер фото — 5 МБ');
         return;
       }
       const reader = new FileReader();
@@ -125,9 +138,21 @@ export default function GymBroTab({ session }) {
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     try {
+      const uid = await getEffectiveUserId();
+      if (!uid) {
+        alert('Пожалуйста, авторизуйтесь в приложении заново.');
+        return;
+      }
+
+      if (!formData.telegram_contact.trim()) {
+        alert('Укажите ваш Telegram username для связи');
+        return;
+      }
+
       const payload = {
-        user_id: session.user.id,
+        user_id: uid,
         ...formData,
+        telegram_contact: formData.telegram_contact.replace('@', '').trim(),
         age: parseInt(formData.age, 10) || null,
         updated_at: new Date().toISOString()
       };
@@ -138,9 +163,9 @@ export default function GymBroTab({ session }) {
 
       if (error) throw error;
       setIsEditing(false);
-      loadBroProfiles();
+      loadBroProfiles(uid);
     } catch (err) {
-      alert('Ошибка при сохранении анкеты: ' + err.message);
+      alert('Ошибка при сохранении: ' + err.message);
     }
   };
 
@@ -166,14 +191,17 @@ export default function GymBroTab({ session }) {
     g.toLowerCase().includes(gymSearch.toLowerCase())
   );
 
+  // Фильтрация анкет по полу и выбранному залу
   const displayedProfiles = profiles.filter(p => {
-    if (filterGym === 'Все') return true;
-    return p.home_gym === filterGym;
+    if (filterGym !== 'Все' && p.home_gym !== filterGym) return false;
+    if (formData.looking_for_gender === 'Парней' && p.gender !== 'Мужской') return false;
+    if (formData.looking_for_gender === 'Девушек' && p.gender !== 'Женский') return false;
+    return true;
   });
 
   return (
     <div className="max-w-xl mx-auto p-4 pb-28 text-white">
-      {/* Шапка таба */}
+      {/* Шапка */}
       <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-3">
         <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
           🔥 GymBro Tinder
@@ -189,7 +217,22 @@ export default function GymBroTab({ session }) {
       {isEditing ? (
         /* ЭКРАН СОЗДАНИЯ / РЕДАКТИРОВАНИЯ АНКЕТЫ */
         <form onSubmit={handleSaveProfile} className="space-y-4 bg-[#111827] p-5 rounded-2xl border border-gray-800">
-          <h3 className="text-base font-bold text-emerald-400">Настройка анкеты GymBro</h3>
+          
+          {/* ЮРИДИЧЕСКАЯ ПЛАШКА СОГЛАСИЯ И ПРАВИЛ */}
+          <div 
+            onClick={() => setIsRulesModalOpen(true)}
+            className="cursor-pointer bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/30 rounded-xl p-3.5 flex items-start gap-3 transition"
+          >
+            <span className="text-lg shrink-0">🛡️</span>
+            <div className="text-xs space-y-0.5">
+              <p className="font-bold text-emerald-300">
+                Правила сообщества и согласие на публикацию
+              </p>
+              <p className="text-gray-400">
+                Заполняя анкету, вы даете согласие на размещение профиля в сервисе GymBro. Нажмите, чтобы прочесть условия.
+              </p>
+            </div>
+          </div>
 
           {/* ЗАГРУЗКА ФОТОГРАФИИ */}
           <div className="flex items-center gap-4 bg-[#1f2937]/70 p-3 rounded-2xl border border-gray-700/60">
@@ -202,10 +245,10 @@ export default function GymBroTab({ session }) {
             </div>
             <div className="flex-1 space-y-2">
               <label className="text-xs font-semibold text-gray-300 block">
-                Фото профиля
+                Фото анкеты
               </label>
               <label className="inline-block px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 text-xs font-bold cursor-pointer transition">
-                <span>📁 Выбрать фото</span>
+                <span>📁 Загрузить фото</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -250,7 +293,7 @@ export default function GymBroTab({ session }) {
               />
             </div>
             <div>
-              <label className="text-xs text-gray-400 font-medium">Пол</label>
+              <label className="text-xs text-gray-400 font-medium">Твой пол</label>
               <select
                 value={formData.gender}
                 onChange={e => setFormData({ ...formData, gender: e.target.value })}
@@ -262,7 +305,30 @@ export default function GymBroTab({ session }) {
             </div>
           </div>
 
-          {/* ПСИХОТИП / ТЕМПЕРАМЕНТ ДЛЯ МЭТЧА */}
+          {/* КОГО ИЩЕШЬ В ДЖИМБРО */}
+          <div>
+            <label className="text-xs text-gray-400 font-medium mb-1.5 block">
+              Кого ты ищешь для тренировок?
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {['Парней', 'Девушек', 'Всех'].map(target => (
+                <button
+                  key={target}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, looking_for_gender: target })}
+                  className={`py-2 rounded-xl border text-xs font-bold transition ${
+                    formData.looking_for_gender === target
+                      ? 'bg-emerald-500 text-black border-emerald-400'
+                      : 'bg-[#1f2937] text-gray-300 border-gray-700 hover:text-white'
+                  }`}
+                >
+                  {target}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ПСИХОТИП */}
           <div>
             <label className="text-xs text-gray-400 font-medium mb-1.5 block">
               Психотип на тренировке (вайб)
@@ -273,13 +339,13 @@ export default function GymBroTab({ session }) {
                   key={p.label}
                   type="button"
                   onClick={() => setFormData({ ...formData, personality_type: p.label })}
-                  className={`p-2.5 rounded-xl border text-center transition flex flex-col items-center gap-1 ${
+                  className={`p-2 rounded-xl border text-center transition flex flex-col items-center gap-1 ${
                     formData.personality_type === p.label
                       ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 font-bold'
                       : 'bg-[#1f2937] border-gray-700 text-gray-400 hover:text-white'
                   }`}
                 >
-                  <span className="text-lg">{p.emoji}</span>
+                  <span className="text-base">{p.emoji}</span>
                   <span className="text-xs">{p.label}</span>
                 </button>
               ))}
@@ -288,7 +354,7 @@ export default function GymBroTab({ session }) {
 
           {/* ВРЕМЯ ТРЕНИРОВОК */}
           <div>
-            <label className="text-xs text-gray-400 font-medium">Удобное время для тренировок</label>
+            <label className="text-xs text-gray-400 font-medium">Время тренировок</label>
             <select
               value={formData.preferred_time}
               onChange={e => setFormData({ ...formData, preferred_time: e.target.value })}
@@ -300,7 +366,7 @@ export default function GymBroTab({ session }) {
             </select>
           </div>
 
-          {/* ВЫБОР ЗАЛА С ОКНОМ ПОИСКА */}
+          {/* ВЫБОР ЗАЛА */}
           <div className="space-y-1">
             <label className="text-xs text-gray-400 font-medium">Твой фитнес-клуб / филиал</label>
             <button
@@ -330,7 +396,7 @@ export default function GymBroTab({ session }) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 font-medium mb-1 block">Цели тренировок</label>
+            <label className="text-xs text-gray-400 font-medium mb-1 block">Цели</label>
             <div className="flex flex-wrap gap-1.5">
               {GOALS_LIST.map(g => (
                 <button
@@ -370,7 +436,7 @@ export default function GymBroTab({ session }) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-400 font-medium">О себе / кого ищешь</label>
+            <label className="text-xs text-gray-400 font-medium">О себе</label>
             <textarea
               rows="3"
               value={formData.bio}
@@ -380,27 +446,25 @@ export default function GymBroTab({ session }) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-gray-400 font-medium">Telegram (@username)</label>
+          {/* ТОЛЬКО TELEGRAM USERNAME (БЕЗ WHATSAPP) */}
+          <div>
+            <label className="text-xs text-gray-400 font-medium">
+              Telegram Username (для связи с напарником)
+            </label>
+            <div className="relative mt-1">
+              <span className="absolute left-3.5 top-2.5 text-gray-500 text-sm">@</span>
               <input
                 type="text"
+                required
                 value={formData.telegram_contact}
-                onChange={e => setFormData({ ...formData, telegram_contact: e.target.value })}
-                className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3 py-2 text-xs mt-1 text-white focus:outline-none focus:border-emerald-500"
-                placeholder="@username"
+                onChange={e => setFormData({ ...formData, telegram_contact: e.target.value.replace('@', '') })}
+                className="w-full bg-[#1f2937] border border-gray-700 rounded-xl pl-8 pr-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                placeholder="username"
               />
             </div>
-            <div>
-              <label className="text-xs text-gray-400 font-medium">WhatsApp</label>
-              <input
-                type="text"
-                value={formData.whatsapp_contact}
-                onChange={e => setFormData({ ...formData, whatsapp_contact: e.target.value })}
-                className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3 py-2 text-xs mt-1 text-white focus:outline-none focus:border-emerald-500"
-                placeholder="+7 707..."
-              />
-            </div>
+            <p className="text-[11px] text-gray-500 mt-1">
+              🔒 Мы не собираем и не раскрываем ваш личный номер телефона.
+            </p>
           </div>
 
           <button
@@ -411,9 +475,8 @@ export default function GymBroTab({ session }) {
           </button>
         </form>
       ) : (
-        /* КАРТОЧКА СВАЙПА В ТИНДЕРЕ */
+        /* КАРТОЧКА СВАЙПА */
         <div className="space-y-4">
-          {/* Фильтр по залу */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
             <span className="text-gray-400 shrink-0">Зал:</span>
             <button
@@ -442,8 +505,6 @@ export default function GymBroTab({ session }) {
             <div className="p-12 text-center text-gray-400">Загрузка бро...</div>
           ) : displayedProfiles.length > 0 && currentIndex < displayedProfiles.length ? (
             <div className="bg-[#111827] border border-gray-800 rounded-3xl overflow-hidden shadow-2xl relative">
-              
-              {/* ФОТОГРАФИЯ АТЛЕТА */}
               <div className="w-full h-72 bg-gray-900 relative">
                 {displayedProfiles[currentIndex].photo_url ? (
                   <img
@@ -457,7 +518,6 @@ export default function GymBroTab({ session }) {
                   </div>
                 )}
                 
-                {/* Бейдж психотипа на фото */}
                 <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-bold text-white flex items-center gap-1.5">
                   <span>
                     {displayedProfiles[currentIndex].personality_type === 'Интроверт' ? '🤫' : 
@@ -466,7 +526,6 @@ export default function GymBroTab({ session }) {
                   <span>{displayedProfiles[currentIndex].personality_type || 'Амбиверт'}</span>
                 </div>
 
-                {/* Имя и возраст поверх градиента */}
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-[#111827] via-[#111827]/80 to-transparent p-5">
                   <h3 className="text-2xl font-black text-white">
                     {displayedProfiles[currentIndex].full_name}, {displayedProfiles[currentIndex].age}
@@ -477,8 +536,7 @@ export default function GymBroTab({ session }) {
                 </div>
               </div>
 
-              <div className="p-5 pt-1 space-y-3">
-                {/* Время тренировок и стаж */}
+              <div className="p-5 pt-2 space-y-3">
                 <div className="flex flex-wrap gap-2 text-xs">
                   <span className="bg-gray-800 border border-gray-700 px-2.5 py-1 rounded-lg text-gray-300">
                     ⏱ {displayedProfiles[currentIndex].preferred_time || 'Вечер'}
@@ -505,31 +563,20 @@ export default function GymBroTab({ session }) {
                   </div>
                 </div>
 
-                <div className="pt-2 flex gap-3">
-                  {displayedProfiles[currentIndex].telegram_contact && (
+                {displayedProfiles[currentIndex].telegram_contact && (
+                  <div className="pt-2">
                     <a
                       href={`https://t.me/${displayedProfiles[currentIndex].telegram_contact.replace('@', '')}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex-1 py-2.5 bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 rounded-xl text-center text-xs font-bold"
+                      className="w-full block py-2.5 bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 rounded-xl text-center text-xs font-bold transition"
                     >
-                      ✈️ Telegram
+                      ✈️ Написать в Telegram (@{displayedProfiles[currentIndex].telegram_contact})
                     </a>
-                  )}
-                  {displayedProfiles[currentIndex].whatsapp_contact && (
-                    <a
-                      href={`https://wa.me/${displayedProfiles[currentIndex].whatsapp_contact.replace(/[^0-9]/g, '')}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex-1 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 rounded-xl text-center text-xs font-bold"
-                    >
-                      💬 WhatsApp
-                    </a>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
-              {/* Кнопки взаимодействия */}
               <div className="flex border-t border-gray-800 bg-[#0b0f19]">
                 <button
                   onClick={() => setCurrentIndex(prev => Math.min(prev + 1, displayedProfiles.length))}
@@ -539,7 +586,10 @@ export default function GymBroTab({ session }) {
                 </button>
                 <button
                   onClick={() => {
-                    alert('Контакт открыт в карточке!');
+                    const tg = displayedProfiles[currentIndex].telegram_contact;
+                    if (tg) {
+                      window.open(`https://t.me/${tg.replace('@', '')}`, '_blank');
+                    }
                     setCurrentIndex(prev => Math.min(prev + 1, displayedProfiles.length));
                   }}
                   className="flex-1 py-4 text-center font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
@@ -561,6 +611,49 @@ export default function GymBroTab({ session }) {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* МОДАЛЬНОЕ ОКНО ПРАВИЛ И ЮРИДИЧЕСКОГО СОГЛАСИЯ */}
+      {isRulesModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-gray-800 rounded-3xl w-full max-w-lg p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                🛡️ Правила сообщества GymBro
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsRulesModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-gray-800 text-gray-400 hover:text-white flex items-center justify-center text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-gray-300 leading-relaxed max-h-[60vh] overflow-y-auto pr-1">
+              <p>
+                1. <strong>Согласие на публикацию</strong>: Заполняя и сохраняя анкету в разделе GymBro, вы добровольно делаете свои указанные данные (имя, возраст, цели, зал, Telegram username и фото) видимыми другим участникам сервиса GymConnect для взаимного спортивного нетворкинга.
+              </p>
+              <p>
+                2. <strong>Защита персональных данных</strong>: Сервис не запрашивает и не раскрывает ваш личный номер телефона. Единственный открытый контакт — публичный никнейм в Telegram.
+              </p>
+              <p>
+                3. <strong>Взаимное уважение</strong>: В сообществе запрещены спам, реклама, домогательства и токсичное поведение. Аккаунты нарушителей блокируются без возможности восстановления.
+              </p>
+              <p>
+                4. <strong>Управление профилем</strong>: Вы можете в любой момент изменить или скрыть свою анкету, обновив данные в этом разделе.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsRulesModalOpen(false)}
+              className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs"
+            >
+              Я принимаю условия
+            </button>
+          </div>
         </div>
       )}
 
