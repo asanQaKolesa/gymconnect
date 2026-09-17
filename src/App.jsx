@@ -4,23 +4,32 @@ import { LEGAL_DOCS } from './legalDocs';
 import NutritionTab from './components/NutritionTab';
 import GymBroTab from './components/GymBroTab';
 
+// Apple 3D Emojis в высоком разрешении
+const ICONS = {
+  lightning: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/High%20Voltage.png",
+  muscle: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/People%20with%20activities/Flexed%20Biceps.png",
+  handshake: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Handshake.png",
+  salad: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Green%20Salad.png",
+  crown: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Crown.png",
+  home: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/House.png",
+  user: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/People/Bust%20in%20Silhouette.png",
+  shield: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Shield.png",
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Базовый профиль пользователя (таблица users)
   const [currentUser, setCurrentUser] = useState(null);
   const [telegramUser, setTelegramUser] = useState({ id: null, username: '', first_name: '' });
 
-  // 2. Отдельная анкета GymBro (таблица gymbro_cards)
   const [myGymBroCard, setMyGymBroCard] = useState(null);
   const [gymBroCards, setGymBroCards] = useState([]);
 
   const [activeDoc, setActiveDoc] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Форма базовой регистрации аккаунта
   const [regForm, setRegForm] = useState({
     name: '',
     gender: 'Парень',
@@ -33,7 +42,6 @@ export default function App() {
 
   async function initApp() {
     setLoading(true);
-
     let tgId = null;
     let tgUser = '';
     let tgName = '';
@@ -48,12 +56,10 @@ export default function App() {
     setTelegramUser({ id: tgId, username: tgUser, first_name: tgName });
     if (tgName) setRegForm(prev => ({ ...prev, name: tgName }));
 
-    // Загрузка залов
     const { data: gymData } = await supabase.from('gyms').select('*');
     if (gymData) setBranches(gymData);
 
     if (tgId) {
-      // 1. Проверяем базовый аккаунт в users
       const { data: userData } = await supabase
         .from('users')
         .select('*')
@@ -64,7 +70,6 @@ export default function App() {
         setCurrentUser(userData);
       }
 
-      // 2. Проверяем отдельную анкету в gymbro_cards
       const { data: cardData } = await supabase
         .from('gymbro_cards')
         .select('*')
@@ -92,10 +97,9 @@ export default function App() {
     }
   }
 
-  // Создание базового аккаунта пользователя
   async function handleRegisterUser(e) {
     e.preventDefault();
-    if (!regForm.name.trim()) return alert('Укажи свое имя');
+    if (!regForm.name.trim()) return alert('Укажите имя');
 
     setSaving(true);
     const tgId = telegramUser.id || Date.now();
@@ -116,12 +120,11 @@ export default function App() {
     if (!error) {
       setCurrentUser(data);
     } else {
-      alert('Ошибка создания профиля: ' + error.message);
+      alert('Ошибка: ' + error.message);
     }
     setSaving(false);
   }
 
-  // Создание / обновление анкеты поиска GymBro
   async function handleSaveGymBroCard(cardData) {
     setSaving(true);
     const tgId = telegramUser.id || (currentUser ? currentUser.telegram_id : Date.now());
@@ -154,8 +157,6 @@ export default function App() {
       if (!error) {
         setMyGymBroCard(data);
         await loadAllCards(tgId);
-      } else {
-        alert('Ошибка обновления анкеты: ' + error.message);
       }
     } else {
       const { data, error } = await supabase
@@ -167,8 +168,6 @@ export default function App() {
       if (!error) {
         setMyGymBroCard(data);
         await loadAllCards(tgId);
-      } else {
-        alert('Ошибка сохранения анкеты: ' + error.message);
       }
     }
     setSaving(false);
@@ -176,219 +175,147 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center font-sans">
-        <div className="text-center space-y-2">
-          <span className="text-3xl animate-spin inline-block">⚡</span>
-          <p className="text-xs text-slate-400">Синхронизация GymConnect...</p>
+      <div className="min-h-screen bg-[#0a0c10] text-slate-100 flex items-center justify-center font-sans">
+        <div className="text-center space-y-3">
+          <img src={ICONS.lightning} alt="Loading" className="w-10 h-10 mx-auto animate-pulse" />
+          <p className="text-xs text-slate-400 font-medium tracking-wide">Синхронизация...</p>
         </div>
       </div>
     );
   }
 
   const ModalDoc = activeDoc && (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full max-h-[80vh] flex flex-col shadow-2xl">
-        <div className="p-4 border-b border-slate-800 flex justify-between items-center">
-          <h3 className="text-xs font-bold text-white pr-2">{LEGAL_DOCS[activeDoc]?.title}</h3>
-          <button onClick={() => setActiveDoc(null)} className="text-slate-400 hover:text-white text-base px-2 py-1 cursor-pointer">✕</button>
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="ios-card max-w-md w-full max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="p-4 border-b border-white/10 flex justify-between items-center">
+          <h3 className="text-xs font-semibold text-white">{LEGAL_DOCS[activeDoc]?.title}</h3>
+          <button onClick={() => setActiveDoc(null)} className="text-slate-400 hover:text-white text-sm">✕</button>
         </div>
-        <div className="p-4 overflow-y-auto text-xs text-slate-300 leading-relaxed whitespace-pre-line">
+        <div className="p-4 overflow-y-auto text-xs text-slate-300 leading-relaxed whitespace-pre-line font-normal">
           {LEGAL_DOCS[activeDoc]?.content}
         </div>
-        <div className="p-3 border-t border-slate-800 bg-slate-950/40 rounded-b-3xl">
-          <button onClick={() => setActiveDoc(null)} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-2.5 rounded-xl font-bold cursor-pointer">Понятно</button>
+        <div className="p-3 border-t border-white/10 bg-black/20">
+          <button onClick={() => setActiveDoc(null)} className="w-full ios-button-secondary py-2.5 text-xs font-semibold">Понятно</button>
         </div>
       </div>
     </div>
   );
 
-  // ЭКРАН 1: БАЗОВАЯ РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЯ (Имя, Пол, Город)
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans p-5 max-w-md mx-auto">
-        {ModalDoc}
-        <header className="text-center py-4 space-y-1">
-          <div className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
-            <span className="text-amber-500 text-sm">⚡</span>
-            <span className="text-xs font-bold text-amber-400">GymConnect ID</span>
-          </div>
-          <h1 className="text-xl font-black tracking-tight mt-2 text-white">Добро пожаловать</h1>
-          <p className="text-xs text-slate-400">Создай базовый профиль атлета (быстро и бесплатно).</p>
-        </header>
-
-        <form onSubmit={handleRegisterUser} className="space-y-4 mt-2 flex-1 flex flex-col justify-between">
-          <div className="space-y-3 bg-slate-900/80 p-4 rounded-3xl border border-slate-800">
-            <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1">Как тебя зовут?</label>
-              <input
-                type="text"
-                required
-                value={regForm.name}
-                onChange={e => setRegForm({ ...regForm, name: e.target.value })}
-                placeholder="Твое имя"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1">Твой пол</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRegForm({ ...regForm, gender: 'Парень' })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
-                    regForm.gender === 'Парень' ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-950 text-slate-400 border-slate-800'
-                  }`}
-                >
-                  🧔 Парень
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRegForm({ ...regForm, gender: 'Девушка' })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
-                    regForm.gender === 'Девушка' ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-950 text-slate-400 border-slate-800'
-                  }`}
-                >
-                  👩 Девушка
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1">Твой город</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRegForm({ ...regForm, city: 'Алматы' })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
-                    regForm.city === 'Алматы' ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-950 text-slate-400 border-slate-800'
-                  }`}
-                >
-                  🍎 Алматы
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRegForm({ ...regForm, city: 'Астана' })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
-                    regForm.city === 'Астана' ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-950 text-slate-400 border-slate-800'
-                  }`}
-                >
-                  🏛 Астана
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-[10px] text-slate-400 text-center leading-tight">
-              Нажимая кнопку, вы принимаете{' '}
-              <button type="button" onClick={() => setActiveDoc('offer')} className="text-amber-400 underline cursor-pointer">Оферту</button> и{' '}
-              <button type="button" onClick={() => setActiveDoc('privacy')} className="text-amber-400 underline cursor-pointer">Политику конфиденциальности</button>.
-            </p>
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3.5 rounded-2xl transition shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
-            >
-              {saving ? 'Создаем профиль...' : 'Войти в GymConnect 🚀'}
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans pb-24 select-none">
+    <div className="min-h-screen bg-[#0a0c10] text-slate-100 flex flex-col font-sans pb-24 select-none">
       {ModalDoc}
 
-      {/* Верхний бар */}
-      <header className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60 backdrop-blur sticky top-0 z-10">
-        <div className="flex items-center gap-1.5">
-          <span className="text-amber-500 font-black text-lg">⚡</span>
+      {/* Верхний Header в стиле Apple iOS */}
+      <header className="px-5 py-3.5 border-b border-white/[0.07] flex justify-between items-center bg-[#0d1017]/80 backdrop-blur-xl sticky top-0 z-30">
+        <div className="flex items-center gap-2.5">
+          <img src={ICONS.lightning} alt="GymConnect" className="w-6 h-6 object-contain" />
           <div>
-            <h1 className="text-base font-bold tracking-tight">GymConnect</h1>
-            <p className="text-[10px] text-slate-400">{currentUser.city} • Фитнес-сеть</p>
+            <h1 className="text-[15px] font-bold text-white tracking-tight leading-tight">GymConnect</h1>
+            <p className="text-[11px] text-slate-400 font-normal">{currentUser?.city || 'Алматы'} • Invictus</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => initApp()}
-            className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full font-semibold active:scale-90 transition cursor-pointer"
+            className="text-[10px] text-slate-400 hover:text-white px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] active:scale-95 transition"
           >
-            🔄 Сброс кэша
+            Обновить
           </button>
-          <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">
-            PRO Тест
-          </span>
+          <div className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
+            <img src={ICONS.crown} alt="PRO" className="w-3 h-3 object-contain" />
+            <span className="text-[10px] font-semibold text-amber-400">PRO</span>
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 p-4 max-w-md mx-auto w-full space-y-4">
-        {/* ================= 1. ГЛАВНАЯ ================= */}
+      <main className="flex-1 px-4 py-4 max-w-md mx-auto w-full space-y-3.5">
+        {/* ================= 1. ГЛАВНАЯ СТРАНИЦА ================= */}
         {activeTab === 'home' && (
-          <div className="space-y-4">
-            <div className="bg-gradient-to-br from-amber-500/15 via-slate-900 to-slate-900 p-4 rounded-3xl border border-amber-500/20 space-y-3">
+          <div className="space-y-3.5">
+            {/* Карточка профиля */}
+            <div className="ios-card-accent p-4 space-y-3">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-[11px] text-amber-400 font-bold uppercase tracking-wider">Профиль пользователя</span>
-                  <h2 className="text-lg font-black text-white mt-0.5">{currentUser.name}</h2>
-                  <p className="text-xs text-slate-300">{currentUser.city} • {currentUser.gender}</p>
+                  <span className="text-[10px] uppercase font-semibold text-amber-400/90 tracking-wider">
+                    Аккаунт атлета
+                  </span>
+                  <h2 className="text-lg font-bold text-white mt-0.5 tracking-tight">
+                    {currentUser?.name || 'Атлет'}
+                  </h2>
+                  <p className="text-xs text-slate-400 font-normal">
+                    {currentUser?.city} • {currentUser?.gender}
+                  </p>
                 </div>
-                <span className="text-2xl">💪</span>
+                <img src={ICONS.muscle} alt="Muscle" className="w-8 h-8 object-contain" />
               </div>
 
               {myGymBroCard ? (
-                <div className="text-xs bg-slate-950/60 p-3 rounded-2xl border border-slate-800 space-y-1">
-                  <p className="text-emerald-400 font-bold">✓ Карточка GymBro активна</p>
-                  <p><span className="text-slate-400">🏢 Будни:</span> {myGymBroCard.weekday_gym}</p>
-                  <p><span className="text-slate-400">🎯 Сплит:</span> {myGymBroCard.split}</p>
+                <div className="text-xs bg-black/30 p-3 rounded-xl border border-white/[0.06] space-y-1">
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                    <span className="text-xs">●</span> Анкета GymBro опубликована
+                  </div>
+                  <p className="text-slate-300 font-normal text-[11px]">
+                    <span className="text-slate-500">Зал:</span> {myGymBroCard.weekday_gym}
+                  </p>
+                  <p className="text-slate-300 font-normal text-[11px]">
+                    <span className="text-slate-500">Фокус:</span> {myGymBroCard.split}
+                  </p>
                 </div>
               ) : (
-                <div className="text-xs bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20 text-amber-300 space-y-1">
-                  <p className="font-bold">Анкета поиска GymBro еще не создана</p>
-                  <p className="text-[11px] text-slate-400">Перейди во вкладку GymBro, чтобы заполнить параметры поиска.</p>
+                <div className="text-xs bg-amber-500/5 p-3 rounded-xl border border-amber-500/20 space-y-1">
+                  <p className="text-amber-300 font-medium">Анкета GymBro не создана</p>
+                  <p className="text-[11px] text-slate-400 font-normal">Заполни анкету, чтобы напарники видели тебя в залах.</p>
                 </div>
               )}
             </div>
 
-            <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-3">
+            {/* Блок Напарники (GymBro) */}
+            <div className="ios-card p-4 space-y-3">
               <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                    Поиск GymBro
-                    <span className="text-[9px] bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded-md font-black">PRO</span>
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">В базе доступно {gymBroCards.length} анкет</p>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-sm font-bold text-white">Поиск GymBro</h3>
+                    <span className="text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold">
+                      PRO
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 font-normal">
+                    В базе доступно {gymBroCards.length} анкет напарников
+                  </p>
                 </div>
-                <span className="text-2xl">🤝</span>
+                <img src={ICONS.handshake} alt="GymBro" className="w-7 h-7 object-contain" />
               </div>
 
               <button
                 onClick={() => setActiveTab('gymbro')}
-                className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3 rounded-2xl transition shadow-lg shadow-amber-500/20 cursor-pointer"
+                className="w-full ios-button-primary py-3 text-xs font-semibold flex items-center justify-center gap-1.5"
               >
-                {myGymBroCard ? 'Открыть поиск напарников ➔' : 'Заполнить анкету GymBro ➔'}
+                {myGymBroCard ? 'Открыть анкеты напарников' : 'Заполнить анкету поиска'} →
               </button>
             </div>
 
-            <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-3">
+            {/* Блок Питание */}
+            <div className="ios-card p-4 space-y-3">
               <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                    Рацион & Питание
-                    <span className="text-[9px] bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded-md font-black">PRO</span>
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">КБЖУ, меню на 7 дней и корзина закупки</p>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-sm font-bold text-white">Рацион & Питание</h3>
+                    <span className="text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold">
+                      PRO
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 font-normal">
+                    КБЖУ, меню на 7 дней и умная корзина
+                  </p>
                 </div>
-                <span className="text-2xl">🥗</span>
+                <img src={ICONS.salad} alt="Salad" className="w-7 h-7 object-contain" />
               </div>
 
               <button
                 onClick={() => setActiveTab('nutrition')}
-                className="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs py-3 rounded-2xl transition border border-slate-700 cursor-pointer"
+                className="w-full ios-button-secondary py-3 text-xs font-medium flex items-center justify-center gap-1.5"
               >
-                Открыть конструктор питания ➔
+                Конструктор рациона →
               </button>
             </div>
           </div>
@@ -420,79 +347,62 @@ export default function App() {
 
         {/* ================= 4. ПРОФИЛЬ ================= */}
         {activeTab === 'profile' && (
-          <div className="space-y-4">
-            <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-3">
-              <h2 className="text-base font-bold text-white">Мой аккаунт</h2>
+          <div className="space-y-3.5">
+            <div className="ios-card p-4 space-y-3">
+              <h2 className="text-sm font-bold text-white">Мой аккаунт</h2>
 
-              <div className="space-y-3 pt-1">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-xl font-black text-slate-950 shadow-md">
-                    {currentUser.name[0]}
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white">{currentUser.name}</h3>
-                    <p className="text-xs text-amber-400">{currentUser.city} • {currentUser.gender}</p>
-                  </div>
+              <div className="flex items-center gap-3 pt-1">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-lg font-bold text-black shadow-lg shadow-amber-500/10">
+                  {currentUser?.name?.[0] || 'A'}
                 </div>
-
-                {myGymBroCard ? (
-                  <div className="text-xs space-y-1.5 bg-slate-950/70 p-3 rounded-2xl border border-slate-800">
-                    <div className="flex justify-between items-center">
-                      <p className="text-amber-400 font-bold">Карточка GymBro активна:</p>
-                      <button
-                        onClick={() => setActiveTab('gymbro')}
-                        className="text-[11px] text-amber-400 underline cursor-pointer"
-                      >
-                        Изменить
-                      </button>
-                    </div>
-                    <p><span className="text-slate-500">🏢 Будни:</span> {myGymBroCard.weekday_gym}</p>
-                    <p><span className="text-slate-500">🏙 Выходные:</span> {myGymBroCard.weekend_gym}</p>
-                    <p><span className="text-slate-500">🎯 Сплит:</span> {myGymBroCard.split}</p>
-                    <p><span className="text-slate-500">⏰ Время:</span> {myGymBroCard.time_slot}</p>
-                    {myGymBroCard.instagram && (
-                      <p><span className="text-slate-500">📸 Inst:</span> @{myGymBroCard.instagram}</p>
-                    )}
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setActiveTab('gymbro')}
-                    className="w-full py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-xl text-xs font-bold transition cursor-pointer"
-                  >
-                    + Заполнить анкету поиска GymBro
-                  </button>
-                )}
+                <div>
+                  <h3 className="text-sm font-bold text-white leading-tight">{currentUser?.name}</h3>
+                  <p className="text-xs text-slate-400 font-normal mt-0.5">{currentUser?.city} • {currentUser?.gender}</p>
+                </div>
               </div>
+
+              {myGymBroCard && (
+                <div className="text-xs space-y-1.5 bg-black/30 p-3 rounded-xl border border-white/[0.06] mt-2">
+                  <div className="flex justify-between items-center pb-1 border-b border-white/[0.05]">
+                    <span className="text-amber-400 font-medium">Анкета напарника активна</span>
+                    <button
+                      onClick={() => setActiveTab('gymbro')}
+                      className="text-[11px] text-slate-400 hover:text-white"
+                    >
+                      Редактировать
+                    </button>
+                  </div>
+                  <p className="text-slate-300 text-[11px]"><span className="text-slate-500">Будни:</span> {myGymBroCard.weekday_gym}</p>
+                  <p className="text-slate-300 text-[11px]"><span className="text-slate-500">Выходные:</span> {myGymBroCard.weekend_gym}</p>
+                  <p className="text-slate-300 text-[11px]"><span className="text-slate-500">Сплит:</span> {myGymBroCard.split}</p>
+                </div>
+              )}
             </div>
 
             {/* Поддержка */}
-            <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-2.5">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">Поддержка</h3>
+            <div className="ios-card p-4 space-y-2">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Поддержка</h3>
               <a
                 href="https://t.me/asanali_kk"
                 target="_blank"
                 rel="noreferrer"
-                className="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center no-underline"
+                className="w-full ios-button-secondary py-2.5 text-xs font-medium flex items-center justify-center gap-2 no-underline text-amber-400"
               >
-                Написать в техподдержку (@asanali_kk) 🤝
+                Чат с основателем (@asanali_kk)
               </a>
             </div>
 
             {/* Документы */}
-            <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-2">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Документы</h3>
-              <div className="grid grid-cols-1 gap-1.5 text-xs">
-                <button type="button" onClick={() => setActiveDoc('rules')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center cursor-pointer">
-                  <span>🛡 Правила сообщества</span>
-                  <span className="text-slate-500">➔</span>
+            <div className="ios-card p-4 space-y-2">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Документы</h3>
+              <div className="space-y-1 text-xs">
+                <button type="button" onClick={() => setActiveDoc('rules')} className="w-full text-left p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] text-slate-300 flex justify-between items-center">
+                  <span>Правила сообщества</span>
+                  <span className="text-slate-500 text-xs">→</span>
                 </button>
-                <button type="button" onClick={() => setActiveDoc('offer')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center cursor-pointer">
-                  <span>📄 Публичный договор-оферта</span>
-                  <span className="text-slate-500">➔</span>
-                </button>
-                <button type="button" onClick={() => setActiveDoc('payment')} className="w-full text-left p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex justify-between items-center cursor-pointer">
-                  <span>💳 Регламент оплаты (Kaspi)</span>
-                  <span className="text-slate-500">➔</span>
+                <button type="button" onClick={() => setActiveDoc('offer')} className="w-full text-left p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] text-slate-300 flex justify-between items-center">
+                  <span>Публичная оферта</span>
+                  <span className="text-slate-500 text-xs">→</span>
                 </button>
               </div>
             </div>
@@ -500,19 +410,38 @@ export default function App() {
         )}
       </main>
 
-      {/* Нижняя навигация */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/95 backdrop-blur border-t border-slate-800 flex justify-around py-2 z-20">
-        <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center text-[11px] font-semibold cursor-pointer ${activeTab === 'home' ? 'text-amber-400' : 'text-slate-400'}`}>
-          <span className="text-base mb-0.5">🏠</span> Главная
+      {/* Нативный нижний бар Apple TabBar с 3D-иконками */}
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto ios-tabbar flex justify-around py-2.5 z-40">
+        <button
+          onClick={() => setActiveTab('home')}
+          className={`flex flex-col items-center gap-1 transition ${activeTab === 'home' ? 'opacity-100 scale-105' : 'opacity-40'}`}
+        >
+          <img src={ICONS.home} alt="Home" className="w-5 h-5 object-contain" />
+          <span className="text-[10px] font-medium tracking-tight">Главная</span>
         </button>
-        <button onClick={() => setActiveTab('gymbro')} className={`flex flex-col items-center text-[11px] font-semibold cursor-pointer ${activeTab === 'gymbro' ? 'text-amber-400' : 'text-slate-400'}`}>
-          <span className="text-base mb-0.5">👥</span> GymBro
+
+        <button
+          onClick={() => setActiveTab('gymbro')}
+          className={`flex flex-col items-center gap-1 transition ${activeTab === 'gymbro' ? 'opacity-100 scale-105' : 'opacity-40'}`}
+        >
+          <img src={ICONS.handshake} alt="GymBro" className="w-5 h-5 object-contain" />
+          <span className="text-[10px] font-medium tracking-tight">GymBro</span>
         </button>
-        <button onClick={() => setActiveTab('nutrition')} className={`flex flex-col items-center text-[11px] font-semibold cursor-pointer ${activeTab === 'nutrition' ? 'text-amber-400' : 'text-slate-400'}`}>
-          <span className="text-base mb-0.5">🥗</span> Питание
+
+        <button
+          onClick={() => setActiveTab('nutrition')}
+          className={`flex flex-col items-center gap-1 transition ${activeTab === 'nutrition' ? 'opacity-100 scale-105' : 'opacity-40'}`}
+        >
+          <img src={ICONS.salad} alt="Nutrition" className="w-5 h-5 object-contain" />
+          <span className="text-[10px] font-medium tracking-tight">Питание</span>
         </button>
-        <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center text-[11px] font-semibold cursor-pointer ${activeTab === 'profile' ? 'text-amber-400' : 'text-slate-400'}`}>
-          <span className="text-base mb-0.5">👤</span> Профиль
+
+        <button
+          onClick={() => setActiveTab('profile')}
+          className={`flex flex-col items-center gap-1 transition ${activeTab === 'profile' ? 'opacity-100 scale-105' : 'opacity-40'}`}
+        >
+          <img src={ICONS.user} alt="Profile" className="w-5 h-5 object-contain" />
+          <span className="text-[10px] font-medium tracking-tight">Профиль</span>
         </button>
       </nav>
     </div>
