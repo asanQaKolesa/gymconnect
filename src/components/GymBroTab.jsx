@@ -3,83 +3,102 @@ import GymBroOnboarding from './gymbro/GymBroOnboarding';
 import GymBroFeed from './gymbro/GymBroFeed';
 import GymBroPaywallModal from './gymbro/GymBroPaywallModal';
 
-export default function GymBroTab({
-  myCard,
-  user,
-  gyms = [],
-  cards = [],
-  onSaveCard,
-  onRefreshCards,
-  isSaving
-}) {
-  const [showPaywall, setShowPaywall] = useState(false);
-  // Состояние: принудительно открыть форму заполнения/редактирования анкеты
-  const [forceEdit, setForceEdit] = useState(false);
+export default function GymBroTab({ myCard, user, gyms, cards, onSaveCard, onRefreshCards, isSaving }) {
+  const [selectedCity, setSelectedCity] = useState(user?.city || 'Алматы');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isPaywallOpen, setIsPaywallOpen] = useState(false);
 
-  // Пользователь идет в онбординг, если карточки нет ИЛИ если он нажал "Редактировать анкету"
-  const needsOnboarding = !myCard || forceEdit;
+  // Если карточки еще нет или включен режим редактирования — показываем Apple-анкету
+  if (!myCard || isEditing) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center px-1">
+          <span className="text-[11px] font-bold text-[#FF5A1F] uppercase tracking-wider">
+            {isEditing ? 'Настройки анкеты' : 'Первичная анкета'}
+          </span>
+          {myCard && (
+            <button
+              onClick={() => setIsEditing(false)}
+              className="text-xs text-slate-400 hover:text-white px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.08]"
+            >
+              Отмена
+            </button>
+          )}
+        </div>
+        <GymBroOnboarding
+          initialData={myCard || { city: selectedCity, name: user?.name, gender: user?.gender }}
+          gyms={gyms}
+          onSave={async (data) => {
+            await onSaveCard(data);
+            setIsEditing(false);
+          }}
+          isSaving={isSaving}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <GymBroPaywallModal
-        isOpen={showPaywall}
-        onClose={() => setShowPaywall(false)}
+      {/* Селектор города Apple Segmented Control */}
+      <div className="apple-glass p-1.5 flex gap-1.5">
+        <button
+          onClick={() => setSelectedCity('Алматы')}
+          className={`flex-1 py-2 text-xs font-semibold rounded-xl transition ${
+            selectedCity === 'Алматы'
+              ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Алматы
+        </button>
+        <button
+          onClick={() => setSelectedCity('Астана')}
+          className={`flex-1 py-2 text-xs font-semibold rounded-xl transition ${
+            selectedCity === 'Астана'
+              ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Астана
+        </button>
+      </div>
+
+      {/* Моя активная карточка */}
+      <div className="apple-glass-card p-4 space-y-2.5">
+        <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-xs font-bold text-white tracking-tight">Твоя карточка в поиске</span>
+          </div>
+          <button
+            onClick={() => setIsEditing(true)}
+            className="text-[11px] text-[#FF5A1F] font-semibold hover:underline"
+          >
+            Изменить
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+          <p><span className="text-slate-500">🏢 Будни:</span> {myCard.weekday_gym}</p>
+          <p><span className="text-slate-500">🏙 Выходные:</span> {myCard.weekend_gym}</p>
+          <p><span className="text-slate-500">🎯 Сплит:</span> {myCard.split}</p>
+          <p><span className="text-slate-500">⏰ Время:</span> {myCard.time_slot}</p>
+        </div>
+      </div>
+
+      {/* Лента напарников */}
+      <GymBroFeed
+        cards={cards.filter(c => c.city === selectedCity)}
+        gyms={gyms}
+        userCard={myCard}
+        onOpenPaywall={() => setIsPaywallOpen(true)}
+        onRefresh={onRefreshCards}
       />
 
-      {needsOnboarding ? (
-        <div className="space-y-3">
-          {myCard && (
-            <button
-              type="button"
-              onClick={() => setForceEdit(false)}
-              className="text-xs text-amber-400 flex items-center gap-1 font-bold py-1 px-2 rounded-lg bg-amber-500/10 border border-amber-500/20"
-            >
-              ← Вернуться в ленту напарников
-            </button>
-          )}
-
-          <GymBroOnboarding
-            gyms={gyms}
-            userCity={myCard?.city || user?.city || 'Алматы'}
-            userName={myCard?.name || user?.name || ''}
-            userGender={myCard?.gender || user?.gender || 'Парень'}
-            onComplete={async (data) => {
-              await onSaveCard(data);
-              setForceEdit(false);
-            }}
-            isSaving={isSaving}
-          />
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {/* Плашка карточки пользователя вверху ленты */}
-          <div className="bg-slate-900 p-3.5 rounded-2xl border border-slate-800 flex justify-between items-center">
-            <div>
-              <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                <span>👤</span> Твоя анкета: <span className="text-amber-400">{myCard.name}</span>
-              </p>
-              <p className="text-[10px] text-slate-400">
-                Ищешь: {myCard.looking_for === 'bro' ? 'Парня' : myCard.looking_for === 'girl' ? 'Девушку' : 'Всех'} • {myCard.weekday_gym}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setForceEdit(true)}
-              className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-xl font-bold active:scale-95 transition"
-            >
-              Анкета ✏️
-            </button>
-          </div>
-
-          <GymBroFeed
-            cards={cards}
-            myCard={myCard}
-            onRefresh={onRefreshCards}
-            onOpenPaywall={() => setShowPaywall(true)}
-            isProTrial={true}
-          />
-        </div>
-      )}
+      <GymBroPaywallModal
+        isOpen={isPaywallOpen}
+        onClose={() => setIsPaywallOpen(false)}
+      />
     </div>
   );
 }
