@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import DailyFuel from '../DailyFuel';
-import DietPlan from '../DietPlan';
+import DietPlan from './DietPlan';
 
 export default function NutritionTab({ myProfile, onUpdateProfile }) {
   const [activeSubTab, setActiveSubTab] = useState('fuel'); // 'fuel' | 'diet'
