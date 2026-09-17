@@ -1,273 +1,173 @@
 import React, { useState } from 'react';
 
-export default function GymBroOnboarding({
-  gyms = [],
-  userCity = 'Алматы',
-  userName = '',
-  userGender = 'Парень',
-  onComplete,
-  isSaving
-}) {
-  const [city, setCity] = useState(userCity);
-  const [formData, setFormData] = useState({
-    name: userName || '',
-    gender: userGender || 'Парень',
-    lookingFor: 'all', // 'bro' | 'girl' | 'all'
-    level: 'Средний (1-3 года)',
-    weekdayGym: '',
-    weekendGym: '',
-    split: 'Ноги / Спина (акцент на базу)',
-    timeSlot: '19:00 - 21:00',
-    instagram: '',
-    bio: ''
+const SPLITS = ['Ноги / Спина', 'Грудь / Руки', 'FullBody', 'Кардио / Функционал', 'CrossFit'];
+const TIME_SLOTS = ['Утро (07:00 - 10:00)', 'День (12:00 - 16:00)', 'Вечер (18:00 - 21:00)', 'Поздний вечер (21:00+)'];
+
+export default function GymBroOnboarding({ initialData, gyms, onSave, isSaving }) {
+  const [form, setForm] = useState({
+    name: initialData?.name || '',
+    gender: initialData?.gender || 'Парень',
+    looking_for: initialData?.looking_for || 'Всех',
+    city: initialData?.city || 'Алматы',
+    weekday_gym: initialData?.weekday_gym || (gyms[0]?.name || 'Invictus Go'),
+    weekend_gym: initialData?.weekend_gym || (gyms[0]?.name || 'Invictus Go'),
+    level: initialData?.level || 'Средний (1-3 года)',
+    split: initialData?.split || SPLITS[0],
+    time_slot: initialData?.time_slot || TIME_SLOTS[2],
+    instagram: initialData?.instagram || '',
+    bio: initialData?.bio || ''
   });
 
-  const cityGyms = gyms.filter(g => (g.city || 'Алматы') === city);
-  const defaultGym = cityGyms[0]?.name || 'Invictus Go';
+  const cityGyms = gyms.filter(g => !g.city || g.city === form.city);
 
-  const handleSubmit = (e) => {
+  function handleSubmit(e) {
     e.preventDefault();
-    if (!formData.name.trim()) return alert('Пожалуйста, укажи имя в анкете');
-
-    onComplete({
-      name: formData.name.trim(),
-      gender: formData.gender,
-      looking_for: formData.lookingFor,
-      city,
-      weekday_gym: formData.weekdayGym || defaultGym,
-      weekend_gym: formData.weekendGym || defaultGym,
-      level: formData.level,
-      split: formData.split,
-      time_slot: formData.timeSlot,
-      instagram: formData.instagram.replace('@', '').trim(),
-      bio: formData.bio.trim()
-    });
-  };
+    if (!form.name.trim()) return alert('Укажи имя');
+    onSave(form);
+  }
 
   return (
-    <div className="space-y-4">
-      <header className="text-center py-2 space-y-1">
-        <div className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
-          <span className="text-amber-500 text-sm">🤝</span>
-          <span className="text-xs font-bold text-amber-400">Анкета поиска GymBro</span>
+    <form onSubmit={handleSubmit} className="apple-glass p-5 space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-base font-bold text-white tracking-tight">Анкета поиска GymBro</h2>
+        <p className="text-xs text-slate-400">Напарники будут подбираться по твоему расписанию и залам.</p>
+      </div>
+
+      <div className="space-y-3 pt-1">
+        <div>
+          <label className="text-[11px] font-semibold text-slate-400 block mb-1">Имя в профиле</label>
+          <input
+            type="text"
+            required
+            value={form.name}
+            onChange={e => setForm({ ...form, name: e.target.value })}
+            className="w-full apple-input"
+            placeholder="Как к тебе обращаться"
+          />
         </div>
-        <h2 className="text-lg font-black text-white mt-1">Кого и где ты ищешь?</h2>
-        <p className="text-[11px] text-slate-400">
-          Заполни карточку напарника, чтобы видеть подходящих людей и появиться в поиске своего зала.
-        </p>
-      </header>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-3">
-          <div>
-            <label className="text-[11px] font-semibold text-slate-400 block mb-1">Город тренировок</label>
-            <div className="grid grid-cols-2 gap-2">
+        {/* Кого ищешь */}
+        <div>
+          <label className="text-[11px] font-semibold text-slate-400 block mb-1">Кого ты ищешь в напарники?</label>
+          <div className="grid grid-cols-3 gap-1.5">
+            {['Парня', 'Девушку', 'Всех'].map(target => (
               <button
+                key={target}
                 type="button"
-                onClick={() => {
-                  setCity('Алматы');
-                  setFormData(prev => ({ ...prev, weekdayGym: '', weekendGym: '' }));
-                }}
-                className={`py-2 text-xs font-bold rounded-xl border transition ${
-                  city === 'Алматы'
-                    ? 'bg-amber-500 text-slate-950 border-amber-500'
-                    : 'bg-slate-950 text-slate-400 border-slate-800'
+                onClick={() => setForm({ ...form, looking_for: target })}
+                className={`py-2 text-xs font-semibold rounded-xl transition ${
+                  form.looking_for === target
+                    ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
+                    : 'bg-white/[0.04] text-slate-400 border border-white/[0.06]'
                 }`}
               >
-                🍎 Алматы
+                {target}
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCity('Астана');
-                  setFormData(prev => ({ ...prev, weekdayGym: '', weekendGym: '' }));
-                }}
-                className={`py-2 text-xs font-bold rounded-xl border transition ${
-                  city === 'Астана'
-                    ? 'bg-amber-500 text-slate-950 border-amber-500'
-                    : 'bg-slate-950 text-slate-400 border-slate-800'
-                }`}
-              >
-                🏛 Астана
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-400 block mb-1">Имя в карточке</label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Как тебя подписать?"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
-            />
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-400 block mb-1">Твой пол</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, gender: 'Парень' })}
-                className={`py-2 text-xs font-bold rounded-xl border ${
-                  formData.gender === 'Парень'
-                    ? 'bg-amber-500 text-slate-950 border-amber-500'
-                    : 'bg-slate-950 text-slate-400 border-slate-800'
-                }`}
-              >
-                🧔 Парень
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, gender: 'Девушка' })}
-                className={`py-2 text-xs font-bold rounded-xl border ${
-                  formData.gender === 'Девушка'
-                    ? 'bg-amber-500 text-slate-950 border-amber-500'
-                    : 'bg-slate-950 text-slate-400 border-slate-800'
-                }`}
-              >
-                👩 Девушка
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-400 block mb-1">Кого ты ищешь для тренировок?</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, lookingFor: 'bro' })}
-                className={`py-2 text-[11px] font-bold rounded-xl border transition ${
-                  formData.lookingFor === 'bro'
-                    ? 'bg-amber-500 text-slate-950 border-amber-500'
-                    : 'bg-slate-950 text-slate-400 border-slate-800'
-                }`}
-              >
-                🧔 Парня
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, lookingFor: 'girl' })}
-                className={`py-2 text-[11px] font-bold rounded-xl border transition ${
-                  formData.lookingFor === 'girl'
-                    ? 'bg-amber-500 text-slate-950 border-amber-500'
-                    : 'bg-slate-950 text-slate-400 border-slate-800'
-                }`}
-              >
-                👩 Девушку
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, lookingFor: 'all' })}
-                className={`py-2 text-[11px] font-bold rounded-xl border transition ${
-                  formData.lookingFor === 'all'
-                    ? 'bg-amber-500 text-slate-950 border-amber-500'
-                    : 'bg-slate-950 text-slate-400 border-slate-800'
-                }`}
-              >
-                🤝 Без разницы
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-400 block mb-1">🏢 Твой зал в будни ({city})</label>
-            <select
-              value={formData.weekdayGym || defaultGym}
-              onChange={e => setFormData({ ...formData, weekdayGym: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
-            >
-              {cityGyms.map(g => (
-                <option key={g.id} value={g.name}>{g.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-400 block mb-1">🏙 Твой зал на выходных ({city})</label>
-            <select
-              value={formData.weekendGym || defaultGym}
-              onChange={e => setFormData({ ...formData, weekendGym: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
-            >
-              {cityGyms.map(g => (
-                <option key={g.id} value={g.name}>{g.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-400 block mb-1">Твой стаж в зале</label>
-            <select
-              value={formData.level}
-              onChange={e => setFormData({ ...formData, level: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
-            >
-              <option value="Новичок (до 1 года)">Новичок (до 1 года)</option>
-              <option value="Средний (1-3 года)">Средний (1-3 года)</option>
-              <option value="Опытный (3+ года)">Опытный (3+ года)</option>
-              <option value="Продвинутый лифтер">Продвинутый лифтер</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-400 block mb-1">Фокус / Сплит тренировок</label>
-            <select
-              value={formData.split}
-              onChange={e => setFormData({ ...formData, split: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
-            >
-              <option value="Ноги / Спина (акцент на базу)">Ноги / Спина (акцент на базу)</option>
-              <option value="Грудь / Плечи / Руки">Грудь / Плечи / Руки</option>
-              <option value="Full Body (все тело)">Full Body (все тело)</option>
-              <option value="Пауэрлифтинг (присед / жим / тяга)">Пауэрлифтинг (присед / жим / тяга)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-400 block mb-1">⏰ Удобное время для тренировок</label>
-            <input
-              type="text"
-              value={formData.timeSlot}
-              onChange={e => setFormData({ ...formData, timeSlot: e.target.value })}
-              placeholder="Будни 19:30, Выходные 12:00"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
-            />
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-400 block mb-1">📸 Твой Instagram (без @, по желанию)</label>
-            <input
-              type="text"
-              value={formData.instagram}
-              onChange={e => setFormData({ ...formData, instagram: e.target.value })}
-              placeholder="username"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
-            />
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-400 block mb-1">💬 О себе / Цель напарника</label>
-            <input
-              type="text"
-              value={formData.bio}
-              onChange={e => setFormData({ ...formData, bio: e.target.value })}
-              placeholder="Ищу страховку на рабочий жим или напарника на базу"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
-            />
+            ))}
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={isSaving}
-          className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-xs py-3.5 rounded-2xl transition shadow-lg shadow-amber-500/20"
-        >
-          {isSaving ? 'Публикуем карточку...' : 'Опубликовать карточку и войти в поиск 🚀'}
-        </button>
-      </form>
-    </div>
+        {/* Город */}
+        <div>
+          <label className="text-[11px] font-semibold text-slate-400 block mb-1">Город тренировок</label>
+          <div className="grid grid-cols-2 gap-2">
+            {['Алматы', 'Астана'].map(c => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setForm({ ...form, city: c })}
+                className={`py-2 text-xs font-semibold rounded-xl transition ${
+                  form.city === c
+                    ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
+                    : 'bg-white/[0.04] text-slate-400 border border-white/[0.06]'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Зал в будни */}
+        <div>
+          <label className="text-[11px] font-semibold text-slate-400 block mb-1">Зал в будни</label>
+          <select
+            value={form.weekday_gym}
+            onChange={e => setForm({ ...form, weekday_gym: e.target.value })}
+            className="w-full apple-input"
+          >
+            {cityGyms.map(g => (
+              <option key={g.id || g.name} value={g.name} className="bg-[#0A0D14] text-white">
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Зал в выходные */}
+        <div>
+          <label className="text-[11px] font-semibold text-slate-400 block mb-1">Зал в выходные</label>
+          <select
+            value={form.weekend_gym}
+            onChange={e => setForm({ ...form, weekend_gym: e.target.value })}
+            className="w-full apple-input"
+          >
+            {cityGyms.map(g => (
+              <option key={g.id || g.name} value={g.name} className="bg-[#0A0D14] text-white">
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Сплит */}
+        <div>
+          <label className="text-[11px] font-semibold text-slate-400 block mb-1">Основной фокус тренировок</label>
+          <select
+            value={form.split}
+            onChange={e => setForm({ ...form, split: e.target.value })}
+            className="w-full apple-input"
+          >
+            {SPLITS.map(s => (
+              <option key={s} value={s} className="bg-[#0A0D14] text-white">{s}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Время */}
+        <div>
+          <label className="text-[11px] font-semibold text-slate-400 block mb-1">Удобное время</label>
+          <select
+            value={form.time_slot}
+            onChange={e => setForm({ ...form, time_slot: e.target.value })}
+            className="w-full apple-input"
+          >
+            {TIME_SLOTS.map(t => (
+              <option key={t} value={t} className="bg-[#0A0D14] text-white">{t}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Instagram */}
+        <div>
+          <label className="text-[11px] font-semibold text-slate-400 block mb-1">Instagram (по желанию)</label>
+          <input
+            type="text"
+            value={form.instagram}
+            onChange={e => setForm({ ...form, instagram: e.target.value.replace('@', '') })}
+            placeholder="username"
+            className="w-full apple-input"
+          />
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        disabled={isSaving}
+        className="w-full gymshark-btn-electric py-3 text-xs mt-2"
+      >
+        {isSaving ? 'Сохраняем...' : 'Опубликовать анкету GymBro 🔥'}
+      </button>
+    </form>
   );
 }
