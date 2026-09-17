@@ -11,10 +11,14 @@ export default function App() {
   const [telegramUser, setTelegramUser] = useState(null);
 
   useEffect(() => {
+    // Инициализация Telegram WebApp
     const tg = window?.Telegram?.WebApp;
     if (tg) {
-      tg.ready();
-      tg.expand();
+      try {
+        tg.ready();
+        tg.expand();
+      } catch (e) {}
+
       if (tg.initDataUnsafe?.user) {
         setTelegramUser(tg.initDataUnsafe.user);
       }
@@ -32,6 +36,13 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Формируем эффективный объект пользователя (Telegram -> Supabase -> Дефолтный)
+  const effectiveUser = telegramUser || session?.user || {
+    id: 'guest_user',
+    username: 'asanali_kk',
+    first_name: 'Атлет'
+  };
 
   const NAV_ITEMS = [
     { id: 'home', label: 'Главная', icon: '⚡' },
@@ -63,14 +74,12 @@ export default function App() {
       <main className="flex-1 w-full max-w-lg mx-auto overflow-y-auto">
         {activeTab === 'home' && (
           <div className="p-5 space-y-5">
-            {/* Фокус дня */}
             <div className="bg-gradient-to-br from-[#131d31] to-[#0f172a] border border-gray-800 p-5 rounded-3xl relative overflow-hidden shadow-xl">
               <div className="text-xs font-bold text-emerald-400 tracking-wider uppercase mb-1">Фокус дня</div>
               <h2 className="text-lg font-black leading-snug">«Дисциплина бьёт мотивацию в 100% случаев»</h2>
               <p className="text-xs text-gray-400 mt-2">Каждый подход приближает тебя к лучшей форме.</p>
             </div>
 
-            {/* Быстрые действия */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setActiveTab('gymbro')}
@@ -91,7 +100,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Блок тренеров */}
             <div className="bg-[#111827] border border-gray-800 p-5 rounded-3xl space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">Сервис тренеров</span>
@@ -107,26 +115,46 @@ export default function App() {
 
         {/* Раздел GymBro */}
         {activeTab === 'gymbro' && (
-          <GymBroTab session={session} telegramUser={telegramUser} user={telegramUser} />
+          <GymBroTab 
+            session={session} 
+            telegramUser={effectiveUser} 
+            user={effectiveUser} 
+            currentUser={effectiveUser} 
+          />
         )}
 
-        {/* Раздел Друзья — родной оригинальный компонент */}
+        {/* Раздел Друзья (оригинальный) */}
         {activeTab === 'friends' && (
-          <FriendsTab session={session} telegramUser={telegramUser} user={telegramUser} />
+          <FriendsTab 
+            session={session} 
+            telegramUser={effectiveUser} 
+            user={effectiveUser} 
+            currentUser={effectiveUser} 
+          />
         )}
 
         {/* Раздел Питание */}
         {activeTab === 'nutrition' && (
-          <NutritionTab session={session} telegramUser={telegramUser} user={telegramUser} />
+          <NutritionTab 
+            session={session} 
+            telegramUser={effectiveUser} 
+            user={effectiveUser} 
+            currentUser={effectiveUser} 
+          />
         )}
 
-        {/* Раздел Профиль */}
+        {/* Раздел Профиль (оригинальный) */}
         {activeTab === 'profile' && (
-          <ProfileTab session={session} telegramUser={telegramUser} user={telegramUser} />
+          <ProfileTab 
+            session={session} 
+            telegramUser={effectiveUser} 
+            user={effectiveUser} 
+            currentUser={effectiveUser} 
+          />
         )}
       </main>
 
-      {/* Нижний бар навигации (5 вкладок, как было) */}
+      {/* Нижний бар */}
       <nav className="fixed bottom-0 inset-x-0 bg-[#0b0f19]/95 backdrop-blur-xl border-t border-gray-800/80 py-2 px-3 z-40">
         <div className="max-w-md mx-auto flex items-center justify-around">
           {NAV_ITEMS.map((tab) => {
