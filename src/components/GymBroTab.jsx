@@ -10,10 +10,28 @@ export default function GymBroTab({ session }) {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   
-  // Поиск и выбор зала
+  // Поиск и фильтрация зала
   const [gymSearch, setGymSearch] = useState('');
   const [isGymModalOpen, setIsGymModalOpen] = useState(false);
   const [filterGym, setFilterGym] = useState('Все');
+
+  const TIME_SLOTS = [
+    'Утро (06:00 - 10:00)',
+    'Обед (12:00 - 15:00)',
+    'После обеда (15:00 - 18:00)',
+    'Вечер (18:00 - 21:00)',
+    'Поздний вечер (21:00+)',
+    'Плавающий график / В любое время'
+  ];
+
+  const PERSONALITY_TYPES = [
+    { label: 'Интроверт', emoji: '🤫', desc: 'В наушниках, без лишних разговоров, чистый фокус' },
+    { label: 'Экстраверт', emoji: '⚡', desc: 'Драйв, громкая музыка, взаимная мотивация и общение' },
+    { label: 'Амбиверт', emoji: '⚖️', desc: 'Баланс: по делу и под настроение' }
+  ];
+
+  const GOALS_LIST = ['Набор массы', 'Похудение / Сушка', 'Пауэрлифтинг', 'Поддержание формы', 'Кроссфит', 'Выносливость'];
+  const DAYS_LIST = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -23,15 +41,13 @@ export default function GymBroTab({ session }) {
     goals: [],
     preferred_days: [],
     preferred_time: 'Вечер (18:00 - 21:00)',
+    personality_type: 'Амбиверт',
     home_gym: ALMATY_GYMS[0],
     bio: '',
     photo_url: '',
     telegram_contact: '',
     whatsapp_contact: ''
   });
-
-  const GOALS_LIST = ['Набор массы', 'Похудение / Сушка', 'Пауэрлифтинг', 'Поддержание формы', 'Кроссфит', 'Выносливость'];
-  const DAYS_LIST = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -57,6 +73,7 @@ export default function GymBroTab({ session }) {
           goals: data.goals || [],
           preferred_days: data.preferred_days || [],
           preferred_time: data.preferred_time || 'Вечер (18:00 - 21:00)',
+          personality_type: data.personality_type || 'Амбиверт',
           home_gym: data.home_gym || ALMATY_GYMS[0],
           bio: data.bio || '',
           photo_url: data.photo_url || '',
@@ -86,6 +103,22 @@ export default function GymBroTab({ session }) {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Обработка загрузки фотографии локально через FileReader
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Размер фото не должен превышать 5 МБ');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, photo_url: reader.result }));
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -140,23 +173,57 @@ export default function GymBroTab({ session }) {
 
   return (
     <div className="max-w-xl mx-auto p-4 pb-28 text-white">
-      {/* Верхняя панель */}
+      {/* Шапка таба */}
       <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-3">
         <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
           🔥 GymBro Tinder
         </h2>
         <button
           onClick={() => setIsEditing(!isEditing)}
-          className="px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs font-semibold border border-gray-700"
+          className="px-3.5 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs font-semibold border border-gray-700 transition"
         >
           {isEditing ? 'Смотреть анкеты' : 'Моя анкета'}
         </button>
       </div>
 
       {isEditing ? (
-        /* РЕГИСТРАЦИЯ И РЕДАКТИРОВАНИЕ АНКЕТЫ */
+        /* ЭКРАН СОЗДАНИЯ / РЕДАКТИРОВАНИЯ АНКЕТЫ */
         <form onSubmit={handleSaveProfile} className="space-y-4 bg-[#111827] p-5 rounded-2xl border border-gray-800">
-          <h3 className="text-base font-bold text-emerald-400">Настройка твоей карточки</h3>
+          <h3 className="text-base font-bold text-emerald-400">Настройка анкеты GymBro</h3>
+
+          {/* ЗАГРУЗКА ФОТОГРАФИИ */}
+          <div className="flex items-center gap-4 bg-[#1f2937]/70 p-3 rounded-2xl border border-gray-700/60">
+            <div className="w-20 h-20 rounded-2xl bg-gray-800 border-2 border-dashed border-gray-600 overflow-hidden flex items-center justify-center shrink-0">
+              {formData.photo_url ? (
+                <img src={formData.photo_url} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-2xl">📸</span>
+              )}
+            </div>
+            <div className="flex-1 space-y-2">
+              <label className="text-xs font-semibold text-gray-300 block">
+                Фото профиля
+              </label>
+              <label className="inline-block px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 text-xs font-bold cursor-pointer transition">
+                <span>📁 Выбрать фото</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </label>
+              {formData.photo_url && (
+                <button
+                  type="button"
+                  onClick={() => setFormData(p => ({ ...p, photo_url: '' }))}
+                  className="text-xs text-rose-400 hover:underline block"
+                >
+                  Удалить фото
+                </button>
+              )}
+            </div>
+          </div>
 
           <div>
             <label className="text-xs text-gray-400 font-medium">Имя и фамилия</label>
@@ -195,7 +262,45 @@ export default function GymBroTab({ session }) {
             </div>
           </div>
 
-          {/* КНОПКА ВЫБОРА ЗАЛА С ОКНОМ ПОИСКА */}
+          {/* ПСИХОТИП / ТЕМПЕРАМЕНТ ДЛЯ МЭТЧА */}
+          <div>
+            <label className="text-xs text-gray-400 font-medium mb-1.5 block">
+              Психотип на тренировке (вайб)
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {PERSONALITY_TYPES.map(p => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, personality_type: p.label })}
+                  className={`p-2.5 rounded-xl border text-center transition flex flex-col items-center gap-1 ${
+                    formData.personality_type === p.label
+                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 font-bold'
+                      : 'bg-[#1f2937] border-gray-700 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  <span className="text-lg">{p.emoji}</span>
+                  <span className="text-xs">{p.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ВРЕМЯ ТРЕНИРОВОК */}
+          <div>
+            <label className="text-xs text-gray-400 font-medium">Удобное время для тренировок</label>
+            <select
+              value={formData.preferred_time}
+              onChange={e => setFormData({ ...formData, preferred_time: e.target.value })}
+              className="w-full bg-[#1f2937] border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm mt-1 text-white focus:outline-none focus:border-emerald-500"
+            >
+              {TIME_SLOTS.map(slot => (
+                <option key={slot} value={slot}>{slot}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* ВЫБОР ЗАЛА С ОКНОМ ПОИСКА */}
           <div className="space-y-1">
             <label className="text-xs text-gray-400 font-medium">Твой фитнес-клуб / филиал</label>
             <button
@@ -204,7 +309,7 @@ export default function GymBroTab({ session }) {
               className="w-full bg-[#1f2937] border border-gray-700 hover:border-emerald-500 rounded-xl px-3.5 py-2.5 text-left flex items-center justify-between text-white transition-colors"
             >
               <span className="truncate text-sm font-medium text-emerald-300">
-                {formData.home_gym || 'Выбрать зал из 230 клубов...'}
+                {formData.home_gym || 'Выбрать зал из списка...'}
               </span>
               <span className="text-xs text-gray-400 ml-2 shrink-0">🔍 Найти</span>
             </button>
@@ -271,7 +376,7 @@ export default function GymBroTab({ session }) {
               value={formData.bio}
               onChange={e => setFormData({ ...formData, bio: e.target.value })}
               className="w-full bg-[#1f2937] border border-gray-700 rounded-xl p-3 text-sm mt-1 text-white focus:outline-none focus:border-emerald-500"
-              placeholder="Ищу напарника на жим и присед по вечерам, взаимная страховка..."
+              placeholder="Ищу напарника на жим и базу, взаимная страховка..."
             />
           </div>
 
@@ -306,7 +411,7 @@ export default function GymBroTab({ session }) {
           </button>
         </form>
       ) : (
-        /* ЛЕНТА СВАЙПОВ ТИНДЕРА */
+        /* КАРТОЧКА СВАЙПА В ТИНДЕРЕ */
         <div className="space-y-4">
           {/* Фильтр по залу */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
@@ -337,23 +442,54 @@ export default function GymBroTab({ session }) {
             <div className="p-12 text-center text-gray-400">Загрузка бро...</div>
           ) : displayedProfiles.length > 0 && currentIndex < displayedProfiles.length ? (
             <div className="bg-[#111827] border border-gray-800 rounded-3xl overflow-hidden shadow-2xl relative">
-              <div className="p-6 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-2xl font-black text-white">
-                      {displayedProfiles[currentIndex].full_name}, {displayedProfiles[currentIndex].age}
-                    </h3>
-                    <p className="text-emerald-400 font-semibold text-xs mt-0.5">
-                      📍 {displayedProfiles[currentIndex].home_gym}
-                    </p>
+              
+              {/* ФОТОГРАФИЯ АТЛЕТА */}
+              <div className="w-full h-72 bg-gray-900 relative">
+                {displayedProfiles[currentIndex].photo_url ? (
+                  <img
+                    src={displayedProfiles[currentIndex].photo_url}
+                    alt={displayedProfiles[currentIndex].full_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-t from-black/80 to-transparent">
+                    🏋️‍♂️
                   </div>
-                  <span className="text-xs bg-gray-800 border border-gray-700 px-2.5 py-1 rounded-lg text-gray-300">
-                    {displayedProfiles[currentIndex].experience_level}
+                )}
+                
+                {/* Бейдж психотипа на фото */}
+                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>
+                    {displayedProfiles[currentIndex].personality_type === 'Интроверт' ? '🤫' : 
+                     displayedProfiles[currentIndex].personality_type === 'Экстраверт' ? '⚡' : '⚖️'}
+                  </span>
+                  <span>{displayedProfiles[currentIndex].personality_type || 'Амбиверт'}</span>
+                </div>
+
+                {/* Имя и возраст поверх градиента */}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-[#111827] via-[#111827]/80 to-transparent p-5">
+                  <h3 className="text-2xl font-black text-white">
+                    {displayedProfiles[currentIndex].full_name}, {displayedProfiles[currentIndex].age}
+                  </h3>
+                  <p className="text-emerald-400 font-semibold text-xs mt-0.5">
+                    📍 {displayedProfiles[currentIndex].home_gym}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-5 pt-1 space-y-3">
+                {/* Время тренировок и стаж */}
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="bg-gray-800 border border-gray-700 px-2.5 py-1 rounded-lg text-gray-300">
+                    ⏱ {displayedProfiles[currentIndex].preferred_time || 'Вечер'}
+                  </span>
+                  <span className="bg-gray-800 border border-gray-700 px-2.5 py-1 rounded-lg text-gray-300">
+                    💪 {displayedProfiles[currentIndex].experience_level}
                   </span>
                 </div>
 
                 {displayedProfiles[currentIndex].bio && (
-                  <p className="text-sm text-gray-300 bg-gray-900/80 p-3.5 rounded-xl border border-gray-800 leading-relaxed">
+                  <p className="text-sm text-gray-300 bg-gray-900/80 p-3 rounded-xl border border-gray-800 leading-relaxed">
                     «{displayedProfiles[currentIndex].bio}»
                   </p>
                 )}
@@ -393,7 +529,7 @@ export default function GymBroTab({ session }) {
                 </div>
               </div>
 
-              {/* Кнопки листания */}
+              {/* Кнопки взаимодействия */}
               <div className="flex border-t border-gray-800 bg-[#0b0f19]">
                 <button
                   onClick={() => setCurrentIndex(prev => Math.min(prev + 1, displayedProfiles.length))}
@@ -428,7 +564,7 @@ export default function GymBroTab({ session }) {
         </div>
       )}
 
-      {/* МОДАЛЬНОЕ ОКНО ПОИСКА ПО 230 ЗАЛАМ */}
+      {/* МОДАЛКА ВЫБОРА ЗАЛА */}
       {isGymModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-[#0f172a] border border-gray-800 rounded-t-3xl sm:rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col p-4 shadow-2xl">
