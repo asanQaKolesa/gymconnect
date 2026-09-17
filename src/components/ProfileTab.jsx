@@ -10,14 +10,7 @@ const PROFILE_SECTIONS = [
   { id: 'legal', label: 'Инфо', icon: '📄' }
 ];
 
-const SPORT_TYPES = [
-  'Атлет',
-  'Бодибилдер',
-  'Пауэрлифтер',
-  'Кроссфитер',
-  'Фитнес',
-  'Калистеника'
-];
+const SPORT_TYPES = ['Атлет', 'Бодибилдер', 'Пауэрлифтер', 'Кроссфитер', 'Фитнес', 'Калистеника'];
 
 export default function ProfileTab({ user, onUpdateUser }) {
   const [activeSection, setActiveSection] = useState('athlete');
@@ -58,7 +51,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
   useEffect(() => {
     async function syncCommunityStats() {
       if (!myTgId) return;
-
       try {
         const { data: postsData } = await supabase
           .from('feed_posts')
@@ -66,28 +58,16 @@ export default function ProfileTab({ user, onUpdateUser }) {
           .eq('user_id', myTgId);
 
         if (postsData) {
-          const sum = postsData.reduce((acc, curr) => acc + (curr.likes_count || 0), 0);
-          setTotalLikes(sum);
+          setTotalLikes(postsData.reduce((acc, curr) => acc + (curr.likes_count || 0), 0));
         }
 
-        const { data: f1 } = await supabase
-          .from('friendships')
-          .select('id')
-          .eq('user_id', myTgId)
-          .eq('status', 'accepted');
-
-        const { data: f2 } = await supabase
-          .from('friendships')
-          .select('id')
-          .eq('friend_id', myTgId)
-          .eq('status', 'accepted');
-
+        const { data: f1 } = await supabase.from('friendships').select('id').eq('user_id', myTgId).eq('status', 'accepted');
+        const { data: f2 } = await supabase.from('friendships').select('id').eq('friend_id', myTgId).eq('status', 'accepted');
         setFriendsCount((f1?.length || 0) + (f2?.length || 0));
       } catch (err) {
-        console.error('Ошибка синхронизации:', err);
+        console.error(err);
       }
     }
-
     syncCommunityStats();
   }, [myTgId, activeSection]);
 
@@ -101,17 +81,10 @@ export default function ProfileTab({ user, onUpdateUser }) {
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const MAX = 500;
-        let w = img.width;
-        let h = img.height;
-        if (w > h && w > MAX) {
-          h *= MAX / w;
-          w = MAX;
-        } else if (h > MAX) {
-          w *= MAX / h;
-          h = MAX;
-        }
-        canvas.width = w;
-        canvas.height = h;
+        let w = img.width, h = img.height;
+        if (w > h && w > MAX) { h *= MAX / w; w = MAX; }
+        else if (h > MAX) { w *= MAX / h; h = MAX; }
+        canvas.width = w; canvas.height = h;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, w, h);
         setForm(prev => ({ ...prev, avatar_url: canvas.toDataURL('image/jpeg', 0.8) }));
@@ -138,12 +111,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
     };
 
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .upsert(payload, { onConflict: 'telegram_id' })
-        .select()
-        .single();
-
+      const { data, error } = await supabase.from('users').upsert(payload, { onConflict: 'telegram_id' }).select().single();
       if (error) throw error;
       if (data) {
         onUpdateUser(data);
@@ -182,29 +150,13 @@ export default function ProfileTab({ user, onUpdateUser }) {
             <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#0C101A]/90">
               <div className="flex items-center gap-2 pr-2">
                 <span className="text-base">{selectedDoc.icon}</span>
-                <h3 className="text-xs font-bold text-white tracking-tight leading-snug truncate">
-                  {selectedDoc.title}
-                </h3>
+                <h3 className="text-xs font-bold text-white tracking-tight leading-snug truncate">{selectedDoc.title}</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedDoc(null)}
-                className="text-slate-400 hover:text-white text-base px-2 py-1 cursor-pointer"
-              >
-                ✕
-              </button>
+              <button type="button" onClick={() => setSelectedDoc(null)} className="text-slate-400 hover:text-white text-base px-2 py-1 cursor-pointer">✕</button>
             </div>
-            <div className="p-4 overflow-y-auto text-xs text-slate-300 leading-relaxed whitespace-pre-line">
-              {selectedDoc.content}
-            </div>
+            <div className="p-4 overflow-y-auto text-xs text-slate-300 leading-relaxed whitespace-pre-line">{selectedDoc.content}</div>
             <div className="p-3 border-t border-white/10 bg-black/40">
-              <button
-                type="button"
-                onClick={() => setSelectedDoc(null)}
-                className="w-full gymshark-btn-electric py-2.5 text-xs font-bold cursor-pointer"
-              >
-                Понятно
-              </button>
+              <button type="button" onClick={() => setSelectedDoc(null)} className="w-full gymshark-btn-electric py-2.5 text-xs font-bold cursor-pointer">Понятно</button>
             </div>
           </div>
         </div>
@@ -269,11 +221,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
                       <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
                     </label>
                     {form.avatar_url && (
-                      <button
-                        type="button"
-                        onClick={() => setForm(prev => ({ ...prev, avatar_url: '' }))}
-                        className="block text-[11px] text-red-400 hover:underline cursor-pointer"
-                      >
+                      <button type="button" onClick={() => setForm(prev => ({ ...prev, avatar_url: '' }))} className="block text-[11px] text-red-400 hover:underline cursor-pointer">
                         Удалить фото
                       </button>
                     )}
@@ -282,13 +230,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-400 block mb-1">Имя атлета</label>
-                  <input
-                    type="text"
-                    required
-                    value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                    className="w-full apple-input"
-                  />
+                  <input type="text" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full apple-input" />
                 </div>
 
                 <div>
@@ -300,9 +242,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
                         type="button"
                         onClick={() => setForm({ ...form, sport_type: st })}
                         className={`py-1.5 px-1 text-[11px] font-semibold rounded-xl border transition cursor-pointer text-center ${
-                          form.sport_type === st
-                            ? 'bg-[#FF5A1F]/20 text-[#FF8C38] border-[#FF5A1F]/60'
-                            : 'bg-white/[0.03] text-slate-400 border-white/[0.06]'
+                          form.sport_type === st ? 'bg-[#FF5A1F]/20 text-[#FF8C38] border-[#FF5A1F]/60' : 'bg-white/[0.03] text-slate-400 border-white/[0.06]'
                         }`}
                       >
                         {st}
@@ -320,9 +260,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
                         type="button"
                         onClick={() => setForm({ ...form, gender: g })}
                         className={`py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
-                          form.gender === g
-                            ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
-                            : 'bg-white/[0.04] text-slate-400 border border-white/[0.06]'
+                          form.gender === g ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20' : 'bg-white/[0.04] text-slate-400 border border-white/[0.06]'
                         }`}
                       >
                         {g}
@@ -340,9 +278,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
                         type="button"
                         onClick={() => setForm({ ...form, city: c })}
                         className={`py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
-                          form.city === c
-                            ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
-                            : 'bg-white/[0.04] text-slate-400 border border-white/[0.06]'
+                          form.city === c ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20' : 'bg-white/[0.04] text-slate-400 border border-white/[0.06]'
                         }`}
                       >
                         {c}
@@ -353,41 +289,20 @@ export default function ProfileTab({ user, onUpdateUser }) {
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-400 block mb-1">Instagram username</label>
-                  <input
-                    type="text"
-                    placeholder="username без @"
-                    value={form.instagram}
-                    onChange={e => setForm({ ...form, instagram: e.target.value })}
-                    className="w-full apple-input"
-                  />
+                  <input type="text" placeholder="username без @" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} className="w-full apple-input" />
                 </div>
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-400 block mb-1">О себе / Фокус</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Цели, тренировочные веса, зал"
-                    value={form.bio}
-                    onChange={e => setForm({ ...form, bio: e.target.value })}
-                    className="w-full apple-input resize-none"
-                  />
+                  <textarea rows={2} placeholder="Цели, тренировочные веса, зал" value={form.bio} onChange={e => setForm({ ...form, bio: e.target.value })} className="w-full apple-input resize-none" />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="w-full gymshark-btn-electric py-3 text-xs font-bold mt-2 cursor-pointer"
-                >
+                <button type="submit" disabled={saving} className="w-full gymshark-btn-electric py-3 text-xs font-bold mt-2 cursor-pointer">
                   {saving ? 'Сохраняем...' : 'Сохранить изменения'}
                 </button>
 
                 <div className="pt-3 border-t border-red-500/20 text-center">
-                  <button
-                    type="button"
-                    disabled={deleting}
-                    onClick={handleDeleteProfile}
-                    className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer underline"
-                  >
+                  <button type="button" disabled={deleting} onClick={handleDeleteProfile} className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer underline">
                     {deleting ? 'Удаление...' : '🗑 Удалить мою анкету атлета'}
                   </button>
                 </div>
@@ -409,16 +324,9 @@ export default function ProfileTab({ user, onUpdateUser }) {
                         {user?.sport_type || 'Атлет'}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 font-medium">
-                      {user?.city} • {user?.gender}
-                    </p>
+                    <p className="text-xs text-slate-400 font-medium">{user?.city} • {user?.gender}</p>
                     {user?.instagram && (
-                      <a
-                        href={`https://instagram.com/${user.instagram}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[11px] text-[#FF8C38] font-semibold flex items-center gap-1 hover:underline"
-                      >
+                      <a href={`https://instagram.com/${user.instagram}`} target="_blank" rel="noreferrer" className="text-[11px] text-[#FF8C38] font-semibold flex items-center gap-1 hover:underline">
                         <span>📸</span> @{user.instagram}
                       </a>
                     )}
@@ -440,17 +348,13 @@ export default function ProfileTab({ user, onUpdateUser }) {
               <span className="text-[10px] text-slate-500 font-bold uppercase">Друзья</span>
               <span className="text-xl font-black text-white mt-1">{friendsCount}</span>
             </div>
-
             <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06] flex flex-col items-center justify-center">
               <span className="text-[10px] text-slate-500 font-bold uppercase">Реакции</span>
               <span className="text-xl font-black text-[#FF8C38] mt-1">🔥 {totalLikes}</span>
             </div>
-
             <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06] flex flex-col items-center justify-center">
               <span className="text-[10px] text-slate-500 font-bold uppercase">Статус</span>
-              <span className="text-xs font-black text-emerald-400 mt-2">
-                {user?.is_pro ? 'PRO' : 'Free Beta'}
-              </span>
+              <span className="text-xs font-black text-emerald-400 mt-2">{user?.is_pro ? 'PRO' : 'Free Beta'}</span>
             </div>
           </div>
         </div>
@@ -465,12 +369,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
             <p className="text-xs text-slate-400 mt-0.5">Связь напрямую с основателем</p>
           </div>
           <div className="space-y-2.5">
-            <a
-              href="https://t.me/asanali_kk"
-              target="_blank"
-              rel="noreferrer"
-              className="w-full gymshark-btn-electric py-3 text-xs font-bold flex items-center justify-center gap-2 no-underline cursor-pointer shadow-lg shadow-[#FF5A1F]/20"
-            >
+            <a href="https://t.me/asanali_kk" target="_blank" rel="noreferrer" className="w-full gymshark-btn-electric py-3 text-xs font-bold flex items-center justify-center gap-2 no-underline cursor-pointer shadow-lg shadow-[#FF5A1F]/20">
               <span>💬 Чат с основателем (@asanali_kk)</span>
               <span>➔</span>
             </a>
