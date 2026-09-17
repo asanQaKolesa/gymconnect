@@ -5,19 +5,20 @@ import AthleteStats from './profile/AthleteStats';
 const ADMIN_USERNAMES = ['asanali_kk'];
 
 const VIBE_OPTIONS = [
-  { id: 'in_gym', label: '🟢 В зале (на пампе)', desc: 'Ебашу прямо сейчас' },
+  { id: 'in_gym', label: '🟢 В зале (на пампе)', desc: 'Тренируюсь прямо сейчас' },
   { id: 'going', label: '⚡️ Заряжен, иду в зал', desc: 'Буду через 20-30 минут' },
-  { id: 'want_gym', label: '💭 Хочу в зал (ищу напарника)', desc: 'Пишите, кто свободен' },
-  { id: 'rest', label: '🔋 Восстановление / Читмил', desc: 'Коплю гликоген' },
+  { id: 'want_gym', label: '💭 Хочу в зал', desc: 'Ищу напарника на тренировку' },
+  { id: 'rest', label: '🔋 Восстановление', desc: 'День отдыха / Режим' },
 ];
 
 export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
   const [activeTab, setActiveTab] = useState('card');
+  const [showSettingsSheet, setShowSettingsSheet] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [totalLikes, setTotalLikes] = useState(0);
   const [friendsCount, setFriendsCount] = useState(0);
-  
+
   const [currentVibe, setCurrentVibe] = useState(user?.current_status || '🟢 В зале (на пампе)');
   const [showVibeDropdown, setShowVibeDropdown] = useState(false);
 
@@ -186,7 +187,7 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
       if (!error && data) {
         onUpdateUser(data);
         setIsEditing(false);
-        alert('Профиль обновлен! ✅');
+        setShowSettingsSheet(false);
       } else {
         alert('Ошибка при сохранении: ' + (error?.message || ''));
       }
@@ -238,81 +239,224 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
   });
 
   return (
-    <div className="space-y-4">
-      {/* 1. Модалка кто поставил огонь */}
-      {showLikesModal && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4">
-          <div className="apple-glass max-w-sm w-full p-5 space-y-4 border border-white/10 rounded-3xl max-h-[75vh] flex flex-col shadow-2xl">
-            <div className="flex justify-between items-center pb-2 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <span className="text-base">🔥</span>
-                <h3 className="text-sm font-black text-white">Реакции на пруфы</h3>
-              </div>
+    <div className="space-y-3 pb-8">
+      {/* 1. БОКОВОЕ/НИЖНЕЕ МЕНЮ НАСТРОЕК (BOTTOM SHEET) */}
+      {showSettingsSheet && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end justify-center">
+          <div className="apple-glass w-full max-w-md rounded-t-3xl border-t border-white/10 p-5 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
+            <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                {isEditing ? 'Редактирование профиля' : 'Настройки & Сервис'}
+              </h3>
               <button
                 type="button"
-                onClick={() => setShowLikesModal(false)}
+                onClick={() => {
+                  setShowSettingsSheet(false);
+                  setIsEditing(false);
+                }}
                 className="text-slate-400 hover:text-white text-base px-2 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+            {/* Внутри шторки: либо форма редактирования, либо ссылки сервиса */}
+            {isEditing ? (
+              <form onSubmit={handleSave} className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">Имя атлета</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.name}
+                    onChange={e => setForm({ ...form, name: e.target.value })}
+                    className="w-full apple-input text-xs py-2"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-400 block mb-1">Город</label>
+                    <select
+                      value={form.city}
+                      onChange={e => setForm({ ...form, city: e.target.value })}
+                      className="w-full apple-input text-xs py-2"
+                    >
+                      <option value="Алматы">Алматы</option>
+                      <option value="Астана">Астана</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-400 block mb-1">Направление</label>
+                    <input
+                      type="text"
+                      value={form.sport_type}
+                      onChange={e => setForm({ ...form, sport_type: e.target.value })}
+                      className="w-full apple-input text-xs py-2"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">Instagram (@)</label>
+                  <input
+                    type="text"
+                    value={form.instagram}
+                    onChange={e => setForm({ ...form, instagram: e.target.value })}
+                    placeholder="username"
+                    className="w-full apple-input text-xs py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-400 block mb-1">О себе</label>
+                  <textarea
+                    rows={2}
+                    value={form.bio}
+                    onChange={e => setForm({ ...form, bio: e.target.value })}
+                    className="w-full apple-input text-xs py-2 resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-white/[0.04] text-xs font-semibold text-slate-300"
+                  >
+                    Назад
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="flex-1 gymshark-btn-electric py-2.5 text-xs font-bold"
+                  >
+                    {saving ? '...' : 'Сохранить'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="w-full p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] text-left text-xs font-semibold text-white flex justify-between items-center transition"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span>✏️</span>
+                    <span>Редактировать анкету</span>
+                  </span>
+                  <span className="text-slate-500">➔</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSettingsSheet(false);
+                    setDocModal('terms');
+                  }}
+                  className="w-full p-3 rounded-2xl bg-white/[0.02] hover:bg-white/[0.06] text-left text-xs text-slate-300 flex justify-between items-center transition"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span>📜</span>
+                    <span>Публичная оферта</span>
+                  </span>
+                  <span className="text-slate-500">➔</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSettingsSheet(false);
+                    setDocModal('privacy');
+                  }}
+                  className="w-full p-3 rounded-2xl bg-white/[0.02] hover:bg-white/[0.06] text-left text-xs text-slate-300 flex justify-between items-center transition"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span>🔒</span>
+                    <span>Политика конфиденциальности</span>
+                  </span>
+                  <span className="text-slate-500">➔</span>
+                </button>
+
+                <a
+                  href="https://t.me/asanali_kk"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full p-3 rounded-2xl bg-white/[0.02] hover:bg-white/[0.06] text-left text-xs text-[#FF8C38] flex justify-between items-center transition no-underline block"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span>💬</span>
+                    <span>Поддержка / Основатель</span>
+                  </span>
+                  <span>↗</span>
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 2. МОДАЛКА: КТО ПОСТАВИЛ ОГОНЬ 🔥 */}
+      {showLikesModal && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
+          <div className="apple-glass max-w-sm w-full p-4 space-y-3 border border-white/10 rounded-3xl max-h-[70vh] flex flex-col">
+            <div className="flex justify-between items-center pb-2 border-b border-white/10">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>🔥</span> Реакции на пруфы
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowLikesModal(false)}
+                className="text-slate-400 hover:text-white text-sm px-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2">
               {loadingLikers ? (
-                <div className="text-center py-8 text-xs text-slate-400">Загрузка реакций...</div>
+                <div className="text-center py-6 text-xs text-slate-400">Загрузка...</div>
               ) : likersList.length === 0 ? (
-                <div className="text-center py-8 text-xs text-slate-500">Пока никто не поставил реакцию</div>
+                <div className="text-center py-6 text-xs text-slate-500">Пока никто не поставил реакцию</div>
               ) : (
                 likersList.map((item, idx) => (
                   <div
                     key={idx}
-                    className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between gap-2"
+                    className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between gap-2"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <div className="flex items-center gap-2 truncate">
+                      <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0">
                         {item.user?.avatar_url ? (
                           <img src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-xs font-bold text-white">{item.user?.name?.[0] || 'A'}</span>
+                          <span className="text-[10px] font-bold text-white">{item.user?.name?.[0] || 'A'}</span>
                         )}
                       </div>
-                      <div className="truncate">
-                        <p className="text-xs font-bold text-white truncate">{item.user?.name || 'Атлет'}</p>
-                        <p className="text-[10px] text-slate-400">
-                          {item.user?.telegram_username ? `@${item.user.telegram_username}` : item.user?.city || 'Алматы'}
-                        </p>
-                      </div>
+                      <p className="text-xs font-semibold text-white truncate">{item.user?.name || 'Атлет'}</p>
                     </div>
                     {item.user?.telegram_username && (
                       <a
                         href={`https://t.me/${item.user.telegram_username}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[11px] font-bold text-[#FF8C38] px-2 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08] hover:bg-white/[0.1] no-underline flex-shrink-0"
+                        className="text-[10px] font-bold text-[#FF8C38] px-2 py-1 rounded-lg bg-white/[0.05] no-underline"
                       >
-                        Написать ↗
+                        Чат ↗
                       </a>
                     )}
                   </div>
                 ))
               )}
             </div>
-
-            <button
-              type="button"
-              onClick={() => setShowLikesModal(false)}
-              className="w-full gymshark-btn-electric py-2.5 text-xs font-bold cursor-pointer"
-            >
-              Закрыть
-            </button>
           </div>
         </div>
       )}
 
-      {/* 2. Модалка документов */}
+      {/* 3. МОДАЛКА ДОКУМЕНТОВ */}
       {docModal && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
-          <div className="apple-glass max-w-sm w-full p-5 space-y-3.5 border border-white/10 rounded-3xl max-h-[80vh] flex flex-col">
+          <div className="apple-glass max-w-sm w-full p-4 space-y-3 border border-white/10 rounded-3xl max-h-[75vh] flex flex-col">
             <div className="flex justify-between items-center pb-2 border-b border-white/10">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">
                 {docModal === 'terms' ? 'Публичная оферта' : 'Политика конфиденциальности'}
@@ -320,98 +464,78 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
               <button
                 type="button"
                 onClick={() => setDocModal(null)}
-                className="text-slate-400 hover:text-white text-sm px-2 cursor-pointer"
+                className="text-slate-400 hover:text-white text-sm px-1 cursor-pointer"
               >
                 ✕
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto text-[11px] text-slate-300 space-y-2 leading-relaxed pr-1">
+            <div className="flex-1 overflow-y-auto text-[11px] text-slate-300 space-y-2 pr-1 leading-relaxed">
               {docModal === 'terms' ? (
                 <>
-                  <p><strong>1. Общие положения</strong></p>
-                  <p>GymConnect — цифровая платформа для коммуникации атлетов, поиска напарников и обмена тренировочным опытом.</p>
-                  <p><strong>2. Ответственность атлета</strong></p>
-                  <p>Каждый пользователь самостоятельно несет ответственность за уровень физической нагрузки, правильность техники выполнения упражнений и состояние своего здоровья в залах.</p>
-                  <p><strong>3. Платные функции</strong></p>
-                  <p>VIP PRO доступ предоставляет расширенный функционал платформы на период 30 календарных дней с момента активации.</p>
+                  <p><strong>1. Общие положения:</strong> GymConnect — сервис для поиска напарников по залу и обмена тренировочным прогрессом.</p>
+                  <p><strong>2. Безопасность:</strong> Пользователь самостоятельно контролирует тренировочные нагрузки и состояние здоровья.</p>
+                  <p><strong>3. VIP доступ:</strong> Предоставляет полный функционал на 30 дней с момента подключения.</p>
                 </>
               ) : (
                 <>
-                  <p><strong>1. Сбор данных</strong></p>
-                  <p>Сервис собирает публичные данные профиля Telegram (ID, имя, username) и данные анкеты, добровольно внесенные атлетом.</p>
-                  <p><strong>2. Защита информации</strong></p>
-                  <p>Данные хранятся в защищенной облачной базе данных и не передаются третьим лицам без согласия пользователя.</p>
+                  <p><strong>1. Данные:</strong> Собираются базовые данные Telegram профиля для авторизации.</p>
+                  <p><strong>2. Защита:</strong> Данные хранятся в защищенной облачной БД и не передаются третьим лицам.</p>
                 </>
               )}
             </div>
             <button
               type="button"
               onClick={() => setDocModal(null)}
-              className="w-full gymshark-btn-electric py-2.5 text-xs font-bold cursor-pointer"
+              className="w-full gymshark-btn-electric py-2 text-xs font-bold"
             >
-              Закрыть
+              Понятно
             </button>
           </div>
         </div>
       )}
 
-      {/* 3. Админ-панель */}
+      {/* 4. МОДАЛКА АДМИНКИ (ТОЛЬКО ДЛЯ ОСНОВАТЕЛЯ) */}
       {showAdminModal && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="apple-glass w-full max-w-md h-[85vh] flex flex-col rounded-t-3xl sm:rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
-            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#0C101A]/95">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-base">👑</span>
-                  <h3 className="text-sm font-black text-white tracking-tight">Админ-панель GymConnect</h3>
-                </div>
-                <p className="text-[10px] text-amber-400 font-semibold mt-0.5">Управление VIP PRO (Kaspi Pay)</p>
-              </div>
+          <div className="apple-glass w-full max-w-md h-[80vh] flex flex-col rounded-t-3xl sm:rounded-3xl border border-white/10 overflow-hidden">
+            <div className="p-3.5 border-b border-white/10 flex justify-between items-center bg-[#0C101A]/95">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>👑</span> Управление VIP PRO
+              </span>
               <button
                 type="button"
                 onClick={() => setShowAdminModal(false)}
-                className="text-slate-400 hover:text-white text-base px-2 py-1 cursor-pointer"
+                className="text-slate-400 hover:text-white text-sm px-2 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-3 border-b border-white/10 bg-[#0C101A]/60">
+            <div className="p-2.5 border-b border-white/10 bg-[#0C101A]/60">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Поиск атлета по имени или @username..."
-                className="w-full apple-input text-xs"
+                placeholder="Поиск по имени или @username..."
+                className="w-full apple-input text-xs py-1.5"
               />
             </div>
 
-            <div className="flex-1 p-4 overflow-y-auto space-y-2.5">
+            <div className="flex-1 p-3 overflow-y-auto space-y-2">
               {loadingUsers ? (
-                <div className="text-center py-10 text-xs text-slate-400">Загрузка базы пользователей...</div>
+                <div className="text-center py-6 text-xs text-slate-400">Загрузка...</div>
               ) : filteredUsers.length === 0 ? (
-                <div className="text-center py-10 text-xs text-slate-500">Пользователи не найдены</div>
+                <div className="text-center py-6 text-xs text-slate-500">Не найдено</div>
               ) : (
                 filteredUsers.map(u => (
                   <div
                     key={u.id}
-                    className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between gap-2"
+                    className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between gap-2"
                   >
                     <div className="truncate">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-white truncate">{u.name || 'Без имени'}</span>
-                        <span
-                          className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                            u.is_pro
-                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                              : 'bg-white/[0.05] text-slate-400'
-                          }`}
-                        >
-                          {u.is_pro ? '👑 VIP PRO' : 'Free'}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-400 truncate">
-                        {u.telegram_username ? `@${u.telegram_username}` : `ID: ${u.telegram_id}`} • {u.city || 'Алматы'}
+                      <p className="text-xs font-bold text-white truncate">{u.name || 'Без имени'}</p>
+                      <p className="text-[10px] text-slate-400">
+                        {u.telegram_username ? `@${u.telegram_username}` : `ID: ${u.telegram_id}`}
                       </p>
                     </div>
 
@@ -419,342 +543,181 @@ export default function ProfileTab({ user, onUpdateUser, onNavigateTab }) {
                       type="button"
                       disabled={updatingUserId === u.id}
                       onClick={() => toggleProAccess(u)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition cursor-pointer flex-shrink-0 ${
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold active:scale-95 transition cursor-pointer flex-shrink-0 ${
                         u.is_pro
-                          ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
-                          : 'bg-gradient-to-r from-amber-500 to-[#FF5A1F] text-white shadow-md shadow-amber-500/20'
+                          ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                          : 'bg-emerald-500 text-white'
                       }`}
                     >
-                      {updatingUserId === u.id ? '...' : u.is_pro ? 'Отключить PRO' : '✓ Выдать VIP PRO'}
+                      {updatingUserId === u.id ? '...' : u.is_pro ? 'Выключить' : 'Включить'}
                     </button>
                   </div>
                 ))
               )}
             </div>
-
-            <div className="p-3 border-t border-white/10 bg-[#0C101A]">
-              <button
-                type="button"
-                onClick={() => setShowAdminModal(false)}
-                className="w-full gymshark-btn-electric py-2.5 text-xs font-bold cursor-pointer"
-              >
-                Закрыть панель
-              </button>
-            </div>
           </div>
         </div>
       )}
 
-      {/* Верхний таб-бар */}
-      <div className="apple-glass p-1.5 grid grid-cols-2 gap-1">
+      {/* ТОНКАЯ МИНИМАЛИСТИЧНАЯ СТРОКА АДМИНА (ЕСЛИ ТЫ ОСНОВАТЕЛЬ) */}
+      {isAdmin && (
+        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+          <span className="text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span>👑</span> Панель основателя
+          </span>
+          <button
+            type="button"
+            onClick={openAdminPanel}
+            className="text-[10px] text-[#FF8C38] font-bold hover:underline cursor-pointer"
+          >
+            Управление ➔
+          </button>
+        </div>
+      )}
+
+      {/* АККУРАТНЫЙ ПЕРЕКЛЮЧАТЕЛЬ ТАБОВ ПРОФИЛЯ */}
+      <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-black/40 border border-white/[0.05]">
         <button
           type="button"
           onClick={() => setActiveTab('card')}
-          className={`py-2 text-xs font-bold rounded-xl transition cursor-pointer ${
-            activeTab === 'card' ? 'bg-[#FF5A1F] text-white shadow-md' : 'text-slate-400 bg-white/[0.02]'
+          className={`py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer ${
+            activeTab === 'card' ? 'bg-[#FF5A1F] text-white shadow-sm' : 'text-slate-400 hover:text-white'
           }`}
         >
-          👤 Визитка атлета
+          Визитка
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('stats')}
-          className={`py-2 text-xs font-bold rounded-xl transition cursor-pointer ${
-            activeTab === 'stats' ? 'bg-[#FF5A1F] text-white shadow-md' : 'text-slate-400 bg-white/[0.02]'
+          className={`py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer ${
+            activeTab === 'stats' ? 'bg-[#FF5A1F] text-white shadow-sm' : 'text-slate-400 hover:text-white'
           }`}
         >
-          📊 Статистика & Зал
+          Статистика
         </button>
       </div>
 
       {activeTab === 'card' && (
-        <div className="space-y-4">
-          {/* Панель основателя */}
-          {isAdmin && (
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-500/20 via-[#FF5A1F]/20 to-purple-500/20 border border-amber-500/40 flex items-center justify-between shadow-lg">
-              <div className="flex items-center gap-2.5">
-                <span className="text-xl">👑</span>
-                <div>
-                  <h4 className="text-xs font-bold text-white">Панель Основателя</h4>
-                  <p className="text-[10px] text-amber-300">Управление VIP-подписками пользователей</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={openAdminPanel}
-                className="gymshark-btn-electric px-3 py-1.5 text-xs font-bold active:scale-95 transition cursor-pointer"
-              >
-                Админка ➔
-              </button>
-            </div>
-          )}
-
-          {/* Карточка профиля */}
-          <div className="apple-glass p-5 space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3.5">
-                <div className="relative group">
-                  <div className="w-16 h-16 rounded-3xl overflow-hidden bg-[#121622] border-2 border-white/15 flex items-center justify-center shadow-xl">
+        <div className="space-y-3">
+          {/* ЧИСТАЯ ЭЛЕГАНТНАЯ КАРТОЧКА АТЛЕТА */}
+          <div className="apple-glass p-4 space-y-3.5 border border-white/[0.06]">
+            {/* Аватар, имя и иконка настроек */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-13 h-13 rounded-2xl overflow-hidden bg-[#121622] border border-white/10 flex items-center justify-center shadow-md">
                     {form.avatar_url ? (
-                      <img src={form.avatar_url} alt="Athlete" className="w-full h-full object-cover" />
+                      <img src={form.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-2xl font-black text-white">{form.name?.[0] || 'A'}</span>
+                      <span className="text-lg font-black text-white">{form.name?.[0] || 'A'}</span>
                     )}
                   </div>
-                  <label className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#FF5A1F] text-white flex items-center justify-center cursor-pointer shadow-md hover:scale-105 active:scale-95 transition">
-                    <span className="text-[11px]">📷</span>
+                  <label className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#FF5A1F] text-white flex items-center justify-center cursor-pointer shadow">
+                    <span className="text-[9px]">📷</span>
                     <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                   </label>
                 </div>
 
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <h2 className="text-base font-black text-white tracking-tight">
-                      {form.name || 'Атлет'}
-                    </h2>
-                    {user?.is_pro ? (
-                      <span className="text-[9px] bg-gradient-to-r from-amber-500/30 to-[#FF5A1F]/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-black uppercase">
-                        👑 VIP
-                      </span>
-                    ) : (
-                      <span className="text-[9px] bg-white/[0.05] text-slate-400 px-2 py-0.5 rounded-full font-bold">
-                        Free
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-400 font-medium">
+                <div className="space-y-0.5 truncate">
+                  <h2 className="text-sm font-bold text-white truncate tracking-tight">
+                    {form.name || 'Атлет'}
+                  </h2>
+                  <p className="text-[11px] text-slate-400 font-normal truncate">
                     {myTgUsername ? `@${myTgUsername}` : 'Без юзернейма'} • {form.city}
                   </p>
-                  <p className="text-[11px] text-[#FF8C38] font-semibold">
+                  <p className="text-[10px] text-[#FF8C38] font-medium">
                     {form.sport_type}
                   </p>
                 </div>
               </div>
 
+              {/* КНОПКА ШЕСТЕРЁНКИ (ОТКРЫВАЕТ НИЖНЮЮ ШТОРКУ) */}
               <button
                 type="button"
-                onClick={() => setIsEditing(!isEditing)}
-                className={`p-2 rounded-xl border text-xs font-bold transition cursor-pointer ${
-                  isEditing
-                    ? 'bg-white/10 border-white/20 text-white'
-                    : 'bg-white/[0.04] border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/[0.08]'
-                }`}
+                onClick={() => {
+                  setIsEditing(false);
+                  setShowSettingsSheet(true);
+                }}
+                className="w-8 h-8 rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer active:scale-95 flex-shrink-0"
                 title="Настройки"
               >
-                {isEditing ? '✕ Отмена' : '⚙️ Редакт.'}
+                ⚙️
               </button>
             </div>
 
-            {/* Выпадающий список Мой вайб */}
-            <div className="space-y-1.5 pt-1 border-t border-white/[0.06]">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                  Мой вайб сегодня:
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium">нажми для смены ▾</span>
-              </div>
-
+            {/* ВАЙБ АТЛЕТА */}
+            <div className="pt-2 border-t border-white/[0.05]">
               <button
                 type="button"
                 onClick={() => setShowVibeDropdown(!showVibeDropdown)}
-                className="w-full p-2.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-white/20 flex items-center justify-between text-left transition cursor-pointer"
+                className="w-full px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/15 flex items-center justify-between text-left transition cursor-pointer"
               >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-sm">{currentVibe.split(' ')[0]}</span>
-                  <span className="text-xs font-black text-white">{currentVibe.substring(2)}</span>
-                </div>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs font-medium text-slate-200">{currentVibe}</span>
+                <span className="text-[10px] text-slate-500">
                   {showVibeDropdown ? '▲' : '▼'}
                 </span>
               </button>
 
               {showVibeDropdown && (
-                <div className="p-1.5 bg-[#0e121c] border border-white/10 rounded-2xl space-y-1 mt-1.5 shadow-2xl">
+                <div className="p-1 bg-[#0b0e17] border border-white/10 rounded-xl space-y-0.5 mt-1.5 shadow-xl">
                   {VIBE_OPTIONS.map(v => (
                     <button
                       key={v.id}
                       type="button"
                       onClick={() => handleSelectVibe(v)}
-                      className={`w-full p-2 rounded-xl text-left flex items-center justify-between transition cursor-pointer ${
+                      className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs transition cursor-pointer flex justify-between items-center ${
                         currentVibe === v.label
-                          ? 'bg-[#FF5A1F]/20 border border-[#FF5A1F]/40 text-white'
-                          : 'hover:bg-white/[0.04] text-slate-300'
+                          ? 'bg-[#FF5A1F]/15 text-[#FF8C38] font-semibold'
+                          : 'text-slate-300 hover:bg-white/[0.03]'
                       }`}
                     >
-                      <div>
-                        <p className="text-xs font-bold">{v.label}</p>
-                        <p className="text-[10px] text-slate-400">{v.desc}</p>
-                      </div>
-                      {currentVibe === v.label && <span className="text-xs text-[#FF8C38]">✓</span>}
+                      <span>{v.label}</span>
+                      {currentVibe === v.label && <span className="text-xs">✓</span>}
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Счетчики */}
-            <div className="grid grid-cols-3 gap-2 text-center pt-1">
+            {/* МИНИМАЛИСТИЧНЫЕ МЕТРИКИ (ДРУЗЬЯ И ОГОНЬ) */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => onNavigateTab && onNavigateTab('friends')}
-                className="p-3 rounded-2xl bg-black/40 border border-white/[0.06] hover:border-white/20 active:scale-95 transition cursor-pointer text-left block"
+                className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/15 active:scale-95 transition cursor-pointer text-center"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] text-slate-500 font-bold uppercase block">Друзья</span>
-                  <span className="text-[9px] text-[#FF8C38]">➔</span>
-                </div>
-                <span className="text-lg font-black text-white mt-0.5 block">{friendsCount}</span>
+                <span className="text-[10px] text-slate-500 font-medium block">Друзья</span>
+                <span className="text-base font-black text-white mt-0.5 block">{friendsCount}</span>
               </button>
 
               <button
                 type="button"
                 onClick={openLikesHistory}
-                className="p-3 rounded-2xl bg-black/40 border border-white/[0.06] hover:border-[#FF5A1F]/40 active:scale-95 transition cursor-pointer text-left block"
+                className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-[#FF5A1F]/30 active:scale-95 transition cursor-pointer text-center"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] text-slate-500 font-bold uppercase block">Реакции</span>
-                  <span className="text-[9px] text-[#FF8C38]">👥</span>
-                </div>
-                <span className="text-lg font-black text-[#FF8C38] mt-0.5 block">🔥 {totalLikes}</span>
+                <span className="text-[10px] text-slate-500 font-medium block">Реакции</span>
+                <span className="text-base font-black text-[#FF8C38] mt-0.5 block">🔥 {totalLikes}</span>
               </button>
-
-              <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06] flex flex-col justify-center">
-                <span className="text-[9px] text-slate-500 font-bold uppercase block">Тариф</span>
-                <span className="text-[11px] font-black text-emerald-400 mt-1.5 block truncate">
-                  {user?.is_pro ? 'PRO Активен' : 'Бета-тест'}
-                </span>
-              </div>
             </div>
 
-            {!isEditing && (
-              <div className="space-y-3 pt-2">
-                {form.bio && (
-                  <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">О себе</span>
-                    <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{form.bio}</p>
-                  </div>
-                )}
-
-                {form.instagram && (
-                  <a
-                    href={`https://instagram.com/${form.instagram}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between text-xs text-slate-300 hover:text-white transition no-underline"
-                  >
-                    <span className="text-slate-400">Instagram:</span>
-                    <span className="font-bold text-[#FF8C38]">@{form.instagram} ↗</span>
-                  </a>
-                )}
+            {/* БИО И ИНСТАГРАМ */}
+            {form.bio && (
+              <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{form.bio}</p>
               </div>
             )}
 
-            {isEditing && (
-              <form onSubmit={handleSave} className="space-y-3 pt-2 border-t border-white/[0.08]">
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">Имя атлета</label>
-                  <input
-                    type="text"
-                    required
-                    value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                    className="w-full apple-input text-xs"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">Город</label>
-                    <select
-                      value={form.city}
-                      onChange={e => setForm({ ...form, city: e.target.value })}
-                      className="w-full apple-input text-xs"
-                    >
-                      <option value="Алматы">Алматы</option>
-                      <option value="Астана">Астана</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">Направление</label>
-                    <input
-                      type="text"
-                      value={form.sport_type}
-                      onChange={e => setForm({ ...form, sport_type: e.target.value })}
-                      placeholder="Бодибилдинг"
-                      className="w-full apple-input text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">Instagram (@)</label>
-                  <input
-                    type="text"
-                    value={form.instagram}
-                    onChange={e => setForm({ ...form, instagram: e.target.value })}
-                    placeholder="username"
-                    className="w-full apple-input text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">О себе</label>
-                  <textarea
-                    rows={3}
-                    value={form.bio}
-                    onChange={e => setForm({ ...form, bio: e.target.value })}
-                    placeholder="Сплит, цели..."
-                    className="w-full apple-input text-xs resize-none"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="w-full gymshark-btn-electric py-3 text-xs font-bold mt-2 cursor-pointer shadow-lg shadow-[#FF5A1F]/20"
-                >
-                  {saving ? 'Сохраняем...' : 'Сохранить профиль'}
-                </button>
-              </form>
-            )}
-          </div>
-
-          {/* Юр блок и поддержка */}
-          <div className="apple-glass p-4 space-y-2.5">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
-              Сервис и поддержка
-            </span>
-
-            <div className="space-y-1.5">
-              <button
-                type="button"
-                onClick={() => setDocModal('terms')}
-                className="w-full p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] text-left text-xs text-slate-300 hover:text-white flex justify-between items-center cursor-pointer"
-              >
-                <span>📜 Публичная оферта сервиса</span>
-                <span className="text-slate-500">➔</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setDocModal('privacy')}
-                className="w-full p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] text-left text-xs text-slate-300 hover:text-white flex justify-between items-center cursor-pointer"
-              >
-                <span>🔒 Политика конфиденциальности</span>
-                <span className="text-slate-500">➔</span>
-              </button>
-
+            {form.instagram && (
               <a
-                href="https://t.me/asanali_kk"
+                href={`https://instagram.com/${form.instagram}`}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full p-2.5 rounded-xl bg-gradient-to-r from-[#FF5A1F]/10 to-amber-500/10 border border-[#FF5A1F]/25 text-left text-xs text-amber-300 hover:text-amber-200 flex justify-between items-center no-underline cursor-pointer"
+                className="px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-between text-xs text-slate-300 hover:text-white transition no-underline block"
               >
-                <span className="font-semibold">💬 Связаться с основателем / Поддержка</span>
-                <span>↗</span>
+                <span className="text-slate-400">Instagram:</span>
+                <span className="font-semibold text-[#FF8C38]">@{form.instagram} ↗</span>
               </a>
-            </div>
+            )}
           </div>
         </div>
       )}
