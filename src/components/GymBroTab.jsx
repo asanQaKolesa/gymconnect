@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
+const CHANNEL_INVITE_URL = 'https://t.me/+QRvCVzzxHUpkMjAy';
+
 // СТАНДАРТИЗИРОВАННЫЙ СПИСОК ФИЛИАЛОВ ДЛЯ ТОЧНОЙ ФИЛЬТРАЦИИ
 export const INVICTUS_CLUBS = [
   'Invictus GO Abay (ул. Абая 165)',
@@ -74,6 +76,10 @@ export default function GymBroTab({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [matchResult, setMatchResult] = useState(null);
+
+  // Модальное окно приглашения в канал
+  const [showChannelModal, setShowChannelModal] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const myTgId = Number(user?.telegram_id || 0);
 
@@ -194,12 +200,10 @@ export default function GymBroTab({
     if (onRefreshCards) onRefreshCards();
   }
 
-  // Фильтрация клубов по поисковому запросу
   const searchedClubs = INVICTUS_CLUBS.filter(club =>
     club.toLowerCase().includes(gymSearchQuery.toLowerCase().trim())
   );
 
-  // Фильтрация колоды
   const activeDeck = cards
     .filter(c => {
       const cardTgId = Number(c.telegram_id);
@@ -326,11 +330,55 @@ export default function GymBroTab({
 
     onSaveCard(dataToSave);
     setIsEditingCard(false);
+
+    // Сразу открываем всплывающее окно вступления в канал
+    setShowChannelModal(true);
   }
 
   return (
     <div className="space-y-3 pb-8 select-none">
-      {/* 1. ЭКРАН МЭТЧА */}
+      {/* 1. ПРИВЕТСТВЕННОЕ ОКНО ВСТУПЛЕНИЯ В TELEGRAM-КАНАЛ ПОСЛЕ СОХРАНЕНИЯ */}
+      {showChannelModal && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
+          <div className="apple-glass max-w-sm w-full p-6 text-center space-y-4 border border-[#FF5A1F]/40 rounded-3xl animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-[#FF5A1F] to-amber-500 flex items-center justify-center text-3xl mx-auto shadow-xl shadow-[#FF5A1F]/30 animate-pulse">
+              📢
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-black text-[#FF8C38] uppercase tracking-widest block">
+                ТЫ В ИГРЕ!
+              </span>
+              <h3 className="text-lg font-black text-white tracking-tight">
+                Вступай в канал GymConnect
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed pt-1">
+                Все совместные открытые тренировки в Invictus, анонсы сходок и закрытые ивенты комьюнити публикуются здесь.
+              </p>
+            </div>
+
+            <a
+              href={CHANNEL_INVITE_URL}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setShowChannelModal(false)}
+              className="w-full gymshark-btn-electric py-3 text-xs font-bold flex items-center justify-center gap-2 no-underline block shadow-lg shadow-[#FF5A1F]/30"
+            >
+              <span>🚀 Вступить в канал комьюнити ➔</span>
+            </a>
+
+            <button
+              type="button"
+              onClick={() => setShowChannelModal(false)}
+              className="w-full py-2 text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
+            >
+              Перейти к поиску GymBro
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 2. ЭКРАН МЭТЧА */}
       {matchResult && (
         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full p-6 text-center space-y-4 border border-white/10 rounded-3xl animate-in zoom-in-95 duration-200">
@@ -399,7 +447,7 @@ export default function GymBroTab({
         </div>
       )}
 
-      {/* 2. ДЕТАЛЬНОЕ ДОСЬЕ АТЛЕТА */}
+      {/* 3. ДЕТАЛЬНОЕ ДОСЬЕ АТЛЕТА */}
       {showDetailModal && currentCard && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full p-5 space-y-3.5 border border-white/10 rounded-3xl max-h-[85vh] overflow-y-auto">
@@ -491,7 +539,7 @@ export default function GymBroTab({
         </div>
       )}
 
-      {/* 3. АНКЕТА GYMBRO С УМНЫМ ПОИСКОМ ЗАЛА */}
+      {/* 4. АНКЕТА GYMBRO */}
       {isEditingCard ? (
         <div className="apple-glass p-4 space-y-3.5 border border-white/[0.08] rounded-3xl">
           <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
@@ -512,6 +560,25 @@ export default function GymBroTab({
             )}
           </div>
 
+          {/* Плашка приглашения в канал прямо в настройках */}
+          <div className="p-3 rounded-2xl bg-gradient-to-r from-[#FF5A1F]/20 via-black/40 to-[#FF5A1F]/10 border border-[#FF5A1F]/30 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📢</span>
+              <div>
+                <span className="text-xs font-bold text-white block">Канал комьюнити</span>
+                <span className="text-[10px] text-slate-400 block">Анонсы тренировок и сходок</span>
+              </div>
+            </div>
+            <a
+              href={CHANNEL_INVITE_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-1.5 rounded-xl gymshark-btn-electric text-[11px] font-bold no-underline whitespace-nowrap"
+            >
+              Вступить ➔
+            </a>
+          </div>
+
           <form onSubmit={handleSubmitForm} className="space-y-3">
             <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
               <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#121622] border border-white/10 flex items-center justify-center flex-shrink-0 shadow-md">
@@ -530,19 +597,17 @@ export default function GymBroTab({
               </div>
             </div>
 
-            {/* БЛОК ВЫБОРА ЗАЛА С ИНТЕРАКТИВНЫМ ПОИСКОМ */}
+            {/* БЛОК ВЫБОРА ЗАЛА С ПОИСКОМ */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-[#FF8C38] uppercase tracking-wider block">
                 📍 Твой домашний зал
               </label>
 
-              {/* Напоминающая подсказка */}
               <div className="p-2 rounded-xl bg-[#FF5A1F]/10 border border-[#FF5A1F]/20 flex items-start gap-1.5 text-[10px] text-slate-300">
                 <span className="text-xs">💡</span>
-                <span>Выбирай филиал из списка или через поиск — так напарники гарантированно найдут тебя в фильтрах!</span>
+                <span>Выбирай точный филиал, чтобы напарники нашли тебя в фильтрах!</span>
               </div>
 
-              {/* Кнопка-селектор */}
               <button
                 type="button"
                 onClick={() => setIsGymDropdownOpen(!isGymDropdownOpen)}
@@ -556,10 +621,8 @@ export default function GymBroTab({
                 </span>
               </button>
 
-              {/* Выпадающее окно с поиском */}
               {isGymDropdownOpen && (
                 <div className="p-2.5 rounded-2xl bg-[#0e121c] border border-white/15 space-y-2 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-                  {/* Поле быстрого поиска */}
                   <div className="relative">
                     <input
                       type="text"
@@ -580,7 +643,6 @@ export default function GymBroTab({
                     )}
                   </div>
 
-                  {/* Список отфильтрованных клубов */}
                   <div className="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
                     {searchedClubs.length > 0 ? (
                       searchedClubs.map(club => {
@@ -625,7 +687,6 @@ export default function GymBroTab({
                 </div>
               )}
 
-              {/* Поле ручного ввода, если выбран «Другой зал» */}
               {formData.weekday_gym === 'Другой зал' && (
                 <div className="pt-1">
                   <input
@@ -750,8 +811,42 @@ export default function GymBroTab({
           </form>
         </div>
       ) : (
-        /* ================= 4. ЭКРАН СВАЙПОВ TINDER ================= */
+        /* ================= 5. ЭКРАН СВАЙПОВ TINDER ================= */
         <div className="space-y-3">
+          {/* КОМПАКТНЫЙ БАННЕР ВЕРХУ ЛЕНТЫ СВАЙПОВ */}
+          {!bannerDismissed && (
+            <div className="relative p-3 rounded-2xl bg-gradient-to-r from-[#FF5A1F]/15 via-black/40 to-[#FF5A1F]/10 border border-[#FF5A1F]/30 backdrop-blur-xl flex items-center justify-between gap-3 shadow-lg">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF5A1F] to-amber-500 flex items-center justify-center text-base shadow flex-shrink-0">
+                  📢
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-black text-white truncate">Канал GymConnect</h4>
+                  <p className="text-[10px] text-slate-400 truncate">Анонсы тренировок и сходок Invictus</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <a
+                  href={CHANNEL_INVITE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-xl gymshark-btn-electric text-[11px] font-bold no-underline whitespace-nowrap shadow-sm"
+                >
+                  Вступить ➔
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setBannerDismissed(true)}
+                  className="p-1 text-slate-500 hover:text-slate-300 text-xs cursor-pointer"
+                  title="Скрыть"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
               <button
