@@ -26,15 +26,17 @@ export default function ProfileTab({ user, onUpdateUser }) {
   const [deleting, setDeleting] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState(null);
 
-  // Живые счетчики реакций и друзей
+  // Живые счетчики
   const [totalLikes, setTotalLikes] = useState(user?.likes_count || 0);
   const [friendsCount, setFriendsCount] = useState(0);
 
-  // Входящие заявки в друзья
+  // Друзья и заявки
   const [pendingRequests, setPendingRequests] = useState([]);
-  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [friendsList, setFriendsList] = useState([]);
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [loadingFriends, setLoadingFriends] = useState(false);
 
-  // Форма редактирования данных
+  // Форма профиля
   const [form, setForm] = useState({
     name: user?.name || window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || '',
     gender: user?.gender || 'Парень',
@@ -61,7 +63,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
     }
   }, [user]);
 
-  // Загрузка статистики и входящих заявок в друзья
   useEffect(() => {
     syncCommunityStats();
   }, [myTgId, activeSection]);
@@ -83,17 +84,16 @@ export default function ProfileTab({ user, onUpdateUser }) {
         setTotalLikes(0);
       }
 
-      // 2. Считаем только принятых друзей (status === 'accepted')
-      const { count } = await supabase
+      // 2. Считаем подтверждённых друзей
+      const { data: acceptedFriendships } = await supabase
         .from('friendships')
-        .select('*', { count: 'exact', head: true })
+        .select('id, user_id, friend_id')
         .eq('status', 'accepted')
         .or(`user_id.eq.${myTgId},friend_id.eq.${myTgId}`);
 
-      setFriendsCount(count || 0);
+      setFriendsCount(acceptedFriendships?.length || 0);
 
-      // 3. Загружаем входящие заявки, где friend_id === myTgId и status === 'pending'
-      setLoadingRequests(true);
+      // 3. Загружаем входящие заявки со статусом 'pending'
       const { data: requests } = await supabase
         .from('friendships')
         .select('id, user_id, created_at')
@@ -101,7 +101,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
         .eq('status', 'pending');
 
       if (requests && requests.length > 0) {
-        // Подтягиваем инфо об отправителях из таблицы users
         const senderIds = requests.map(r => r.user_id);
         const { data: senders } = await supabase
           .from('users')
@@ -122,42 +121,83 @@ export default function ProfileTab({ user, onUpdateUser }) {
       }
     } catch (err) {
       console.error('Ошибка синхронизации:', err);
-    } finally {
-      setLoadingRequests(false);
     }
   }
 
-  // Принять заявку в друзья
-  async function handleAcceptFriend(requestId) {
-    await supabase
-      .from('friendships')
-      .update({ status: 'accepted' })
-      .eq('id', requestId);
+  // Загрузка детального списка друзей при открытии модалки
+  async function handleOpenFriendsList() {
+    setShowFriendsModal(true);
+    setLoadingFriends(true);
 
+    try {
+      const { data: friendships } = await supabase
+        .from('friendships')
+        .select('id, user_id, friend_id')
+        .eq('status', 'accepted')
+        .or(`user_id.eq.${myTgId},friend_id.eq.${myTgId}`);
+
+      if (friendships && friendships.length > 0) {
+        // Находим ID всех друзей (противоположная сторона связи)
+        const targetIds = friendships.map(f =>
+          Number(f.user_id) === myTgId ? Number(f.friend_id) : Number(f.user_id)
+        );
+
+        const { data: friendsData } = await supabase
+          .from('users')
+          .select('telegram_id, telegram_username, name, avatar_url, city, sport_type, instagram')
+          .in('telegram_id', targetIds);
+
+        const list = friendships.map(f => {
+          const friendTgId = Number(f.user_id) === myTgId ? Number(f.friend_id) : Number(f.user_id);
+          const friendProfile = friendsData?.find(u => Number(u.telegram_id) === friendTgId);
+          return {
+            friendship_id: f.id,
+            ...friendProfile,
+            telegram_id: friendTgId,
+            name: friendProfile?.name || 'Атлет GymConnect'
+          };
+        });
+
+        setFriendsList(list);
+      } else {
+        setFriendsList([]);
+      }
+    } catch (err) {
+      console.error('Ошибка загрузки списка друзей:', err);
+    } finally {
+      setLoadingFriends(false);
+    }
+  }
+
+  // Удаление из друзей
+  async function handleRemoveFriend(friendshipId) {
+    const confirmed = window.confirm('Удалить атлета из друзей?');
+    if (!confirmed) return;
+
+    await supabase.from('friendships').delete().eq('id', friendshipId);
+    setFriendsList(prev => prev.filter(f => f.friendship_id !== friendshipId));
+    setFriendsCount(prev => Math.max(0, prev - 1));
+  }
+
+  // Принять заявку
+  async function handleAcceptFriend(requestId) {
+    await supabase.from('friendships').update({ status: 'accepted' }).eq('id', requestId);
     setPendingRequests(prev => prev.filter(r => r.id !== requestId));
     setFriendsCount(prev => prev + 1);
   }
 
   // Отклонить заявку
   async function handleDeclineFriend(requestId) {
-    await supabase
-      .from('friendships')
-      .delete()
-      .eq('id', requestId);
-
+    await supabase.from('friendships').delete().eq('id', requestId);
     setPendingRequests(prev => prev.filter(r => r.id !== requestId));
   }
 
-  // Заблокировать пользователя
+  // Блокировка
   async function handleBlockUser(requestId) {
-    const confirmed = window.confirm('Заблокировать этого пользователя? Он больше не сможет отправлять вам запросы.');
+    const confirmed = window.confirm('Заблокировать этого пользователя?');
     if (!confirmed) return;
 
-    await supabase
-      .from('friendships')
-      .update({ status: 'blocked' })
-      .eq('id', requestId);
-
+    await supabase.from('friendships').update({ status: 'blocked' }).eq('id', requestId);
     setPendingRequests(prev => prev.filter(r => r.id !== requestId));
   }
 
@@ -246,7 +286,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
   // Удаление анкеты
   async function handleDeleteProfile() {
     const confirmed = window.confirm(
-      'Вы уверены, что хотите удалить свою анкету? Все данные профиля будут удалены.'
+      'Вы уверены, что хотите удалить свою анкету? Все данные будут удалены.'
     );
     if (!confirmed) return;
 
@@ -269,6 +309,116 @@ export default function ProfileTab({ user, onUpdateUser }) {
 
   return (
     <div className="space-y-4">
+      {/* МОДАЛКА ПРОСМОТРА СПИСКА ДРУЗЕЙ В СТИЛЕ APPLE */}
+      {showFriendsModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="apple-glass w-full max-w-md h-[75vh] flex flex-col rounded-t-3xl sm:rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
+            {/* Заголовок */}
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#0C101A]/95">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🤝</span>
+                <h3 className="text-sm font-bold text-white tracking-tight">
+                  Мои друзья ({friendsList.length})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFriendsModal(false)}
+                className="text-slate-400 hover:text-white text-base px-2 py-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Список друзей */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-2.5">
+              {loadingFriends ? (
+                <div className="text-center py-10 text-xs text-slate-400">
+                  Загрузка друзей...
+                </div>
+              ) : friendsList.length === 0 ? (
+                <div className="text-center py-12 space-y-2">
+                  <span className="text-3xl">👥</span>
+                  <h4 className="text-sm font-bold text-white">Список друзей пока пуст</h4>
+                  <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                    Заходи в ленту тренировок или поиск GymBro, чтобы отправлять заявки атлетам своего зала.
+                  </p>
+                </div>
+              ) : (
+                friendsList.map(friend => (
+                  <div
+                    key={friend.friendship_id}
+                    className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between gap-3 hover:bg-white/[0.05] transition"
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#FF5A1F]/30 to-[#FF8C38]/30 border border-white/10 flex items-center justify-center flex-shrink-0 text-sm font-bold text-white overflow-hidden shadow-sm">
+                        {friend.avatar_url ? (
+                          <img src={friend.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          friend.name?.[0] || 'A'
+                        )}
+                      </div>
+                      <div className="truncate">
+                        <h4 className="text-xs font-bold text-white truncate leading-snug">
+                          {friend.name}
+                        </h4>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {friend.city || 'Алматы'} • {friend.sport_type || 'Атлет'}
+                        </p>
+                        {friend.instagram && (
+                          <span className="text-[9px] text-[#FF8C38] font-medium block">
+                            @{friend.instagram}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {/* Написать в Telegram */}
+                      {friend.telegram_username ? (
+                        <a
+                          href={`https://t.me/${friend.telegram_username}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1.5 rounded-xl bg-[#FF5A1F] text-white text-[11px] font-bold active:scale-95 transition no-underline flex items-center gap-1 shadow-md shadow-[#FF5A1F]/20"
+                        >
+                          <span>💬</span>
+                          <span>Чат</span>
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-slate-500 bg-white/[0.04] px-2 py-1 rounded-lg">
+                          В друзьях
+                        </span>
+                      )}
+
+                      {/* Удалить из друзей */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFriend(friend.friendship_id)}
+                        title="Удалить из друзей"
+                        className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-white/10 flex items-center justify-center text-xs active:scale-95 transition cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-3 border-t border-white/10 bg-[#0C101A]">
+              <button
+                type="button"
+                onClick={() => setShowFriendsModal(false)}
+                className="w-full gymshark-btn-electric py-2.5 text-xs font-bold cursor-pointer"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Модальное окно просмотра документов */}
       {selectedDoc && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4">
@@ -483,7 +633,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
                 {saving ? 'Сохраняем...' : 'Сохранить изменения'}
               </button>
 
-              {/* Опасная зона: Удаление анкеты */}
+              {/* Удаление анкеты */}
               <div className="pt-3 border-t border-red-500/20 text-center">
                 <button
                   type="button"
@@ -535,12 +685,16 @@ export default function ProfileTab({ user, onUpdateUser }) {
                 </div>
               )}
 
-              {/* Счетчики */}
+              {/* КЛИКАБЕЛЬНЫЙ БЛОК СЧЕТЧИКОВ (ТАП ПО «ДРУЗЬЯ» ОТКРЫВАЕТ СПИСОК) */}
               <div className="grid grid-cols-3 gap-2 pt-1 text-center">
-                <div className="p-2.5 rounded-xl bg-black/30 border border-white/[0.05]">
-                  <p className="text-[10px] text-slate-500 font-bold uppercase">Друзья</p>
+                <button
+                  type="button"
+                  onClick={handleOpenFriendsList}
+                  className="p-2.5 rounded-xl bg-black/40 border border-white/[0.08] hover:border-[#FF5A1F]/40 active:scale-95 transition cursor-pointer flex flex-col items-center justify-center group"
+                >
+                  <p className="text-[10px] text-slate-500 group-hover:text-slate-300 font-bold uppercase">Друзья ➔</p>
                   <p className="text-base font-black text-white mt-0.5">{friendsCount}</p>
-                </div>
+                </button>
                 <div className="p-2.5 rounded-xl bg-black/30 border border-white/[0.05]">
                   <p className="text-[10px] text-slate-500 font-bold uppercase">Реакции</p>
                   <p className="text-base font-black text-[#FF8C38] mt-0.5">🔥 {totalLikes}</p>
@@ -588,7 +742,6 @@ export default function ProfileTab({ user, onUpdateUser }) {
                           </div>
                         </div>
 
-                        {/* Кнопки: Принять / Отклонить / Блок */}
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                           <button
                             onClick={() => handleAcceptFriend(req.id)}
