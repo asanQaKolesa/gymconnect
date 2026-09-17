@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
+import HomeTab from './components/HomeTab';
 import GymBroTab from './components/GymBroTab';
+import NutritionTab from './components/NutritionTab';
+import ProfileTab from './components/ProfileTab';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -20,7 +23,7 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Ровно 4 чистые вкладки в нижнем баре
+  // Ровно 4 чистые вкладки в нижнем баре (Друзья внутри GymBro)
   const NAV_ITEMS = [
     { id: 'home', label: 'Главная', icon: '⚡' },
     { id: 'gymbro', label: 'GymBro', icon: '🤝' },
@@ -46,60 +49,12 @@ export default function App() {
         </div>
       </header>
 
-      {/* Основной контент экранов */}
+      {/* Основной контент экранов — восстанавливаем оригинальные компоненты */}
       <main className="flex-1 w-full max-w-lg mx-auto overflow-y-auto">
-        {activeTab === 'home' && (
-          <div className="p-5 space-y-5">
-            {/* Мотивационный блок */}
-            <div className="bg-gradient-to-br from-[#131d31] to-[#0f172a] border border-gray-800 p-5 rounded-3xl relative overflow-hidden shadow-xl">
-              <div className="text-xs font-bold text-emerald-400 tracking-wider uppercase mb-1">Фокус дня</div>
-              <h2 className="text-lg font-black leading-snug">«Дисциплина бьёт мотивацию в 100% случаев»</h2>
-              <p className="text-xs text-gray-400 mt-2">Каждый подход приближает тебя к лучшей форме.</p>
-            </div>
-
-            {/* Быстрые действия */}
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setActiveTab('gymbro')}
-                className="p-4 rounded-2xl bg-[#131d31] border border-gray-800 hover:border-emerald-500/50 text-left transition space-y-1 group"
-              >
-                <span className="text-2xl block group-hover:scale-110 transition-transform">🤝</span>
-                <div className="font-bold text-sm text-white">Найти напарника</div>
-                <div className="text-[11px] text-gray-400">Tinder в твоем зале</div>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('nutrition')}
-                className="p-4 rounded-2xl bg-[#131d31] border border-gray-800 hover:border-emerald-500/50 text-left transition space-y-1 group"
-              >
-                <span className="text-2xl block group-hover:scale-110 transition-transform">🥗</span>
-                <div className="font-bold text-sm text-white">Мой рацион</div>
-                <div className="text-[11px] text-gray-400">КБЖУ и трекер воды</div>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Раздел GymBro (Поиск + Друзья внутри) */}
+        {activeTab === 'home' && <HomeTab session={session} setActiveTab={setActiveTab} />}
         {activeTab === 'gymbro' && <GymBroTab session={session} />}
-
-        {/* Раздел Питание */}
-        {activeTab === 'nutrition' && (
-          <div className="p-8 text-center space-y-2 text-gray-400">
-            <div className="text-4xl">🥗</div>
-            <h3 className="font-bold text-white text-base">Дневник питания</h3>
-            <p className="text-xs">Трекер калорий и воды будет готов в следующем обновлении.</p>
-          </div>
-        )}
-
-        {/* Раздел Профиль */}
-        {activeTab === 'profile' && (
-          <div className="p-8 text-center space-y-2 text-gray-400">
-            <div className="text-4xl">👤</div>
-            <h3 className="font-bold text-white text-base">Личный кабинет</h3>
-            <p className="text-xs">Настройки аккаунта и статистика тренировок.</p>
-          </div>
-        )}
+        {activeTab === 'nutrition' && <NutritionTab session={session} />}
+        {activeTab === 'profile' && <ProfileTab session={session} />}
       </main>
 
       {/* Нижний бар навигации (4 вкладки) */}
