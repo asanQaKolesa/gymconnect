@@ -3,16 +3,12 @@ import { supabase } from './supabaseClient';
 import NutritionTab from './components/NutritionTab';
 import GymBroTab from './components/GymBroTab';
 import ProfileTab from './components/ProfileTab';
+import GymFeedTab from './components/GymFeedTab';
 
 const Icons = {
   Lightning: () => (
     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
       <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-    </svg>
-  ),
-  Biceps: () => (
-    <svg className="w-5 h-5 text-[#FF5A1F]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 16.5a3.5 3.5 0 0 0 5 0l1-1a3.5 3.5 0 0 1 5 0l2 2a3 3 0 0 0 4.2-4.2l-2-2a3.5 3.5 0 0 1 0-5l1-1a3.5 3.5 0 0 0 0-5l-2-2a3.5 3.5 0 0 0-4.2 0l-1 1a3.5 3.5 0 0 1-5 0l-2-2a3.5 3.5 0 0 0-4.2 4.2l1 1a3.5 3.5 0 0 1 0 5l-1 1a3.5 3.5 0 0 0 0 5l2 2a3 3 0 0 0 .2.3z" />
     </svg>
   ),
   Users: () => (
@@ -21,6 +17,12 @@ const Icons = {
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  Camera: () => (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
     </svg>
   ),
   Salad: () => (
@@ -177,6 +179,10 @@ export default function App() {
     setSaving(false);
   }
 
+  function handleOpenKaspiPaywall() {
+    alert('Переход к оформлению GymConnect PRO через Kaspi Pay...');
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#07090e] text-slate-100 flex items-center justify-center font-sans">
@@ -192,7 +198,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col font-sans pb-24 select-none">
-      {/* Шапка приложения в стиле Apple Glass */}
+      {/* Верхний Header */}
       <header className="px-5 py-3.5 border-b border-white/[0.08] flex justify-between items-center bg-[#0a0d14]/80 backdrop-blur-2xl sticky top-0 z-30">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] flex items-center justify-center text-white shadow-lg shadow-[#FF5A1F]/25 flex-shrink-0">
@@ -200,28 +206,32 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-[15px] font-bold text-white tracking-tight leading-tight">GymConnect</h1>
-            <p className="text-[11px] text-slate-400 font-normal">{currentUser?.city || 'Алматы'} • Fitness Hub</p>
+            <p className="text-[11px] text-slate-400 font-normal">{currentUser?.city || 'Алматы'} • Club</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => initApp()}
-            className="text-[11px] text-slate-400 hover:text-white px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] active:scale-95 transition"
+            className="text-[11px] text-slate-400 hover:text-white px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] active:scale-95 transition cursor-pointer"
           >
             Обновить
           </button>
-          <div className="flex items-center gap-1 bg-[#FF5A1F]/15 border border-[#FF5A1F]/30 px-2.5 py-1 rounded-full">
+          <button
+            onClick={handleOpenKaspiPaywall}
+            className="flex items-center gap-1 bg-[#FF5A1F]/15 border border-[#FF5A1F]/30 px-2.5 py-1 rounded-full cursor-pointer active:scale-95 transition"
+          >
             <Icons.Crown />
-            <span className="text-[10px] font-bold text-[#FF5A1F] tracking-wide">ATHLETE</span>
-          </div>
+            <span className="text-[10px] font-bold text-[#FF5A1F] tracking-wide">
+              {currentUser?.is_pro ? 'PRO' : 'GET PRO'}
+            </span>
+          </button>
         </div>
       </header>
 
       <main className="flex-1 px-4 py-4 max-w-md mx-auto w-full space-y-3.5">
-        {/* ================= 1. ГЛАВНАЯ СТРАНИЦА ================= */}
+        {/* ================= 1. ГЛАВНАЯ ================= */}
         {activeTab === 'home' && (
           <div className="space-y-3.5">
-            {/* Карточка профиля атлета с четко фиксированной аватаркой */}
             <div className="apple-glass-card p-5 space-y-3.5">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3.5 overflow-hidden">
@@ -247,7 +257,7 @@ export default function App() {
 
                 <button
                   onClick={() => setActiveTab('profile')}
-                  className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300 hover:text-white flex-shrink-0"
+                  className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-300 hover:text-white flex-shrink-0 cursor-pointer"
                 >
                   <Icons.ArrowRight />
                 </button>
@@ -269,12 +279,12 @@ export default function App() {
               ) : (
                 <div className="text-xs bg-[#FF5A1F]/10 p-3 rounded-xl border border-[#FF5A1F]/20 space-y-1">
                   <p className="text-[#FF8C38] font-semibold text-[11px]">Анкета напарника не заполнена</p>
-                  <p className="text-[11px] text-slate-400 font-normal">Заполни параметры залов, чтобы напарники видели тебя в поиске.</p>
+                  <p className="text-[11px] text-slate-400 font-normal">Заполни залы, чтобы напарники видели тебя в поиске.</p>
                 </div>
               )}
             </div>
 
-            {/* Блок Напарники (GymBro) */}
+            {/* Блок Напарники */}
             <div className="apple-glass p-5 space-y-3.5">
               <div className="flex justify-between items-center">
                 <div className="space-y-0.5">
@@ -302,30 +312,30 @@ export default function App() {
               </button>
             </div>
 
-            {/* Блок Питание */}
+            {/* Блок Лента */}
             <div className="apple-glass p-5 space-y-3.5">
               <div className="flex justify-between items-center">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="text-[15px] font-bold text-white tracking-tight">Рацион & Питание</h3>
-                    <span className="text-[9px] bg-[#FF5A1F]/15 text-[#FF5A1F] border border-[#FF5A1F]/30 px-1.5 py-0.5 rounded-md font-extrabold tracking-wide">
-                      NUTRITION
+                    <h3 className="text-[15px] font-bold text-white tracking-tight">Фитнес-лента</h3>
+                    <span className="text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-md font-extrabold tracking-wide">
+                      CLUB
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 font-normal">
-                    КБЖУ, меню на неделю и продуктовая корзина
+                    Пруфы тренировок и комьюнити
                   </p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-[#FF5A1F]">
-                  <Icons.Salad />
+                <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-amber-400">
+                  <Icons.Camera />
                 </div>
               </div>
 
               <button
-                onClick={() => setActiveTab('nutrition')}
+                onClick={() => setActiveTab('feed')}
                 className="w-full gymshark-btn-glass py-3 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>Конструктор рациона</span>
+                <span>Открыть ленту зала</span>
                 <Icons.ArrowRight />
               </button>
             </div>
@@ -345,7 +355,15 @@ export default function App() {
           />
         )}
 
-        {/* ================= 3. ПИТАНИЕ ================= */}
+        {/* ================= 3. ЛЕНТА (GYMFEED PRO) ================= */}
+        {activeTab === 'feed' && (
+          <GymFeedTab
+            user={currentUser}
+            onOpenPaywall={handleOpenKaspiPaywall}
+          />
+        )}
+
+        {/* ================= 4. ПИТАНИЕ ================= */}
         {activeTab === 'nutrition' && (
           <NutritionTab
             myProfile={currentUser}
@@ -355,7 +373,7 @@ export default function App() {
           />
         )}
 
-        {/* ================= 4. ПРОФИЛЬ ================= */}
+        {/* ================= 5. ПРОФИЛЬ ================= */}
         {activeTab === 'profile' && (
           <ProfileTab
             user={currentUser}
@@ -364,7 +382,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Нативный нижний бар Apple TabBar */}
+      {/* Нативный нижний бар Apple TabBar с 5 вкладками */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto ios-nav-dock flex justify-around py-2.5 z-40">
         <button
           onClick={() => setActiveTab('home')}
@@ -380,6 +398,14 @@ export default function App() {
         >
           <Icons.Users />
           <span className="text-[10px] font-semibold tracking-tight">GymBro</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('feed')}
+          className={`flex flex-col items-center gap-1 transition cursor-pointer ${activeTab === 'feed' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
+        >
+          <Icons.Camera />
+          <span className="text-[10px] font-semibold tracking-tight">Лента</span>
         </button>
 
         <button
