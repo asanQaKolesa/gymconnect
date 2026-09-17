@@ -7,41 +7,54 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  useEffect(() => {
-    async function fetchUsers() {
-      try {
-        setLoading(true);
-        setErrorMsg('');
+  const fetchAllUsers = async () => {
+    try {
+      setLoading(true);
+      setErrorMsg('');
 
-        // Проверяем разные возможные варианты названий таблиц в Supabase
-        const tableNames = ['users', 'profiles', 'athletes', 'clients', 'registrations'];
-        let foundData = null;
-        let lastError = null;
+      let allRecords = [];
 
-        for (const tableName of tableNames) {
-          const { data, error } = await supabase.from(tableName).select('*');
-          if (!error && data) {
-            foundData = data;
-            break;
-          } else {
-            lastError = error;
-          }
+      // 1. Пробуем собрать данные из обычных таблиц (users, profiles, athletes, clients)
+      const tableNames = ['users', 'profiles', 'athletes', 'clients', 'registrations'];
+      for (const tableName of tableNames) {
+        const { data, error } = await supabase.from(tableName).select('*');
+        if (!error && data && data.length > 0) {
+          allRecords = [...allRecords, ...data];
         }
-
-        if (foundData) {
-          setUsers(foundData);
-        } else {
-          throw lastError || new Error('Таблицы не найдены');
-        }
-      } catch (err) {
-        console.error('Ошибка загрузки:', err.message);
-        setErrorMsg('Не удалось найти таблицы в Supabase. Создайте таблицу пользователей в вашей базе данных.');
-      } finally {
-        setLoading(false);
       }
-    }
 
-    fetchUsers();
+      // 2. Пробуем получить пользователей из таблицы авторизации Supabase Auth (если есть права)
+      try {
+        const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+        if (!authError && authData && authData.users) {
+          const formattedAuthUsers = authData.users.map(u => ({
+            id: u.id,
+            name: u.user_metadata?.name || u.email?.split('@')[0] || 'Auth User',
+            email: u.email,
+            phone: u.phone || 'Не указан',
+            created_at: u.created_at,
+            source: 'Supabase Auth'
+          }));
+          allRecords = [...allRecords, ...formattedAuthUsers];
+        }
+      } catch (e) {
+        // Административный метод Auth API может требовать service_role ключ, это нормально
+      }
+
+      // Убираем дубликаты, если они есть
+      const uniqueUsers = Array.from(new Map(allRecords.map(item => [item.id || item.email, item])).values());
+      setUsers(uniqueUsers);
+
+    } catch (err) {
+      console.error('Ошибка:', err.message);
+      setErrorMsg('Не удалось выгрузить пользователей. Проверьте подключение.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllUsers();
   }, []);
 
   return (
@@ -51,8 +64,16 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-black text-emerald-400">GymConnect // Admin CRM</h1>
           <p className="text-xs text-zinc-400">Закрытая панель управления базой данных и пользователями</p>
         </div>
-        <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-xs text-emerald-400 font-mono">
-          LIVE_SUPABASE: CONNECTED
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={fetchAllUsers}
+            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+          >
+            🔄 Обновить данные
+          </button>
+          <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-xs text-emerald-400 font-mono">
+            LIVE_SUPABASE: CONNECTED
+          </div>
         </div>
       </div>
 
@@ -88,26 +109,26 @@ export default function AdminDashboard() {
             <div className="p-8 text-center text-zinc-500 text-sm">Загрузка данных из базы...</div>
           ) : users.length === 0 ? (
             <div className="p-8 text-center text-zinc-500 text-sm">
-              Таблица найдена, но в ней пока нет записей.
+              В базе пока нет записей. Если пользователь зарегистрировался, убедитесь, что он записался в таблицу базы данных.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-zinc-900 text-zinc-400 uppercase text-[10px] tracking-wider font-mono">
                   <tr>
-                    <th className="p-4">ID / Имя</th>
+                    <th className="p-4">Имя / Профиль</th>
                     <th className="p-4">Email / Контакт</th>
-                    <th className="p-4">Данные анкеты</th>
+                    <th className="p-4">Данные / Источник</th>
                     <th className="p-4 text-right">Действия</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/50">
                   {users.map((u, index) => (
                     <tr key={u.id || index} className="hover:bg-zinc-800/30 transition-colors">
-                      <td className="p-4 font-medium">{u.name || u.full_name || u.username || `Пользователь #${index + 1}`}</td>
+                      <td className="p-4 font-medium">{u.name || u.full_name || u.username || 'Без имени'}</td>
                       <td className="p-4 text-zinc-400">{u.email || u.phone || 'Не указан'}</td>
                       <td className="p-4 text-zinc-400 text-xs font-mono">
-                        {JSON.stringify(u)}
+                        {u.source ? `Источник: ${u.source}` : JSON.stringify(u).slice(0, 50)}
                       </td>
                       <td className="p-4 text-right">
                         <button className="text-xs text-zinc-400 hover:text-white bg-zinc-800 px-3 py-1 rounded-lg transition-colors">
