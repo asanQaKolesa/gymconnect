@@ -1,262 +1,179 @@
 import React, { useState } from 'react';
 
 export default function AthleteStats({ user }) {
-  const [viewTab, setViewTab] = useState('overview'); // 'overview' | 'prs' | 'calendar'
+  // Реальная цель атлета: 181 из 220 тренировок
+  const [completedWorkouts, setCompletedWorkouts] = useState(181);
+  const targetWorkouts = 220;
 
-  // Отмеченные тренировки в текущем месяце
-  const [trainedDays, setTrainedDays] = useState([2, 4, 7, 9, 11, 14, 16, 18]);
+  // Интерактивный трекер текущей недели
+  const [weekDays, setWeekDays] = useState([
+    { day: 'ПН', done: true, label: 'Ноги / Спина' },
+    { day: 'ВТ', done: true, label: 'Грудь / Руки' },
+    { day: 'СР', done: false, label: 'Отдых' },
+    { day: 'ЧТ', done: true, label: 'База / Ноги' },
+    { day: 'ПТ', done: true, label: 'Спина / Дельты' },
+    { day: 'СБ', done: false, label: 'Восстановление' },
+    { day: 'ВС', done: false, label: 'Кардио' },
+  ]);
 
-  // Персональные рекорды (PR) атлета
-  const [prs, setPrs] = useState({
-    bench: 110,
-    squat: 140,
-    deadlift: 170,
-    weight: 78
-  });
-
-  const [editingPR, setEditingPR] = useState(false);
-  const [prForm, setPrForm] = useState({ ...prs });
-
-  const toggleDay = (day) => {
-    if (trainedDays.includes(day)) {
-      setTrainedDays(trainedDays.filter(d => d !== day));
-    } else {
-      setTrainedDays([...trainedDays, day]);
-    }
+  const toggleDay = (index) => {
+    const updated = [...weekDays];
+    const wasDone = updated[index].done;
+    updated[index].done = !wasDone;
+    setWeekDays(updated);
+    setCompletedWorkouts(prev => wasDone ? prev - 1 : prev + 1);
   };
 
-  const handleSavePRs = (e) => {
-    e.preventDefault();
-    setPrs({ ...prForm });
-    setEditingPR(false);
-  };
+  const percent = Math.min(100, Math.round((completedWorkouts / targetWorkouts) * 100));
+  const remaining = Math.max(0, targetWorkouts - completedWorkouts);
 
-  const completionRate = Math.min(100, Math.round((trainedDays.length / 16) * 100));
+  // Расчет кругового SVG прогресс-бара Apple
+  const radius = 62;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percent / 100) * circumference;
 
   return (
     <div className="space-y-4">
-      {/* 1. Карточка дисциплины GymConnect Consistency */}
-      <div className="apple-glass-card p-5 space-y-3">
-        <div className="flex justify-between items-start">
+      {/* 1. ГЛАВНЫЙ ВИДЖЕТ: ГОДОВАЯ ЦЕЛЬ В СТИЛЕ APPLE FITNESS RINGS */}
+      <div className="apple-glass p-5 space-y-4">
+        <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF5A1F]">
-              GymConnect Performance
+              Сезон 2026 • Годовой таргет
             </span>
-            <h3 className="text-lg font-black text-white tracking-tight mt-0.5">
-              Индекс дисциплины
+            <h3 className="text-base font-black text-white tracking-tight mt-0.5">
+              Силовые тренировки
             </h3>
-            <p className="text-xs text-slate-400 font-medium">
-              Цель: 4 тренировки в неделю
-            </p>
           </div>
-          <div className="w-14 h-14 rounded-2xl bg-[#FF5A1F]/15 border border-[#FF5A1F]/30 flex flex-col items-center justify-center shadow-lg shadow-[#FF5A1F]/10">
-            <span className="text-xs font-black text-[#FF8C38] leading-none">{completionRate}%</span>
-            <span className="text-[9px] text-slate-400 uppercase font-bold mt-1">ПЛАН</span>
-          </div>
+          <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+            Опережает план
+          </span>
         </div>
 
-        {/* Прогресс-бар Apple Style */}
-        <div className="space-y-1.5 pt-1">
-          <div className="w-full h-2.5 rounded-full bg-black/40 border border-white/10 overflow-hidden p-0.5">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-[#FF682B] to-[#FF8C38] transition-all duration-500 shadow-sm"
-              style={{ width: `${completionRate}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-[11px] text-slate-400 font-medium">
-            <span>Выполнено: {trainedDays.length} из 16 за месяц</span>
-            <span className="text-emerald-400 font-semibold">В темпе 🔥</span>
-          </div>
-        </div>
-      </div>
+        {/* Круговой индикатор прогресса */}
+        <div className="flex items-center justify-around pt-1">
+          <div className="relative w-36 h-36 flex items-center justify-center">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 144 144">
+              {/* Фоновая дорожка кольца */}
+              <circle
+                cx="72"
+                cy="72"
+                r={radius}
+                className="text-white/[0.06]"
+                strokeWidth="11"
+                stroke="currentColor"
+                fill="transparent"
+              />
+              {/* Заполненное кольцо прогресса GymConnect */}
+              <circle
+                cx="72"
+                cy="72"
+                r={radius}
+                stroke="url(#gymconnectGradient)"
+                strokeWidth="11"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                fill="transparent"
+                style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}
+              />
+              <defs>
+                <linearGradient id="gymconnectGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#FF7A3D" />
+                  <stop offset="100%" stopColor="#FF4500" />
+                </linearGradient>
+              </defs>
+            </svg>
 
-      {/* 2. Apple Segmented Control */}
-      <div className="apple-glass p-1.5 flex gap-1.5">
-        <button
-          onClick={() => setViewTab('overview')}
-          className={`flex-1 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
-            viewTab === 'overview'
-              ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          Метрики
-        </button>
-        <button
-          onClick={() => setViewTab('prs')}
-          className={`flex-1 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
-            viewTab === 'prs'
-              ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          Силовые (PR)
-        </button>
-        <button
-          onClick={() => setViewTab('calendar')}
-          className={`flex-1 py-2 text-xs font-semibold rounded-xl transition cursor-pointer ${
-            viewTab === 'calendar'
-              ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          Календарь
-        </button>
-      </div>
-
-      {/* ================= ВКЛАДКА 1: МЕТРИКИ ================= */}
-      {viewTab === 'overview' && (
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="apple-glass p-4 space-y-1.5">
-            <span className="text-[11px] text-slate-400 font-medium block">⚡ Активные сессии</span>
-            <p className="text-2xl font-black text-white tracking-tight">{trainedDays.length}</p>
-            <span className="text-[10px] text-emerald-400 font-semibold block">+3 на этой неделе</span>
+            <div className="absolute flex flex-col items-center justify-center text-center">
+              <span className="text-2xl font-black text-white tracking-tight leading-none">
+                {percent}%
+              </span>
+              <span className="text-[10px] font-semibold text-slate-400 mt-0.5">ВЫПОЛНЕНО</span>
+            </div>
           </div>
 
-          <div className="apple-glass p-4 space-y-1.5">
-            <span className="text-[11px] text-slate-400 font-medium block">⏱ Время под нагрузкой</span>
-            <p className="text-2xl font-black text-white tracking-tight">{(trainedDays.length * 1.3).toFixed(1)} ч</p>
-            <span className="text-[10px] text-slate-500 font-medium block">В среднем 75 мин/день</span>
-          </div>
-
-          <div className="apple-glass p-4 space-y-1.5">
-            <span className="text-[11px] text-slate-400 font-medium block">⚖️ Вес атлета</span>
-            <p className="text-2xl font-black text-white tracking-tight">{prs.weight} кг</p>
-            <span className="text-[10px] text-[#FF8C38] font-semibold block">Качественная масса</span>
-          </div>
-
-          <div className="apple-glass p-4 space-y-1.5">
-            <span className="text-[11px] text-slate-400 font-medium block">🏆 Сумма базы</span>
-            <p className="text-2xl font-black text-[#FF5A1F] tracking-tight">{prs.bench + prs.squat + prs.deadlift} кг</p>
-            <span className="text-[10px] text-slate-500 font-medium block">Жим + Присед + Тяга</span>
-          </div>
-        </div>
-      )}
-
-      {/* ================= ВКЛАДКА 2: СИЛОВЫЕ РЕКОРДЫ (PR) ================= */}
-      {viewTab === 'prs' && (
-        <div className="apple-glass p-5 space-y-4">
-          <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
+          {/* Цифры таргета */}
+          <div className="space-y-3">
             <div>
-              <h3 className="text-sm font-bold text-white tracking-tight">Личные рекорды (PR)</h3>
-              <p className="text-xs text-slate-400">Максимальные веса на 1 повторение</p>
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Выполнено</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black text-white">{completedWorkouts}</span>
+                <span className="text-xs text-slate-400 font-medium">/ {targetWorkouts}</span>
+              </div>
             </div>
-            <button
-              onClick={() => {
-                setPrForm({ ...prs });
-                setEditingPR(!editingPR);
-              }}
-              className="text-xs text-[#FF5A1F] font-semibold hover:underline cursor-pointer"
-            >
-              {editingPR ? 'Отмена' : 'Изменить'}
-            </button>
-          </div>
 
-          {editingPR ? (
-            <form onSubmit={handleSavePRs} className="space-y-3 pt-1">
-              <div>
-                <label className="text-[11px] font-semibold text-slate-400 block mb-1">Жим лежа (кг)</label>
-                <input
-                  type="number"
-                  value={prForm.bench}
-                  onChange={e => setPrForm({ ...prForm, bench: Number(e.target.value) })}
-                  className="w-full apple-input"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-semibold text-slate-400 block mb-1">Приседания со штангой (кг)</label>
-                <input
-                  type="number"
-                  value={prForm.squat}
-                  onChange={e => setPrForm({ ...prForm, squat: Number(e.target.value) })}
-                  className="w-full apple-input"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-semibold text-slate-400 block mb-1">Становая тяга (кг)</label>
-                <input
-                  type="number"
-                  value={prForm.deadlift}
-                  onChange={e => setPrForm({ ...prForm, deadlift: Number(e.target.value) })}
-                  className="w-full apple-input"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-semibold text-slate-400 block mb-1">Текущий собственный вес (кг)</label>
-                <input
-                  type="number"
-                  value={prForm.weight}
-                  onChange={e => setPrForm({ ...prForm, weight: Number(e.target.value) })}
-                  className="w-full apple-input"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full gymshark-btn-electric py-2.5 text-xs font-bold mt-2 cursor-pointer"
-              >
-                Сохранить рекорды
-              </button>
-            </form>
-          ) : (
-            <div className="space-y-2 pt-1">
-              <div className="flex justify-between items-center p-3 rounded-xl bg-black/30 border border-white/[0.06]">
-                <span className="text-xs font-semibold text-slate-300">Жим лежа</span>
-                <span className="text-sm font-black text-white">{prs.bench} кг</span>
-              </div>
-              <div className="flex justify-between items-center p-3 rounded-xl bg-black/30 border border-white/[0.06]">
-                <span className="text-xs font-semibold text-slate-300">Приседания</span>
-                <span className="text-sm font-black text-white">{prs.squat} кг</span>
-              </div>
-              <div className="flex justify-between items-center p-3 rounded-xl bg-black/30 border border-white/[0.06]">
-                <span className="text-xs font-semibold text-slate-300">Становая тяга</span>
-                <span className="text-sm font-black text-white">{prs.deadlift} кг</span>
-              </div>
-              <div className="flex justify-between items-center p-3 rounded-xl bg-[#FF5A1F]/10 border border-[#FF5A1F]/20">
-                <span className="text-xs font-bold text-[#FF8C38]">Сумма троеборья</span>
-                <span className="text-sm font-black text-white">{prs.bench + prs.squat + prs.deadlift} кг</span>
-              </div>
+            <div>
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Осталось закрыть</span>
+              <span className="text-lg font-bold text-[#FF8C38]">{remaining} сессий</span>
             </div>
-          )}
+          </div>
         </div>
-      )}
 
-      {/* ================= ВКЛАДКА 3: КАЛЕНДАРЬ ТРЕНИРОВОК ================= */}
-      {viewTab === 'calendar' && (
-        <div className="apple-glass p-5 space-y-3.5">
-          <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
-            <h3 className="text-sm font-bold text-white tracking-tight">Лог тренировочных дней</h3>
-            <span className="text-[11px] text-[#FF8C38] font-bold">Сентябрь 2026</span>
+        {/* Линейный суб-бар с расчетом ритма */}
+        <div className="bg-black/30 p-3 rounded-xl border border-white/[0.05] space-y-1 text-xs">
+          <div className="flex justify-between text-[11px]">
+            <span className="text-slate-400">Текущий темп</span>
+            <span className="text-emerald-400 font-semibold">4.2 тренировки / нед</span>
           </div>
-
-          <div className="grid grid-cols-7 text-center text-[10px] font-bold text-slate-500 pb-1">
-            <span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1.5">
-            <div className="h-9" />
-            {Array.from({ length: 30 }, (_, i) => i + 1).map(day => {
-              const isDone = trainedDays.includes(day);
-              return (
-                <button
-                  key={day}
-                  onClick={() => toggleDay(day)}
-                  className={`h-9 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer ${
-                    isDone
-                      ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/25 active:scale-95'
-                      : 'bg-white/[0.03] text-slate-400 hover:bg-white/[0.06] border border-white/[0.05]'
-                  }`}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-
-          <p className="text-[11px] text-slate-400 text-center pt-2">
-            Тапай на число, чтобы отметить выполненную тренировку
+          <p className="text-[10px] text-slate-500">
+            При сохранении темпа цель в 220 тренировок закроется в ноябре.
           </p>
         </div>
-      )}
+      </div>
+
+      {/* 2. НЕДЕЛЬНЫЙ СПЛИТ-ТРЕКЕР (АКТУАЛЬНЫЙ РИТМ) */}
+      <div className="apple-glass p-5 space-y-3.5">
+        <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
+          <div>
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider">Недельный сплит</h3>
+            <p className="text-[11px] text-slate-400">Нажми на день, чтобы отметить тренировку</p>
+          </div>
+          <span className="text-[11px] font-bold text-[#FF8C38]">
+            {weekDays.filter(d => d.done).length} / 4 норма
+          </span>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1.5 pt-1">
+          {weekDays.map((item, idx) => (
+            <button
+              key={item.day}
+              type="button"
+              onClick={() => toggleDay(idx)}
+              className={`py-3 px-1 rounded-xl flex flex-col items-center justify-between min-h-[64px] border transition active:scale-95 cursor-pointer ${
+                item.done
+                  ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white border-[#FF5A1F] shadow-md shadow-[#FF5A1F]/20'
+                  : 'bg-white/[0.02] text-slate-400 border-white/[0.05] hover:border-white/[0.1]'
+              }`}
+            >
+              <span className="text-[10px] font-bold">{item.day}</span>
+              <span className="text-xs font-bold">{item.done ? '✓' : '—'}</span>
+              <span className={`text-[8px] font-medium leading-none ${item.done ? 'text-white/80' : 'text-slate-500'}`}>
+                {item.done ? 'Зал' : 'Отдых'}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 3. КАРТОЧКИ КЛЮЧЕВЫХ МЕТРИК GYMCONNECT */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="apple-glass p-4 space-y-1">
+          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+            Суммарный объем
+          </span>
+          <p className="text-xl font-black text-white tracking-tight">284 тонны</p>
+          <span className="text-[10px] text-emerald-400 font-semibold block">Базовые сплиты</span>
+        </div>
+
+        <div className="apple-glass p-4 space-y-1">
+          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+            Средняя длительность
+          </span>
+          <p className="text-xl font-black text-white tracking-tight">72 мин</p>
+          <span className="text-[10px] text-slate-400 font-medium block">Высокая плотность</span>
+        </div>
+      </div>
     </div>
   );
 }
