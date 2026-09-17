@@ -44,18 +44,21 @@ export default function GymBroTab({
   const [isEditingCard, setIsEditingCard] = useState(!myCard);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showDetailModal, setShowDetailModal] = useState(false);
-
-  // Стейт результата свайпа
   const [matchResult, setMatchResult] = useState(null);
 
-  // Список ID тех, кто уже лайкнул меня
+  const myTgId = Number(user?.telegram_id || 0);
+
+  // Хранилище исключенных ID (лайкнутые, принятые и локально дизлайкнутые)
+  const [excludedIds, setExcludedIds] = useState([]);
   const [incomingLikers, setIncomingLikers] = useState([]);
+
+  // История последнего действия для кнопки отката назад ↩️
+  const [lastSwipedCard, setLastSwipedCard] = useState(null);
 
   // Фильтры
   const [gymFilter, setGymFilter] = useState('all');
   const [goalFilter, setGoalFilter] = useState('all');
 
-  // Стейт формы анкеты
   const [formData, setFormData] = useState({
     name: myCard?.name || user?.name || '',
     gender: myCard?.gender || user?.gender || 'Парень',
@@ -75,27 +78,54 @@ export default function GymBroTab({
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  const myTgId = Number(user?.telegram_id || 0);
-
-  // Подгружаем список людей, которые свайпнули меня
+  // Загружаем постоянные исключения: friendships + локальные дизлайки
   useEffect(() => {
-    async function loadIncomingLikes() {
+    async function loadExclusions() {
       if (!myTgId) return;
+
+      // 1. Дизлайки из localStorage устройства
+      let localPassed = [];
       try {
-        const { data } = await supabase
+        const savedPasses = localStorage.getItem(`gym_passed_${myTgId}`);
+        if (savedPasses) localPassed = JSON.parse(savedPasses);
+      } catch (e) {}
+
+      // 2. Исходящие заявки и друзья из Supabase
+      try {
+        const { data: myOut } = await supabase
+          .from('friendships')
+          .select('friend_id')
+          .eq('user_id', myTgId);
+
+        const { data: acceptedIn } = await supabase
+          .from('friendships')
+          .select('user_id')
+          .eq('friend_id', myTgId)
+          .eq('status', 'accepted');
+
+        const { data: pendingIn } = await supabase
           .from('friendships')
           .select('user_id')
           .eq('friend_id', myTgId)
           .eq('status', 'pending');
 
-        if (data) {
-          setIncomingLikers(data.map(d => Number(d.user_id)));
+        const dbExcluded = [
+          ...(myOut || []).map(r => Number(r.friend_id)),
+          ...(acceptedIn || []).map(r => Number(r.user_id))
+        ];
+
+        // Объединяем без дублей
+        const allExcluded = [...new Set([...localPassed, ...dbExcluded])];
+        setExcludedIds(allExcluded);
+
+        if (pendingIn) {
+          setIncomingLikers(pendingIn.map(d => Number(d.user_id)));
         }
       } catch (err) {
         console.error(err);
       }
     }
-    loadIncomingLikes();
+    loadExclusions();
   }, [myTgId]);
 
   function handlePhotoUpload(e) {
@@ -129,10 +159,13 @@ export default function GymBroTab({
     reader.readAsDataURL(file);
   }
 
-  // Фильтрация и ПРИОРИТЕТНАЯ СОРТИРОВКА карточек
-  const filteredCards = cards
+  // Фильтрация колоды: СТРОГО исключаем всех просмотренных
+  const activeDeck = cards
     .filter(c => {
-      if (Number(c.telegram_id) === myTgId) return false;
+      const cardTgId = Number(c.telegram_id);
+      if (cardTgId === myTgId) return false;
+      // Если уже лайкнут, дизлайкнут или в друзьях — больше НЕ показываем
+      if (excludedIds.includes(cardTgId)) return false;
 
       if (gymFilter === 'my_gym' && formData.weekday_gym) {
         if (c.weekday_gym?.toLowerCase() !== formData.weekday_gym?.toLowerCase()) return false;
@@ -145,7 +178,6 @@ export default function GymBroTab({
       return true;
     })
     .sort((a, b) => {
-      // ТЕ, КТО ЛАЙКНУЛ МЕНЯ, ИДУТ САМЫМИ ПЕРВЫМИ В СТОПКЕ!
       const aLikesMe = incomingLikers.includes(Number(a.telegram_id));
       const bLikesMe = incomingLikers.includes(Number(b.telegram_id));
       if (aLikesMe && !bLikesMe) return -1;
@@ -153,7 +185,7 @@ export default function GymBroTab({
       return 0;
     });
 
-  const currentCard = filteredCards[currentIndex];
+  const currentCard = activeDeck[currentIndex];
   const isCurrentCardLikingMe = currentCard ? incomingLikers.includes(Number(currentCard.telegram_id)) : false;
 
   function handleTouchStart(e) {
@@ -173,21 +205,56 @@ export default function GymBroTab({
     }
   }
 
+  // ДИЗЛАЙК (ПРОПУСК): навсегда запоминаем в localStorage, чтобы не повторялся
   function handlePass() {
-    if (currentIndex < filteredCards.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-    } else {
-      setCurrentIndex(filteredCards.length);
+    if (!currentCard) return;
+    const targetTgId = Number(currentCard.telegram_id);
+
+    setLastSwipedCard({ card: currentCard, action: 'pass' });
+
+    // Сохраняем в локальные исключения навсегда
+    const updated = [...new Set([...excludedIds, targetTgId])];
+    setExcludedIds(updated);
+    try {
+      localStorage.setItem(`gym_passed_${myTgId}`, JSON.stringify(updated));
+    } catch (e) {}
+
+    // Сдвигаем карточку
+    if (currentIndex >= activeDeck.length - 1) {
+      setCurrentIndex(0);
     }
   }
 
+  // ОТКАТ СВАЙПА НАЗАД ↩️ (REWIND)
+  function handleRewind() {
+    if (!lastSwipedCard) return;
+    const targetTgId = Number(lastSwipedCard.card.telegram_id);
+
+    // Удаляем из исключений
+    const updated = excludedIds.filter(id => id !== targetTgId);
+    setExcludedIds(updated);
+    try {
+      localStorage.setItem(`gym_passed_${myTgId}`, JSON.stringify(updated));
+    } catch (e) {}
+
+    setLastSwipedCard(null);
+    setCurrentIndex(0);
+  }
+
+  // КОННЕКТ (ЛАЙК)
   async function handleConnect() {
     if (!currentCard) return;
     const targetTgId = Number(currentCard.telegram_id);
 
+    setLastSwipedCard({ card: currentCard, action: 'connect' });
+
+    // Добавляем в исключения навсегда
+    const updated = [...new Set([...excludedIds, targetTgId])];
+    setExcludedIds(updated);
+
     try {
-      // Если атлет уже свайпал меня -> ВЗАИМНЫЙ МЭТЧ!
       if (isCurrentCardLikingMe) {
+        // ВЗАИМНЫЙ МЭТЧ!
         await supabase
           .from('friendships')
           .update({ status: 'accepted' })
@@ -198,11 +265,9 @@ export default function GymBroTab({
           isMutual: true,
           targetUser: currentCard
         });
-
-        // Убираем из списка входящих
         setIncomingLikers(prev => prev.filter(id => id !== targetTgId));
       } else {
-        // Односторонний лайк
+        // Односторонняя заявка
         await supabase.from('friendships').insert([
           { user_id: myTgId, friend_id: targetTgId, status: 'pending' }
         ]);
@@ -220,7 +285,9 @@ export default function GymBroTab({
       });
     }
 
-    handlePass();
+    if (currentIndex >= activeDeck.length - 1) {
+      setCurrentIndex(0);
+    }
   }
 
   function handleSubmitForm(e) {
@@ -232,7 +299,7 @@ export default function GymBroTab({
 
   return (
     <div className="space-y-3 pb-8 select-none">
-      {/* 1. ЭКРАН РЕЗУЛЬТАТА СВАЙПА (МЭТЧ / ЗАЯВКА) */}
+      {/* 1. ЭКРАН РЕЗУЛЬТАТА СВАЙПА */}
       {matchResult && (
         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full p-6 text-center space-y-4 border border-white/10 rounded-3xl animate-in zoom-in-95 duration-200">
@@ -249,7 +316,7 @@ export default function GymBroTab({
                     Вы оба готовы тренироваться!
                   </h3>
                   <p className="text-xs text-slate-300 pt-1">
-                    Симпатия взаимна. Вы с атлетом <strong className="text-white">{matchResult.targetUser.name}</strong> теперь напарники в GymConnect.
+                    Вы с атлетом <strong className="text-white">{matchResult.targetUser.name}</strong> теперь напарники в GymConnect.
                   </p>
                 </div>
 
@@ -408,7 +475,7 @@ export default function GymBroTab({
               <button
                 type="button"
                 onClick={() => setIsEditingCard(false)}
-                className="text-xs text-slate-400 hover:text-white px-2 py-1"
+                className="text-xs text-slate-400 hover:text-white px-2 py-1 cursor-pointer"
               >
                 ✕ Отмена
               </button>
@@ -451,7 +518,7 @@ export default function GymBroTab({
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Твой основной зал
+                  Основной зал
                 </label>
                 <input
                   type="text"
@@ -482,7 +549,7 @@ export default function GymBroTab({
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Твой сплит
+                  Сплит
                 </label>
                 <select
                   value={formData.split}
@@ -497,7 +564,7 @@ export default function GymBroTab({
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Время тренировок
+                  Время
                 </label>
                 <select
                   value={formData.time_slot}
@@ -528,13 +595,13 @@ export default function GymBroTab({
 
             <div>
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                О себе в зале (рабочие веса, цели)
+                О себе в зале
               </label>
               <textarea
                 rows={2}
                 value={formData.bio}
                 onChange={e => setFormData({ ...formData, bio: e.target.value })}
-                placeholder="Жму 100 на 5, ищу напарника для жесткой страховки..."
+                placeholder="Жму 100 на 5, ищу напарника..."
                 className="w-full apple-input text-xs py-2 resize-none"
               />
             </div>
@@ -591,16 +658,6 @@ export default function GymBroTab({
             </button>
           </div>
 
-          {/* Индикатор входящих заявок */}
-          {incomingLikers.length > 0 && (
-            <div className="p-2 rounded-xl bg-gradient-to-r from-amber-500/20 via-[#FF5A1F]/20 to-transparent border border-amber-500/30 flex items-center justify-between">
-              <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
-                <span>🔥</span> Тебя хотят добавить в GymBro: {incomingLikers.length} атлета
-              </span>
-              <span className="text-[10px] text-slate-400">в начале ленты ▾</span>
-            </div>
-          )}
-
           {currentCard ? (
             <div className="space-y-3">
               <div
@@ -629,9 +686,7 @@ export default function GymBroTab({
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
 
-                {/* Верхние бейджи */}
                 <div className="absolute top-3.5 inset-x-3.5 flex justify-between items-start pointer-events-none gap-2">
-                  {/* ПРИОРИТЕТНЫЙ БЕЙДЖ ЕСЛИ ЛАЙКНУЛ ТЕБЯ */}
                   {isCurrentCardLikingMe ? (
                     <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-[#FF5A1F] text-white shadow-lg shadow-amber-500/40 animate-pulse">
                       ⚡️ Хочет тренироваться с тобой!
@@ -647,7 +702,6 @@ export default function GymBroTab({
                   </span>
                 </div>
 
-                {/* Нижняя плашка */}
                 <div className="absolute bottom-4 inset-x-4 space-y-1.5 pointer-events-none">
                   <div className="flex items-baseline gap-2">
                     <h3 className="text-xl font-black text-white tracking-tight drop-shadow-md">
@@ -678,8 +732,20 @@ export default function GymBroTab({
                 </div>
               </div>
 
-              {/* Кнопки действий */}
-              <div className="flex items-center justify-center gap-6 pt-1">
+              {/* 4 ПОСТОЯННЫЕ КНОПКИ ДЕЙСТВИЙ */}
+              <div className="flex items-center justify-center gap-4 pt-1">
+                {/* 1. КНОПКА ОТКАТА НАЗАД ↩️ (REWIND) */}
+                <button
+                  type="button"
+                  disabled={!lastSwipedCard}
+                  onClick={handleRewind}
+                  className="w-11 h-11 rounded-full bg-white/[0.04] border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 flex items-center justify-center text-base shadow active:scale-90 transition cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
+                  title="Вернуть предыдущую анкету"
+                >
+                  ↩️
+                </button>
+
+                {/* 2. КНОПКА ПРОПУСТИТЬ ✕ */}
                 <button
                   type="button"
                   onClick={handlePass}
@@ -689,15 +755,17 @@ export default function GymBroTab({
                   ✕
                 </button>
 
+                {/* 3. КНОПКА ИНФО ℹ️ */}
                 <button
                   type="button"
                   onClick={() => setShowDetailModal(true)}
-                  className="w-10 h-10 rounded-full bg-white/[0.04] border border-white/10 text-slate-300 flex items-center justify-center text-sm shadow active:scale-90 transition cursor-pointer"
+                  className="w-11 h-11 rounded-full bg-white/[0.04] border border-white/10 text-slate-300 flex items-center justify-center text-sm shadow active:scale-90 transition cursor-pointer"
                   title="Подробнее"
                 >
                   ℹ️
                 </button>
 
+                {/* 4. КНОПКА КОННЕКТ 🤝 */}
                 <button
                   type="button"
                   onClick={handleConnect}
@@ -713,38 +781,27 @@ export default function GymBroTab({
               </div>
             </div>
           ) : (
+            /* ЭКРАН ЗАВЕРШЕНИЯ (БЕЗ ДУРАЦКИХ ПОВТОРОВ) */
             <div className="p-8 text-center apple-glass border border-white/[0.08] rounded-3xl space-y-3 py-14">
-              <span className="text-4xl block">🏋️‍♂️🔥</span>
+              <span className="text-4xl block">🏋️‍♂️🏁</span>
               <div className="space-y-1">
-                <h3 className="text-sm font-black text-white">Ты просмотрел всех атлетов!</h3>
+                <h3 className="text-sm font-black text-white">Все доступные анкеты просмотрены!</h3>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  Попробуй сбросить фильтры или нажми кнопку ниже, чтобы начать заново.
+                  Все, кому ты отправил запрос, находятся в ожидании ответа. Новые анкеты появятся по мере регистрации атлетов.
                 </p>
               </div>
 
-              <div className="pt-2 flex justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGymFilter('all');
-                    setGoalFilter('all');
-                    setCurrentIndex(0);
-                  }}
-                  className="gymshark-btn-electric px-4 py-2 text-xs font-bold cursor-pointer"
-                >
-                  Сбросить фильтры
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentIndex(0);
-                    if (onRefreshCards) onRefreshCards();
-                  }}
-                  className="px-4 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-semibold text-slate-300 hover:text-white cursor-pointer"
-                >
-                  Смотреть сначала
-                </button>
-              </div>
+              {lastSwipedCard && (
+                <div className="pt-2 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleRewind}
+                    className="px-4 py-2 rounded-xl bg-white/[0.04] border border-amber-500/30 text-xs font-semibold text-amber-400 hover:text-white cursor-pointer active:scale-95 transition"
+                  >
+                    Вернуть последнюю анкету ↩️
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
