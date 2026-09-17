@@ -4,7 +4,6 @@ import NutritionTab from './components/NutritionTab';
 import GymBroTab from './components/GymBroTab';
 import ProfileTab from './components/ProfileTab';
 import GymFeedTab from './components/GymFeedTab';
-import FriendsTab from './components/FriendsTab';
 
 const Icons = {
   Lightning: () => (
@@ -24,14 +23,6 @@ const Icons = {
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  ),
-  Friends: () => (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-      <circle cx="9" cy="7" r="4"></circle>
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
     </svg>
   ),
   Salad: () => (
@@ -347,7 +338,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Шапка */}
       <header className="px-5 py-3 border-b border-white/[0.08] flex justify-between items-center bg-[#0a0d14]/80 backdrop-blur-2xl sticky top-0 z-30">
         <div onClick={handleLogoTap} className="flex items-center gap-2.5 cursor-pointer active:scale-95 transition">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] flex items-center justify-center text-white shadow-lg shadow-[#FF5A1F]/25 flex-shrink-0">
@@ -377,6 +368,7 @@ export default function App() {
         </div>
       </header>
 
+      {/* Основной контент */}
       <main className="flex-1 px-4 py-3.5 max-w-md mx-auto w-full space-y-4">
         {activeTab === 'home' && (
           <div className="space-y-3.5">
@@ -421,6 +413,7 @@ export default function App() {
           </div>
         )}
 
+        {/* Раздел GymBro (включает поиск + твоих друзей внутри) */}
         {activeTab === 'gymbro' && (
           <GymBroTab
             myCard={myGymBroCard}
@@ -434,10 +427,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'friends' && (
-          <FriendsTab user={currentUser} />
-        )}
-
+        {/* Раздел Питание */}
         {activeTab === 'nutrition' && (
           <NutritionTab
             myProfile={currentUser}
@@ -447,6 +437,7 @@ export default function App() {
           />
         )}
 
+        {/* Раздел Профиль */}
         {activeTab === 'profile' && (
           <ProfileTab
             user={currentUser}
@@ -456,7 +447,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Нижнее меню */}
+      {/* 4 чистые вкладки в нижнем баре */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto ios-nav-dock flex justify-around py-2.5 z-40">
         <button
           onClick={() => setActiveTab('home')}
@@ -472,14 +463,6 @@ export default function App() {
         >
           <Icons.UsersGymBro />
           <span className="text-[10px] font-semibold tracking-tight">GymBro</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('friends')}
-          className={`flex flex-col items-center gap-1 transition cursor-pointer ${activeTab === 'friends' ? 'text-[#FF5A1F] scale-105' : 'text-slate-400 opacity-60'}`}
-        >
-          <Icons.Friends />
-          <span className="text-[10px] font-semibold tracking-tight">Друзья</span>
         </button>
 
         <button
