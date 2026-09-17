@@ -9,75 +9,116 @@ export default function FriendsTab({
   onRefreshFriends
 }) {
   const [gymBroMap, setGymBroMap] = useState({});
+  const [usersMap, setUsersMap] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all' | 'gymbro'
 
   const myTgId = Number(user?.telegram_id || 0);
 
-  // Загружаем карточки gymbro_cards для всех друзей, чтобы определить напарников
-  useEffect(() => {
-    async function loadGymBroDetails() {
-      if (!friends || friends.length === 0) return;
+  // Извлекаем все возможные ID друзей из входящего массива
+  const friendIds = friends.map(f => {
+    if (typeof f === 'number' || typeof f === 'string') return Number(f);
+    return Number(f.telegram_id || f.friend_id || f.id || (f.friend && f.friend.telegram_id) || 0);
+  }).filter(id => id && id !== myTgId);
 
-      const friendTgIds = friends.map(f => Number(f.telegram_id || f.friend_id || 0)).filter(Boolean);
-      if (friendTgIds.length === 0) return;
+  // Подгружаем недостающие профили и данные gymbro_cards напрямую из базы
+  useEffect(() => {
+    async function loadData() {
+      if (friendIds.length === 0) return;
 
       try {
-        const { data: cards, error } = await supabase
+        // 1. Профили пользователей
+        const { data: userData } = await supabase
+          .from('users')
+          .select('telegram_id, telegram_username, name, avatar_url, city')
+          .in('telegram_id', friendIds);
+
+        if (userData) {
+          const uMap = {};
+          userData.forEach(u => {
+            uMap[Number(u.telegram_id)] = u;
+          });
+          setUsersMap(uMap);
+        }
+
+        // 2. Карточки GymBro
+        const { data: cards } = await supabase
           .from('gymbro_cards')
           .select('telegram_id, weekday_gym, split, time_slot, search_goal')
-          .in('telegram_id', friendTgIds);
+          .in('telegram_id', friendIds);
 
-        if (!error && cards) {
-          const map = {};
+        if (cards) {
+          const bMap = {};
           cards.forEach(c => {
-            map[Number(c.telegram_id)] = c;
+            bMap[Number(c.telegram_id)] = c;
           });
-          setGymBroMap(map);
+          setGymBroMap(bMap);
         }
-      } catch (e) {
-        console.error('Ошибка загрузки данных GymBro для друзей:', e);
+      } catch (err) {
+        console.error('Ошибка загрузки данных друзей:', err);
       }
     }
 
-    loadGymBroDetails();
-  }, [friends]);
+    loadData();
+  }, [JSON.stringify(friendIds)]);
 
-  // Фильтрация друзей
-  const filteredFriends = friends.filter(friend => {
-    const friendTgId = Number(friend.telegram_id || friend.friend_id || 0);
-    const gymBroInfo = gymBroMap[friendTgId];
+  // Собираем нормализованный список друзей
+  const normalizedList = friendIds.map(fId => {
+    const rawFriend = friends.find(f => {
+      const id = typeof f === 'object' ? Number(f.telegram_id || f.friend_id || f.id || 0) : Number(f);
+      return id === fId;
+    });
 
-    if (filterType === 'gymbro' && !gymBroInfo) return false;
+    const dbUser = usersMap[fId] || {};
+    const gymBroInfo = gymBroMap[fId] || null;
+
+    return {
+      telegram_id: fId,
+      name: dbUser.name || rawFriend?.name || 'Атлет',
+      telegram_username: dbUser.telegram_username || rawFriend?.telegram_username || '',
+      avatar_url: dbUser.avatar_url || rawFriend?.avatar_url || rawFriend?.photo_url || '',
+      city: dbUser.city || rawFriend?.city || 'Алматы',
+      gymBroInfo: gymBroInfo,
+      isGymBro: Boolean(gymBroInfo)
+    };
+  });
+
+  // Фильтруем по вкладкам и строке поиска
+  const displayedFriends = normalizedList.filter(item => {
+    if (filterType === 'gymbro' && !item.isGymBro) return false;
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const nameMatch = (friend.name || '').toLowerCase().includes(q);
-      const gymMatch = (gymBroInfo?.weekday_gym || '').toLowerCase().includes(q);
-      const usernameMatch = (friend.telegram_username || '').toLowerCase().includes(q);
-      return nameMatch || gymMatch || usernameMatch;
+      const matchName = item.name.toLowerCase().includes(q);
+      const matchUser = item.telegram_username.toLowerCase().includes(q);
+      const matchGym = (item.gymBroInfo?.weekday_gym || '').toLowerCase().includes(q);
+      return matchName || matchUser || matchGym;
     }
 
     return true;
   });
 
-  function handleInviteWorkout(friend, gymBroInfo) {
+  const gymBroCount = normalizedList.filter(item => item.isGymBro).length;
+
+  function handleInviteWorkout(friend) {
     if (!friend.telegram_username) {
       alert('У напарника скрыт юзернейм в Telegram.');
       return;
     }
-    const gym = gymBroInfo?.weekday_gym ? gymBroInfo.weekday_gym.split('(')[0].trim() : 'зал';
+    const gym = friend.gymBroInfo?.weekday_gym
+      ? friend.gymBroInfo.weekday_gym.split('(')[0].trim()
+      : 'зал';
     const text = encodeURIComponent(`Салам, бро! 🔥 Го сегодня на тренировку в ${gym}? Какой сплит у тебя по плану?`);
     window.open(`https://t.me/${friend.telegram_username}?text=${text}`, '_blank');
   }
 
   return (
     <div className="space-y-4 pb-12 select-none">
-      {/* Шапка вкладки */}
+      {/* Шапка */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-black text-white uppercase tracking-wider">
-            Твои контакты ({friends.length})
+            Твои контакты ({normalizedList.length})
           </h2>
           <p className="text-[10px] text-slate-400">
             Напарники по залу и атлеты в твоей сети
@@ -96,7 +137,7 @@ export default function FriendsTab({
         )}
       </div>
 
-      {/* Фильтры и поиск */}
+      {/* Поиск и фильтры */}
       <div className="space-y-2">
         <div className="relative">
           <input
@@ -127,7 +168,7 @@ export default function FriendsTab({
                 : 'bg-white/[0.03] border-white/[0.08] text-slate-400'
             }`}
           >
-            Все атлеты ({friends.length})
+            Все атлеты ({normalizedList.length})
           </button>
 
           <button
@@ -140,22 +181,21 @@ export default function FriendsTab({
             }`}
           >
             <span>⚡️ Напарники GymBro</span>
-            <span>({Object.keys(gymBroMap).length})</span>
+            <span>({gymBroCount})</span>
           </button>
         </div>
       </div>
 
-      {/* Список друзей */}
-      {filteredFriends.length > 0 ? (
+      {/* Список */}
+      {displayedFriends.length > 0 ? (
         <div className="space-y-2.5">
-          {filteredFriends.map(friend => {
-            const friendTgId = Number(friend.telegram_id || friend.friend_id || 0);
-            const gymBroInfo = gymBroMap[friendTgId];
-            const isGymBro = Boolean(gymBroInfo);
+          {displayedFriends.map(friend => {
+            const isGymBro = friend.isGymBro;
+            const gymBroInfo = friend.gymBroInfo;
 
             return (
               <div
-                key={friendTgId || friend.id}
+                key={friend.telegram_id}
                 className={`p-3.5 rounded-3xl transition duration-200 border ${
                   isGymBro
                     ? 'bg-gradient-to-br from-[#1c1613] via-[#10141f] to-[#0a0d14] border-amber-500/40 shadow-lg shadow-amber-500/5'
@@ -163,16 +203,15 @@ export default function FriendsTab({
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  {/* Аватарка и данные */}
                   <div
                     className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
                     onClick={() => onOpenProfile && onOpenProfile(friend)}
                   >
                     <div className="relative flex-shrink-0">
                       <div className="w-12 h-12 rounded-2xl overflow-hidden bg-[#121622] border border-white/10 flex items-center justify-center">
-                        {friend.avatar_url || friend.photo_url ? (
+                        {friend.avatar_url ? (
                           <img
-                            src={friend.avatar_url || friend.photo_url}
+                            src={friend.avatar_url}
                             alt=""
                             className="w-full h-full object-cover"
                           />
@@ -207,8 +246,8 @@ export default function FriendsTab({
                         </span>
                       )}
 
-                      {/* Детали GymBro: Зал и Сплит */}
-                      {isGymBro && (
+                      {/* Филиал и сплит */}
+                      {isGymBro && gymBroInfo && (
                         <div className="pt-1.5 space-y-0.5">
                           <span className="text-[10px] text-amber-300 font-semibold block truncate">
                             📍 {gymBroInfo.weekday_gym}
@@ -221,11 +260,11 @@ export default function FriendsTab({
                     </div>
                   </div>
 
-                  {/* Кнопка удаления */}
+                  {/* Удаление */}
                   {onRemoveFriend && (
                     <button
                       type="button"
-                      onClick={() => onRemoveFriend(friendTgId)}
+                      onClick={() => onRemoveFriend(friend.telegram_id)}
                       className="text-slate-500 hover:text-red-400 p-1 text-xs cursor-pointer transition flex-shrink-0"
                       title="Удалить из друзей"
                     >
@@ -234,13 +273,13 @@ export default function FriendsTab({
                   )}
                 </div>
 
-                {/* Действия с напарником */}
+                {/* Кнопки вызова на тренировку */}
                 <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center gap-2">
                   {friend.telegram_username ? (
                     <>
                       <button
                         type="button"
-                        onClick={() => handleInviteWorkout(friend, gymBroInfo)}
+                        onClick={() => handleInviteWorkout(friend)}
                         className="flex-1 gymshark-btn-electric py-2 text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                       >
                         <span>🏋️‍♂️ Позвать в зал</span>
@@ -266,7 +305,6 @@ export default function FriendsTab({
           })}
         </div>
       ) : (
-        /* Пустой экран */
         <div className="p-8 text-center apple-glass border border-white/[0.08] rounded-3xl space-y-3 py-12">
           <span className="text-3xl block">🤝</span>
           <div className="space-y-1">
