@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
 const GOALS = [
@@ -45,8 +45,11 @@ export default function GymBroTab({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // Стейты результата свайпа
-  const [matchResult, setMatchResult] = useState(null); // { isMutual: boolean, targetUser: object }
+  // Стейт результата свайпа
+  const [matchResult, setMatchResult] = useState(null);
+
+  // Список ID тех, кто уже лайкнул меня
+  const [incomingLikers, setIncomingLikers] = useState([]);
 
   // Фильтры
   const [gymFilter, setGymFilter] = useState('all');
@@ -71,6 +74,29 @@ export default function GymBroTab({
 
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
+
+  const myTgId = Number(user?.telegram_id || 0);
+
+  // Подгружаем список людей, которые свайпнули меня
+  useEffect(() => {
+    async function loadIncomingLikes() {
+      if (!myTgId) return;
+      try {
+        const { data } = await supabase
+          .from('friendships')
+          .select('user_id')
+          .eq('friend_id', myTgId)
+          .eq('status', 'pending');
+
+        if (data) {
+          setIncomingLikers(data.map(d => Number(d.user_id)));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    loadIncomingLikes();
+  }, [myTgId]);
 
   function handlePhotoUpload(e) {
     const file = e.target.files?.[0];
@@ -103,22 +129,32 @@ export default function GymBroTab({
     reader.readAsDataURL(file);
   }
 
-  // Фильтрация анкет
-  const filteredCards = cards.filter(c => {
-    if (Number(c.telegram_id) === Number(user?.telegram_id)) return false;
+  // Фильтрация и ПРИОРИТЕТНАЯ СОРТИРОВКА карточек
+  const filteredCards = cards
+    .filter(c => {
+      if (Number(c.telegram_id) === myTgId) return false;
 
-    if (gymFilter === 'my_gym' && formData.weekday_gym) {
-      if (c.weekday_gym?.toLowerCase() !== formData.weekday_gym?.toLowerCase()) return false;
-    }
+      if (gymFilter === 'my_gym' && formData.weekday_gym) {
+        if (c.weekday_gym?.toLowerCase() !== formData.weekday_gym?.toLowerCase()) return false;
+      }
 
-    if (goalFilter !== 'all') {
-      if (c.search_goal !== goalFilter) return false;
-    }
+      if (goalFilter !== 'all') {
+        if (c.search_goal !== goalFilter) return false;
+      }
 
-    return true;
-  });
+      return true;
+    })
+    .sort((a, b) => {
+      // ТЕ, КТО ЛАЙКНУЛ МЕНЯ, ИДУТ САМЫМИ ПЕРВЫМИ В СТОПКЕ!
+      const aLikesMe = incomingLikers.includes(Number(a.telegram_id));
+      const bLikesMe = incomingLikers.includes(Number(b.telegram_id));
+      if (aLikesMe && !bLikesMe) return -1;
+      if (!aLikesMe && bLikesMe) return 1;
+      return 0;
+    });
 
   const currentCard = filteredCards[currentIndex];
+  const isCurrentCardLikingMe = currentCard ? incomingLikers.includes(Number(currentCard.telegram_id)) : false;
 
   function handleTouchStart(e) {
     touchStartX.current = e.targetTouches[0].clientX;
@@ -145,40 +181,28 @@ export default function GymBroTab({
     }
   }
 
-  // Логика двойного согласия (Double Opt-In Match)
   async function handleConnect() {
     if (!currentCard) return;
-
-    const myTgId = Number(user?.telegram_id);
     const targetTgId = Number(currentCard.telegram_id);
 
-    if (!myTgId || !targetTgId) {
-      handlePass();
-      return;
-    }
-
     try {
-      // 1. Проверяем, свайпал ли этот атлет меня ранее (входящая заявка)
-      const { data: incomingReq } = await supabase
-        .from('friendships')
-        .select('id, status')
-        .eq('user_id', targetTgId)
-        .eq('friend_id', myTgId)
-        .maybeSingle();
-
-      if (incomingReq) {
-        // ВЗАИМНЫЙ МЭТЧ: переводим статус в accepted
+      // Если атлет уже свайпал меня -> ВЗАИМНЫЙ МЭТЧ!
+      if (isCurrentCardLikingMe) {
         await supabase
           .from('friendships')
           .update({ status: 'accepted' })
-          .eq('id', incomingReq.id);
+          .eq('user_id', targetTgId)
+          .eq('friend_id', myTgId);
 
         setMatchResult({
           isMutual: true,
           targetUser: currentCard
         });
+
+        // Убираем из списка входящих
+        setIncomingLikers(prev => prev.filter(id => id !== targetTgId));
       } else {
-        // ОДНОСТОРОННИЙ СВАЙП: создаем входящую заявку
+        // Односторонний лайк
         await supabase.from('friendships').insert([
           { user_id: myTgId, friend_id: targetTgId, status: 'pending' }
         ]);
@@ -277,7 +301,7 @@ export default function GymBroTab({
         </div>
       )}
 
-      {/* 2. ДЕТАЛЬНОЕ ДОСЬЕ АТЛЕТА С ЗАЩИТОЙ КОНТАКТОВ */}
+      {/* 2. ДЕТАЛЬНОЕ ДОСЬЕ АТЛЕТА */}
       {showDetailModal && currentCard && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full p-5 space-y-3.5 border border-white/10 rounded-3xl max-h-[85vh] overflow-y-auto">
@@ -307,6 +331,14 @@ export default function GymBroTab({
               <h3 className="text-base font-black text-white">{currentCard.name}</h3>
               <p className="text-xs text-slate-400">{currentCard.city} • {currentCard.level}</p>
             </div>
+
+            {isCurrentCardLikingMe && (
+              <div className="p-2.5 rounded-2xl bg-gradient-to-r from-amber-500/20 to-[#FF5A1F]/20 border border-amber-500/40 text-center">
+                <span className="text-xs font-black text-amber-300 flex items-center justify-center gap-1.5">
+                  <span>🔥</span> Этот атлет уже хочет тренироваться с тобой!
+                </span>
+              </div>
+            )}
 
             <div className="p-2.5 rounded-2xl bg-[#FF5A1F]/10 border border-[#FF5A1F]/30 text-center">
               <span className="text-[9px] text-[#FF8C38] font-bold uppercase block">Цель знакомства:</span>
@@ -339,7 +371,6 @@ export default function GymBroTab({
               </div>
             )}
 
-            {/* БЕЗОПАСНЫЙ БЛОК: TELEGRAM СКРЫТ ДО МЭТЧА */}
             <div className="p-2.5 rounded-xl bg-black/40 border border-white/[0.06] text-center space-y-1">
               <span className="text-[10px] text-slate-400 block flex items-center justify-center gap-1">
                 <span>🔒</span> Связь в Telegram: <strong className="text-slate-500">t.me/••••••••</strong>
@@ -357,13 +388,13 @@ export default function GymBroTab({
               }}
               className="w-full gymshark-btn-electric py-3 text-xs font-bold cursor-pointer"
             >
-              Предложить тренировку 🤝
+              {isCurrentCardLikingMe ? 'Взаимный мэтч! 🤝🔥' : 'Предложить тренировку 🤝'}
             </button>
           </div>
         </div>
       )}
 
-      {/* 3. РЕДАКТИРОВАНИЕ АНКЕТЫ GYMBRO */}
+      {/* 3. РЕДАКТИРОВАНИЕ АНКЕТЫ */}
       {isEditingCard ? (
         <div className="apple-glass p-4 space-y-3.5 border border-white/[0.08] rounded-3xl">
           <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
@@ -560,6 +591,16 @@ export default function GymBroTab({
             </button>
           </div>
 
+          {/* Индикатор входящих заявок */}
+          {incomingLikers.length > 0 && (
+            <div className="p-2 rounded-xl bg-gradient-to-r from-amber-500/20 via-[#FF5A1F]/20 to-transparent border border-amber-500/30 flex items-center justify-between">
+              <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
+                <span>🔥</span> Тебя хотят добавить в GymBro: {incomingLikers.length} атлета
+              </span>
+              <span className="text-[10px] text-slate-400">в начале ленты ▾</span>
+            </div>
+          )}
+
           {currentCard ? (
             <div className="space-y-3">
               <div
@@ -567,7 +608,11 @@ export default function GymBroTab({
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 onClick={() => setShowDetailModal(true)}
-                className="relative w-full h-[420px] rounded-3xl overflow-hidden bg-[#10141f] border border-white/10 shadow-2xl cursor-pointer active:scale-[0.99] transition duration-200"
+                className={`relative w-full h-[420px] rounded-3xl overflow-hidden bg-[#10141f] border shadow-2xl cursor-pointer active:scale-[0.99] transition duration-200 ${
+                  isCurrentCardLikingMe
+                    ? 'border-amber-500/80 ring-2 ring-amber-500/30 shadow-amber-500/20'
+                    : 'border-white/10'
+                }`}
               >
                 {currentCard.photo_url ? (
                   <img
@@ -584,15 +629,25 @@ export default function GymBroTab({
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
 
-                <div className="absolute top-3.5 inset-x-3.5 flex justify-between items-start pointer-events-none">
-                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white">
-                    🎯 {currentCard.search_goal || 'Тренировки'}
-                  </span>
-                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-[#FF5A1F]/80 backdrop-blur-md text-white shadow-md">
-                    {currentCard.weekday_gym || 'Зал не указан'}
+                {/* Верхние бейджи */}
+                <div className="absolute top-3.5 inset-x-3.5 flex justify-between items-start pointer-events-none gap-2">
+                  {/* ПРИОРИТЕТНЫЙ БЕЙДЖ ЕСЛИ ЛАЙКНУЛ ТЕБЯ */}
+                  {isCurrentCardLikingMe ? (
+                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-[#FF5A1F] text-white shadow-lg shadow-amber-500/40 animate-pulse">
+                      ⚡️ Хочет тренироваться с тобой!
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white truncate">
+                      🎯 {currentCard.search_goal || 'Тренировки'}
+                    </span>
+                  )}
+
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-[#FF5A1F]/90 backdrop-blur-md text-white shadow-md flex-shrink-0">
+                    {currentCard.weekday_gym || 'Зал'}
                   </span>
                 </div>
 
+                {/* Нижняя плашка */}
                 <div className="absolute bottom-4 inset-x-4 space-y-1.5 pointer-events-none">
                   <div className="flex items-baseline gap-2">
                     <h3 className="text-xl font-black text-white tracking-tight drop-shadow-md">
@@ -646,7 +701,11 @@ export default function GymBroTab({
                 <button
                   type="button"
                   onClick={handleConnect}
-                  className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] text-white flex items-center justify-center text-2xl shadow-xl shadow-[#FF5A1F]/30 active:scale-90 transition cursor-pointer"
+                  className={`w-14 h-14 rounded-full text-white flex items-center justify-center text-2xl shadow-xl active:scale-90 transition cursor-pointer ${
+                    isCurrentCardLikingMe
+                      ? 'bg-gradient-to-tr from-amber-500 via-[#FF5A1F] to-emerald-400 ring-4 ring-amber-500/30 animate-pulse'
+                      : 'bg-gradient-to-tr from-[#FF5A1F] to-[#FF8C38] shadow-[#FF5A1F]/30'
+                  }`}
                   title="Законнектиться"
                 >
                   🤝
