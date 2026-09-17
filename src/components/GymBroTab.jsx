@@ -47,8 +47,8 @@ export default function GymBroTab({
   const [matchSuccessUser, setMatchSuccessUser] = useState(null);
 
   // Фильтры
-  const [gymFilter, setGymFilter] = useState('all'); // 'all' | 'my_gym'
-  const [goalFilter, setGoalFilter] = useState('all'); // 'all' | goal string
+  const [gymFilter, setGymFilter] = useState('all');
+  const [goalFilter, setGoalFilter] = useState('all');
 
   // Стейт формы анкеты
   const [formData, setFormData] = useState({
@@ -67,21 +67,49 @@ export default function GymBroTab({
     photo_url: myCard?.photo_url || user?.avatar_url || ''
   });
 
-  // Логика свайпа жестами
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
+  // Загрузка фото с сжатием прямо в анкете GymBro
+  function handlePhotoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 600;
+        let w = img.width;
+        let h = img.height;
+        if (w > h && w > MAX) {
+          h = Math.round((h * MAX) / w);
+          w = MAX;
+        } else if (h > MAX) {
+          w = Math.round((w * MAX) / h);
+          h = MAX;
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL('image/jpeg', 0.82);
+        setFormData(prev => ({ ...prev, photo_url: compressed }));
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
   // Фильтрация анкет
   const filteredCards = cards.filter(c => {
-    // Не показываем самого себя
     if (Number(c.telegram_id) === Number(user?.telegram_id)) return false;
 
-    // Фильтр по залу
     if (gymFilter === 'my_gym' && formData.weekday_gym) {
-      if (c.weekday_gym !== formData.weekday_gym) return false;
+      if (c.weekday_gym?.toLowerCase() !== formData.weekday_gym?.toLowerCase()) return false;
     }
 
-    // Фильтр по цели
     if (goalFilter !== 'all') {
       if (c.search_goal !== goalFilter) return false;
     }
@@ -102,10 +130,8 @@ export default function GymBroTab({
   function handleTouchEnd() {
     const diff = touchStartX.current - touchEndX.current;
     if (diff > 60) {
-      // Свайп влево: пропуск
       handlePass();
     } else if (diff < -60) {
-      // Свайп вправо: коннект
       handleConnect();
     }
   }
@@ -121,7 +147,6 @@ export default function GymBroTab({
   async function handleConnect() {
     if (!currentCard) return;
 
-    // Отправка дружбы в Supabase
     try {
       const myTgId = Number(user?.telegram_id);
       const targetTgId = Number(currentCard.telegram_id);
@@ -186,7 +211,7 @@ export default function GymBroTab({
         </div>
       )}
 
-      {/* 2. ДЕТАЛЬНОЕ ДОСЬЕ АТЛЕТА ПРИ ТАПЕ НА КАРТОЧКУ */}
+      {/* 2. ДЕТАЛЬНОЕ ДОСЬЕ ПРИ ТАПЕ НА КАРТОЧКУ */}
       {showDetailModal && currentCard && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="apple-glass max-w-sm w-full p-5 space-y-3.5 border border-white/10 rounded-3xl max-h-[85vh] overflow-y-auto">
@@ -262,7 +287,7 @@ export default function GymBroTab({
         </div>
       )}
 
-      {/* 3. РЕДАКТИРОВАНИЕ АНКЕТЫ GYMBRO */}
+      {/* 3. РЕДАКТИРОВАНИЕ АНКЕТЫ GYMBRO С ЗАГРУЗКОЙ ФОТО */}
       {isEditingCard ? (
         <div className="apple-glass p-4 space-y-3.5 border border-white/[0.08] rounded-3xl">
           <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
@@ -270,7 +295,7 @@ export default function GymBroTab({
               <h3 className="text-xs font-black text-white uppercase tracking-wider">
                 {myCard ? 'Настройки анкеты GymBro' : 'Создание анкеты GymBro'}
               </h3>
-              <p className="text-[10px] text-slate-400">Укажи свой зал и цели, чтобы находить напарников</p>
+              <p className="text-[10px] text-slate-400">Заполни карточку, чтобы другие атлеты могли тебя найти</p>
             </div>
             {myCard && (
               <button
@@ -284,6 +309,24 @@ export default function GymBroTab({
           </div>
 
           <form onSubmit={handleSubmitForm} className="space-y-3">
+            {/* БЛОК ЗАГРУЗКИ ФОТО ДЛЯ GYMBRO */}
+            <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#121622] border border-white/10 flex items-center justify-center flex-shrink-0 shadow-md">
+                {formData.photo_url ? (
+                  <img src={formData.photo_url} alt="GymBro" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-2xl">📸</span>
+                )}
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <span className="text-[11px] font-bold text-white block">Фото для карточки</span>
+                <label className="inline-block px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-xs font-semibold text-slate-200 cursor-pointer active:scale-95 transition">
+                  <span>Выбрать из галереи 📷</span>
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                </label>
+              </div>
+            </div>
+
             <div>
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
                 Цель поиска напарника
@@ -402,7 +445,7 @@ export default function GymBroTab({
       ) : (
         /* ================= 4. ЭКРАН СВАЙПОВ TINDER ================= */
         <div className="space-y-3">
-          {/* Верхняя панель: Быстрые фильтры и кнопка Моя анкета */}
+          {/* Быстрые фильтры */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
               <button
@@ -443,7 +486,7 @@ export default function GymBroTab({
             </button>
           </div>
 
-          {/* Сама Tinder-карточка */}
+          {/* Карточка атлета */}
           {currentCard ? (
             <div className="space-y-3">
               <div
@@ -453,7 +496,6 @@ export default function GymBroTab({
                 onClick={() => setShowDetailModal(true)}
                 className="relative w-full h-[420px] rounded-3xl overflow-hidden bg-[#10141f] border border-white/10 shadow-2xl cursor-pointer active:scale-[0.99] transition duration-200"
               >
-                {/* Фоновое фото атлета */}
                 {currentCard.photo_url ? (
                   <img
                     src={currentCard.photo_url}
@@ -467,10 +509,8 @@ export default function GymBroTab({
                   </div>
                 )}
 
-                {/* Градиент затемнения снизу для четкого текста */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
 
-                {/* Верхние бейджи: цель и клуб */}
                 <div className="absolute top-3.5 inset-x-3.5 flex justify-between items-start pointer-events-none">
                   <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white">
                     🎯 {currentCard.search_goal || 'Тренировки'}
@@ -480,7 +520,6 @@ export default function GymBroTab({
                   </span>
                 </div>
 
-                {/* Нижняя плашка с инфо об атлете */}
                 <div className="absolute bottom-4 inset-x-4 space-y-1.5 pointer-events-none">
                   <div className="flex items-baseline gap-2">
                     <h3 className="text-xl font-black text-white tracking-tight drop-shadow-md">
@@ -511,9 +550,8 @@ export default function GymBroTab({
                 </div>
               </div>
 
-              {/* Кнопки действий (Tinder Controls) */}
+              {/* Кнопки действий */}
               <div className="flex items-center justify-center gap-6 pt-1">
-                {/* Кнопка Пропустить (Влево) */}
                 <button
                   type="button"
                   onClick={handlePass}
@@ -523,7 +561,6 @@ export default function GymBroTab({
                   ✕
                 </button>
 
-                {/* Кнопка Инфо */}
                 <button
                   type="button"
                   onClick={() => setShowDetailModal(true)}
@@ -533,7 +570,6 @@ export default function GymBroTab({
                   ℹ️
                 </button>
 
-                {/* Кнопка Коннект (Вправо) */}
                 <button
                   type="button"
                   onClick={handleConnect}
@@ -545,13 +581,12 @@ export default function GymBroTab({
               </div>
             </div>
           ) : (
-            /* Экран, когда анкеты закончились */
             <div className="p-8 text-center apple-glass border border-white/[0.08] rounded-3xl space-y-3 py-14">
               <span className="text-4xl block">🏋️‍♂️🔥</span>
               <div className="space-y-1">
                 <h3 className="text-sm font-black text-white">Ты просмотрел всех атлетов!</h3>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  Попробуй сбросить фильтры или загляни позже — новые анкеты появляются каждый день.
+                  Попробуй сбросить фильтры или нажми кнопку ниже, чтобы начать заново.
                 </p>
               </div>
 
