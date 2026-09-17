@@ -82,11 +82,13 @@ export default function GymBroTab({
   const [sessionPassedIds, setSessionPassedIds] = useState([]);
   const [lastSwipedCard, setLastSwipedCard] = useState(null);
 
-  // Фильтры
-  const [gymFilter, setGymFilter] = useState('all'); // 'all' | 'my_gym'
+  // Фильтры ленты
+  const [gymFilter, setGymFilter] = useState('all');
   const [goalFilter, setGoalFilter] = useState('all');
 
-  // Если выбран «Другой зал», позволяем ввести вручную
+  // Поиск зала внутри формы анкеты
+  const [gymSearchQuery, setGymSearchQuery] = useState('');
+  const [isGymDropdownOpen, setIsGymDropdownOpen] = useState(false);
   const [customGymName, setCustomGymName] = useState('');
 
   const [formData, setFormData] = useState({
@@ -192,6 +194,11 @@ export default function GymBroTab({
     if (onRefreshCards) onRefreshCards();
   }
 
+  // Фильтрация клубов по поисковому запросу
+  const searchedClubs = INVICTUS_CLUBS.filter(club =>
+    club.toLowerCase().includes(gymSearchQuery.toLowerCase().trim())
+  );
+
   // Фильтрация колоды
   const activeDeck = cards
     .filter(c => {
@@ -200,7 +207,6 @@ export default function GymBroTab({
       if (activeRelations.includes(cardTgId)) return false;
       if (sessionPassedIds.includes(cardTgId)) return false;
 
-      // ТОЧНЫЙ ФИЛЬТР ПО ЗАЛУ
       if (gymFilter === 'my_gym' && formData.weekday_gym) {
         if (c.weekday_gym !== formData.weekday_gym) return false;
       }
@@ -485,7 +491,7 @@ export default function GymBroTab({
         </div>
       )}
 
-      {/* 3. АНКЕТА GYMBRO С ВЫБОРОМ ФИЛИАЛОВ INVICTUS */}
+      {/* 3. АНКЕТА GYMBRO С УМНЫМ ПОИСКОМ ЗАЛА */}
       {isEditingCard ? (
         <div className="apple-glass p-4 space-y-3.5 border border-white/[0.08] rounded-3xl">
           <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
@@ -493,7 +499,7 @@ export default function GymBroTab({
               <h3 className="text-xs font-black text-white uppercase tracking-wider">
                 {myCard ? 'Настройки анкеты GymBro' : 'Создание анкеты GymBro'}
               </h3>
-              <p className="text-[10px] text-slate-400">Выбери филиал Invictus или свой клуб</p>
+              <p className="text-[10px] text-slate-400">Укажи зал для точного поиска напарников</p>
             </div>
             {myCard && (
               <button
@@ -524,34 +530,117 @@ export default function GymBroTab({
               </div>
             </div>
 
-            {/* ВЫБОР ФИЛИАЛА ИЗ ГОТОВЫХ ПЛАШЕК */}
-            <div>
-              <label className="text-[10px] font-bold text-[#FF8C38] uppercase tracking-wider block mb-1">
-                📍 Твой филиал зала (Выбери из списка)
+            {/* БЛОК ВЫБОРА ЗАЛА С ИНТЕРАКТИВНЫМ ПОИСКОМ */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-[#FF8C38] uppercase tracking-wider block">
+                📍 Твой домашний зал
               </label>
-              <select
-                value={formData.weekday_gym}
-                onChange={e => setFormData({ ...formData, weekday_gym: e.target.value })}
-                className="w-full apple-input text-xs py-2.5 font-medium"
-              >
-                {INVICTUS_CLUBS.map(club => (
-                  <option key={club} value={club}>{club}</option>
-                ))}
-              </select>
 
+              {/* Напоминающая подсказка */}
+              <div className="p-2 rounded-xl bg-[#FF5A1F]/10 border border-[#FF5A1F]/20 flex items-start gap-1.5 text-[10px] text-slate-300">
+                <span className="text-xs">💡</span>
+                <span>Выбирай филиал из списка или через поиск — так напарники гарантированно найдут тебя в фильтрах!</span>
+              </div>
+
+              {/* Кнопка-селектор */}
+              <button
+                type="button"
+                onClick={() => setIsGymDropdownOpen(!isGymDropdownOpen)}
+                className="w-full p-2.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-[#FF5A1F]/40 flex items-center justify-between text-left transition cursor-pointer"
+              >
+                <span className="text-xs font-bold text-white truncate">
+                  📍 {formData.weekday_gym}
+                </span>
+                <span className="text-slate-400 text-xs ml-2">
+                  {isGymDropdownOpen ? '▲' : '▼'}
+                </span>
+              </button>
+
+              {/* Выпадающее окно с поиском */}
+              {isGymDropdownOpen && (
+                <div className="p-2.5 rounded-2xl bg-[#0e121c] border border-white/15 space-y-2 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+                  {/* Поле быстрого поиска */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="🔍 Введи название (Абая, Forum, Atakent)..."
+                      value={gymSearchQuery}
+                      onChange={e => setGymSearchQuery(e.target.value)}
+                      className="w-full apple-input text-xs py-2 pl-3 pr-8 bg-black/50"
+                    />
+                    {gymSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setGymSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Список отфильтрованных клубов */}
+                  <div className="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                    {searchedClubs.length > 0 ? (
+                      searchedClubs.map(club => {
+                        const isSelected = formData.weekday_gym === club;
+                        return (
+                          <button
+                            key={club}
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, weekday_gym: club });
+                              setIsGymDropdownOpen(false);
+                              setGymSearchQuery('');
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-xl text-xs transition cursor-pointer flex items-center justify-between ${
+                              isSelected
+                                ? 'bg-[#FF5A1F] text-white font-bold shadow'
+                                : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                            }`}
+                          >
+                            <span className="truncate">{club}</span>
+                            {isSelected && <span className="text-xs ml-1">✓</span>}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="p-3 text-center space-y-2">
+                        <p className="text-xs text-slate-400">Филиал не найден в списке</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, weekday_gym: 'Другой зал' });
+                            setCustomGymName(gymSearchQuery);
+                            setIsGymDropdownOpen(false);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-white/[0.06] border border-white/10 text-xs font-bold text-amber-300 hover:bg-white/[0.1] cursor-pointer"
+                        >
+                          ➕ Использовать как «{gymSearchQuery}»
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Поле ручного ввода, если выбран «Другой зал» */}
               {formData.weekday_gym === 'Другой зал' && (
-                <input
-                  type="text"
-                  required
-                  placeholder="Введи точное название клуба..."
-                  value={customGymName}
-                  onChange={e => setCustomGymName(e.target.value)}
-                  className="w-full apple-input text-xs py-2 mt-2"
-                />
+                <div className="pt-1">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Напиши точное название своего зала..."
+                    value={customGymName}
+                    onChange={e => setCustomGymName(e.target.value)}
+                    className="w-full apple-input text-xs py-2 border-amber-500/40"
+                  />
+                </div>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
                   Цель поиска
@@ -601,7 +690,7 @@ export default function GymBroTab({
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Время тренировок
+                  Время
                 </label>
                 <select
                   value={formData.time_slot}
@@ -663,7 +752,6 @@ export default function GymBroTab({
       ) : (
         /* ================= 4. ЭКРАН СВАЙПОВ TINDER ================= */
         <div className="space-y-3">
-          {/* Верхняя строка фильтров */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
               <button
@@ -704,7 +792,6 @@ export default function GymBroTab({
             </button>
           </div>
 
-          {/* Карточка атлета */}
           {currentCard ? (
             <div className="space-y-3">
               <div
@@ -733,7 +820,6 @@ export default function GymBroTab({
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
 
-                {/* Верхние бейджи */}
                 <div className="absolute top-3.5 inset-x-3.5 flex justify-between items-start pointer-events-none gap-2">
                   {isCurrentCardLikingMe ? (
                     <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-[#FF5A1F] text-white shadow-lg shadow-amber-500/40 animate-pulse">
@@ -750,7 +836,6 @@ export default function GymBroTab({
                   </span>
                 </div>
 
-                {/* Нижняя плашка */}
                 <div className="absolute bottom-4 inset-x-4 space-y-1.5 pointer-events-none">
                   <div className="flex items-baseline gap-2">
                     <h3 className="text-xl font-black text-white tracking-tight drop-shadow-md">
@@ -836,7 +921,7 @@ export default function GymBroTab({
                 <h3 className="text-sm font-black text-white">Все доступные анкеты просмотрены!</h3>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto">
                   {gymFilter === 'my_gym'
-                    ? 'В выбранном филиале пока нет новых анкет. Попробуй включить «Все филиалы»!'
+                    ? 'В выбранном филиале пока нет новых анкет. Попробуй переключить на «Все филиалы»!'
                     : 'Все напарники, с которыми ты уже подружился, находятся во вкладке «Друзья».'}
                 </p>
               </div>
