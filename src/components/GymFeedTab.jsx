@@ -1,32 +1,23 @@
-// Отправка заявки в друзья со статусом pending
-  async function handleAddFriend(authorId) {
-    if (!myTgId) return alert('Войдите в профиль через бота');
-    if (Number(authorId) === myTgId) return alert('Это твой собственный пост!');
-
-    // Проверяем, есть ли уже заявка или дружба
-    const { data: existing } = await supabase
-      .from('friendships')
-      .select('status')
-      .or(`and(user_id.eq.${myTgId},friend_id.eq.${authorId}),and(user_id.eq.${authorId},friend_id.eq.${myTgId})`)
-      .maybeSingle();
-
-    if (existing?.status === 'accepted') {
-      return alert('Вы уже в друзьях с этим атлетом! 🤝');
-    }
-    if (existing?.status === 'pending') {
-      return alert('Заявка в друзья уже ожидает подтверждения ⏳');
-    }
-    if (existing?.status === 'blocked') {
-      return alert('Пользователь недоступен.');
-    }
-
-    const { error } = await supabase.from('friendships').upsert([
-      { user_id: myTgId, friend_id: Number(authorId), status: 'pending' }
-    ], { onConflict: 'user_id,friend_id' });
-
-    if (!error) {
-      alert('Заявка в друзья отправлена атлету! Ждем подтверждения ⏳');
-    } else {
-      alert('Не удалось отправить заявку: ' + error.message);
-    }
-  }
+{/* Хедер поста */}
+                <div className="p-3.5 flex justify-between items-center">
+                  <div 
+                    onClick={() => {
+                      if (post.user_id) {
+                        // Переход на диалог или просмотр
+                        window.open(`https://t.me/${post.author_name}`, '_blank');
+                      }
+                    }}
+                    className="flex items-center gap-2.5 cursor-pointer active:opacity-80"
+                  >
+                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0">
+                      {post.author_avatar ? (
+                        <img src={post.author_avatar} alt="Author" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-sm font-bold text-white">{post.author_name?.[0] || 'A'}</span>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white leading-tight">{post.author_name}</h4>
+                      <p className="text-[10px] text-[#FF8C38] font-medium">{post.gym_name}</p>
+                    </div>
+                  </div>
