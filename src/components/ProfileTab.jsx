@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { LEGAL_DOCS_LIST } from '../legalDocs';
+import { LEGAL_DOCS_DATA, LEGAL_DOCS_KEYS } from '../legalDocs';
 import AthleteStats from './profile/AthleteStats';
 
 const PROFILE_SECTIONS = [
@@ -14,6 +14,9 @@ export default function ProfileTab({ user, onUpdateUser }) {
   const [activeSection, setActiveSection] = useState('athlete');
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Для модального окна просмотра документа внутри приложения
+  const [selectedDoc, setSelectedDoc] = useState(null);
 
   // Форма профиля атлета
   const [form, setForm] = useState({
@@ -57,27 +60,65 @@ export default function ProfileTab({ user, onUpdateUser }) {
       onUpdateUser(data);
       setIsEditing(false);
     } else {
-      alert('Ошибка при сохранении профиля: ' + (error?.message || 'Неизвестная ошибка'));
+      alert('Ошибка при сохранении: ' + (error?.message || 'Попробуйте снова'));
     }
     setSaving(false);
   }
 
   return (
     <div className="space-y-4">
-      {/* Apple Segmented Control для вкладок профиля */}
-      <div className="apple-glass p-1.5 flex gap-1.5 overflow-x-auto no-scrollbar">
+      {/* МОДАЛЬНОЕ ОКНО ДОКУМЕНТА (ОТКРЫВАЕТСЯ ВНУТРИ TELEGRAM) */}
+      {selectedDoc && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4">
+          <div className="apple-glass max-w-sm w-full max-h-[80vh] flex flex-col shadow-2xl border border-white/10 overflow-hidden">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#0C101A]/90">
+              <div className="flex items-center gap-2 pr-2">
+                <span className="text-base">{selectedDoc.icon}</span>
+                <h3 className="text-xs font-bold text-white tracking-tight leading-snug truncate">
+                  {selectedDoc.title}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedDoc(null)}
+                className="text-slate-400 hover:text-white text-base px-2 py-1 cursor-pointer flex-shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto text-xs text-slate-300 leading-relaxed whitespace-pre-line space-y-2">
+              {selectedDoc.content}
+            </div>
+
+            <div className="p-3 border-t border-white/10 bg-black/40">
+              <button
+                type="button"
+                onClick={() => setSelectedDoc(null)}
+                className="w-full gymshark-btn-electric py-2.5 text-xs font-bold cursor-pointer"
+              >
+                Понятно
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Верхний таб-бар профиля: четкая сетка из 4 кнопок, ничего не съезжает */}
+      <div className="apple-glass p-1.5 grid grid-cols-4 gap-1">
         {PROFILE_SECTIONS.map(section => (
           <button
             key={section.id}
+            type="button"
             onClick={() => setActiveSection(section.id)}
-            className={`flex-1 py-2 px-2.5 text-xs font-semibold rounded-xl whitespace-nowrap transition cursor-pointer flex items-center justify-center gap-1.5 ${
+            className={`py-2 px-1 text-[11px] font-bold rounded-xl transition cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
               activeSection === section.id
                 ? 'bg-gradient-to-b from-[#FF682B] to-[#E0480A] text-white shadow-md shadow-[#FF5A1F]/20'
                 : 'text-slate-400 hover:text-slate-200 bg-white/[0.02]'
             }`}
           >
-            <span>{section.icon}</span>
-            <span>{section.label}</span>
+            <span className="text-xs">{section.icon}</span>
+            <span className="truncate w-full text-center">{section.label}</span>
           </button>
         ))}
       </div>
@@ -88,6 +129,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
           <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
             <h2 className="text-sm font-bold text-white tracking-tight">Личные данные атлета</h2>
             <button
+              type="button"
               onClick={() => {
                 setForm({
                   name: user?.name || '',
@@ -116,7 +158,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
 
                 <div className="space-y-1.5">
                   <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-xs font-semibold text-slate-200 transition">
-                    <span>📸 Выбрать фото</span>
+                    <span>📸 Загрузить фото</span>
                     <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
                   </label>
 
@@ -214,7 +256,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
         </div>
       )}
 
-      {/* ================= 2. ПОДРАЗДЕЛ: СТАТИСТИКА (INVICTUS STYLE) ================= */}
+      {/* ================= 2. ПОДРАЗДЕЛ: СТАТИСТИКА ================= */}
       {activeSection === 'stats' && (
         <AthleteStats user={user} />
       )}
@@ -224,7 +266,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
         <div className="apple-glass p-5 space-y-4">
           <div className="pb-2 border-b border-white/[0.08]">
             <h3 className="text-sm font-bold text-white tracking-tight">Служба заботы GymConnect</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Оперативная помощь и предложения по сервису</p>
+            <p className="text-xs text-slate-400 mt-0.5">Оперативная помощь и связь с основателем</p>
           </div>
 
           <div className="space-y-2.5">
@@ -234,44 +276,46 @@ export default function ProfileTab({ user, onUpdateUser }) {
               rel="noreferrer"
               className="w-full gymshark-btn-electric py-3 text-xs font-bold flex items-center justify-center gap-2 no-underline cursor-pointer"
             >
-              <span>💬 Чат с основателем (@asanali_kk)</span>
+              <span>💬 Написать основателю (@asanali_kk)</span>
               <span>➔</span>
             </a>
 
             <div className="p-3.5 rounded-2xl bg-black/30 border border-white/[0.06] space-y-1.5 text-xs">
               <p className="font-semibold text-slate-200">Время ответа:</p>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                Обычно отвечаем в течение 15–30 минут с 09:00 до 22:00 по времени Алматы/Астаны.
+                Отвечаем лично в течение 15–30 минут с 09:00 до 22:00 (Алматы/Астана).
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* ================= 4. ПОДРАЗДЕЛ: ДОКУМЕНТЫ ================= */}
+      {/* ================= 4. ПОДРАЗДЕЛ: ДОКУМЕНТЫ (ВНУТРИ ПРИЛОЖЕНИЯ) ================= */}
       {activeSection === 'legal' && (
         <div className="apple-glass p-5 space-y-3">
           <div className="flex justify-between items-center pb-2 border-b border-white/[0.08]">
             <h3 className="text-sm font-bold text-white tracking-tight">Правовая информация</h3>
-            <span className="text-[10px] text-[#FF8C38] font-medium">gymconnect.kz</span>
+            <span className="text-[10px] text-[#FF8C38] font-bold">Официальные документы</span>
           </div>
 
           <div className="space-y-1.5 text-xs">
-            {LEGAL_DOCS_LIST && LEGAL_DOCS_LIST.map((doc) => (
-              <a
-                key={doc.id}
-                href={doc.url}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full text-left p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.12] text-slate-300 flex justify-between items-center no-underline active:scale-[0.99] transition cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5 pr-2">
-                  <span className="text-base">{doc.icon}</span>
-                  <span className="leading-snug text-[11px] font-medium">{doc.title}</span>
-                </div>
-                <span className="text-slate-500 text-xs">➔</span>
-              </a>
-            ))}
+            {LEGAL_DOCS_KEYS.map((key) => {
+              const doc = LEGAL_DOCS_DATA[key];
+              return (
+                <button
+                  key={doc.id}
+                  type="button"
+                  onClick={() => setSelectedDoc(doc)}
+                  className="w-full text-left p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.12] text-slate-300 flex justify-between items-center active:scale-[0.99] transition cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 pr-2">
+                    <span className="text-base">{doc.icon}</span>
+                    <span className="leading-snug text-[11px] font-medium">{doc.title}</span>
+                  </div>
+                  <span className="text-slate-500 text-xs">➔</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
