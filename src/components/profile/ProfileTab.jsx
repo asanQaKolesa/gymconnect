@@ -13,7 +13,7 @@ export default function ProfileTab() {
         </p>
       </div>
 
-      {/* Подключаем блок статистики атлета */}
+      {/* Статистика атлета */}
       <AthleteStats />
     </div>
   );
