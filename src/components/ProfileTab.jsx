@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import AthleteStats from './profile/AthleteStats';
 
 export default function ProfileTab({ user, onUpdateUser }) {
   const [activeTab, setActiveTab] = useState('athlete');
@@ -13,8 +12,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
     city: user?.city || 'Алматы',
     sport_type: user?.sport_type || 'Атлет',
     instagram: user?.instagram || '',
-    bio: user?.bio || '',
-    avatar_url: user?.avatar_url || ''
+    bio: user?.bio || ''
   });
 
   const myTgId = Number(user?.telegram_id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 0);
@@ -26,8 +24,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
         city: user.city || 'Алматы',
         sport_type: user.sport_type || 'Атлет',
         instagram: user.instagram || '',
-        bio: user.bio || '',
-        avatar_url: user.avatar_url || ''
+        bio: user.bio || ''
       });
     }
   }, [user]);
@@ -35,12 +32,16 @@ export default function ProfileTab({ user, onUpdateUser }) {
   useEffect(() => {
     async function loadStats() {
       if (!myTgId) return;
-      const { data: posts } = await supabase.from('feed_posts').select('likes_count').eq('user_id', myTgId);
-      if (posts) setTotalLikes(posts.reduce((acc, p) => acc + (p.likes_count || 0), 0));
+      try {
+        const { data: posts } = await supabase.from('feed_posts').select('likes_count').eq('user_id', myTgId);
+        if (posts) setTotalLikes(posts.reduce((acc, p) => acc + (p.likes_count || 0), 0));
 
-      const { data: f1 } = await supabase.from('friendships').select('id').eq('user_id', myTgId).eq('status', 'accepted');
-      const { data: f2 } = await supabase.from('friendships').select('id').eq('friend_id', myTgId).eq('status', 'accepted');
-      setFriendsCount((f1?.length || 0) + (f2?.length || 0));
+        const { data: f1 } = await supabase.from('friendships').select('id').eq('user_id', myTgId).eq('status', 'accepted');
+        const { data: f2 } = await supabase.from('friendships').select('id').eq('friend_id', myTgId).eq('status', 'accepted');
+        setFriendsCount((f1?.length || 0) + (f2?.length || 0));
+      } catch (err) {
+        console.error(err);
+      }
     }
     loadStats();
   }, [myTgId]);
@@ -56,18 +57,20 @@ export default function ProfileTab({ user, onUpdateUser }) {
       city: form.city,
       sport_type: form.sport_type,
       instagram: form.instagram ? form.instagram.replace('@', '').trim() : null,
-      bio: form.bio ? form.bio.trim() : null,
-      avatar_url: form.avatar_url || null
+      bio: form.bio ? form.bio.trim() : null
     };
 
-    const { data, error } = await supabase.from('users').upsert(payload, { onConflict: 'telegram_id' }).select().single();
-    if (!error && data) {
-      onUpdateUser(data);
-      alert('Профиль сохранен! ✅');
-    } else {
-      alert('Ошибка при сохранении: ' + (error?.message || 'Попробуйте позже'));
+    try {
+      const { data, error } = await supabase.from('users').upsert(payload, { onConflict: 'telegram_id' }).select().single();
+      if (!error && data) {
+        onUpdateUser(data);
+        alert('Профиль сохранен! ✅');
+      } else {
+        alert('Ошибка сохранения: ' + (error?.message || 'Попробуйте позже'));
+      }
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   return (
@@ -93,7 +96,7 @@ export default function ProfileTab({ user, onUpdateUser }) {
         </button>
       </div>
 
-      {activeTab === 'athlete' && (
+      {activeTab === 'athlete' ? (
         <div className="apple-glass p-5 space-y-4">
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="p-3 rounded-2xl bg-black/40 border border-white/[0.06]">
@@ -176,9 +179,15 @@ export default function ProfileTab({ user, onUpdateUser }) {
             </button>
           </form>
         </div>
+      ) : (
+        <div className="apple-glass p-5 text-center space-y-2">
+          <span className="text-3xl">📊</span>
+          <h4 className="text-sm font-bold text-white">Статистика тренировок</h4>
+          <p className="text-xs text-slate-400">
+            Здесь будет отображаться активность за месяц и силовые рекорды.
+          </p>
+        </div>
       )}
-
-      {activeTab === 'stats' && <AthleteStats user={user} />}
     </div>
   );
 }
