@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import HomeTab from './components/home/HomeTab';
 import ReviewsTab from './components/reviews/ReviewsTab';
 import GymBroTab from './components/gymbro/GymBroTab';
-import AppleTabBar from './ui/AppleTabBar';
 import { appleTheme } from './ui/AppleTheme';
 
 export default function App() {
@@ -10,7 +9,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen bg-[${appleTheme.colors.bg}] pb-24 ${appleTheme.styles.fontFamily}`}>
-      {/* Отображение активных вкладок */}
+      {/* Отображение активных вкладок (комнат) */}
       {activeTab === 'home' && <HomeTab />}
       {activeTab === 'reviews' && <ReviewsTab />}
       {activeTab === 'gymbro' && <GymBroTab />}
@@ -28,9 +27,6 @@ export default function App() {
           <p>Вкладка в разработке под Apple UI Kit...</p>
         </div>
       )}
-
-      {/* Наш новый фирменный стеклянный TabBar в стиле Apple */}
-      <AppleTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 }
