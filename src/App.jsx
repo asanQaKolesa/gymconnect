@@ -9,8 +9,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
 
   return (
-    <div className={`min-h-screen bg-[${appleTheme.colors.bg}] pb-28 ${appleTheme.styles.fontFamily}`}>
-      {/* Отображение изолированных вкладок */}
+    <div className={`min-h-screen bg-[${appleTheme.colors.bg}] pb-24 ${appleTheme.styles.fontFamily}`}>
+      {/* Отображение активных вкладок */}
       {activeTab === 'home' && <HomeTab />}
       {activeTab === 'reviews' && <ReviewsTab />}
       {activeTab === 'gymbro' && <GymBroTab />}
@@ -29,7 +29,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Твой родной светлый таб-бар Apple */}
+      {/* Наш новый фирменный стеклянный TabBar в стиле Apple */}
       <AppleTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
