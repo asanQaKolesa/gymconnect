@@ -39,7 +39,7 @@ export default function GymBroTab() {
   };
 
   return (
-    <div className="p-3 max-w-md mx-auto pb-24 flex flex-col h-full animate-in fade-in duration-200">
+    <div className="p-3 max-w-md mx-auto pb-24 flex flex-col h-[calc(100vh-70px)] animate-in fade-in duration-200">
       
       {/* Верхние кнопки-переключатели (Мэтчи, Лайки, Анкета) */}
       <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">
@@ -57,7 +57,7 @@ export default function GymBroTab() {
       </div>
 
       {/* Фильтры зала */}
-      <div className="grid grid-cols-2 gap-1.5 mb-2.5 shrink-0">
+      <div className="grid grid-cols-2 gap-1.5 mb-2 shrink-0">
         <button className="py-2 px-3 bg-blue-600 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center gap-1.5">
           <MapPin className="w-3.5 h-3.5 stroke-[1.5]" />
           <span>Все залы Алматы</span>
@@ -70,7 +70,7 @@ export default function GymBroTab() {
 
       {/* Центральная карточка свайпа (растягивается на всю доступную высоту) */}
       {currentProfile ? (
-        <div className="relative bg-white rounded-3xl overflow-hidden shadow-md border border-slate-100 flex-1 flex flex-col justify-end mb-3 min-h-[380px]">
+        <div className="relative bg-white rounded-3xl overflow-hidden shadow-md border border-slate-100 flex-1 flex flex-col justify-end mb-2 min-h-[320px]">
           {/* Фото на заднем фоне карточки */}
           <div className="absolute inset-0 z-0">
             <img 
@@ -92,19 +92,19 @@ export default function GymBroTab() {
           </div>
 
           {/* Контент поверх фото внизу карточки */}
-          <div className="relative z-10 p-4 text-white">
-            <div className="flex items-baseline gap-2 mb-1">
-              <h2 className="text-xl font-bold tracking-tight">{currentProfile.name}</h2>
+          <div className="relative z-10 p-3.5 text-white">
+            <div className="flex items-baseline gap-2 mb-0.5">
+              <h2 className="text-lg font-bold tracking-tight">{currentProfile.name}</h2>
             </div>
-            <div className="text-[11px] text-slate-200 mb-2.5 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <div className="text-[11px] text-slate-200 mb-2 flex items-center gap-1">
+              <MapPin className="w-3 h-3 text-blue-400 shrink-0" />
               <span>{currentProfile.gym} • {currentProfile.time}</span>
             </div>
 
             {/* Стаж и био */}
-            <div className="bg-white/15 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+            <div className="bg-white/15 backdrop-blur-md rounded-2xl p-2.5 border border-white/10">
               <div className="text-[9px] font-bold text-blue-300 tracking-wider uppercase mb-0.5">{currentProfile.experience}</div>
-              <p className="text-xs text-slate-100 leading-snug">
+              <p className="text-[11px] text-slate-100 leading-snug line-clamp-2">
                 {currentProfile.bio}
               </p>
             </div>
@@ -116,29 +116,29 @@ export default function GymBroTab() {
         </div>
       )}
 
-      {/* Четыре управляющие кнопки (зафиксированы внизу перед таб-баром) */}
-      <div className="flex items-center justify-center gap-3 shrink-0 pb-1">
+      {/* Четыре управляющие кнопки на красивой единой белой плашке прямо над таб-баром */}
+      <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 flex items-center justify-around shrink-0">
         <button 
           onClick={handleNext}
-          className="w-12 h-12 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-50 shadow-sm active:scale-95 transition-all"
+          className="w-11 h-11 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full flex items-center justify-center text-slate-500 shadow-sm active:scale-95 transition-all"
         >
           <RotateCcw className="w-4 h-4 stroke-[1.5]" />
         </button>
         <button 
           onClick={handleNext}
-          className="w-14 h-14 bg-white border border-rose-100 rounded-full flex items-center justify-center text-rose-500 hover:bg-rose-50 shadow-sm active:scale-95 transition-all"
+          className="w-12 h-12 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-full flex items-center justify-center text-rose-500 shadow-sm active:scale-95 transition-all"
         >
-          <X className="w-6 h-6 stroke-[2]" />
+          <X className="w-5 h-5 stroke-[2]" />
         </button>
         <button 
           onClick={handleNext}
-          className="w-14 h-14 bg-white border border-emerald-100 rounded-full flex items-center justify-center text-emerald-500 hover:bg-emerald-50 shadow-sm active:scale-95 transition-all"
+          className="w-12 h-12 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-full flex items-center justify-center text-emerald-500 shadow-sm active:scale-95 transition-all"
         >
-          <Check className="w-6 h-6 stroke-[2]" />
+          <Check className="w-5 h-5 stroke-[2]" />
         </button>
         <button 
           onClick={handleNext}
-          className="w-12 h-12 bg-white border border-purple-100 rounded-full flex items-center justify-center text-purple-600 hover:bg-purple-50 shadow-sm active:scale-95 transition-all"
+          className="w-11 h-11 bg-purple-50 hover:bg-purple-100 border border-purple-100 rounded-full flex items-center justify-center text-purple-600 shadow-sm active:scale-95 transition-all"
         >
           <Zap className="w-4 h-4 stroke-[1.5]" />
         </button>
