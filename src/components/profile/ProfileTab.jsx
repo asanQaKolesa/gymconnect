@@ -7,7 +7,7 @@ import ProfileDangerZone from './ProfileDangerZone';
 
 export default function ProfileTab() {
   return (
-    <div className="p-4 max-w-md mx-auto pb-16 animate-in fade-in duration-200">
+    <div className="p-4 max-w-md mx-auto flex flex-col pb-6 animate-in fade-in duration-200">
       <ProfileHeader />
       <ProfileCard />
       <ProfileMenu />
