@@ -39,7 +39,7 @@ export default function GymBroTab() {
   };
 
   return (
-    <div className="p-3 max-w-md mx-auto pb-24 flex flex-col h-[calc(100vh-70px)] animate-in fade-in duration-200">
+    <div className="p-3 max-w-md mx-auto pb-24 flex flex-col h-[calc(100vh-60px)] animate-in fade-in duration-200">
       
       {/* Верхние кнопки-переключатели (Мэтчи, Лайки, Анкета) */}
       <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">
@@ -68,9 +68,9 @@ export default function GymBroTab() {
         </button>
       </div>
 
-      {/* Центральная карточка свайпа (растягивается на всю доступную высоту) */}
+      {/* Центральная карточка свайпа (растягивается на всё оставшееся пространство) */}
       {currentProfile ? (
-        <div className="relative bg-white rounded-3xl overflow-hidden shadow-md border border-slate-100 flex-1 flex flex-col justify-end mb-2 min-h-[320px]">
+        <div className="relative bg-white rounded-3xl overflow-hidden shadow-md border border-slate-100 flex-1 flex flex-col justify-end mb-2">
           {/* Фото на заднем фоне карточки */}
           <div className="absolute inset-0 z-0">
             <img 
@@ -116,7 +116,7 @@ export default function GymBroTab() {
         </div>
       )}
 
-      {/* Четыре управляющие кнопки на красивой единой белой плашке прямо над таб-баром */}
+      {/* Четыре управляющие кнопки на единой плашке прямо над таб-баром */}
       <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 flex items-center justify-around shrink-0">
         <button 
           onClick={handleNext}
