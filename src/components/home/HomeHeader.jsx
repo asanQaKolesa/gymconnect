@@ -6,9 +6,9 @@ export default function HomeHeader({ onOpenSub, onOpenNotif }) {
     <div className="flex items-center gap-2 mb-3">
       <button 
         onClick={onOpenSub}
-        className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-semibold shadow-sm shadow-blue-500/20 flex items-center justify-between transition-all"
+        className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-semibold shadow-sm shadow-emerald-500/20 flex items-center justify-between transition-all"
       >
-        <span>Оформить подписку GymConnect</span>
+        <span>Оформить подписку GymConnect PRO</span>
         <ArrowRight className="w-4 h-4 stroke-[1.5]" />
       </button>
       <button 
