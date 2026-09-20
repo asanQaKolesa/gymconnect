@@ -1,10 +1,11 @@
 import React from 'react';
-import { BarChart2, Award, Tag, CreditCard, Globe, ChevronRight } from 'lucide-react';
+import { BarChart2, Award, Dumbbell, Tag, CreditCard, Globe, ChevronRight } from 'lucide-react';
 
 export default function ProfileMenu() {
   const menuItems = [
     { icon: BarChart2, label: 'Моя статистика', desc: 'Посещения, дни в зале', action: () => alert('Статистика') },
     { icon: Award, label: 'Подписка GymConnect', desc: 'Активна до конца октября', action: () => alert('Подписка') },
+    { icon: Dumbbell, label: 'Персональная программа', desc: 'Настройка целей и дней тренировок', action: () => alert('Конструктор программы тренировок') },
     { icon: Tag, label: 'Ввести промокод', desc: 'Активация бонусов', action: () => alert('Промокод') },
     { icon: CreditCard, label: 'История платежей', desc: 'Чеки и транзакции', action: () => alert('Платежи') },
     { icon: Globe, label: 'Язык интерфейса', desc: 'Русский / Қазақша', action: () => alert('Смена языка') },
