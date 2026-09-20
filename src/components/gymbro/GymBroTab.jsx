@@ -39,7 +39,7 @@ export default function GymBroTab() {
   };
 
   return (
-    <div className="p-3 max-w-md mx-auto pb-24 animate-in fade-in duration-200">
+    <div className="p-3 max-w-md mx-auto pb-16 animate-in fade-in duration-200">
       
       {/* Шапка раздела GymBro в едином стиле */}
       <div className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-100 mb-2.5 relative overflow-hidden">
