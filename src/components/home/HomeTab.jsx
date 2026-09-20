@@ -1,9 +1,9 @@
 import React from 'react';
-import HomeHeader from './blocks/HomeHeader';
-import DailyQuote from './blocks/DailyQuote';
-import WorkoutStreak from './blocks/WorkoutStreak';
-import TodayPlan from './blocks/TodayPlan';
-import ActionGrid from './blocks/ActionGrid';
+import HomeHeader from './HomeHeader';
+import DailyQuote from './DailyQuote';
+import WorkoutStreak from './WorkoutStreak';
+import TodayPlan from './TodayPlan';
+import ActionGrid from './ActionGrid';
 
 export default function HomeTab() {
   return (
