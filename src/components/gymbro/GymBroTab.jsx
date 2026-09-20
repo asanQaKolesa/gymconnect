@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { RotateCcw, X, Check, Zap, MapPin, SlidersHorizontal } from 'lucide-react';
 
 export default function GymBroTab() {
-  // Моковые данные анкет для свайпов
   const [profiles, setProfiles] = useState([
     {
       id: 1,
@@ -35,12 +34,12 @@ export default function GymBroTab() {
     if (currentIndex < profiles.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      setCurrentIndex(0); // зацикливаем для теста
+      setCurrentIndex(0);
     }
   };
 
   return (
-    <div className="p-3 max-w-md mx-auto pb-24 flex flex-col justify-between h-[calc(100vh-60px)] animate-in fade-in duration-200">
+    <div className="p-3 max-w-md mx-auto pb-24 flex flex-col h-full animate-in fade-in duration-200">
       
       {/* Верхние кнопки-переключатели (Мэтчи, Лайки, Анкета) */}
       <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">
@@ -58,7 +57,7 @@ export default function GymBroTab() {
       </div>
 
       {/* Фильтры зала */}
-      <div className="grid grid-cols-2 gap-1.5 mb-2 shrink-0">
+      <div className="grid grid-cols-2 gap-1.5 mb-2.5 shrink-0">
         <button className="py-2 px-3 bg-blue-600 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center gap-1.5">
           <MapPin className="w-3.5 h-3.5 stroke-[1.5]" />
           <span>Все залы Алматы</span>
@@ -69,9 +68,9 @@ export default function GymBroTab() {
         </button>
       </div>
 
-      {/* Центральная карточка свайпа (компактная, без лишней прокрутки) */}
+      {/* Центральная карточка свайпа (растягивается на всю доступную высоту) */}
       {currentProfile ? (
-        <div className="relative bg-white rounded-3xl overflow-hidden shadow-md border border-slate-100 flex-1 flex flex-col justify-end mb-2 max-h-[380px]">
+        <div className="relative bg-white rounded-3xl overflow-hidden shadow-md border border-slate-100 flex-1 flex flex-col justify-end mb-3 min-h-[380px]">
           {/* Фото на заднем фоне карточки */}
           <div className="absolute inset-0 z-0">
             <img 
@@ -79,7 +78,7 @@ export default function GymBroTab() {
               alt={currentProfile.name} 
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
           </div>
 
           {/* Бейджи сверху фото (Экстраверт / Возраст) */}
@@ -93,53 +92,53 @@ export default function GymBroTab() {
           </div>
 
           {/* Контент поверх фото внизу карточки */}
-          <div className="relative z-10 p-3.5 text-white">
+          <div className="relative z-10 p-4 text-white">
             <div className="flex items-baseline gap-2 mb-1">
-              <h2 className="text-lg font-bold tracking-tight">{currentProfile.name}</h2>
+              <h2 className="text-xl font-bold tracking-tight">{currentProfile.name}</h2>
             </div>
-            <div className="text-[11px] text-slate-200 mb-2 flex items-center gap-1">
-              <MapPin className="w-3 h-3 text-blue-400 shrink-0" />
+            <div className="text-[11px] text-slate-200 mb-2.5 flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
               <span>{currentProfile.gym} • {currentProfile.time}</span>
             </div>
 
             {/* Стаж и био */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-2.5 border border-white/10">
-              <div className="text-[9px] font-bold text-blue-400 tracking-wider uppercase mb-0.5">{currentProfile.experience}</div>
-              <p className="text-[11px] text-slate-100 leading-snug line-clamp-2">
+            <div className="bg-white/15 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+              <div className="text-[9px] font-bold text-blue-300 tracking-wider uppercase mb-0.5">{currentProfile.experience}</div>
+              <p className="text-xs text-slate-100 leading-snug">
                 {currentProfile.bio}
               </p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="flex-1 bg-white rounded-3xl border border-slate-100 flex items-center justify-center p-6 text-center">
+        <div className="flex-1 bg-white rounded-3xl border border-slate-100 flex items-center justify-center p-6 text-center my-auto">
           <p className="text-xs text-slate-400">Анкеты в вашем районе закончились</p>
         </div>
       )}
 
-      {/* Четыре управляющие кнопки прямо над таб-баром (компактно) */}
-      <div className="flex items-center justify-center gap-3 shrink-0 pt-1">
+      {/* Четыре управляющие кнопки (зафиксированы внизу перед таб-баром) */}
+      <div className="flex items-center justify-center gap-3 shrink-0 pb-1">
         <button 
           onClick={handleNext}
-          className="w-11 h-11 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-50 shadow-sm active:scale-95 transition-all"
+          className="w-12 h-12 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-50 shadow-sm active:scale-95 transition-all"
         >
           <RotateCcw className="w-4 h-4 stroke-[1.5]" />
         </button>
         <button 
           onClick={handleNext}
-          className="w-12 h-12 bg-white border border-rose-100 rounded-full flex items-center justify-center text-rose-500 hover:bg-rose-50 shadow-sm active:scale-95 transition-all"
+          className="w-14 h-14 bg-white border border-rose-100 rounded-full flex items-center justify-center text-rose-500 hover:bg-rose-50 shadow-sm active:scale-95 transition-all"
         >
-          <X className="w-5 h-5 stroke-[2]" />
+          <X className="w-6 h-6 stroke-[2]" />
         </button>
         <button 
           onClick={handleNext}
-          className="w-12 h-12 bg-white border border-emerald-100 rounded-full flex items-center justify-center text-emerald-500 hover:bg-emerald-50 shadow-sm active:scale-95 transition-all"
+          className="w-14 h-14 bg-white border border-emerald-100 rounded-full flex items-center justify-center text-emerald-500 hover:bg-emerald-50 shadow-sm active:scale-95 transition-all"
         >
-          <Check className="w-5 h-5 stroke-[2]" />
+          <Check className="w-6 h-6 stroke-[2]" />
         </button>
         <button 
           onClick={handleNext}
-          className="w-11 h-11 bg-white border border-purple-100 rounded-full flex items-center justify-center text-purple-600 hover:bg-purple-50 shadow-sm active:scale-95 transition-all"
+          className="w-12 h-12 bg-white border border-purple-100 rounded-full flex items-center justify-center text-purple-600 hover:bg-purple-50 shadow-sm active:scale-95 transition-all"
         >
           <Zap className="w-4 h-4 stroke-[1.5]" />
         </button>
