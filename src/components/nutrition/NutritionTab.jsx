@@ -12,7 +12,7 @@ export default function NutritionTab() {
   const [weight, setWeight] = useState(75);
 
   return (
-    <div className="p-3 max-w-md mx-auto pb-24 animate-in fade-in duration-200">
+    <div className="p-3 max-w-md mx-auto pb-16 animate-in fade-in duration-200">
       <NutritionHeader />
       <NutritionDisclaimer />
       <NutritionCalculator weight={weight} setWeight={setWeight} />
