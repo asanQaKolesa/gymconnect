@@ -14,16 +14,6 @@ export default function ReviewsList({ activeTab, onOpenAll, onOpenAdd }) {
         verified: true,
         text: 'Отличный зал! Новые тренажеры Matrix, вентиляция работает на ура, по вечерам в зоне свободных весов бывает плотно.',
         likes: 14
-      },
-      {
-        id: 2,
-        author: 'Тимур М.',
-        target: 'World Class Almaty',
-        date: '3 дня назад',
-        rating: 4.5,
-        verified: true,
-        text: 'Премиальный сервис, чистый бассейн, полотенца всегда в наличии. Из минусов — высокая цена годового абонемента.',
-        likes: 8
       }
     ],
     trainers: [
@@ -36,16 +26,6 @@ export default function ReviewsList({ activeTab, onOpenAll, onOpenAdd }) {
         verified: true,
         text: 'За 2 месяца набора массы под руководством Армана прибавил 3.5 кг чистых мышц. Очень грамотно ставит технику.',
         likes: 21
-      },
-      {
-        id: 2,
-        author: 'Камила Р.',
-        target: 'Тренер Алия С.',
-        date: 'Неделю назад',
-        rating: 4.8,
-        verified: true,
-        text: 'Помогла скорректировать осанку и избавиться от боли в пояснице. Программа тренировок составлена идеально.',
-        likes: 12
       }
     ]
   };
@@ -53,40 +33,48 @@ export default function ReviewsList({ activeTab, onOpenAll, onOpenAdd }) {
   const currentList = reviewsData[activeTab];
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-3">
       {/* Заголовок блока */}
       <div className="flex items-center justify-between px-1">
         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Свежий отзыв</span>
-        <span className="text-[11px] text-blue-600 font-medium">Без накрутки</span>
+        <span className="text-[11px] text-emerald-600 font-medium">Верифицировано</span>
       </div>
 
-      {/* Первый отзыв (полный) */}
+      {/* Единственный актуальный свежий отзыв */}
       {currentList[0] && <ReviewCard review={currentList[0]} isTransparent={false} />}
 
-      {/* Второй отзыв (обрезанный на 30% сверху с градиентом растворения) */}
-      <div className="relative h-20 overflow-hidden rounded-2xl border border-slate-100 bg-white p-4 opacity-40 select-none pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/80 to-white z-10"></div>
-        {currentList[1] && <ReviewCard review={currentList[1]} isTransparent={true} />}
-      </div>
+      {/* Полноразмерная карточка-кнопка: Посмотреть все отзывы */}
+      <button 
+        onClick={onOpenAll}
+        className="w-full p-4 bg-white hover:bg-slate-50 border border-slate-100 rounded-2xl text-left transition-all shadow-sm group flex items-center justify-between"
+      >
+        <div>
+          <div className="text-xs font-semibold text-slate-900 mb-0.5 flex items-center gap-1.5">
+            <span>Все отзывы ({activeTab === 'gyms' ? '42' : '28'})</span>
+            <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+          </div>
+          <div className="text-[11px] text-slate-400">Нажмите, чтобы ознакомиться со всеми мнениями и рейтингами</div>
+        </div>
+        <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+          <ArrowRight className="w-4 h-4 stroke-[1.5]" />
+        </div>
+      </button>
 
-      {/* Кнопки управления (компактные, прямо на главном экране) */}
-      <div className="grid grid-cols-2 gap-2 pt-1">
-        <button 
-          onClick={onOpenAll}
-          className="py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-        >
-          <span>Все отзывы</span>
-          <ArrowRight className="w-3.5 h-3.5 stroke-[1.5]" />
-        </button>
-
-        <button 
-          onClick={onOpenAdd}
-          className="py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/20"
-        >
-          <PlusCircle className="w-3.5 h-3.5 stroke-[1.5]" />
-          <span>Оставить отзыв</span>
-        </button>
-      </div>
+      {/* Полноразмерная карточка-кнопка: Оставить отзыв */}
+      <button 
+        onClick={onOpenAdd}
+        className="w-full p-4 bg-white hover:bg-slate-50 border border-slate-100 rounded-2xl text-left transition-all shadow-sm group flex items-center justify-between"
+      >
+        <div>
+          <div className="text-xs font-semibold text-blue-600 mb-0.5 flex items-center gap-1.5">
+            <span>Оставить свой отзыв</span>
+          </div>
+          <div className="text-[11px] text-slate-400">Ваш реальный опыт поможет другим атлетам сделать правильный выбор без разочарования</div>
+        </div>
+        <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 transition-colors">
+          <PlusCircle className="w-4 h-4 stroke-[1.5]" />
+        </div>
+      </button>
     </div>
   );
 }
