@@ -13,11 +13,11 @@ export default function App() {
   return (
     <div className={`min-h-screen bg-slate-100 flex justify-center ${appleTheme.styles.fontFamily}`}>
       
-      {/* Жесткий мобильный контейнер */}
-      <div className={`w-full max-w-md min-h-screen bg-[${appleTheme.colors.bg}] relative pb-28 shadow-2xl`}>
+      {/* ЖЕСТКИЙ МОБИЛЬНЫЙ КОНТЕЙНЕР */}
+      <div className={`w-full max-w-md min-h-screen bg-[${appleTheme.colors.bg}] relative pb-28 shadow-2xl flex flex-col justify-between`}>
         
-        {/* Рендер активной вкладки */}
-        <div className="w-full">
+        {/* Рендер активной вкладки с отступом сверху и снизу */}
+        <div className="w-full flex-1 pb-24">
           {activeTab === 'home' && <HomeTab />}
           {activeTab === 'gymbro' && <GymBroTab />}
           {activeTab === 'reviews' && <ReviewsTab />}
@@ -25,9 +25,9 @@ export default function App() {
           {activeTab === 'profile' && <ProfileTab />}
         </div>
 
-        {/* Нижний таб-бар */}
-        <div className="absolute bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 shadow-lg">
-          <div className="max-w-md mx-auto px-4 py-2 flex justify-around items-center">
+        {/* НИЖНИЙ ТАБ-БАР (FIXED - ВСЕГДА ВИДЕН ВНИЗУ) */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 shadow-lg">
+          <div className="w-full max-w-md mx-auto px-4 py-2 flex justify-around items-center">
             
             <button
               onClick={() => setActiveTab('home')}
