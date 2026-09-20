@@ -5,11 +5,11 @@ import ReviewSearch from './ReviewSearch';
 import ReviewsList from './ReviewsList';
 
 export default function ReviewsTab() {
-  const [activeTab, setActiveTab] = useState('gyms'); // 'gyms' или 'trainers'
+  const [activeTab, setActiveTab] = useState('gyms');
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <div className="p-4 max-w-md mx-auto pb-16 animate-in fade-in duration-200">
+    <div className="p-4 max-w-md mx-auto flex flex-col pb-6 animate-in fade-in duration-200">
       <ReviewsHeader />
       <ReviewTabsSwitch activeTab={activeTab} setActiveTab={setActiveTab} />
       <ReviewSearch activeTab={activeTab} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
