@@ -4,6 +4,8 @@ import DailyQuote from './DailyQuote';
 import WorkoutStreak from './WorkoutStreak';
 import TodayPlan from './TodayPlan';
 import ActionGrid from './ActionGrid';
+import HomeChallenges from './HomeChallenges';
+import HomeArticles from './HomeArticles';
 
 export default function HomeTab() {
   return (
@@ -16,6 +18,8 @@ export default function HomeTab() {
       <WorkoutStreak />
       <TodayPlan />
       <ActionGrid />
+      <HomeChallenges />
+      <HomeArticles />
     </div>
   );
 }
