@@ -1,8 +1,8 @@
 import React from 'react';
 import NutritionDisclaimer from './NutritionDisclaimer';
 import NutritionCalculator from './NutritionCalculator';
-import NutritionAllergies from './NutritionAllergies';
 import WaterTracker from './WaterTracker';
+import NutritionAllergies from './NutritionAllergies';
 import NutritionDiet from './NutritionDiet';
 import NutritionCart from './NutritionCart';
 import NutritionSupplements from './NutritionSupplements';
@@ -14,8 +14,8 @@ export default function NutritionTab() {
       
       <NutritionDisclaimer />
       <NutritionCalculator />
-      <NutritionAllergies />
       <WaterTracker />
+      <NutritionAllergies />
       <NutritionDiet />
       <NutritionCart />
       <NutritionSupplements />
