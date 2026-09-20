@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Flame, Sliders, X } from 'lucide-react';
 
-export default function NutritionCalculator() {
-  const [weight, setWeight] = useState(75);
+export default function NutritionCalculator({ weight = 75, setWeight }) {
   const [height, setHeight] = useState(178);
   const [age, setAge] = useState(26);
   const [goal, setGoal] = useState('deficit');
@@ -19,7 +18,6 @@ export default function NutritionCalculator() {
 
   return (
     <>
-      {/* Компактная плашка калькулятора */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -28,7 +26,7 @@ export default function NutritionCalculator() {
             </div>
             <div>
               <h2 className="text-sm font-semibold text-slate-900">Калькулятор КБЖУ</h2>
-              <p className="text-xs text-slate-400">Цель: {goalText}</p>
+              <p className="text-xs text-slate-400">Цель: {goalText} • Вес: {weight} кг</p>
             </div>
           </div>
           <button 
@@ -40,7 +38,6 @@ export default function NutritionCalculator() {
           </button>
         </div>
 
-        {/* Результаты в компактном виде */}
         <div className="bg-slate-50 rounded-xl p-3 grid grid-cols-4 gap-1 text-center">
           <div>
             <div className="text-[10px] text-slate-400 mb-0.5">Ккал</div>
@@ -61,7 +58,6 @@ export default function NutritionCalculator() {
         </div>
       </div>
 
-      {/* Модальное окно настройки параметров (как в профиле) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl relative animate-in fade-in zoom-in duration-200">
