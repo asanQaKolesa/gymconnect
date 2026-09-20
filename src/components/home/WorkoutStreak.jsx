@@ -13,9 +13,6 @@ export default function WorkoutStreak() {
           <div className="text-[11px] text-slate-400">5 дней подряд в режиме • Отличная дисциплина</div>
         </div>
       </div>
-      <div className="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-xl">
-        5 дней 🔥
-      </div>
     </div>
   );
 }
