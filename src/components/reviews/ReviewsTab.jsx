@@ -9,7 +9,7 @@ export default function ReviewsTab() {
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <div className="p-4 max-w-md mx-auto pb-24 animate-in fade-in duration-200">
+    <div className="p-4 max-w-md mx-auto pb-16 animate-in fade-in duration-200">
       <ReviewsHeader />
       <ReviewTabsSwitch activeTab={activeTab} setActiveTab={setActiveTab} />
       <ReviewSearch activeTab={activeTab} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
