@@ -26,56 +26,56 @@ export default function App() {
         </div>
 
         {/* НИЖНИЙ ТАБ-БАР (FIXED - ВСЕГДА ВИДЕН ВНИЗУ) */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-t border-slate-200 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-100 shadow-lg">
           <div className="w-full max-w-md mx-auto px-4 py-2 flex justify-around items-center">
             
             <button
               onClick={() => setActiveTab('home')}
-              className={`flex flex-col items-center justify-center w-14 py-1 transition-colors ${
-                activeTab === 'home' ? 'text-blue-600 font-semibold' : 'text-slate-400 hover:text-slate-600'
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'home' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <Home className="w-5 h-5 mb-1 stroke-[1.5]" />
+              <Home className="w-5 h-5 mb-1 stroke-[1.75]" />
               <span className="text-[10px]">Главная</span>
             </button>
 
             <button
               onClick={() => setActiveTab('gymbro')}
-              className={`flex flex-col items-center justify-center w-14 py-1 transition-colors ${
-                activeTab === 'gymbro' ? 'text-blue-600 font-semibold' : 'text-slate-400 hover:text-slate-600'
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'gymbro' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <Users className="w-5 h-5 mb-1 stroke-[1.5]" />
+              <Users className="w-5 h-5 mb-1 stroke-[1.75]" />
               <span className="text-[10px]">GymBro</span>
             </button>
 
             <button
               onClick={() => setActiveTab('reviews')}
-              className={`flex flex-col items-center justify-center w-14 py-1 transition-colors ${
-                activeTab === 'reviews' ? 'text-blue-600 font-semibold' : 'text-slate-400 hover:text-slate-600'
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'reviews' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <MessageSquare className="w-5 h-5 mb-1 stroke-[1.5]" />
+              <MessageSquare className="w-5 h-5 mb-1 stroke-[1.75]" />
               <span className="text-[10px]">Отзывы</span>
             </button>
 
             <button
               onClick={() => setActiveTab('nutrition')}
-              className={`flex flex-col items-center justify-center w-14 py-1 transition-colors ${
-                activeTab === 'nutrition' ? 'text-blue-600 font-semibold' : 'text-slate-400 hover:text-slate-600'
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'nutrition' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <Utensils className="w-5 h-5 mb-1 stroke-[1.5]" />
+              <Utensils className="w-5 h-5 mb-1 stroke-[1.75]" />
               <span className="text-[10px]">Питание</span>
             </button>
 
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex flex-col items-center justify-center w-14 py-1 transition-colors ${
-                activeTab === 'profile' ? 'text-blue-600 font-semibold' : 'text-slate-400 hover:text-slate-600'
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'profile' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <User className="w-5 h-5 mb-1 stroke-[1.5]" />
+              <User className="w-5 h-5 mb-1 stroke-[1.75]" />
               <span className="text-[10px]">Профиль</span>
             </button>
 
