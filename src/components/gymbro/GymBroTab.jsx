@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { RotateCcw, X, Check, Zap, MapPin, SlidersHorizontal, Users } from 'lucide-react';
+import GymBroHeader from './GymBroHeader';
+import { RotateCcw, X, Check, Zap, MapPin, SlidersHorizontal } from 'lucide-react';
 
 export default function GymBroTab() {
   const [profiles, setProfiles] = useState([
@@ -41,18 +42,8 @@ export default function GymBroTab() {
   return (
     <div className="p-3 max-w-md mx-auto pb-24 animate-in fade-in duration-200">
       
-      {/* Шапка раздела GymBro (в стиле Reviews) */}
-      <div className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-100 mb-2.5 relative overflow-hidden">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-sm font-bold text-slate-900 tracking-tight">GymBro Matching</h1>
-            <p className="text-[11px] text-slate-400 mt-0.5">Больше не тренируйся один • Напарники по базе</p>
-          </div>
-          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <Users className="w-4 h-4 stroke-[1.5]" />
-          </div>
-        </div>
-      </div>
+      {/* Подключаем независимую шапку */}
+      <GymBroHeader />
 
       {/* Верхние кнопки-переключатели (Мэтчи, Лайки, Анкета) */}
       <div className="grid grid-cols-3 gap-1.5 mb-2">
