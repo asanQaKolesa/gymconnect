@@ -13,10 +13,18 @@ export const appleTheme = {
     groupedBg: '#F9F9FB',   // Подложки
   },
   styles: {
+    // Карточки в стиле iOS с мягкими тенями и тонкими рамками
     card: "bg-white rounded-[20px] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-black/[0.04]",
     cardLarge: "bg-white rounded-[24px] p-5 shadow-[0_6px_24px_rgba(0,0,0,0.04)] border border-black/[0.04]",
-    buttonPrimary: "w-full py-3.5 rounded-[16px] bg-[#007AFF] text-white font-semibold text-[16px] tracking-tight shadow-[0_4px_14px_rgba(0,122,255,0.3)] hover:bg-[#0056B3] active:scale-[0.98] transition-all",
-    sectionTitle: "text-[13px] font-normal text-[#6C6C70] px-3 uppercase tracking-wide mb-2",
+    
+    // Кнопки
+    buttonPrimary: "w-full py-3.5 rounded-[16px] bg-[#007AFF] text-white font-semibold text-[15px] tracking-tight shadow-[0_4px_14px_rgba(0,122,255,0.3)] hover:bg-[#0056B3] active:scale-[0.98] transition-all",
+    buttonSecondary: "w-full py-3.5 rounded-[16px] bg-slate-100 text-slate-800 font-medium text-[15px] tracking-tight hover:bg-slate-200 active:scale-[0.98] transition-all",
+    
+    // Заголовки секций (как в настройках iOS)
+    sectionTitle: "text-[12px] font-medium text-[#8E8E93] px-3 uppercase tracking-wider mb-2",
+    
+    // Системный шрифт Apple
     fontFamily: "font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text','Helvetica_Neue',sans-serif]"
   }
 };
