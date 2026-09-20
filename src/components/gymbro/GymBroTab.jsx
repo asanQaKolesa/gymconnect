@@ -39,7 +39,7 @@ export default function GymBroTab() {
   };
 
   return (
-    <div className="p-3 max-w-md mx-auto pb-24 flex flex-col h-[calc(100vh-60px)] animate-in fade-in duration-200">
+    <div className="px-3 pt-3 pb-20 max-w-md mx-auto flex flex-col h-[calc(100vh-80px)] animate-in fade-in duration-200">
       
       {/* Верхние кнопки-переключатели (Мэтчи, Лайки, Анкета) */}
       <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">
@@ -71,7 +71,6 @@ export default function GymBroTab() {
       {/* Центральная карточка свайпа (растягивается на всё оставшееся пространство) */}
       {currentProfile ? (
         <div className="relative bg-white rounded-3xl overflow-hidden shadow-md border border-slate-100 flex-1 flex flex-col justify-end mb-2">
-          {/* Фото на заднем фоне карточки */}
           <div className="absolute inset-0 z-0">
             <img 
               src={currentProfile.image} 
@@ -81,7 +80,6 @@ export default function GymBroTab() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
           </div>
 
-          {/* Бейджи сверху фото (Экстраверт / Возраст) */}
           <div className="absolute top-3 left-3 right-3 z-10 flex gap-1.5">
             <span className="px-2.5 py-1 bg-white/20 backdrop-blur-md text-white rounded-full text-[10px] font-medium">
               {currentProfile.type}
@@ -91,7 +89,6 @@ export default function GymBroTab() {
             </span>
           </div>
 
-          {/* Контент поверх фото внизу карточки */}
           <div className="relative z-10 p-3.5 text-white">
             <div className="flex items-baseline gap-2 mb-0.5">
               <h2 className="text-lg font-bold tracking-tight">{currentProfile.name}</h2>
@@ -101,7 +98,6 @@ export default function GymBroTab() {
               <span>{currentProfile.gym} • {currentProfile.time}</span>
             </div>
 
-            {/* Стаж и био */}
             <div className="bg-white/15 backdrop-blur-md rounded-2xl p-2.5 border border-white/10">
               <div className="text-[9px] font-bold text-blue-300 tracking-wider uppercase mb-0.5">{currentProfile.experience}</div>
               <p className="text-[11px] text-slate-100 leading-snug line-clamp-2">
@@ -116,7 +112,7 @@ export default function GymBroTab() {
         </div>
       )}
 
-      {/* Четыре управляющие кнопки на единой плашке прямо над таб-баром */}
+      {/* Четыре управляющие кнопки на единой плашке */}
       <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 flex items-center justify-around shrink-0">
         <button 
           onClick={handleNext}
