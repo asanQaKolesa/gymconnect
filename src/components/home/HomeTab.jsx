@@ -9,7 +9,7 @@ import HomeArticles from './HomeArticles';
 
 export default function HomeTab() {
   return (
-    <div className="p-4 max-w-md mx-auto pb-16 animate-in fade-in duration-200">
+    <div className="p-4 max-w-md mx-auto flex flex-col pb-6 animate-in fade-in duration-200">
       <HomeHeader 
         onOpenSub={() => alert('Открытие подписки PRO')} 
         onOpenNotif={() => alert('Уведомления пустые')} 
