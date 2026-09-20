@@ -39,36 +39,36 @@ export default function GymBroTab() {
   };
 
   return (
-    <div className="px-3 pt-3 pb-20 max-w-md mx-auto flex flex-col h-[calc(100vh-80px)] animate-in fade-in duration-200">
+    <div className="p-3 max-w-md mx-auto flex flex-col absolute inset-x-0 top-0 bottom-20 z-10 animate-in fade-in duration-200 overflow-hidden">
       
       {/* Верхние кнопки-переключатели (Мэтчи, Лайки, Анкета) */}
-      <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">
-        <button className="py-2 px-2 bg-white hover:bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-semibold text-slate-800 shadow-sm flex items-center justify-center gap-1">
+      <div className="grid grid-cols-3 gap-1.5 mb-1.5 shrink-0">
+        <button className="py-1.5 px-2 bg-white hover:bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-semibold text-slate-800 shadow-sm flex items-center justify-center gap-1">
           <span>Мэтчи</span>
           <span className="w-4 h-4 bg-blue-50 text-blue-600 rounded-full text-[9px] flex items-center justify-center">3</span>
         </button>
-        <button className="py-2 px-2 bg-white hover:bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-semibold text-slate-800 shadow-sm flex items-center justify-center gap-1">
+        <button className="py-1.5 px-2 bg-white hover:bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-semibold text-slate-800 shadow-sm flex items-center justify-center gap-1">
           <span>Лайки</span>
           <span className="w-4 h-4 bg-rose-50 text-rose-600 rounded-full text-[9px] flex items-center justify-center">5</span>
         </button>
-        <button className="py-2 px-2 bg-white hover:bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-semibold text-slate-800 shadow-sm flex items-center justify-center gap-1">
+        <button className="py-1.5 px-2 bg-white hover:bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-semibold text-slate-800 shadow-sm flex items-center justify-center gap-1">
           <span>Моя анкета</span>
         </button>
       </div>
 
       {/* Фильтры зала */}
       <div className="grid grid-cols-2 gap-1.5 mb-2 shrink-0">
-        <button className="py-2 px-3 bg-blue-600 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center gap-1.5">
+        <button className="py-1.5 px-3 bg-blue-600 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center justify-center gap-1.5">
           <MapPin className="w-3.5 h-3.5 stroke-[1.5]" />
           <span>Все залы Алматы</span>
         </button>
-        <button className="py-2 px-3 bg-white hover:bg-slate-50 border border-slate-100 text-slate-700 rounded-xl text-xs font-medium shadow-sm flex items-center justify-center gap-1.5">
+        <button className="py-1.5 px-3 bg-white hover:bg-slate-50 border border-slate-100 text-slate-700 rounded-xl text-xs font-medium shadow-sm flex items-center justify-center gap-1.5">
           <SlidersHorizontal className="w-3.5 h-3.5 stroke-[1.5] text-slate-400" />
           <span>Только мой зал</span>
         </button>
       </div>
 
-      {/* Центральная карточка свайпа (растягивается на всё оставшееся пространство) */}
+      {/* Центральная карточка свайпа (занимает 100% оставшегося пространства) */}
       {currentProfile ? (
         <div className="relative bg-white rounded-3xl overflow-hidden shadow-md border border-slate-100 flex-1 flex flex-col justify-end mb-2">
           <div className="absolute inset-0 z-0">
@@ -112,7 +112,7 @@ export default function GymBroTab() {
         </div>
       )}
 
-      {/* Четыре управляющие кнопки на единой плашке */}
+      {/* Четыре управляющие кнопки на плашке прямо над таб-баром */}
       <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 flex items-center justify-around shrink-0">
         <button 
           onClick={handleNext}
