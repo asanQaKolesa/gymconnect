@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import HomeTab from './components/home/HomeTab';
 import ReviewsTab from './components/reviews/ReviewsTab';
 import GymBroTab from './components/gymbro/GymBroTab';
@@ -6,11 +6,32 @@ import NutritionTab from './components/nutrition/NutritionTab';
 import ProfileTab from './components/profile/ProfileTab';
 import SplashLoader from './components/onboarding/SplashLoader';
 import LanguageSelector from './components/onboarding/LanguageSelector';
+import AdminPanel from './components/admin/AdminPanel'; // Импортируем нашу админ-панель
 import { appleTheme } from './ui/AppleTheme';
 import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
 import { translations } from './locales/translations';
 
 export default function App() {
+  // Стейт для отслеживания секретной админ-ссылки (#admin)
+  const [isAdminRoute, setIsAdminRoute] = useState(false);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#admin') {
+        setIsAdminRoute(true);
+      } else {
+        setIsAdminRoute(false);
+      }
+    };
+
+    // Проверяем при загрузке
+    handleHashChange();
+
+    // Слушаем изменения хэша в строке браузера
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   // Состояние заставки
   const [isLoading, setIsLoading] = useState(true);
 
@@ -47,12 +68,24 @@ export default function App() {
     setActiveTab('home');
   };
 
+  // 0. СЕКРЕТНЫЙ РОУТ АДМИНКИ (#admin)
+  if (isAdminRoute) {
+    return (
+      <AdminPanel 
+        onBack={() => {
+          window.location.hash = '';
+          setIsAdminRoute(false);
+        }} 
+      />
+    );
+  }
+
   // 1. Если заставка еще активна
   if (isLoading) {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
-  // 2. Если заставка завершилась, но язык не выбран — показываем выбор языка
+  // 2. Если заставка завершилась, но язык не выбран — показываем выбор языка (только с флагом РК)
   if (!language) {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
