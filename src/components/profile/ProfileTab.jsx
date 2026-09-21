@@ -1,7 +1,7 @@
 // src/components/profile/ProfileTab.jsx
 import React, { useState } from 'react';
 import { translations } from '../../locales/translations';
-import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown, Camera, Calendar, Scale, Ruler } from 'lucide-react';
+import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown, Camera, Calendar, Scale, Ruler, Search, X, Clock, MapPin } from 'lucide-react';
 
 import ProfileHeader from './ProfileHeader';
 import ProfileCard from './ProfileCard';
@@ -243,6 +243,16 @@ const ALMATY_GYMS = [
   "Level fitness & Gym | Достык, 105, Алматы"
 ];
 
+const DAYS_OF_WEEK = [
+  { id: 'mon', label: 'Пн' },
+  { id: 'tue', label: 'Вт' },
+  { id: 'wed', label: 'Ср' },
+  { id: 'thu', label: 'Чт' },
+  { id: 'fri', label: 'Пт' },
+  { id: 'sat', label: 'Сб' },
+  { id: 'sun', label: 'Вс' }
+];
+
 export default function ProfileTab({ onComplete, isRegistration, currentLang = 'kk' }) {
   const t = translations[currentLang] || translations.kk;
 
@@ -259,21 +269,19 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       gender: savedProfile.gender || 'male',
       height: savedProfile.height || '',
       weight: savedProfile.weight || '',
-      city: 'Алматы',
+      city: savedProfile.city || 'Алматы',
       district: savedProfile.district || 'Медеуский',
       gym: savedProfile.gym || '',
       
-      // Спортивная специализация / интересы
       specialization: savedProfile.specialization || 'athlete',
       goal: savedProfile.goal || 'mass',
       
-      // Параметры GymBro матчинга
       lookingFor: savedProfile.lookingFor || 'gymbro',
       workoutTime: savedProfile.workoutTime || 'evening',
-      workoutDays: savedProfile.workoutDays || 'mon_wed_fri',
+      customTime: savedProfile.customTime || '',
+      workoutDays: savedProfile.workoutDays || ['mon', 'wed', 'fri'],
       bio: savedProfile.bio || '',
 
-      // Юридические согласия
       agreeTerms: savedProfile.agreeTerms || false,
       agreePrivacy: savedProfile.agreePrivacy || false,
       agreeMarketing: savedProfile.agreeMarketing || false,
@@ -281,8 +289,26 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     };
   });
 
+  const [gymSearchQuery, setGymSearchQuery] = useState(formData.gym || '');
+  const [isGymDropdownOpen, setIsGymDropdownOpen] = useState(false);
+
+  const filteredGyms = ALMATY_GYMS.filter(gym => 
+    gym.toLowerCase().includes(gymSearchQuery.toLowerCase())
+  );
+
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const toggleWorkoutDay = (dayId) => {
+    setFormData(prev => {
+      const currentDays = prev.workoutDays || [];
+      if (currentDays.includes(dayId)) {
+        return { ...prev, workoutDays: currentDays.filter(d => d !== dayId) };
+      } else {
+        return { ...prev, workoutDays: [...currentDays, dayId] };
+      }
+    });
   };
 
   const handlePhotoUpload = (e) => {
@@ -299,14 +325,22 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Проверка возраста 18-80
     const ageNum = Number(formData.age);
     if (!ageNum || ageNum < 18 || ageNum > 80) {
       alert(currentLang === 'kk' ? 'Жасыңыз 18 бен 80 аралығында болуы тиіс!' : 'Возраст должен быть от 18 до 80 лет!');
       return;
     }
 
-    // Проверка юридических чекбоксов
+    if (!formData.gym) {
+      alert(currentLang === 'kk' ? 'Негізгі фитнес-залыңызды таңдаңыз!' : 'Выберите ваш основной фитнес-зал!');
+      return;
+    }
+
+    if (formData.workoutDays.length === 0) {
+      alert(currentLang === 'kk' ? 'Кем дегенде бір жаттығу күнін таңдаңыз!' : 'Выберите хотя бы один день тренировок!');
+      return;
+    }
+
     if (!formData.agreeTerms || !formData.agreePrivacy || !formData.agreeSafety) {
       alert(currentLang === 'kk' ? 'Барлық міндетті келісімдерді белгілеңіз!' : 'Пожалуйста, примите обязательные соглашения и правила безопасности!');
       return;
@@ -399,7 +433,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* Возраст (18-80) и Пол */}
+            {/* Возраст и Пол */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
@@ -470,19 +504,22 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* Город и Район */}
+            {/* Выбор Города (Алматы по умолчанию) и Района */}
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">{currentLang === 'kk' ? 'Қала' : 'Город'}</label>
-                <input 
-                  type="text"
-                  disabled
-                  value="Алматы"
-                  className="w-full px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed"
-                />
+                <label className="block text-xs font-medium text-slate-700 mb-1">{currentLang === 'kk' ? 'Қала' : 'Город'} *</label>
+                <select
+                  value={formData.city}
+                  onChange={(e) => handleChange('city', e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
+                >
+                  <option value="Алматы">Алматы</option>
+                  <option value="Астана" disabled>Астана (скоро)</option>
+                  <option value="Шымкент" disabled>Шымкент (скоро)</option>
+                </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">{currentLang === 'kk' ? 'Аудан' : 'Район'}</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">{currentLang === 'kk' ? 'Аудан' : 'Район'} *</label>
                 <select
                   value={formData.district}
                   onChange={(e) => handleChange('district', e.target.value)}
@@ -500,32 +537,60 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* Выбор зала (230 объектов) */}
-            <div>
+            {/* Интерактивный поиск зала */}
+            <div className="relative">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Негізгі фитнес-залыңыз' : 'Ваш основной фитнес-зал'} *
               </label>
               <div className="relative flex items-center">
-                <Dumbbell className="absolute left-3 w-4 h-4 text-slate-400" />
-                <select
+                <Search className="absolute left-3 w-4 h-4 text-slate-400" />
+                <input 
+                  type="text"
                   required
-                  value={formData.gym}
-                  onChange={(e) => handleChange('gym', e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all appearance-none cursor-pointer"
-                >
-                  <option value="" disabled>{currentLang === 'kk' ? 'Залды таңдаңыз...' : 'Выберите клуб...'}</option>
-                  {ALMATY_GYMS.map((gymName, index) => (
-                    <option key={index} value={gymName}>{gymName}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 w-4 h-4 text-slate-400 pointer-events-none" />
+                  value={gymSearchQuery}
+                  onFocus={() => setIsGymDropdownOpen(true)}
+                  onChange={(e) => {
+                    setGymSearchQuery(e.target.value);
+                    handleChange('gym', e.target.value);
+                    setIsGymDropdownOpen(true);
+                  }}
+                  placeholder={currentLang === 'kk' ? 'Залды іздеу (мысалы: Invictus)...' : 'Начните ввод зала (например: Invictus)...'}
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                />
+                {gymSearchQuery && (
+                  <button 
+                    type="button" 
+                    onClick={() => { setGymSearchQuery(''); handleChange('gym', ''); }}
+                    className="absolute right-3 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
+
+              {isGymDropdownOpen && filteredGyms.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg">
+                  {filteredGyms.map((gymName, index) => (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        setGymSearchQuery(gymName);
+                        handleChange('gym', gymName);
+                        setIsGymDropdownOpen(false);
+                      }}
+                      className="px-3 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer border-b border-slate-50 last:border-none transition-colors"
+                    >
+                      {gymName}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Спортивная специализация / интересы */}
+            {/* Спортивная специализация */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
-                {currentLang === 'kk' ? 'Спорттық бағытыңыз / Мамандығыңыз' : 'Спортивная специализация'} *
+                {currentLang === 'kk' ? 'Спорттық бағытыңыз' : 'Спортивная специализация'} *
               </label>
               <select
                 value={formData.specialization}
@@ -540,7 +605,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </select>
             </div>
 
-            {/* Главная цель тренировок */}
+            {/* Главная цель тренировок (включая рекомпозицию) */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Негізгі мақсатыңыз' : 'Главная цель тренировок'} *
@@ -549,6 +614,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 {[
                   { id: 'mass', label: currentLang === 'kk' ? 'Бұлшықет жинау' : 'Набор массы' },
                   { id: 'cut', label: currentLang === 'kk' ? 'Арықтау / Сушка' : 'Сушка / Похудение' },
+                  { id: 'recomp', label: currentLang === 'kk' ? 'Рекомпозиция (Масса + Сушка)' : 'Рекомпозиция тела' },
                   { id: 'strength', label: currentLang === 'kk' ? 'Күшті арттыру' : 'Развитие силы' },
                   { id: 'tone', label: currentLang === 'kk' ? 'Тонус және денсаулық' : 'Тонус и здоровье' }
                 ].map((item) => (
@@ -601,12 +667,12 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 </div>
               </div>
 
-              {/* Время тренировок */}
+              {/* Время суток + точное время */}
               <div className="mb-3">
                 <label className="block text-xs font-medium text-slate-700 mb-1">
                   {currentLang === 'kk' ? 'Ыңғайлы уақыт' : 'Удобное время суток'}
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2 mb-2">
                   {[
                     { id: 'morning', label: currentLang === 'kk' ? 'Таңертең' : 'Утро' },
                     { id: 'afternoon', label: currentLang === 'kk' ? 'Күндіз' : 'День' },
@@ -626,29 +692,48 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                     </button>
                   ))}
                 </div>
+                <div className="relative flex items-center">
+                  <Clock className="absolute left-3 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="text"
+                    value={formData.customTime}
+                    onChange={(e) => handleChange('customTime', e.target.value)}
+                    placeholder={currentLang === 'kk' ? 'Нақты уақыт (мысалы: 18:00 - 20:00)' : 'Точное время (например: 18:00 - 20:00)'}
+                    className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                  />
+                </div>
               </div>
 
-              {/* Дни тренировок */}
+              {/* Свободный календарь дней недели (Мультивыбор) */}
               <div className="mb-3">
                 <label className="block text-xs font-medium text-slate-700 mb-1">
-                  {currentLang === 'kk' ? 'Жаттығу күндері' : 'График дней тренировок'}
+                  {currentLang === 'kk' ? 'Жаттығу күндерін таңдаңыз' : 'Выберите дни тренировок'} *
                 </label>
-                <select
-                  value={formData.workoutDays}
-                  onChange={(e) => handleChange('workoutDays', e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
-                >
-                  <option value="mon_wed_fri">Понедельник — Среда — Пятница (ПН-СР-ПТ)</option>
-                  <option value="tue_thu_sat">Вторник — Четверг — Суббота (ВТ-ЧТ-СБ)</option>
-                  <option value="everyday">Каждый день / Плотный график</option>
-                  <option value="flexible">Плавающий / Гибкий график</option>
-                </select>
+                <div className="grid grid-cols-7 gap-1">
+                  {DAYS_OF_WEEK.map((day) => {
+                    const isSelected = formData.workoutDays?.includes(day.id);
+                    return (
+                      <button
+                        type="button"
+                        key={day.id}
+                        onClick={() => toggleWorkoutDay(day.id)}
+                        className={`py-2.5 rounded-xl text-xs font-semibold border transition-all flex flex-col items-center justify-center ${
+                          isSelected 
+                            ? 'bg-blue-600 border-blue-600 text-white shadow-sm' 
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {day.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* О себе (Bio) */}
+              {/* О себе (Bio) для карточки GymBro */}
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
-                  {currentLang === 'kk' ? 'Өзіңіз туралы (Bio)' : 'О себе (для карточки Tinder)'}
+                  {currentLang === 'kk' ? 'Өзіңіз туралы (GymBro карточкасы үшін)' : 'О себе (для карточки GymBro)'}
                 </label>
                 <textarea
                   rows="2"
@@ -660,8 +745,8 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* ЮРИДИЧЕСКИЙ БЛОК И БЕЗОПАСНОСТЬ */}
-            <div className="pt-3 border-t border-slate-100 space-y-2.5">
+            {/* ЮРИДИЧЕСКИЙ БЛОК (ВЕРТИКАЛЬНАЯ КОЛОНКА) */}
+            <div className="pt-3 border-t border-slate-100 flex flex-col gap-2.5">
               <div className="flex items-start gap-2">
                 <input 
                   type="checkbox"
@@ -669,7 +754,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                   id="terms"
                   checked={formData.agreeTerms}
                   onChange={(e) => handleChange('agreeTerms', e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
                 />
                 <label htmlFor="terms" className="text-[11px] text-slate-600 leading-tight cursor-pointer">
                   {currentLang === 'kk' ? 'Жария оферта шарттарымен келісемін' : 'Я ознакомлен(а) и согласен(а) с Договором публичной оферты'}
@@ -683,7 +768,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                   id="privacy"
                   checked={formData.agreePrivacy}
                   onChange={(e) => handleChange('agreePrivacy', e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
                 />
                 <label htmlFor="privacy" className="text-[11px] text-slate-600 leading-tight cursor-pointer">
                   {currentLang === 'kk' ? 'Деректерді өңдеуге келісім беремін' : 'Даю согласие на обработку персональных данных'}
@@ -696,7 +781,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                   id="marketing"
                   checked={formData.agreeMarketing}
                   onChange={(e) => handleChange('agreeMarketing', e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
                 />
                 <label htmlFor="marketing" className="text-[11px] text-slate-600 leading-tight cursor-pointer">
                   {currentLang === 'kk' ? 'Telegram арқылы жарнама мен ақпарат алуға келісемін' : 'Согласен(а) на получение рассылок и персонализированной рекламы в Telegram'}
