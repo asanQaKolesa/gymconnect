@@ -1,98 +1,77 @@
-/* src/components/onboarding/SplashLoader.css */
+// src/components/onboarding/SplashLoader.jsx
+import React, { useEffect, useState } from 'react';
+import './SplashLoader.css';
+import { Users, Dumbbell, Zap, ShieldCheck } from 'lucide-react';
 
-:root {
-    /* Используем CSS-переменные Telegram, если они есть */
-    --bg-color: var(--tg-theme-bg-color, #1c1c1e);
-    --text-color: var(--tg-theme-text-color, #ffffff);
-    --accent-color: var(--tg-theme-button-color, #3390ec);
-}
+const SplashLoader = ({ onFinish }) => {
+    const [isVisible, setIsVisible] = useState(true);
+    const [step, setStep] = useState(0);
 
-.splash-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: var(--bg-color);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999; /* Поверх всего */
-    opacity: 1;
-    transition: opacity 0.5s ease-in-out; /* Плавное исчезновение */
-}
+    // Массив сменяющихся фич/иконок для демонстрации комьюнити
+    const features = [
+        { icon: <Dumbbell className="w-8 h-8 text-blue-400" />, title: "Найди своего партнера по залу", sub: "Сплит-тренировки стали ближе" },
+        { icon: <Users className="w-8 h-8 text-indigo-400" />, title: "Тренируйся в сильном окружении", sub: "Комьюнити мотивированных атлетов" },
+        { icon: <Zap className="w-8 h-8 text-emerald-400" />, title: "Прогрессируй быстрее", sub: "Обмен опытом и результатами" }
+    ];
 
-.splash-container.fade-out {
-    opacity: 0; /* Класс для запуска исчезновения */
-}
+    useEffect(() => {
+        // Переключение мини-слайдов внутри заставки каждые 1.3 секунды
+        const interval = setInterval(() => {
+            setStep((prev) => (prev < features.length - 1 ? prev + 1 : prev));
+        }, 1300);
 
-.splash-content {
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    animation: scaleIn 0.8s ease-out forwards; /* Анимация появления блока */
-}
+        // Общее время работы заставки — 4.5 секунды
+        const timer = setTimeout(() => {
+            setIsVisible(false);
+            setTimeout(() => {
+                if (onFinish) onFinish();
+            }, 600); // Время на плавное исчезновение
+        }, 4500);
 
-/* Анимация появления логотипа/блока */
-@keyframes scaleIn {
-    from { transform: scale(0.8); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
+        return () => {
+            clearInterval(interval);
+            clearTimeout(timer);
+        };
+    }, [onFinish]);
 
-.splash-logo-ring {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.1);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 10px;
-    animation: pulseRing 2s infinite; /* Пульсация кольца */
-}
+    return (
+        <div className={`splash-overlay ${!isVisible ? 'splash-fade-out' : ''}`}>
+            {/* Фоновые градиентные эппловские свечения */}
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-72 h-72 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-72 h-72 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
 
-@keyframes pulseRing {
-    0% { box-shadow: 0 0 0 0 rgba(51, 144, 236, 0.4); }
-    70% { box-shadow: 0 0 0 15px rgba(51, 144, 236, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(51, 144, 236, 0); }
-}
+            <div className="splash-card">
+                {/* Анимированный блок иконки */}
+                <div className="icon-pulse-container">
+                    <div className="icon-ring"></div>
+                    <div className="icon-inner">
+                        {features[step].icon}
+                    </div>
+                </div>
 
-.splash-title {
-    font-size: 36px;
-    font-weight: 700;
-    color: var(--text-color);
-    margin: 0;
-    letter-spacing: -0.5px;
-    animation: slideUpFade 0.6s ease-out 0.2s both; /* Появление заголовка с задержкой */
-}
+                {/* Название бренда */}
+                <h1 className="splash-brand">GymConnect</h1>
 
-.splash-slogan {
-    font-size: 18px;
-    color: var(--text-color);
-    opacity: 0.7;
-    margin: 0;
-    animation: slideUpFade 0.6s ease-out 0.4s both; /* Появление слогана с задержкой */
-}
+                {/* Двуязычный слоган (Казахский -> Русский) */}
+                <div className="slogans-container">
+                    <p className="slogan-kk">Жалғыз жаттықпайсың</p>
+                    <p className="slogan-ru">Больше не тренируйся один</p>
+                </div>
 
-/* Общая анимация появления текста снизу */
-@keyframes slideUpFade {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
+                {/* Смена подтекстов под шагом */}
+                <div className="feature-dynamic-text">
+                    <span className="fade-text" key={step}>
+                        {features[step].title}
+                    </span>
+                </div>
 
-.splash-spinner {
-    width: 24px;
-    height: 24px;
-    border: 3px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    border-top-color: var(--accent-color);
-    animation: spin 1s linear infinite;
-    margin-top: 30px;
-    animation: spin 1s linear infinite 0.6s both; /* Появление спиннера с задержкой */
-}
+                {/* Эппловский прогресс-бар загрузки */}
+                <div className="splash-progress-track">
+                    <div className="splash-progress-fill"></div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
+export default SplashLoader;
