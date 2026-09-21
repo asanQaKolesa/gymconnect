@@ -1,7 +1,8 @@
 // src/components/profile/ProfileTab.jsx
 import React, { useState } from 'react';
 import { translations } from '../../locales/translations';
-import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown, Camera, Calendar, Scale, Ruler, Search, X, Clock, MapPin, Award, UserCheck, CreditCard } from 'lucide-react';
+import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown, Camera, Calendar, Scale, Ruler, Search, X, Clock, CreditCard } from 'lucide-react';
+import { supabase } from '../../supabaseClient'; // Подключаем твой Supabase клиент
 
 import ProfileHeader from './ProfileHeader';
 import ProfileCard from './ProfileCard';
@@ -224,10 +225,10 @@ const ALMATY_GYMS = [
   "IronGym | Улица Каныша Сатпаева, 30/2в, Алматы",
   "Medina Fitness Studio | Улица Егизбаева, 13/3, Алматы",
   "Balance and Grace Pilates Studio | Улица Кажымукана, 10а, Алматы",
-  "Stretching Almaty | Улица Панфилова, 92, Алматы",
+  "Stretching Almaty | Панфилова, 92, Алматы",
   "Family Space | Микрорайон Самал-2, 91, Алматы",
   "First Pilates Studio | ЖК Гаухартас, проспект Абая, 150/230 блок 4, Алматы",
-  "King Fitness | Улица Коктерек, 141, Алматы",
+  "King Fitness | Коктерек, 141, Алматы",
   "YA. Pilates Room | Globus, проспект Абая, 109в, Алматы",
   "Lifetime | Улица Розыбакиева, 273, Алматы",
   "La Vida Pilates | Микрорайон Казахфильм, 41а, Алматы",
@@ -237,7 +238,7 @@ const ALMATY_GYMS = [
   "YA. Pilates Room | ТРЦ Riviera Park, улица Каныша Сатпаева, 90/21, Алматы",
   "Ocean Soul | ЖК Metropole, проспект Аль-Фараби, 41/6 блок 15, Алматы",
   "Lifestyle | Улица Исиналиева, 1/1, Алматы",
-  "AF Sport | Улица Навои, 300, Алматы",
+  "AF Sport | Навои, 300, Алматы",
   "Ems Fit x Body | Улица Жубанова, За, Алматы",
   "Level fitness & Gym | БЦ Премьер Алатау, проспект Достык, 105, Алматы"
 ];
@@ -274,7 +275,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       
       experienceLevel: savedProfile.experienceLevel || 'independent',
       trainerNeed: savedProfile.trainerNeed || 'self',
-      trainerUsername: savedProfile.trainerUsername || '', // Никнейм тренера (необязательно)
+      trainerUsername: savedProfile.trainerUsername || '',
       membershipTerm: savedProfile.membershipTerm || '6_months',
 
       specialization: savedProfile.specialization || 'athlete',
@@ -327,7 +328,8 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     }
   };
 
-  const handleSubmit = (e) => {
+  // ФУНКЦИЯ СОХРАНЕНИЯ В SUPABASE И LOCALSTORAGE
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     const ageNum = Number(formData.age);
@@ -351,6 +353,49 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       return;
     }
 
+    // Данные для отправки в Supabase
+    const profilePayload = {
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      username: formData.username,
+      age: Number(formData.age),
+      gender: formData.gender,
+      height: Number(formData.height),
+      weight: Number(formData.weight),
+      city: formData.city,
+      district: formData.district,
+      gym: formData.gym,
+      membership_term: formData.membershipTerm,
+      experience_level: formData.experienceLevel,
+      trainer_need: formData.trainerNeed,
+      trainer_username: formData.trainerUsername || null,
+      specialization: formData.specialization,
+      goal: formData.goal,
+      looking_for: formData.lookingFor,
+      workout_time: formData.workoutTime,
+      custom_time: formData.customTime || null,
+      workout_days: formData.workoutDays,
+      bio: formData.bio || null,
+      avatar_url: formData.avatar || null,
+      agree_terms: formData.agreeTerms,
+      agree_privacy: formData.agreePrivacy,
+      agree_marketing: formData.agreeMarketing,
+      agree_trainers: formData.agreeTrainers,
+      agree_safety: formData.agreeSafety
+    };
+
+    // Отправка в Supabase таблицу 'profiles'
+    const { error } = await supabase
+      .from('profiles')
+      .upsert([profilePayload], { onConflict: 'username' });
+
+    if (error) {
+      console.error('Ошибка сохранения в Supabase:', error.message);
+      alert('Ошибка сохранения базы данных: ' + error.message);
+      return;
+    }
+
+    // Сохранение локально и завершение онбординга
     localStorage.setItem('gymconnect_user_data', JSON.stringify(formData));
     if (onComplete) onComplete();
   };
@@ -592,7 +637,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               )}
             </div>
 
-            {/* Срок абонемента в клубе (для предложения продления) */}
+            {/* Срок абонемента в клубе */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Абонемент мерзімі' : 'Срок вашего абонемента в клубе'} *
@@ -648,7 +693,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </select>
             </div>
 
-            {/* НОВОЕ ПОЛЕ: Telegram никнейм тренера (если есть тренер) */}
+            {/* Telegram никнейм тренера (если есть) */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Тренеріңіздің Telegram никнеймі (міндетті емес)' : 'Telegram никнейм вашего тренера (необязательно)'}
@@ -719,7 +764,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 {currentLang === 'kk' ? 'GymBro іздеу параметрлері' : 'Параметры поиска GymBro'}
               </h3>
 
-              {/* Кем ищет */}
               <div className="mb-3">
                 <label className="block text-xs font-medium text-slate-700 mb-1">
                   {currentLang === 'kk' ? 'Кімді іздересіз?' : 'Кого вы ищете для тренировок?'}
@@ -746,7 +790,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 </div>
               </div>
 
-              {/* Время суток + точное время */}
               <div className="mb-3">
                 <label className="block text-xs font-medium text-slate-700 mb-1">
                   {currentLang === 'kk' ? 'Ыңғайлы уақыт' : 'Удобное время суток'}
@@ -783,7 +826,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 </div>
               </div>
 
-              {/* Дни тренировок */}
               <div className="mb-3">
                 <label className="block text-xs font-medium text-slate-700 mb-1">
                   {currentLang === 'kk' ? 'Жаттығу күндерін таңдаңыз' : 'Выберите дни тренировок'} *
@@ -809,7 +851,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 </div>
               </div>
 
-              {/* О себе (Bio) */}
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
                   {currentLang === 'kk' ? 'Өзіңіз туралы (GymBro карточкасы үшін)' : 'О себе (для карточки GymBro)'}
@@ -824,7 +865,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* ЮРИДИЧЕСКИЙ БЛОК (ВЕРТИКАЛЬНАЯ КОЛОНКА) */}
+            {/* ЮРИДИЧЕСКИЙ БЛОК */}
             <div className="pt-3 border-t border-slate-100 flex flex-col gap-2.5">
               <div className="flex items-start gap-2">
                 <input 
