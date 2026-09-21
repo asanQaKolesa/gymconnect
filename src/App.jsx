@@ -15,7 +15,7 @@ import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
 import { translations } from './locales/translations';
 
 export default function App() {
-  // 0. ПРОВЕРКА АДМИН-РЕЖИМА ФАУНДЕРА (?admin=true)
+  // 0. СУПЕР-ПРИОРИТЕТ: САМАЯ ПЕРВАЯ ПРОВЕРКА АДМИНА (?admin=true)
   const [isAdminRoute] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('admin') === 'true') {
@@ -37,14 +37,13 @@ export default function App() {
     );
   }
 
-  // 0.1. ПРОВЕРКА ТРЕНЕРСКОГО РОУТА (?trainer=true)
+  // 0.1. СУПЕР-ПРИОРИТЕТ: САМАЯ ПЕРВАЯ ПРОВЕРКА ТРЕНЕРА (?trainer=true)
   const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
   
   const [trainerUsername, setTrainerUsername] = useState(() => {
     return localStorage.getItem('gymconnect_trainer_username') || '';
   });
   
-  // Стейт переключения между Входом и Регистрацией для тренера
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
 
   if (isTrainerRoute) {
@@ -83,7 +82,7 @@ export default function App() {
     }
   }
 
-  // Состояние заставки
+  // Состояние заставки для обычного приложения
   const [isLoading, setIsLoading] = useState(true);
 
   // Выбранный язык (по умолчанию null для показа LanguageSelector)
@@ -124,7 +123,7 @@ export default function App() {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
-  // 2. Если заставка завершилась, но язык не выбран — показываем выбор языка (только флаг РК)
+  // 2. Если заставка завершилась, но язык не выбран — показываем выбор языка
   if (!language) {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
