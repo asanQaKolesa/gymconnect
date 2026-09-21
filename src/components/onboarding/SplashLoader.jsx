@@ -2,14 +2,13 @@
 import React, { useEffect, useState } from 'react';
 import './SplashLoader.css';
 import AlmatyMapBackground from './AlmatyMapBackground';
-import { MapPin, Users, Utensils, MessageSquare, Dumbbell, Ticket, Shield, Flame, Zap } from 'lucide-react';
+import { MapPin, Users, Utensils, MessageSquare, Dumbbell, Ticket, Shield, Flame, Building2 } from 'lucide-react';
 
 const SplashLoader = ({ onFinish }) => {
     const [isVisible, setIsVisible] = useState(true);
     const [featureIndex, setFeatureIndex] = useState(0);
     const [progress, setProgress] = useState(0);
 
-    // 8 уникальных фич (без повторов на последнем шаге)
     const features = [
         { icon: <Users className="w-5 h-5 text-blue-600" />, kk: "Өз залыңнан серіктес тап", ru: "Найди сплит-партнера в своем зале" },
         { icon: <Utensils className="w-5 h-5 text-emerald-600" />, kk: "Тамақтану және КБЖУ жоспары", ru: "Умный расчет КБЖУ и рацион питания" },
@@ -52,31 +51,27 @@ const SplashLoader = ({ onFinish }) => {
 
     return (
         <div className={`splash-overlay ${!isVisible ? 'splash-fade-out' : ''}`}>
-            {/* Фоновая карта */}
             <AlmatyMapBackground />
 
-            {/* Контрастная белая плашка */}
             <div className="splash-card-contrast">
+                {/* Бейдж с иконкой фитнес-центра и текстом в одну строку */}
                 <div className="splash-badge">
-                    <Zap className="w-4 h-4 text-blue-600" />
+                    <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
                     <div className="badge-text-col">
-                        <span className="badge-kk">Алматыдағы 230+ фитнес-орталық бізбен бірге болады</span>
-                        <span className="badge-ru">230+ фитнес-центров Алматы будут с нами</span>
+                        <span className="badge-kk">Алматыда 230+ зал бізбен бірге</span>
+                        <span className="badge-ru">230+ фитнес-залов Алматы с нами</span>
                     </div>
                 </div>
 
-                {/* Бренд */}
                 <h1 className="splash-brand">
                     <span>G</span><span>y</span><span>m</span><span>C</span><span>o</span><span>n</span><span>n</span><span>e</span><span>c</span><span>t</span>
                 </h1>
 
-                {/* Слоганы (Казахский первый) */}
                 <div className="slogans-container">
                     <p className="slogan-kk">Жалғыз жаттықпайсың</p>
                     <p className="slogan-ru">Больше не тренируйся один</p>
                 </div>
 
-                {/* Блок преимуществ */}
                 <div className="feature-box" key={featureIndex}>
                     <div className="feature-icon-wrap">
                         {features[featureIndex].icon}
@@ -87,7 +82,6 @@ const SplashLoader = ({ onFinish }) => {
                     </div>
                 </div>
 
-                {/* Прогресс-бар */}
                 <div className="splash-progress-wrapper">
                     <div className="splash-progress-info">
                         <div className="progress-text-col">
