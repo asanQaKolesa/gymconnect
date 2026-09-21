@@ -2,27 +2,29 @@
 import React, { useEffect, useState } from 'react';
 import './SplashLoader.css';
 import AlmatyMapBackground from './AlmatyMapBackground';
-import { MapPin, Users, Utensils, MessageSquare, Dumbbell, Ticket, Zap } from 'lucide-react';
+import { MapPin, Users, Utensils, MessageSquare, Dumbbell, Ticket, Shield, Flame, Zap } from 'lucide-react';
 
 const SplashLoader = ({ onFinish }) => {
     const [isVisible, setIsVisible] = useState(true);
     const [featureIndex, setFeatureIndex] = useState(0);
     const [progress, setProgress] = useState(0);
 
-    // 6 преимуществ (Казахский строго первый)
+    // 8 уникальных фич (без повторов на последнем шаге)
     const features = [
         { icon: <Users className="w-5 h-5 text-blue-600" />, kk: "Өз залыңнан серіктес тап", ru: "Найди сплит-партнера в своем зале" },
         { icon: <Utensils className="w-5 h-5 text-emerald-600" />, kk: "Тамақтану және КБЖУ жоспары", ru: "Умный расчет КБЖУ и рацион питания" },
         { icon: <MessageSquare className="w-5 h-5 text-indigo-600" />, kk: "Залдар туралы шынайы пікірлер", ru: "Честные отзывы о фитнес-клубах Алматы" },
         { icon: <Dumbbell className="w-5 h-5 text-orange-600" />, kk: "Кәсіби тренерді таңдаңыз", ru: "Подбор квалифицированных тренеров" },
         { icon: <MapPin className="w-5 h-5 text-sky-600" />, kk: "Алматының барлық залдары картада", ru: "Все фитнес-клубы города на одной карте" },
-        { icon: <Ticket className="w-5 h-5 text-teal-600" />, kk: "Кез келген залға абонемент сатып алу", ru: "Покупка абонемента в любой фитнес-зал" }
+        { icon: <Ticket className="w-5 h-5 text-teal-600" />, kk: "Кез келген залға абонемент сатып алу", ru: "Покупка абонемента в любой фитнес-зал" },
+        { icon: <Shield className="w-5 h-5 text-violet-600" />, kk: "Тек тексерілген орталықтар", ru: "Только проверенные фитнес-центры" },
+        { icon: <Flame className="w-5 h-5 text-rose-600" />, kk: "Мотивация және нәтиже 24/7", ru: "Мотивация и результаты каждый день" }
     ];
 
     useEffect(() => {
         const featureInterval = setInterval(() => {
-            setFeatureIndex((prev) => (prev < features.length - 1 ? prev + 1 : prev));
-        }, 1600);
+            setFeatureIndex((prev) => (prev < features.length - 1 ? prev + 1 : 0));
+        }, 1300);
 
         const progressInterval = setInterval(() => {
             setProgress((prev) => {
@@ -50,15 +52,14 @@ const SplashLoader = ({ onFinish }) => {
 
     return (
         <div className={`splash-overlay ${!isVisible ? 'splash-fade-out' : ''}`}>
-            {/* Фоновая карта 2ГИС */}
+            {/* Фоновая карта */}
             <AlmatyMapBackground />
 
-            {/* Контрастная светлая плашка (не сливается с картой) */}
+            {/* Контрастная белая плашка */}
             <div className="splash-card-contrast">
                 <div className="splash-badge">
-                    <MapPin className="w-4 h-4 text-blue-600" />
+                    <Zap className="w-4 h-4 text-blue-600" />
                     <div className="badge-text-col">
-                        <span className="city-title">Алматы</span>
                         <span className="badge-kk">Алматыдағы 230+ фитнес-орталық бізбен бірге болады</span>
                         <span className="badge-ru">230+ фитнес-центров Алматы будут с нами</span>
                     </div>
@@ -86,7 +87,7 @@ const SplashLoader = ({ onFinish }) => {
                     </div>
                 </div>
 
-                {/* Прогресс-бар (Казахский первый) */}
+                {/* Прогресс-бар */}
                 <div className="splash-progress-wrapper">
                     <div className="splash-progress-info">
                         <div className="progress-text-col">
