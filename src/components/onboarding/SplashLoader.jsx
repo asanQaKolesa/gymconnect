@@ -51,8 +51,10 @@ const SplashLoader = ({ onFinish }) => {
 
     return (
         <div className={`splash-overlay ${!isVisible ? 'splash-fade-out' : ''}`}>
+            {/* Фоновая паттерн-карта с пинами залов */}
             <AlmatyMapBackground />
 
+            {/* Контрастная белая плашка поверх карты */}
             <div className="splash-card-contrast">
                 <div className="splash-badge">
                     <UsersRound className="w-4 h-4 text-blue-600 shrink-0" />
@@ -67,7 +69,7 @@ const SplashLoader = ({ onFinish }) => {
                 </h1>
 
                 <div className="slogans-container">
-                    <p className="slogan-kk">Жалғыз жаттықпайсың</p>
+                    <p className="slogan-kk">Бұдан былай жалғыз жаттықпайсың</p>
                     <p className="slogan-ru">Больше не тренируйся один</p>
                 </div>
 
