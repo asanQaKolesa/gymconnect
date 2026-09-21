@@ -11,13 +11,13 @@ import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
 import { translations } from './locales/translations';
 
 export default function App() {
-  // Состояние заставки (10 секунд)
+  // Состояние заставки
   const [isLoading, setIsLoading] = useState(true);
 
-  // ДЛЯ ТЕСТА: язык сбрасывается при каждом обновлении страницы, чтобы ты мог тестировать экран выбора языка
+  // Выбранный язык (по умолчанию null для показа LanguageSelector)
   const [language, setLanguage] = useState(null);
 
-  // Получаем словарь текстов для выбранного языка (по умолчанию казахский)
+  // Получаем словарь текстов для выбранного языка
   const t = translations[language] || translations.kk;
 
   // Проверяем, заполнил ли пользователь профиль (анкету)
@@ -25,7 +25,7 @@ export default function App() {
     return localStorage.getItem('gymconnect_profile_filled') === 'true';
   });
 
-  // Активная вкладка: если не зарегистрирован, принудительно ставим 'profile', иначе 'home'
+  // Активная вкладка: если не зарегистрирован, открываем профиль/анкету, иначе главную
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('gymconnect_profile_filled') === 'true' ? 'home' : 'profile';
   });
@@ -35,7 +35,7 @@ export default function App() {
     setIsLoading(false);
   };
 
-  // Сохранение выбранного языка
+  // Сохранение выбранного языка (переход к главному экрану без принудительного открытия анкеты)
   const handleSelectLanguage = (lang) => {
     setLanguage(lang);
   };
@@ -47,12 +47,12 @@ export default function App() {
     setActiveTab('home');
   };
 
-  // 1. Если заставка еще активна, показываем только её
+  // 1. Если заставка еще активна
   if (isLoading) {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
-  // 2. Если заставка завершилась, но язык не выбран — показываем выбор языка (Казахский первый)
+  // 2. Если заставка завершилась, но язык не выбран — показываем выбор языка
   if (!language) {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
@@ -79,7 +79,7 @@ export default function App() {
           )}
         </div>
 
-        {/* НИЖНИЙ ТАБ-БАР (Локализован через словарь t) */}
+        {/* НИЖНИЙ ТАБ-БАР ИЛИ ПОДСКАЗКА РЕГИСТРАЦИИ */}
         {isRegistered ? (
           <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-100 shadow-lg">
             <div className="w-full max-w-md mx-auto px-4 py-2 flex justify-around items-center">
@@ -137,7 +137,6 @@ export default function App() {
             </div>
           </div>
         ) : (
-          /* Подсказка для нового пользователя внизу экрана */
           <div className="fixed bottom-0 left-0 right-0 z-50 bg-blue-600 text-white text-center py-3 text-xs font-medium shadow-lg">
             {language === 'kk' ? 'GymConnect қолжетімділігі үшін профиль сауалнамасын толтырыңыз' : 'Заполните анкету профиля для доступа к GymConnect'}
           </div>
