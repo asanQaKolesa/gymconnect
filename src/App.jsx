@@ -5,6 +5,7 @@ import GymBroTab from './components/gymbro/GymBroTab';
 import NutritionTab from './components/nutrition/NutritionTab';
 import ProfileTab from './components/profile/ProfileTab';
 import SplashLoader from './components/onboarding/SplashLoader';
+import LanguageSelector from './components/onboarding/LanguageSelector';
 import { appleTheme } from './ui/AppleTheme';
 import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
 
@@ -12,8 +13,12 @@ export default function App() {
   // Состояние заставки (показываем при самом первом открытии)
   const [isLoading, setIsLoading] = useState(true);
 
+  // Состояние выбора языка (проверяем localStorage, по умолчанию null)
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('gymconnect_language') || null;
+  });
+
   // Проверяем, заполнил ли пользователь профиль (анкету)
-  // Сохраняем статус в localStorage, чтобы при повторных входах не заставлять заполнять заново
   const [isRegistered, setIsRegistered] = useState(() => {
     return localStorage.getItem('gymconnect_profile_filled') === 'true';
   });
@@ -23,23 +28,35 @@ export default function App() {
     return localStorage.getItem('gymconnect_profile_filled') === 'true' ? 'home' : 'profile';
   });
 
-  // Обработка окончания показа заставки
+  // Обработка окончания показа заставки (10 секунд)
   const handleSplashFinish = () => {
     setIsLoading(false);
   };
 
-  // Функция успешного завершения онбординга (вызывается из ProfileTab, когда юзер сохранил анкету)
+  // Сохранение выбранного языка
+  const handleSelectLanguage = (lang) => {
+    setLanguage(lang);
+    localStorage.setItem('gymconnect_language', lang);
+  };
+
+  // Функция успешного завершения онбординга (вызывается из ProfileTab)
   const handleProfileComplete = () => {
     setIsRegistered(true);
     localStorage.setItem('gymconnect_profile_filled', 'true');
     setActiveTab('home'); // Переводим на главную после заполнения
   };
 
-  // Если заставка еще активна, показываем только её
+  // 1. Если заставка еще активна, показываем только её
   if (isLoading) {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
+  // 2. Если заставка завершилась, но язык еще не выбран — показываем выбор языка (Казахский первый)
+  if (!language) {
+    return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
+  }
+
+  // 3. Основной интерфейс приложения
   return (
     <div className={`min-h-screen bg-slate-100 flex justify-center ${appleTheme.styles.fontFamily}`}>
       
@@ -55,7 +72,7 @@ export default function App() {
           {activeTab === 'profile' && <ProfileTab onComplete={handleProfileComplete} isRegistration={!isRegistered} />}
         </div>
 
-        {/* НИЖНИЙ ТАБ-БАР (Блокируем или скрываем переключения, если пользователь еще не прошел онбординг) */}
+        {/* НИЖНИЙ ТАБ-БАР */}
         {isRegistered ? (
           <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-100 shadow-lg">
             <div className="w-full max-w-md mx-auto px-4 py-2 flex justify-around items-center">
