@@ -7,6 +7,7 @@ import ProfileTab from './components/profile/ProfileTab';
 import SplashLoader from './components/onboarding/SplashLoader';
 import LanguageSelector from './components/onboarding/LanguageSelector';
 import AdminPanel from './components/admin/AdminPanel'; // Фаундерская CRM
+import TrainerLogin from './components/trainer/TrainerLogin'; // Вход тренера
 import TrainerOnboarding from './components/trainer/TrainerOnboarding'; // Регистрация тренера
 import TrainerCRM from './components/trainer/TrainerCRM'; // CRM тренера
 import { appleTheme } from './ui/AppleTheme';
@@ -38,19 +39,35 @@ export default function App() {
 
   // 0.1. ПРОВЕРКА ТРЕНЕРСКОГО РОУТА (?trainer=true)
   const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
+  
   const [trainerUsername, setTrainerUsername] = useState(() => {
     return localStorage.getItem('gymconnect_trainer_username') || '';
   });
+  
+  // Стейт переключения между Входом и Регистрацией для тренера
+  const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
 
   if (isTrainerRoute) {
     if (!trainerUsername) {
-      return (
-        <TrainerOnboarding 
-          onComplete={(username) => {
-            setTrainerUsername(username);
-          }} 
-        />
-      );
+      if (isTrainerRegistering) {
+        return (
+          <TrainerOnboarding 
+            onComplete={(username) => {
+              setTrainerUsername(username);
+              setIsTrainerRegistering(false);
+            }} 
+          />
+        );
+      } else {
+        return (
+          <TrainerLogin 
+            onLoginSuccess={(username) => {
+              setTrainerUsername(username);
+            }}
+            onSwitchToRegister={() => setIsTrainerRegistering(true)}
+          />
+        );
+      }
     } else {
       return (
         <TrainerCRM 
@@ -59,6 +76,7 @@ export default function App() {
             localStorage.removeItem('gymconnect_trainer_registered');
             localStorage.removeItem('gymconnect_trainer_username');
             setTrainerUsername('');
+            setIsTrainerRegistering(false);
           }}
         />
       );
