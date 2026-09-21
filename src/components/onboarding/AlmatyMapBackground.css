@@ -6,7 +6,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: #f4f0ea; /* Фирменный светлый фон 2ГИС */
+    background-color: #f7f4ee;
     overflow: hidden;
     z-index: 1;
 }
@@ -15,29 +15,25 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    opacity: 0.65;
+    opacity: 0.5;
 }
 
 .road-main {
     position: absolute;
-    background: #ffaa33; /* Оранжевые главные проспекты */
-    box-shadow: 0 0 4px rgba(255, 170, 51, 0.4);
+    background: #fde047; /* Теплые желтые дороги 2ГИС */
 }
 
-.road-main.r-1 { top: 30%; width: 100%; height: 5px; }
-.road-main.r-2 { top: 65%; width: 100%; height: 4px; }
-.road-main.r-3 { left: 45%; height: 100%; width: 5px; }
+.road-main.r-1 { top: 25%; width: 100%; height: 4px; }
+.road-main.r-2.r-2 { top: 55%; width: 100%; height: 3px; }
 
 .road-sub {
     position: absolute;
-    background: #ffffff; /* Мелкие улицы */
+    background: #ffffff;
 }
 
-.road-sub.s-1 { top: 15%; width: 100%; height: 2px; }
-.road-sub.s-2 { top: 85%; width: 100%; height: 2px; }
-.road-sub.s-3 { left: 20%; height: 100%; width: 2px; }
+.road-sub.s-1 { left: 35%; height: 100%; width: 2px; }
+.road-sub.s-2 { left: 70%; height: 100%; width: 2px; }
 
-/* Пины залов */
 .gis-gym-pin {
     position: absolute;
     transform: translate(-50%, -50%);
@@ -47,46 +43,49 @@
     z-index: 2;
 }
 
-.gis-pin-dot {
-    width: 10px;
-    height: 10px;
-    background-color: #2563eb;
-    border: 2px solid #ffffff;
+.gis-pin-icon-wrap {
+    width: 22px;
+    height: 22px;
+    background-color: #ffffff;
+    border: 1.5px solid #2563eb;
     border-radius: 50%;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     z-index: 3;
 }
 
 .gis-pin-pulse {
     position: absolute;
-    top: -5px;
-    left: -5px;
-    width: 20px;
-    height: 20px;
-    border: 1.5px solid rgba(37, 99, 235, 0.5);
+    top: -4px;
+    left: -4px;
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(37, 99, 235, 0.3);
     border-radius: 50%;
-    animation: gisPulse 2.5s ease-out infinite;
+    animation: gisPulse 3s ease-out infinite;
 }
 
 @keyframes gisPulse {
-    0% { transform: scale(0.6); opacity: 1; }
-    100% { transform: scale(2.6); opacity: 0; }
+    0% { transform: scale(0.5); opacity: 0.8; }
+    100% { transform: scale(2.2); opacity: 0; }
 }
 
-.gis-pin-card {
+.gis-pin-card-trans {
     position: absolute;
-    top: 14px;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    padding: 2px 8px;
-    border-radius: 6px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+    top: 24px;
+    background: rgba(255, 255, 255, 0.75); /* Полупрозрачная подложка */
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(203, 213, 225, 0.5);
+    padding: 1px 6px;
+    border-radius: 4px;
     white-space: nowrap;
 }
 
 .gis-pin-text {
-    font-size: 9px;
-    font-weight: 700;
-    color: #1e293b;
+    font-size: 8px;
+    font-weight: 600;
+    color: rgba(30, 41, 59, 0.7); /* Полупрозрачный текст названий */
     letter-spacing: -0.2px;
 }
