@@ -51,10 +51,8 @@ const SplashLoader = ({ onFinish }) => {
 
     return (
         <div className={`splash-overlay ${!isVisible ? 'splash-fade-out' : ''}`}>
-            {/* Фоновая паттерн-карта с пинами залов */}
             <AlmatyMapBackground />
 
-            {/* Контрастная белая плашка поверх карты */}
             <div className="splash-card-contrast">
                 <div className="splash-badge">
                     <UsersRound className="w-4 h-4 text-blue-600 shrink-0" />
