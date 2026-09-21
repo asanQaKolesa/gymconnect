@@ -1,72 +1,69 @@
 // src/components/trainer/TrainerOnboarding.jsx
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Dumbbell, ShieldCheck, CheckCircle2, User, Phone, MapPin, Award, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Dumbbell, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
 
 export default function TrainerOnboarding({ onComplete }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // Данные анкеты тренера
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
     username: '',
-    phone: '',
-    gyms: [],
+    phone: '+7 ',
+    instagram: '',
+    specializations: [],
     formats: ['offline'],
-    specialization: 'Тренажерный зал / Набор массы',
-    experience_years: '3-5 лет',
+    gyms: [],
+    products: '',
     certificate_url: '',
     agree_verification: false
   });
 
-  // Список популярных залов Алматы для выбора
+  const availableSpecializations = [
+    'Тренажерный зал',
+    'Набор массы',
+    'Похудение',
+    'Рекомпозиция',
+    'Функциональный тренинг',
+    'Реабилитация / ОФП'
+  ];
+
   const almatyGyms = [
     'Invictus Go | Улица Навои, 97',
     'Invictus Fitness | Аль-Фараби',
     'World Class Almaty | Наурызбай батыра',
     'Fitnation | Розыбакиева',
     'БАНЗАЙ Fitness | Проспект Абая, 150',
-    'Другой / Работаю персонально'
+    'Индивидуальный формат / Свой зал'
   ];
 
-  const handleGymToggle = (gym) => {
+  const handleToggle = (field, item) => {
     setFormData(prev => {
-      const exists = prev.gyms.includes(gym);
-      if (exists) {
-        return { ...prev, gyms: prev.gyms.filter(g => g !== gym) };
-      } else {
-        return { ...prev, gyms: [...prev.gyms, gym] };
-      }
+      const exists = prev[field].includes(item);
+      return {
+        ...prev,
+        [field]: exists ? prev[field].filter(i => i !== item) : [...prev[field], item]
+      };
     });
   };
 
-  const handleFormatToggle = (format) => {
-    setFormData(prev => {
-      const exists = prev.formats.includes(format);
-      if (exists) {
-        return { ...prev, formats: prev.formats.filter(f => f !== format) };
-      } else {
-        return { ...prev, formats: [...prev.formats, format] };
-      }
-    });
-  };
-
-  // Сохранение данных в Supabase
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.agree_verification) {
-      alert('Необходимо подтвердить согласие на верификацию квалификации.');
+      alert('Подтвердите согласие на верификацию квалификации.');
       return;
     }
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('trainer_profiles')
-        .insert([formData]);
+      const payload = {
+        ...formData,
+        city: 'Алматы'
+      };
 
+      const { error } = await supabase.from('trainer_profiles').insert([payload]);
       if (error) throw error;
 
       localStorage.setItem('gymconnect_trainer_registered', 'true');
@@ -80,144 +77,129 @@ export default function TrainerOnboarding({ onComplete }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-3xl p-6 shadow-xl">
         
-        {/* Шапка */}
-        <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-4">
+        <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold">
               GC
             </div>
             <div>
-              <h1 className="text-base font-bold text-white">Регистрация тренера</h1>
-              <p className="text-xs text-slate-400">Шаг {step} из 3</p>
+              <h1 className="text-base font-bold text-slate-900">Регистрация тренера</h1>
+              <p className="text-xs text-slate-500">Шаг {step} из 3</p>
             </div>
           </div>
-          <span className="text-xs font-mono text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-lg border border-blue-500/20">
+          <span className="text-xs font-mono text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
             Partner Portal
           </span>
         </div>
 
-        {/* ШАГ 1: Контакты и специализация */}
+        {/* ШАГ 1: Контакты */}
         {step === 1 && (
           <div className="space-y-4">
-            <h2 className="text-sm font-bold text-slate-200">1. Основная информация</h2>
+            <h2 className="text-sm font-bold text-slate-800">1. Основная информация и контакты</h2>
             
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Имя *</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Имя *</label>
                 <input 
                   type="text"
                   required
                   value={formData.first_name}
                   onChange={(e) => setFormData({...formData, first_name: e.target.value})}
                   placeholder="Аскар"
-                  className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-blue-600"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Фамилия *</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Фамилия *</label>
                 <input 
                   type="text"
                   required
                   value={formData.last_name}
                   onChange={(e) => setFormData({...formData, last_name: e.target.value})}
                   placeholder="Сериков"
-                  className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-blue-600"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Telegram Username *</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Telegram Username *</label>
               <input 
                 type="text"
                 required
                 value={formData.username}
                 onChange={(e) => setFormData({...formData, username: e.target.value})}
                 placeholder="@askar_coach"
-                className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-blue-600 font-mono"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Номер телефона (WhatsApp / Kaspi) *</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Номер телефона WhatsApp *</label>
               <input 
                 type="text"
                 required
                 value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                placeholder="+7 (701) 000-00-00"
-                className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-blue-600 font-mono"
+                onChange={(e) => {
+                  let val = e.target.value;
+                  if (!val.startsWith('+7')) val = '+7 ' + val.replace(/^\+?[78]\s?/, '');
+                  setFormData({...formData, phone: val});
+                }}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Специализация</label>
-                <select 
-                  value={formData.specialization}
-                  onChange={(e) => setFormData({...formData, specialization: e.target.value})}
-                  className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-blue-600"
-                >
-                  <option>Тренажерный зал / Набор массы</option>
-                  <option>Похудение / Рекомпозиция</option>
-                  <option>Функциональный тренинг</option>
-                  <option>Реабилитация / ОФП</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Стаж работы</label>
-                <select 
-                  value={formData.experience_years}
-                  onChange={(e) => setFormData({...formData, experience_years: e.target.value})}
-                  className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-blue-600"
-                >
-                  <option>1-3 года</option>
-                  <option>3-5 лет</option>
-                  <option>Более 5 лет</option>
-                </select>
-              </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Instagram профиль</label>
+              <input 
+                type="text"
+                value={formData.instagram}
+                onChange={(e) => setFormData({...formData, instagram: e.target.value})}
+                placeholder="@askar_fitness"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
+              />
             </div>
 
             <button 
               type="button"
               onClick={() => {
-                if (!formData.first_name || !formData.username || !formData.phone) {
-                  alert('Заполните обязательные поля');
+                if (!formData.first_name || !formData.username || formData.phone.length < 5) {
+                  alert('Заполните обязательные поля корректно');
                   return;
                 }
                 setStep(2);
               }}
               className="w-full mt-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
             >
-              <span>Далее: Локация и формат</span>
+              <span>Далее: Направления и клубы</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* ШАГ 2: Выбор фитнес-залов и форматы */}
+        {/* ШАГ 2: Специализация, залы и форматы */}
         {step === 2 && (
           <div className="space-y-4">
-            <h2 className="text-sm font-bold text-slate-200">2. Где вы проводите тренировки?</h2>
+            <h2 className="text-sm font-bold text-slate-800">2. Направления, клубы и форматы</h2>
             
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">Выберите фитнес-клубы Алматы (можно несколько):</label>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                {almatyGyms.map((gym, index) => {
-                  const isSelected = formData.gyms.includes(gym);
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">Ваша специализация (можно выбрать несколько):</label>
+              <div className="grid grid-cols-2 gap-2">
+                {availableSpecializations.map((spec, index) => {
+                  const isSelected = formData.specializations.includes(spec);
                   return (
                     <div 
                       key={index}
-                      onClick={() => handleGymToggle(gym)}
-                      className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between ${
-                        isSelected ? 'bg-blue-600/20 border-blue-600 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                      onClick={() => handleToggle('specializations', spec)}
+                      className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between ${
+                        isSelected ? 'bg-blue-50 border-blue-600 text-blue-700 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
                       }`}
                     >
-                      <span>{gym}</span>
-                      <div className={`w-4 h-4 rounded-md border flex items-center justify-center ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-700'}`}>
+                      <span>{spec}</span>
+                      <div className={`w-4 h-4 rounded-md border flex items-center justify-center ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300'}`}>
                         {isSelected && <CheckCircle2 className="w-3 h-3" />}
                       </div>
                     </div>
@@ -227,7 +209,30 @@ export default function TrainerOnboarding({ onComplete }) {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">Формат работы:</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">Фитнес-клубы, где вы работаете:</label>
+              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                {almatyGyms.map((gym, index) => {
+                  const isSelected = formData.gyms.includes(gym);
+                  return (
+                    <div 
+                      key={index}
+                      onClick={() => handleToggle('gyms', gym)}
+                      className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between ${
+                        isSelected ? 'bg-blue-50 border-blue-600 text-blue-700 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      <span>{gym}</span>
+                      <div className={`w-4 h-4 rounded-md border flex items-center justify-center ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300'}`}>
+                        {isSelected && <CheckCircle2 className="w-3 h-3" />}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">Формат работы:</label>
               <div className="grid grid-cols-3 gap-2">
                 {['offline', 'online', 'group'].map((format) => {
                   const isSelected = formData.formats.includes(format);
@@ -236,9 +241,9 @@ export default function TrainerOnboarding({ onComplete }) {
                     <button
                       key={format}
                       type="button"
-                      onClick={() => handleFormatToggle(format)}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-medium border transition-all ${
-                        isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-900 border-slate-800 text-slate-400'
+                      onClick={() => handleToggle('formats', format)}
+                      className={`py-2 rounded-xl text-xs font-medium border transition-all ${
+                        isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'
                       }`}
                     >
                       {labels[format]}
@@ -252,7 +257,7 @@ export default function TrainerOnboarding({ onComplete }) {
               <button 
                 type="button"
                 onClick={() => setStep(1)}
-                className="w-1/3 py-3 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-1"
+                className="w-1/3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-1"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Назад</span>
@@ -262,41 +267,52 @@ export default function TrainerOnboarding({ onComplete }) {
                 onClick={() => setStep(3)}
                 className="w-2/3 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
               >
-                <span>Далее: Верификация</span>
+                <span>Далее: Продукты и верификация</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         )}
 
-        {/* ШАГ 3: Верификация и сертификаты */}
+        {/* ШАГ 3: Продукты и верификация */}
         {step === 3 && (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <h2 className="text-sm font-bold text-slate-200">3. Подтверждение квалификации</h2>
+            <h2 className="text-sm font-bold text-slate-800">3. Ваши продукты и верификация</h2>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Ссылка на диплом / сертификат (необязательно)</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Ваши продукты / челленджи / программы</label>
+              <textarea 
+                rows="2"
+                value={formData.products}
+                onChange={(e) => setFormData({...formData, products: e.target.value})}
+                placeholder="Например: Онлайн ведение, авторский 30-дневный челлендж сушки, гайд по питанию..."
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">Мы сможем платно продвигать ваши программы внутри приложения GymConnect.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Ссылка на диплом / сертификат</label>
               <input 
                 type="text"
                 value={formData.certificate_url}
                 onChange={(e) => setFormData({...formData, certificate_url: e.target.value})}
-                placeholder="https://drive.google.com/... или ссылка на сайт академии"
-                className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-blue-600 font-mono text-xs"
+                placeholder="https://... (сертификат Invictus Academy или академии)"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
               />
-              <p className="text-[10px] text-slate-500 mt-1">Укажите ссылку на ваши документы об образовании или сертификат академии (например, Invictus Academy).</p>
             </div>
 
-            <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input 
                   type="checkbox"
                   required
                   checked={formData.agree_verification}
                   onChange={(e) => setFormData({...formData, agree_verification: e.target.checked})}
-                  className="mt-0.5 rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-0"
+                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-0"
                 />
-                <span className="text-xs text-slate-300 leading-relaxed">
-                  Я даю согласие администрации GymConnect на направление официального запроса в указанные фитнес-клубы и учебные заведения для верификации моей квалификации и трудоустройства.
+                <span className="text-[11px] text-slate-700 leading-relaxed">
+                  Согласен на запрос администрации GymConnect в указанные клубы для верификации моей квалификации.
                 </span>
               </label>
             </div>
@@ -305,7 +321,7 @@ export default function TrainerOnboarding({ onComplete }) {
               <button 
                 type="button"
                 onClick={() => setStep(2)}
-                className="w-1/3 py-3 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-1"
+                className="w-1/3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-1"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Назад</span>
@@ -315,7 +331,7 @@ export default function TrainerOnboarding({ onComplete }) {
                 disabled={loading}
                 className="w-2/3 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-emerald-600/20"
               >
-                {loading ? 'Регистрация...' : 'Завершить и войти в CRM'}
+                {loading ? 'Создание профиля...' : 'Завершить и открыть CRM'}
               </button>
             </div>
           </form>
