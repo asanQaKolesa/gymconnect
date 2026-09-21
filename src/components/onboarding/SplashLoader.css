@@ -9,7 +9,7 @@
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    padding-bottom: 36px;
+    padding-bottom: 32px;
     z-index: 99999;
     opacity: 1;
     transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
@@ -22,22 +22,22 @@
     pointer-events: none;
 }
 
-.splash-card-lower {
+.splash-card-contrast {
     position: relative;
     z-index: 10;
     width: 92%;
     max-width: 380px;
     padding: 24px 18px;
-    background: rgba(9, 14, 26, 0.92); /* Плотное контрастное темное стекло */
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-    border: 1px solid rgba(56, 189, 248, 0.3);
+    background: rgba(255, 255, 255, 0.95); /* Контрастная белая плашка */
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(203, 213, 225, 0.8);
     border-radius: 32px;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.85);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     animation: cardSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -50,12 +50,13 @@
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    background: rgba(56, 189, 248, 0.12);
-    border: 1px solid rgba(56, 189, 248, 0.2);
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
     padding: 6px 12px;
     border-radius: 16px;
     margin-bottom: 12px;
     text-align: left;
+    width: 100%;
 }
 
 .badge-text-col {
@@ -64,22 +65,28 @@
     gap: 1px;
 }
 
-.badge-text-col span:first-child {
-    font-size: 11px;
-    font-weight: 600;
-    color: #38bdf8;
+.city-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1e293b;
 }
 
-.badge-sub {
+.badge-kk {
     font-size: 10px;
+    font-weight: 600;
+    color: #2563eb;
+}
+
+.badge-ru {
+    font-size: 9px;
     font-weight: 400;
-    color: rgba(255, 255, 255, 0.55);
+    color: #64748b;
 }
 
 .splash-brand {
     font-size: 28px;
     font-weight: 700;
-    color: #ffffff;
+    color: #0f172a;
     letter-spacing: -0.5px;
     margin: 0 0 4px 0;
     display: flex;
@@ -127,7 +134,7 @@
 .slogan-kk {
     font-size: 13px;
     font-weight: 600;
-    color: #38bdf8;
+    color: #2563eb;
     letter-spacing: -0.2px;
     margin: 0;
 }
@@ -135,15 +142,15 @@
 .slogan-ru {
     font-size: 11px;
     font-weight: 400;
-    color: rgba(255, 255, 255, 0.65);
+    color: #64748b;
     letter-spacing: -0.2px;
     margin: 0;
 }
 
 .feature-box {
     width: 100%;
-    background: rgba(30, 41, 59, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 14px;
     padding: 10px 12px;
     display: flex;
@@ -156,7 +163,8 @@
 .feature-icon-wrap {
     width: 36px;
     height: 36px;
-    background: rgba(255, 255, 255, 0.08);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 10px;
     display: flex;
     justify-content: center;
@@ -173,14 +181,14 @@
 .dyn-kk {
     font-size: 12px;
     font-weight: 600;
-    color: #ffffff;
+    color: #1e293b;
     margin: 0 0 2px 0;
 }
 
 .dyn-ru {
     font-size: 10px;
     font-weight: 400;
-    color: rgba(255, 255, 255, 0.6);
+    color: #64748b;
     margin: 0;
 }
 
@@ -203,7 +211,7 @@
     justify-content: space-between;
     align-items: flex-end;
     font-size: 10px;
-    color: rgba(255, 255, 255, 0.6);
+    color: #64748b;
     font-weight: 500;
     text-align: left;
 }
@@ -214,28 +222,34 @@
     gap: 1px;
 }
 
-.prog-sub {
+.prog-kk {
+    font-size: 10px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.prog-ru {
     font-size: 9px;
-    color: rgba(255, 255, 255, 0.45);
+    color: #64748b;
 }
 
 .splash-percent {
     font-size: 12px;
     font-weight: 700;
-    color: #38bdf8;
+    color: #2563eb;
 }
 
 .splash-progress-track {
     width: 100%;
     height: 4px;
-    background: rgba(255, 255, 255, 0.1);
+    background: #e2e8f0;
     border-radius: 6px;
     overflow: hidden;
 }
 
 .splash-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #38bdf8, #6366f1);
+    background: linear-gradient(90deg, #2563eb, #4f46e5);
     border-radius: 6px;
     transition: width 0.1s linear;
 }
