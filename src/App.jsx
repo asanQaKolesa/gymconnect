@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import HomeTab from './components/home/HomeTab';
 import ReviewsTab from './components/reviews/ReviewsTab';
 import GymBroTab from './components/gymbro/GymBroTab';
@@ -15,7 +15,7 @@ import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
 import { translations } from './locales/translations';
 
 export default function App() {
-  // 0. СУПЕР-ПРИОРИТЕТ: САМАЯ ПЕРВАЯ ПРОВЕРКА АДМИНА (?admin=true)
+  // 0. ЖЕЛЕЗОБЕТОННАЯ ПРОВЕРКА АДМИНА (САМАЯ ПЕРВАЯ СТРОКА)
   const [isAdminRoute] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('admin') === 'true') {
@@ -37,13 +37,11 @@ export default function App() {
     );
   }
 
-  // 0.1. СУПЕР-ПРИОРИТЕТ: САМАЯ ПЕРВАЯ ПРОВЕРКА ТРЕНЕРА (?trainer=true)
+  // 0.1. ЖЕЛЕЗОБЕТОННАЯ ПРОВЕРКА ТРЕНЕРА
   const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
-  
   const [trainerUsername, setTrainerUsername] = useState(() => {
     return localStorage.getItem('gymconnect_trainer_username') || '';
   });
-  
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
 
   if (isTrainerRoute) {
