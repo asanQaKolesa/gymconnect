@@ -1,7 +1,7 @@
 // src/components/profile/ProfileTab.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { translations } from '../../locales/translations';
-import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown } from 'lucide-react';
+import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown, Camera, Calendar, Scale, Ruler, Heart, ShieldAlert } from 'lucide-react';
 
 import ProfileHeader from './ProfileHeader';
 import ProfileCard from './ProfileCard';
@@ -245,17 +245,38 @@ const ALMATY_GYMS = [
 
 export default function ProfileTab({ onComplete, isRegistration, currentLang = 'kk' }) {
   const t = translations[currentLang] || translations.kk;
-  const p = t.profileOnboarding;
 
+  // Инициализация формы с автоподтяжкой из Telegram WebApp и localStorage
   const [formData, setFormData] = useState(() => {
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
     const savedProfile = JSON.parse(localStorage.getItem('gymconnect_user_data') || '{}');
 
     return {
-      name: savedProfile.name || (tgUser ? `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() : ''),
+      firstName: savedProfile.firstName || tgUser?.first_name || '',
+      lastName: savedProfile.lastName || tgUser?.last_name || '',
       username: savedProfile.username || (tgUser?.username ? `@${tgUser.username}` : ''),
+      avatar: savedProfile.avatar || tgUser?.photo_url || '',
+      age: savedProfile.age || '',
+      gender: savedProfile.gender || 'male',
+      height: savedProfile.height || '',
+      weight: savedProfile.weight || '',
+      city: 'Алматы',
+      district: savedProfile.district || 'Медеуский',
       gym: savedProfile.gym || '',
-      goal: savedProfile.goal || 'mass'
+      goal: savedProfile.goal || 'mass',
+      
+      // Блок GymBro матчинга
+      lookingFor: savedProfile.lookingFor || 'gymbro',
+      workoutTime: savedProfile.workoutTime || 'evening',
+      customTime: savedProfile.customTime || '',
+      workoutDays: savedProfile.workoutDays || 'mon_wed_fri',
+      bio: savedProfile.bio || '',
+
+      // Юридические согласия
+      agreeTerms: savedProfile.agreeTerms || false,
+      agreePrivacy: savedProfile.agreePrivacy || false,
+      agreeMarketing: savedProfile.agreeMarketing || false,
+      agreeSafety: savedProfile.agreeSafety || false
     };
   });
 
@@ -263,60 +284,229 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Загрузка / изменение фото профиля
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        handleChange('avatar', reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
+    
+    // Проверка возраста (18 - 80)
+    const ageNum = Number(formData.age);
+    if (!ageNum || ageNum < 18 || ageNum > 80) {
+      alert(currentLang === 'kk' ? 'Жасыңыз 18 бен 80 аралығында болуы тиіс!' : 'Возраст должен быть от 18 до 80 лет!');
+      return;
+    }
 
+    // Проверка обязательных юридических чекбоксов
+    if (!formData.agreeTerms || !formData.agreePrivacy || !formData.agreeSafety) {
+      alert(currentLang === 'kk' ? 'Барлық міндетті келісімдерді белгілеңіз!' : 'Пожалуйста, примите обязательные соглашения и правила безопасности!');
+      return;
+    }
+
+    // Сохранение в localStorage (CRM / база данных)
     localStorage.setItem('gymconnect_user_data', JSON.stringify(formData));
     if (onComplete) onComplete();
   };
 
+  // ЕСЛИ РЕГИСТРАЦИЯ / ОНБОРДИНГ — ПОКАЗЫВАЕМ ПОЛНУЮ РЕГИСТРАЦИОННУЮ АНКЕТУ
   if (isRegistration) {
     return (
-      <div className="w-full min-h-screen p-4 pb-32 flex flex-col items-center justify-start animate-in fade-in duration-200">
-        <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-xl border border-slate-100 mt-4">
+      <div className="w-full min-h-screen p-4 pb-36 flex flex-col items-center justify-start animate-in fade-in duration-200">
+        <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-xl border border-slate-100 mt-2">
           
           <div className="text-center mb-6">
             <div className="inline-block bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1 rounded-full mb-2">
-              {p.badge}
+              {currentLang === 'kk' ? 'Қош келдіңіз!' : 'Добро пожаловать!'}
             </div>
-            <h1 className="text-xl font-bold text-slate-900 mb-1 tracking-tight">{p.title}</h1>
-            <p className="text-xs text-slate-500">{p.subtitle}</p>
+            <h1 className="text-xl font-bold text-slate-900 mb-1 tracking-tight">
+              {currentLang === 'kk' ? 'Анкетаңызды толтырыңыз' : 'Заполните вашу анкету'}
+            </h1>
+            <p className="text-xs text-slate-500">
+              {currentLang === 'kk' ? 'GymBro табу және КБЖУ есептеу үшін қажет' : 'Нужно для поиска GymBro и расчета КБЖУ'}
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">{p.nameLabel}</label>
-              <div className="relative flex items-center">
-                <User className="absolute left-3 w-4 h-4 text-slate-400" />
+            {/* Загрузка фото профиля */}
+            <div className="flex flex-col items-center mb-4">
+              <div className="relative w-20 h-20 bg-slate-100 rounded-full border-2 border-slate-200 overflow-hidden flex items-center justify-center shadow-inner">
+                {formData.avatar ? (
+                  <img src={formData.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-8 h-8 text-slate-400" />
+                )}
+                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
+                  <Camera className="w-6 h-6 text-white" />
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                </label>
+              </div>
+              <span className="text-[11px] text-slate-500 mt-1.5 font-medium">
+                {currentLang === 'kk' ? 'Суретті өзгерту' : 'Изменить фото профиля'}
+              </span>
+            </div>
+
+            {/* Имя и Фамилия */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  {currentLang === 'kk' ? 'Аты' : 'Имя'} *
+                </label>
                 <input 
                   type="text"
                   required
-                  value={formData.name}
-                  onChange={(e) => handleChange('name', e.target.value)}
-                  placeholder={p.namePlaceholder}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                  value={formData.firstName}
+                  onChange={(e) => handleChange('firstName', e.target.value)}
+                  placeholder={currentLang === 'kk' ? 'Атыңыз' : 'Имя'}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  {currentLang === 'kk' ? 'Тегі' : 'Фамилия'} *
+                </label>
+                <input 
+                  type="text"
+                  required
+                  value={formData.lastName}
+                  onChange={(e) => handleChange('lastName', e.target.value)}
+                  placeholder={currentLang === 'kk' ? 'Тегіңіз' : 'Фамилия'}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
                 />
               </div>
             </div>
 
+            {/* Telegram Username */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">{p.usernameLabel}</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Telegram Username *</label>
               <div className="relative flex items-center">
                 <AtSign className="absolute left-3 w-4 h-4 text-slate-400" />
                 <input 
                   type="text"
+                  required
                   value={formData.username}
                   onChange={(e) => handleChange('username', e.target.value)}
-                  placeholder={p.usernamePlaceholder}
+                  placeholder="@username"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
                 />
               </div>
             </div>
 
+            {/* Возраст (18-80) и Пол */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  {currentLang === 'kk' ? 'Жасы (18-80)' : 'Возраст (18-80)'} *
+                </label>
+                <div className="relative flex items-center">
+                  <Calendar className="absolute left-3 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="number"
+                    min="18"
+                    max="80"
+                    required
+                    value={formData.age}
+                    onChange={(e) => handleChange('age', e.target.value)}
+                    placeholder="25"
+                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  {currentLang === 'kk' ? 'Жынысы' : 'Пол'} *
+                </label>
+                <select
+                  value={formData.gender}
+                  onChange={(e) => handleChange('gender', e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
+                >
+                  <option value="male">{currentLang === 'kk' ? 'Ер адам (Мужской)' : 'Мужской'}</option>
+                  <option value="female">{currentLang === 'kk' ? 'Әйел адам (Женский)' : 'Женский'}</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Рост и Вес (для КБЖУ) */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  {currentLang === 'kk' ? 'Бойы (см)' : 'Рост (см)'} *
+                </label>
+                <div className="relative flex items-center">
+                  <Ruler className="absolute left-3 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="number"
+                    required
+                    value={formData.height}
+                    onChange={(e) => handleChange('height', e.target.value)}
+                    placeholder="178"
+                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  {currentLang === 'kk' ? 'Салмағы (кг)' : 'Вес (кг)'} *
+                </label>
+                <div className="relative flex items-center">
+                  <Scale className="absolute left-3 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="number"
+                    required
+                    value={formData.weight}
+                    onChange={(e) => handleChange('weight', e.target.value)}
+                    placeholder="75"
+                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Город (Алматы) и Район */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">{currentLang === 'kk' ? 'Қала' : 'Город'}</label>
+                <input 
+                  type="text"
+                  disabled
+                  value="Алматы"
+                  className="w-full px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">{currentLang === 'kk' ? 'Аудан' : 'Район'}</label>
+                <select
+                  value={formData.district}
+                  onChange={(e) => handleChange('district', e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
+                >
+                  <option value="Медеуский">Медеуский</option>
+                  <option value="Бостандыкский">Бостандыкский</option>
+                  <option value="Алмалинский">Алмалинский</option>
+                  <option value="Ауэзовский">Ауэзовский</option>
+                  <option value="Наурызбайский">Наурызбайский</option>
+                  <option value="Жетысуский">Жетысуский</option>
+                  <option value="Турксибский">Турксибский</option>
+                  <option value="Алатауский">Алатауский</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Выбор основного фитнес-зала (230 объектов Алматы) */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">{p.gymLabel}</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                {currentLang === 'kk' ? 'Негізгі фитнес-залыңыз' : 'Ваш основной фитнес-зал'} *
+              </label>
               <div className="relative flex items-center">
                 <Dumbbell className="absolute left-3 w-4 h-4 text-slate-400" />
                 <select
@@ -325,7 +515,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                   onChange={(e) => handleChange('gym', e.target.value)}
                   className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all appearance-none cursor-pointer"
                 >
-                  <option value="" disabled>{p.gymDefaultOption}</option>
+                  <option value="" disabled>{currentLang === 'kk' ? 'Залды таңдаңыз...' : 'Выберите клуб...'}</option>
                   {ALMATY_GYMS.map((gymName, index) => (
                     <option key={index} value={gymName}>{gymName}</option>
                   ))}
@@ -334,14 +524,17 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
+            {/* Главная цель тренировок */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">{p.goalLabel}</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                {currentLang === 'kk' ? 'Негізгі мақсатыңыз' : 'Главная цель тренировок'} *
+              </label>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { id: 'mass', label: p.goalMass },
-                  { id: 'cut', label: p.goalCut },
-                  { id: 'strength', label: p.goalStrength },
-                  { id: 'tone', label: p.goalTone }
+                  { id: 'mass', label: currentLang === 'kk' ? 'Бұлшықет жинау' : 'Набор массы' },
+                  { id: 'cut', label: currentLang === 'kk' ? 'Арықтау / Сушка' : 'Сушка / Похудение' },
+                  { id: 'strength', label: currentLang === 'kk' ? 'Күшті арттыру' : 'Развитие силы' },
+                  { id: 'tone', label: currentLang === 'kk' ? 'Тонус және денсаулық' : 'Тонус и здоровье' }
                 ].map((item) => (
                   <button
                     type="button"
@@ -359,12 +552,163 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
+            {/* БЛОК GYMBRO-МАТЧИНГА */}
+            <div className="pt-2 border-t border-slate-100">
+              <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">
+                {currentLang === 'kk' ? 'GymBro іздеу параметрлері' : 'Параметры поиска GymBro'}
+              </h3>
+
+              {/* Кого ищет */}
+              <div className="mb-3">
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  {currentLang === 'kk' ? 'Кімді іздересіз?' : 'Кого вы ищете?'}
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'gymbro', label: 'GymBro' },
+                    { id: 'gymgirl', label: 'GymGirl' },
+                    { id: 'anyone', label: currentLang === 'kk' ? 'Бәрібир' : 'Любой' }
+                  ].map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() => handleChange('lookingFor', item.id)}
+                      className={`py-2 px-2 rounded-xl text-xs font-medium border text-center transition-all ${
+                        formData.lookingFor === item.id 
+                          ? 'bg-blue-50 border-blue-600 text-blue-700 font-semibold' 
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Время тренировок */}
+              <div className="mb-3">
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  {currentLang === 'kk' ? 'Ыңғайлы уақыт' : 'Удобное время суток'}
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'morning', label: currentLang === 'kk' ? 'Таңертең' : 'Утро' },
+                    { id: 'afternoon', label: currentLang === 'kk' ? 'Күндіз' : 'День' },
+                    { id: 'evening', label: currentLang === 'kk' ? 'Кешкілік' : 'Вечер' }
+                  ].map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() => handleChange('workoutTime', item.id)}
+                      className={`py-2 px-2 rounded-xl text-xs font-medium border text-center transition-all ${
+                        formData.workoutTime === item.id 
+                          ? 'bg-blue-50 border-blue-600 text-blue-700 font-semibold' 
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Дни тренировок */}
+              <div className="mb-3">
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  {currentLang === 'kk' ? 'Жаттығу күндері' : 'График тренировок'}
+                </label>
+                <select
+                  value={formData.workoutDays}
+                  onChange={(e) => handleChange('workoutDays', e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
+                >
+                  <option value="mon_wed_fri">Понедельник — Среда — Пятница (ПН-СР-ПТ)</option>
+                  <option value="tue_thu_sat">Вторник — Четверг — Суббота (ВТ-ЧТ-СБ)</option>
+                  <option value="everyday">Каждый день / Плотный график</option>
+                  <option value="flexible">Плавающий / Гибкий график</option>
+                </select>
+              </div>
+
+              {/* О себе (Bio) */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  {currentLang === 'kk' ? 'Өзіңіз туралы (Bio)' : 'О себе (для карточки Tinder)'}
+                </label>
+                <textarea
+                  rows="2"
+                  value={formData.bio}
+                  onChange={(e) => handleChange('bio', e.target.value)}
+                  placeholder={currentLang === 'kk' ? 'Мысалы: Базалық жаттығулар, серіктес іздеймін...' : 'Например: Качаю базу, ищу напарника на вечер...'}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600 transition-all resize-none"
+                ></textarea>
+              </div>
+            </div>
+
+            {/* ЮРИДИЧЕСКИЙ БЛОК И БЕЗОПАСНОСТЬ (ЧЕКБОКСЫ) */}
+            <div className="pt-3 border-t border-slate-100 space-y-2.5">
+              <div className="flex items-start gap-2">
+                <input 
+                  type="checkbox"
+                  required
+                  id="terms"
+                  checked={formData.agreeTerms}
+                  onChange={(e) => handleChange('agreeTerms', e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="terms" className="text-[11px] text-slate-600 leading-tight cursor-pointer">
+                  {currentLang === 'kk' ? 'Жария оферта шарттарымен келісемін' : 'Я ознакомлен(а) и согласен(а) с Договором публичной оферты'}
+                </label>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <input 
+                  type="checkbox"
+                  required
+                  id="privacy"
+                  checked={formData.agreePrivacy}
+                  onChange={(e) => handleChange('agreePrivacy', e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="privacy" className="text-[11px] text-slate-600 leading-tight cursor-pointer">
+                  {currentLang === 'kk' ? 'Деректерді өңдеуге келісім беремін' : 'Даю согласие на обработку персональных данных'}
+                </label>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <input 
+                  type="checkbox"
+                  id="marketing"
+                  checked={formData.agreeMarketing}
+                  onChange={(e) => handleChange('agreeMarketing', e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="marketing" className="text-[11px] text-slate-600 leading-tight cursor-pointer">
+                  {currentLang === 'kk' ? 'Telegram арқылы жарнама мен ақпарат алуға келісемін' : 'Согласен(а) на получение рассылок и персонализированной рекламы в Telegram'}
+                </label>
+              </div>
+
+              <div className="flex items-start gap-2 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+                <input 
+                  type="checkbox"
+                  required
+                  id="safety"
+                  checked={formData.agreeSafety}
+                  onChange={(e) => handleChange('agreeSafety', e.target.checked)}
+                  className="mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500 cursor-pointer shrink-0"
+                />
+                <label htmlFor="safety" className="text-[10px] text-amber-900 leading-tight cursor-pointer">
+                  <strong>{currentLang === 'kk' ? 'Қауіпсіздік ескертуі:' : 'Предупреждение о безопасности:'}</strong> {currentLang === 'kk' ? 'Платформа қауіпсіздік үшін жауап бермейді. Қыздарға тек қыздарды таңдау ұсынылады.' : 'Платформа не несет ответственности за безопасность при личных встречах. Девушкам рекомендуется выбирать в поиске девушек.'}
+                </label>
+              </div>
+            </div>
+
+            {/* Кнопка сохранения */}
             <button
               type="submit"
-              className="w-full mt-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2"
+              className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>{p.saveBtn}</span>
+              <span>{currentLang === 'kk' ? 'Анкетаны сақтау және бастау' : 'Сохранить анкету и войти'}</span>
             </button>
 
           </form>
@@ -373,8 +717,9 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     );
   }
 
+  // ОБЫЧНЫЙ ПРОФИЛЬ ПОСЛЕ РЕГИСТРАЦИИ (ЗДЕСЬ МОЖНО РЕДАКТИРОВАТЬ ДАННЫЕ)
   return (
-    <div className="p-4 max-w-md mx-auto flex flex-col pb-6 animate-in fade-in duration-200">
+    <div className="p-4 max-w-md mx-auto flex flex-col pb-24 animate-in fade-in duration-200">
       <ProfileHeader />
       <ProfileCard />
       <ProfileMenu />
