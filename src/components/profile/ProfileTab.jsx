@@ -203,14 +203,14 @@ const ALMATY_GYMS = [
   "Ober Pilates Studio | ЖК Гаухартас, проспект Абая, 150/230 блок 6, Алматы",
   "Prosto_fitspace | БЦ Желтоксан, улица Желтоксан, 111а, Алматы",
   "Aquamarine SPA & Fitness | Гостиница Ramada Almaty, улица Байтурсынова, 27/1, Алматы",
-  "Arlan Black Wolves | Улица Наурызбай батыра, 91Б, Алматы",
+  "Arlan Black Wolves | Наурызбай батыра, 91Б, Алматы",
   "Progym | Улица Калдаякова, 17, Алматы",
   "Pyramid renesans | Проспект Абая, 202/1, Алматы",
   "Сфера | Микрорайон Самал-2, 66а, Алматы",
   "Пляж | Улица Карасай батыра, 120а, Алматы",
   "Flower Dance | Микрорайон Жетысу-3, 65, Алматы",
-  "Alta pole studio | Улица Толе би, 189д, Алматы",
-  "Wave | Улица Наурызбай батыра, 127 блок 1, Алматы",
+  "Alta pole studio | Толе би, 189д, Алматы",
+  "Wave | Наурызбай батыра, 127 блок 1, Алматы",
   "Adrenaline | ЖК Этюд, проспект Достык, 250, Алматы",
   "L-fitness | ТЦ Дархан, улица Айманова, 155, Алматы",
   "Let's jump | Микрорайон Жетысу-2, 47а, Алматы",
@@ -274,6 +274,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       
       experienceLevel: savedProfile.experienceLevel || 'independent',
       trainerNeed: savedProfile.trainerNeed || 'self',
+      trainerUsername: savedProfile.trainerUsername || '', // Никнейм тренера (необязательно)
       membershipTerm: savedProfile.membershipTerm || '6_months',
 
       specialization: savedProfile.specialization || 'athlete',
@@ -630,7 +631,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </select>
             </div>
 
-            {/* Потребность в тренере (Для оффер-базы тренеров) */}
+            {/* Потребность в тренере */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Тренер форматы' : 'Формат работы с тренером'} *
@@ -645,6 +646,23 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 <option value="find_online">{currentLang === 'kk' ? 'Онлайн тренер іздегім келеді' : 'Хочу найти онлайн-тренера'}</option>
                 <option value="find_offline">{currentLang === 'kk' ? 'Залда тренер табуды қалаймын (Офлайн)' : 'Хочу найти тренера офлайн в зале'}</option>
               </select>
+            </div>
+
+            {/* НОВОЕ ПОЛЕ: Telegram никнейм тренера (если есть тренер) */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                {currentLang === 'kk' ? 'Тренеріңіздің Telegram никнеймі (міндетті емес)' : 'Telegram никнейм вашего тренера (необязательно)'}
+              </label>
+              <div className="relative flex items-center">
+                <AtSign className="absolute left-3 w-4 h-4 text-slate-400" />
+                <input 
+                  type="text"
+                  value={formData.trainerUsername}
+                  onChange={(e) => handleChange('trainerUsername', e.target.value)}
+                  placeholder="@trainer_username"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                />
+              </div>
             </div>
 
             {/* Спортивная специализация */}
@@ -665,7 +683,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </select>
             </div>
 
-            {/* Главная цель тренировок (Сбалансированная сетка из 6 элементов: ровно по 3 в ряд) */}
+            {/* Главная цель тренировок */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Негізгі мақсатыңыз' : 'Главная цель тренировок'} *
@@ -806,7 +824,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* ЮРИДИЧЕСКИЙ БЛОК (ВЕРТИКАЛЬНАЯ КОЛОНКА СО ВСЕМИ СОГЛАСИЯМИ) */}
+            {/* ЮРИДИЧЕСКИЙ БЛОК (ВЕРТИКАЛЬНАЯ КОЛОНКА) */}
             <div className="pt-3 border-t border-slate-100 flex flex-col gap-2.5">
               <div className="flex items-start gap-2">
                 <input 
@@ -849,7 +867,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 </label>
               </div>
 
-              {/* Новое согласие для предложения услуг тренеров */}
               <div className="flex items-start gap-2">
                 <input 
                   type="checkbox"
