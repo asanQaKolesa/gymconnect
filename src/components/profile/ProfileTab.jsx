@@ -1,7 +1,7 @@
 // src/components/profile/ProfileTab.jsx
 import React, { useState } from 'react';
 import { translations } from '../../locales/translations';
-import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown, Camera, Calendar, Scale, Ruler, Search, X, Clock, MapPin } from 'lucide-react';
+import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown, Camera, Calendar, Scale, Ruler, Search, X, Clock, MapPin, Award, UserCheck, CreditCard } from 'lucide-react';
 
 import ProfileHeader from './ProfileHeader';
 import ProfileCard from './ProfileCard';
@@ -9,7 +9,6 @@ import ProfileMenu from './ProfileMenu';
 import ProfileDocs from './ProfileDocs';
 import ProfileDangerZone from './ProfileDangerZone';
 
-// Полный перечень всех 230 фитнес-залов и объектов Алматы
 const ALMATY_GYMS = [
   "БАНЗАЙ Fitness | Проспект Абая, 150, Алматы",
   "Adrenaline | Проспект Жибек Жолы, 66, Алматы",
@@ -273,6 +272,11 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       district: savedProfile.district || 'Медеуский',
       gym: savedProfile.gym || '',
       
+      // Новые поля для тренеров и абонементов
+      experienceLevel: savedProfile.experienceLevel || 'independent',
+      trainerNeed: savedProfile.trainerNeed || 'self',
+      membershipTerm: savedProfile.membershipTerm || '6_months',
+
       specialization: savedProfile.specialization || 'athlete',
       goal: savedProfile.goal || 'mass',
       
@@ -285,6 +289,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       agreeTerms: savedProfile.agreeTerms || false,
       agreePrivacy: savedProfile.agreePrivacy || false,
       agreeMarketing: savedProfile.agreeMarketing || false,
+      agreeTrainers: savedProfile.agreeTrainers || false, // Согласие для тренеров
       agreeSafety: savedProfile.agreeSafety || false
     };
   });
@@ -341,7 +346,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       return;
     }
 
-    if (!formData.agreeTerms || !formData.agreePrivacy || !formData.agreeSafety) {
+    if (!formData.agreeTerms || !formData.agreePrivacy || !formData.agreeTrainers || !formData.agreeSafety) {
       alert(currentLang === 'kk' ? 'Барлық міндетті келісімдерді белгілеңіз!' : 'Пожалуйста, примите обязательные соглашения и правила безопасности!');
       return;
     }
@@ -504,7 +509,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* Выбор Города (Алматы по умолчанию) и Района */}
+            {/* Город и Район */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">{currentLang === 'kk' ? 'Қала' : 'Город'} *</label>
@@ -587,6 +592,62 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               )}
             </div>
 
+            {/* Срок абонемента в клубе (для предложения продления) */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                {currentLang === 'kk' ? 'Абонемент мерзімі' : 'Срок вашего абонемента в клубе'} *
+              </label>
+              <div className="relative flex items-center">
+                <CreditCard className="absolute left-3 w-4 h-4 text-slate-400" />
+                <select
+                  value={formData.membershipTerm}
+                  onChange={(e) => handleChange('membershipTerm', e.target.value)}
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
+                >
+                  <option value="1_month">{currentLang === 'kk' ? '1 ай қалды' : 'Остался 1 месяц'}</option>
+                  <option value="3_months">{currentLang === 'kk' ? '3 ай' : '3 месяца'}</option>
+                  <option value="6_months">{currentLang === 'kk' ? '6 ай' : '6 месяцев'}</option>
+                  <option value="1_year">{currentLang === 'kk' ? '1 жыл' : '1 год'}</option>
+                  <option value="guest">{currentLang === 'kk' ? 'Гостевой визит / Разовые' : 'Гостевые визиты'}</option>
+                </select>
+                <ChevronDown className="absolute right-3 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Стаж тренировок */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                {currentLang === 'kk' ? 'Жаттығу стажы' : 'Ваш стаж тренировок'} *
+              </label>
+              <select
+                value={formData.experienceLevel}
+                onChange={(e) => handleChange('experienceLevel', e.target.value)}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
+              >
+                <option value="beginner">{currentLang === 'kk' ? 'Мен жаңадан бастаушымын (Новичок)' : 'Новичок (до 6 месяцев)'}</option>
+                <option value="minimal">{currentLang === 'kk' ? 'Минималды тәжірибем бар' : 'Минимальный опыт'}</option>
+                <option value="independent">{currentLang === 'kk' ? 'Өз бетімше жаттығамын' : 'Занимаюсь самостоятельно'}</option>
+                <option value="with_trainer">{currentLang === 'kk' ? 'Тренермен жаттығамын' : 'Занимаюсь с тренером'}</option>
+              </select>
+            </div>
+
+            {/* Потребность в тренере (Для оффер-базы тренеров) */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                {currentLang === 'kk' ? 'Тренер форматы' : 'Формат работы с тренером'} *
+              </label>
+              <select
+                value={formData.trainerNeed}
+                onChange={(e) => handleChange('trainerNeed', e.target.value)}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
+              >
+                <option value="self">{currentLang === 'kk' ? 'Өз бетімше айналысамын (Тренер керек емес)' : 'Буду заниматься сам'}</option>
+                <option value="have_trainer">{currentLang === 'kk' ? 'Қазір тренермен жұмыс жасаймын' : 'Занимаюсь с тренером'}</option>
+                <option value="find_online">{currentLang === 'kk' ? 'Онлайн тренер іздегім келеді' : 'Хочу найти онлайн-тренера'}</option>
+                <option value="find_offline">{currentLang === 'kk' ? 'Залда тренер табуды қалаймын (Офлайн)' : 'Хочу найти тренера офлайн в зале'}</option>
+              </select>
+            </div>
+
             {/* Спортивная специализация */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
@@ -605,7 +666,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </select>
             </div>
 
-            {/* Главная цель тренировок (включая рекомпозицию) */}
+            {/* Главная цель тренировок (Сбалансированная сетка из 6 элементов: ровно по 3 в ряд) */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Негізгі мақсатыңыз' : 'Главная цель тренировок'} *
@@ -614,9 +675,10 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 {[
                   { id: 'mass', label: currentLang === 'kk' ? 'Бұлшықет жинау' : 'Набор массы' },
                   { id: 'cut', label: currentLang === 'kk' ? 'Арықтау / Сушка' : 'Сушка / Похудение' },
-                  { id: 'recomp', label: currentLang === 'kk' ? 'Рекомпозиция (Масса + Сушка)' : 'Рекомпозиция тела' },
+                  { id: 'recomp', label: currentLang === 'kk' ? 'Рекомпозиция (Масса+Сушка)' : 'Рекомпозиция тела' },
                   { id: 'strength', label: currentLang === 'kk' ? 'Күшті арттыру' : 'Развитие силы' },
-                  { id: 'tone', label: currentLang === 'kk' ? 'Тонус және денсаулық' : 'Тонус и здоровье' }
+                  { id: 'tone', label: currentLang === 'kk' ? 'Тонус және денсаулық' : 'Тонус и здоровье' },
+                  { id: 'endurance', label: currentLang === 'kk' ? 'Төзімділік' : 'Выносливость' }
                 ].map((item) => (
                   <button
                     type="button"
@@ -704,7 +766,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 </div>
               </div>
 
-              {/* Свободный календарь дней недели (Мультивыбор) */}
+              {/* Дни тренировок */}
               <div className="mb-3">
                 <label className="block text-xs font-medium text-slate-700 mb-1">
                   {currentLang === 'kk' ? 'Жаттығу күндерін таңдаңыз' : 'Выберите дни тренировок'} *
@@ -730,7 +792,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 </div>
               </div>
 
-              {/* О себе (Bio) для карточки GymBro */}
+              {/* О себе (Bio) */}
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
                   {currentLang === 'kk' ? 'Өзіңіз туралы (GymBro карточкасы үшін)' : 'О себе (для карточки GymBro)'}
@@ -745,7 +807,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* ЮРИДИЧЕСКИЙ БЛОК (ВЕРТИКАЛЬНАЯ КОЛОНКА) */}
+            {/* ЮРИДИЧЕСКИЙ БЛОК (ВЕРТИКАЛЬНАЯ КОЛОНКА СО ВСЕМИ СОГЛАСИЯМИ) */}
             <div className="pt-3 border-t border-slate-100 flex flex-col gap-2.5">
               <div className="flex items-start gap-2">
                 <input 
@@ -785,6 +847,21 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 />
                 <label htmlFor="marketing" className="text-[11px] text-slate-600 leading-tight cursor-pointer">
                   {currentLang === 'kk' ? 'Telegram арқылы жарнама мен ақпарат алуға келісемін' : 'Согласен(а) на получение рассылок и персонализированной рекламы в Telegram'}
+                </label>
+              </div>
+
+              {/* Новое согласие для предложения услуг тренеров */}
+              <div className="flex items-start gap-2">
+                <input 
+                  type="checkbox"
+                  required
+                  id="trainers"
+                  checked={formData.agreeTrainers}
+                  onChange={(e) => handleChange('agreeTrainers', e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                />
+                <label htmlFor="trainers" className="text-[11px] text-slate-600 leading-tight cursor-pointer">
+                  {currentLang === 'kk' ? 'Тренерлердің өз қызметтерін ұсынуына анкеттаны беруге келісім беремін' : 'Даю согласие на передачу анкетных данных сертифицированным тренерам для получения персональных предложений услуг'}
                 </label>
               </div>
 
