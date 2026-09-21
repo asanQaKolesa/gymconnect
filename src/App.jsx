@@ -70,7 +70,13 @@ export default function App() {
           {activeTab === 'gymbro' && <GymBroTab />}
           {activeTab === 'reviews' && <ReviewsTab />}
           {activeTab === 'nutrition' && <NutritionTab />}
-          {activeTab === 'profile' && <ProfileTab onComplete={handleProfileComplete} isRegistration={!isRegistered} currentLang={language} />}
+          {activeTab === 'profile' && (
+            <ProfileTab 
+              onComplete={handleProfileComplete} 
+              isRegistration={!isRegistered} 
+              currentLang={language} 
+            />
+          )}
         </div>
 
         {/* НИЖНИЙ ТАБ-БАР (Локализован через словарь t) */}
