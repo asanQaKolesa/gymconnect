@@ -49,10 +49,10 @@
 .splash-badge {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    padding: 8px 12px;
+    padding: 7px 10px;
     border-radius: 16px;
     margin-bottom: 12px;
     text-align: left;
@@ -63,20 +63,22 @@
     display: flex;
     flex-direction: column;
     gap: 1px;
-    overflow: hidden;
+    width: 100%;
 }
 
 .badge-kk {
-    font-size: 11px;
+    font-size: 8.5px; /* Уменьшенный размер для идеального размещения */
     font-weight: 600;
     color: #2563eb;
+    line-height: 1.2;
     white-space: nowrap;
 }
 
 .badge-ru {
-    font-size: 10px;
+    font-size: 8.5px;
     font-weight: 400;
     color: #64748b;
+    line-height: 1.2;
     white-space: nowrap;
 }
 
