@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import HomeTab from './components/home/HomeTab';
 import ReviewsTab from './components/reviews/ReviewsTab';
 import GymBroTab from './components/gymbro/GymBroTab';
@@ -10,13 +10,11 @@ import { appleTheme } from './ui/AppleTheme';
 import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
 
 export default function App() {
-  // Состояние заставки (показываем при самом первом открытии)
+  // Состояние заставки (10 секунд)
   const [isLoading, setIsLoading] = useState(true);
 
-  // Состояние выбора языка (проверяем localStorage, по умолчанию null)
-  const [language, setLanguage] = useState(() => {
-    return localStorage.getItem('gymconnect_language') || null;
-  });
+  // ДЛЯ ТЕСТА: язык сбрасывается при каждом обновлении страницы, чтобы ты мог тестировать экран выбора языка
+  const [language, setLanguage] = useState(null);
 
   // Проверяем, заполнил ли пользователь профиль (анкету)
   const [isRegistered, setIsRegistered] = useState(() => {
@@ -28,7 +26,7 @@ export default function App() {
     return localStorage.getItem('gymconnect_profile_filled') === 'true' ? 'home' : 'profile';
   });
 
-  // Обработка окончания показа заставки (10 секунд)
+  // Обработка окончания показа заставки
   const handleSplashFinish = () => {
     setIsLoading(false);
   };
@@ -36,14 +34,13 @@ export default function App() {
   // Сохранение выбранного языка
   const handleSelectLanguage = (lang) => {
     setLanguage(lang);
-    localStorage.setItem('gymconnect_language', lang);
   };
 
   // Функция успешного завершения онбординга (вызывается из ProfileTab)
   const handleProfileComplete = () => {
     setIsRegistered(true);
     localStorage.setItem('gymconnect_profile_filled', 'true');
-    setActiveTab('home'); // Переводим на главную после заполнения
+    setActiveTab('home');
   };
 
   // 1. Если заставка еще активна, показываем только её
@@ -51,7 +48,7 @@ export default function App() {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
-  // 2. Если заставка завершилась, но язык еще не выбран — показываем выбор языка (Казахский первый)
+  // 2. Если заставка завершилась, но язык не выбран — показываем выбор языка (Казахский первый)
   if (!language) {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
