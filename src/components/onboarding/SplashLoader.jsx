@@ -1,50 +1,103 @@
-// src/components/onboarding/AlmatyMapBackground.jsx
-import React from 'react';
-import './AlmatyMapBackground.css';
+// src/components/onboarding/SplashLoader.jsx
+import React, { useEffect, useState } from 'react';
+import './SplashLoader.css';
+import AlmatyMapBackground from './AlmatyMapBackground';
+import { MapPin, Users, Utensils, MessageSquare, Dumbbell, ShieldCheck, Zap } from 'lucide-react';
 
-const AlmatyMapBackground = () => {
-    // Реальные залы из предоставленного документа для фонового паттерна карты
-    const mapGyms = [
-        { id: 1, name: "Invictus Fitness", top: "35%", left: "28%" },
-        { id: 2, name: "БАНЗАЙ Fitness", top: "22%", left: "60%" },
-        { id: 3, name: "Adrenaline", top: "48%", left: "45%" },
-        { id: 4, name: "Underground Big", top: "65%", left: "30%" },
-        { id: 5, name: "Iron House", top: "30%", left: "75%" },
-        { id: 6, name: "FitnessBlitz", top: "52%", left: "70%" },
-        { id: 7, name: "Nomad Gym", top: "72%", left: "55%" },
-        { id: 8, name: "WORKOUT", top: "18%", left: "40%" },
-        { id: 9, name: "Urban Gym", top: "40%", left: "85%" },
-        { id: 10, name: "Balance", top: "60%", left: "15%" },
-        { id: 11, name: "S89 Fitness", top: "28%", left: "20%" },
-        { id: 12, name: "Technofit", top: "58%", left: "42%" },
-        { id: 13, name: "K1 Fitness", top: "78%", left: "75%" },
-        { id: 14, name: "Uniflex", top: "15%", left: "80%" }
+const SplashLoader = ({ onFinish }) => {
+    const [isVisible, setIsVisible] = useState(true);
+    const [featureIndex, setFeatureIndex] = useState(0);
+    const [progress, setProgress] = useState(0);
+
+    // 6 ключевых функций экосистемы GymConnect (Казахский + Русский)
+    const features = [
+        { icon: <Users className="w-5 h-5 text-blue-400" />, kk: "Өз залыңнан серіктес тап", ru: "Найди сплит-партнера в своем зале" },
+        { icon: <Utensils className="w-5 h-5 text-emerald-400" />, kk: "Тамақтану және КБЖУ жоспары", ru: "Умный расчет КБЖУ и рацион питания" },
+        { icon: <MessageSquare className="w-5 h-5 text-indigo-400" />, kk: "Залдар туралы шынайы пікірлер", ru: "Честные отзывы о фитнес-клубах Алматы" },
+        { icon: <Dumbbell className="w-5 h-5 text-orange-400" />, kk: "Кәсіби тренерді таңдаңыз", ru: "Подбор квалифицированных тренеров" },
+        { icon: <MapPin className="w-5 h-5 text-sky-400" />, kk: "Алматының барлық залдары картада", ru: "Все фитнес-клубы города на одной карте" },
+        { icon: <ShieldCheck className="w-5 h-5 text-teal-400" />, kk: "Біртұтас спорттық қауымдастық", ru: "Единое комьюнити мотивированных атлетов" }
     ];
 
-    return (
-        <div className="almaty-map-bg">
-            {/* Схема дорог и сетки Алматы */}
-            <div className="map-grid-lines">
-                <div className="line-h line-1"></div>
-                <div className="line-h line-2"></div>
-                <div className="line-v line-1"></div>
-                <div className="line-v line-2"></div>
-            </div>
+    useEffect(() => {
+        // Смена функций каждые 1.6 секунды (6 шагов за ~9.6 сек)
+        const featureInterval = setInterval(() => {
+            setFeatureIndex((prev) => (prev < features.length - 1 ? prev + 1 : prev));
+        }, 1600);
 
-            {/* Аккуратные мини-пины реальных залов на фоне */}
-            {mapGyms.map((gym, index) => (
-                <div 
-                    key={gym.id} 
-                    className="gym-map-pin"
-                    style={{ top: gym.top, left: gym.left, animationDelay: `${index * 0.3}s` }}
-                >
-                    <span className="pin-pulse"></span>
-                    <span className="pin-dot"></span>
-                    <div className="pin-tooltip">{gym.name}</div>
+        // Плавный прирост процентов до 100% за 10 секунд (10000 мс)
+        const progressInterval = setInterval(() => {
+            setProgress((prev) => {
+                if (prev >= 100) {
+                    clearInterval(progressInterval);
+                    return 100;
+                }
+                return prev + 1;
+            });
+        }, 100);
+
+        // Общее время работы экрана загрузки — ровно 10 секунд
+        const timer = setTimeout(() => {
+            setIsVisible(false);
+            setTimeout(() => {
+                if (onFinish) onFinish();
+            }, 600);
+        }, 10000);
+
+        return () => {
+            clearInterval(featureInterval);
+            clearInterval(progressInterval);
+            clearTimeout(timer);
+        };
+    }, [onFinish]);
+
+    return (
+        <div className={`splash-overlay ${!isVisible ? 'splash-fade-out' : ''}`}>
+            {/* Карта Алматы на фоне с реальными залами */}
+            <AlmatyMapBackground />
+
+            {/* Стеклянная плашка расположена ниже центра для удобства */}
+            <div className="splash-card-lower">
+                <div className="splash-badge">
+                    <Zap className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Алматы • 230+ объектов в базе</span>
                 </div>
-            ))}
+
+                {/* Анимация побуквенной сборки бренда */}
+                <h1 className="splash-brand">
+                    <span>G</span><span>y</span><span>m</span><span>C</span><span>o</span><span>n</span><span>n</span><span>e</span><span>c</span><span>t</span>
+                </h1>
+
+                {/* Слоганы появляются одновременно сразу под брендом */}
+                <div className="slogans-container">
+                    <p className="slogan-kk">Жалғыз жаттықпайсың</p>
+                    <p className="slogan-ru">Больше не тренируйся один</p>
+                </div>
+
+                {/* Динамический блок функций */}
+                <div className="feature-box" key={featureIndex}>
+                    <div className="feature-icon-wrap">
+                        {features[featureIndex].icon}
+                    </div>
+                    <div className="feature-text-wrap">
+                        <p className="dyn-kk">{features[featureIndex].kk}</p>
+                        <p className="dyn-ru">{features[featureIndex].ru}</p>
+                    </div>
+                </div>
+
+                {/* Прогресс-бар со счетчиком до 100% */}
+                <div className="splash-progress-wrapper">
+                    <div className="splash-progress-info">
+                        <span>Запуск экосистемы GymConnect...</span>
+                        <span className="splash-percent">{progress}%</span>
+                    </div>
+                    <div className="splash-progress-track">
+                        <div className="splash-progress-fill" style={{ width: `${progress}%` }}></div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
 
-export default AlmatyMapBackground;
+export default SplashLoader;
