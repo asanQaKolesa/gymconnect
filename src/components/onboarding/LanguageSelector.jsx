@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Check, Globe } from 'lucide-react';
 
 export default function LanguageSelector({ currentLang = 'kk', onSelectLanguage }) {
-  // Локальное состояние выбранного языка (по умолчанию казахский 'kk')
   const [selected, setSelected] = useState(currentLang);
 
   const handleContinue = (e) => {
@@ -31,7 +30,7 @@ export default function LanguageSelector({ currentLang = 'kk', onSelectLanguage 
             </p>
           </div>
 
-          {/* Карточки выбора языка */}
+          {/* Карточки выбора языка (только с флагом Казахстана) */}
           <div className="space-y-3 mb-6">
             
             {/* Казахский */}
@@ -57,7 +56,7 @@ export default function LanguageSelector({ currentLang = 'kk', onSelectLanguage 
               </div>
             </div>
 
-            {/* Русский */}
+            {/* Русский (без чужого флага) */}
             <div 
               onClick={() => setSelected('ru')}
               className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${
@@ -67,7 +66,7 @@ export default function LanguageSelector({ currentLang = 'kk', onSelectLanguage 
               }`}
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">🇷🇺</span>
+                <span className="text-2xl">🇰🇿</span>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">Русский</h3>
                   <p className="text-[11px] text-slate-500">Продолжить на русском языке</p>
