@@ -1,0 +1,98 @@
+/* src/components/onboarding/SplashLoader.css */
+
+:root {
+    /* Используем CSS-переменные Telegram, если они есть */
+    --bg-color: var(--tg-theme-bg-color, #1c1c1e);
+    --text-color: var(--tg-theme-text-color, #ffffff);
+    --accent-color: var(--tg-theme-button-color, #3390ec);
+}
+
+.splash-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* Поверх всего */
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out; /* Плавное исчезновение */
+}
+
+.splash-container.fade-out {
+    opacity: 0; /* Класс для запуска исчезновения */
+}
+
+.splash-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    animation: scaleIn 0.8s ease-out forwards; /* Анимация появления блока */
+}
+
+/* Анимация появления логотипа/блока */
+@keyframes scaleIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.splash-logo-ring {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+    animation: pulseRing 2s infinite; /* Пульсация кольца */
+}
+
+@keyframes pulseRing {
+    0% { box-shadow: 0 0 0 0 rgba(51, 144, 236, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(51, 144, 236, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(51, 144, 236, 0); }
+}
+
+.splash-title {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+    letter-spacing: -0.5px;
+    animation: slideUpFade 0.6s ease-out 0.2s both; /* Появление заголовка с задержкой */
+}
+
+.splash-slogan {
+    font-size: 18px;
+    color: var(--text-color);
+    opacity: 0.7;
+    margin: 0;
+    animation: slideUpFade 0.6s ease-out 0.4s both; /* Появление слогана с задержкой */
+}
+
+/* Общая анимация появления текста снизу */
+@keyframes slideUpFade {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.splash-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    border-top-color: var(--accent-color);
+    animation: spin 1s linear infinite;
+    margin-top: 30px;
+    animation: spin 1s linear infinite 0.6s both; /* Появление спиннера с задержкой */
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
