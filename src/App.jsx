@@ -15,29 +15,7 @@ import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
 import { translations } from './locales/translations';
 
 export default function App() {
-  // 0. ЖЕЛЕЗОБЕТОННАЯ ПРОВЕРКА АДМИНА (САМАЯ ПЕРВАЯ СТРОКА)
-  const [isAdminRoute] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('admin') === 'true') {
-      localStorage.setItem('gymconnect_admin_mode', 'true');
-      return true;
-    }
-    return localStorage.getItem('gymconnect_admin_mode') === 'true';
-  });
-
-  if (isAdminRoute) {
-    return (
-      <AdminPanel 
-        onBack={() => {
-          localStorage.removeItem('gymconnect_admin_mode');
-          window.history.pushState({}, document.title, window.location.pathname);
-          window.location.reload();
-        }} 
-      />
-    );
-  }
-
-  // 0.1. ЖЕЛЕЗОБЕТОННАЯ ПРОВЕРКА ТРЕНЕРА
+  // 1. СТРОГАЯ ПРОВЕРКА ТРЕНЕРСКОГО РОУТА (?trainer=true)
   const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
   const [trainerUsername, setTrainerUsername] = useState(() => {
     return localStorage.getItem('gymconnect_trainer_username') || '';
@@ -80,6 +58,28 @@ export default function App() {
     }
   }
 
+  // 2. СТРОГАЯ ПРОВЕРКА АДМИН-РЕЖИМА ФАУНДЕРА (?admin=true)
+  const [isAdminRoute] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('admin') === 'true') {
+      localStorage.setItem('gymconnect_admin_mode', 'true');
+      return true;
+    }
+    return localStorage.getItem('gymconnect_admin_mode') === 'true';
+  });
+
+  if (isAdminRoute) {
+    return (
+      <AdminPanel 
+        onBack={() => {
+          localStorage.removeItem('gymconnect_admin_mode');
+          window.history.pushState({}, document.title, window.location.pathname);
+          window.location.reload();
+        }} 
+      />
+    );
+  }
+
   // Состояние заставки для обычного приложения
   const [isLoading, setIsLoading] = useState(true);
 
@@ -116,17 +116,17 @@ export default function App() {
     setActiveTab('home');
   };
 
-  // 1. Если заставка еще активна
+  // 3. Если заставка еще активна
   if (isLoading) {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
-  // 2. Если заставка завершилась, но язык не выбран — показываем выбор языка
+  // 4. Если заставка завершилась, но язык не выбран — показываем выбор языка
   if (!language) {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
 
-  // 3. Основной интерфейс приложения (Telegram Mini App)
+  // 5. Основной интерфейс приложения (Telegram Mini App)
   return (
     <div className={`min-h-screen bg-slate-100 flex justify-center ${appleTheme.styles.fontFamily}`}>
       
