@@ -6,14 +6,16 @@ import NutritionTab from './components/nutrition/NutritionTab';
 import ProfileTab from './components/profile/ProfileTab';
 import SplashLoader from './components/onboarding/SplashLoader';
 import LanguageSelector from './components/onboarding/LanguageSelector';
-import AdminPanel from './components/admin/AdminPanel'; // Защищенная CRM-панель
+import AdminPanel from './components/admin/AdminPanel'; // Фаундерская CRM
+import TrainerOnboarding from './components/trainer/TrainerOnboarding'; // Регистрация тренера
+import TrainerCRM from './components/trainer/TrainerCRM'; // CRM тренера
 import { appleTheme } from './ui/AppleTheme';
 import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
 import { translations } from './locales/translations';
 
 export default function App() {
-  // Стейт для отслеживания админ-режима (проверяем URL и память браузера)
-  const [isAdminRoute, setIsAdminRoute] = useState(() => {
+  // 0. ПРОВЕРКА АДМИН-РЕЖИМА ФАУНДЕРА (?admin=true)
+  const [isAdminRoute] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('admin') === 'true') {
       localStorage.setItem('gymconnect_admin_mode', 'true');
@@ -21,6 +23,47 @@ export default function App() {
     }
     return localStorage.getItem('gymconnect_admin_mode') === 'true';
   });
+
+  if (isAdminRoute) {
+    return (
+      <AdminPanel 
+        onBack={() => {
+          localStorage.removeItem('gymconnect_admin_mode');
+          window.history.pushState({}, document.title, window.location.pathname);
+          window.location.reload();
+        }} 
+      />
+    );
+  }
+
+  // 0.1. ПРОВЕРКА ТРЕНЕРСКОГО РОУТА (?trainer=true)
+  const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
+  const [trainerUsername, setTrainerUsername] = useState(() => {
+    return localStorage.getItem('gymconnect_trainer_username') || '';
+  });
+
+  if (isTrainerRoute) {
+    if (!trainerUsername) {
+      return (
+        <TrainerOnboarding 
+          onComplete={(username) => {
+            setTrainerUsername(username);
+          }} 
+        />
+      );
+    } else {
+      return (
+        <TrainerCRM 
+          trainerUsername={trainerUsername}
+          onLogout={() => {
+            localStorage.removeItem('gymconnect_trainer_registered');
+            localStorage.removeItem('gymconnect_trainer_username');
+            setTrainerUsername('');
+          }}
+        />
+      );
+    }
+  }
 
   // Состояние заставки
   const [isLoading, setIsLoading] = useState(true);
@@ -57,19 +100,6 @@ export default function App() {
     localStorage.setItem('gymconnect_profile_filled', 'true');
     setActiveTab('home');
   };
-
-  // 0. АДМИН-ПАНЕЛЬ (если активирован режим администратора)
-  if (isAdminRoute) {
-    return (
-      <AdminPanel 
-        onBack={() => {
-          localStorage.removeItem('gymconnect_admin_mode');
-          window.history.pushState({}, document.title, window.location.pathname);
-          setIsAdminRoute(false);
-        }} 
-      />
-    );
-  }
 
   // 1. Если заставка еще активна
   if (isLoading) {
