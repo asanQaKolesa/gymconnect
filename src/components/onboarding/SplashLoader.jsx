@@ -9,7 +9,7 @@ const SplashLoader = ({ onFinish }) => {
     const [featureIndex, setFeatureIndex] = useState(0);
     const [progress, setProgress] = useState(0);
 
-    // 6 ключевых функций экосистемы GymConnect (Казахский + Русский)
+    // 6 ключевых преимуществ экосистемы GymConnect (Казахский + Русский)
     const features = [
         { icon: <Users className="w-5 h-5 text-blue-400" />, kk: "Өз залыңнан серіктес тап", ru: "Найди сплит-партнера в своем зале" },
         { icon: <Utensils className="w-5 h-5 text-emerald-400" />, kk: "Тамақтану және КБЖУ жоспары", ru: "Умный расчет КБЖУ и рацион питания" },
@@ -25,7 +25,7 @@ const SplashLoader = ({ onFinish }) => {
             setFeatureIndex((prev) => (prev < features.length - 1 ? prev + 1 : prev));
         }, 1600);
 
-        // Плавный прирост процентов до 100% за 10 секунд (10000 мс)
+        // Плавный рост прогресса до 100% за 10 секунд
         const progressInterval = setInterval(() => {
             setProgress((prev) => {
                 if (prev >= 100) {
@@ -36,7 +36,7 @@ const SplashLoader = ({ onFinish }) => {
             });
         }, 100);
 
-        // Общее время работы экрана загрузки — ровно 10 секунд
+        // Общее время заставки — ровно 10 секунд
         const timer = setTimeout(() => {
             setIsVisible(false);
             setTimeout(() => {
@@ -53,28 +53,31 @@ const SplashLoader = ({ onFinish }) => {
 
     return (
         <div className={`splash-overlay ${!isVisible ? 'splash-fade-out' : ''}`}>
-            {/* Карта Алматы на фоне с реальными залами */}
+            {/* Фоновая карта Алматы в стиле 2ГИС */}
             <AlmatyMapBackground />
 
-            {/* Стеклянная плашка расположена ниже центра для удобства */}
+            {/* Контрастная стеклянная плашка поверх карты */}
             <div className="splash-card-lower">
                 <div className="splash-badge">
                     <Zap className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Алматы • 230+ объектов в базе</span>
+                    <div className="badge-text-col">
+                        <span>Алматы • 230+ объектов в базе или с нами</span>
+                        <span className="badge-sub">Алматы • 230+ объект базада немесе бізбен бірге</span>
+                    </div>
                 </div>
 
-                {/* Анимация побуквенной сборки бренда */}
+                {/* Побуквенная анимация GymConnect */}
                 <h1 className="splash-brand">
                     <span>G</span><span>y</span><span>m</span><span>C</span><span>o</span><span>n</span><span>n</span><span>e</span><span>c</span><span>t</span>
                 </h1>
 
-                {/* Слоганы появляются одновременно сразу под брендом */}
+                {/* Слоганы на двух языках */}
                 <div className="slogans-container">
                     <p className="slogan-kk">Жалғыз жаттықпайсың</p>
                     <p className="slogan-ru">Больше не тренируйся один</p>
                 </div>
 
-                {/* Динамический блок функций */}
+                {/* Блок преимуществ */}
                 <div className="feature-box" key={featureIndex}>
                     <div className="feature-icon-wrap">
                         {features[featureIndex].icon}
@@ -85,10 +88,13 @@ const SplashLoader = ({ onFinish }) => {
                     </div>
                 </div>
 
-                {/* Прогресс-бар со счетчиком до 100% */}
+                {/* Прогресс-бар загрузки экосистемы на двух языках */}
                 <div className="splash-progress-wrapper">
                     <div className="splash-progress-info">
-                        <span>Запуск экосистемы GymConnect...</span>
+                        <div className="progress-text-col">
+                            <span>Запуск экосистемы GymConnect...</span>
+                            <span className="prog-sub">GymConnect экожүйесін іске қосу...</span>
+                        </div>
                         <span className="splash-percent">{progress}%</span>
                     </div>
                     <div className="splash-progress-track">
