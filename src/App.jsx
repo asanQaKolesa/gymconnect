@@ -8,6 +8,7 @@ import SplashLoader from './components/onboarding/SplashLoader';
 import LanguageSelector from './components/onboarding/LanguageSelector';
 import { appleTheme } from './ui/AppleTheme';
 import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
+import { translations } from './locales/translations';
 
 export default function App() {
   // Состояние заставки (10 секунд)
@@ -15,6 +16,9 @@ export default function App() {
 
   // ДЛЯ ТЕСТА: язык сбрасывается при каждом обновлении страницы, чтобы ты мог тестировать экран выбора языка
   const [language, setLanguage] = useState(null);
+
+  // Получаем словарь текстов для выбранного языка (по умолчанию казахский)
+  const t = translations[language] || translations.kk;
 
   // Проверяем, заполнил ли пользователь профиль (анкету)
   const [isRegistered, setIsRegistered] = useState(() => {
@@ -66,10 +70,10 @@ export default function App() {
           {activeTab === 'gymbro' && <GymBroTab />}
           {activeTab === 'reviews' && <ReviewsTab />}
           {activeTab === 'nutrition' && <NutritionTab />}
-          {activeTab === 'profile' && <ProfileTab onComplete={handleProfileComplete} isRegistration={!isRegistered} />}
+          {activeTab === 'profile' && <ProfileTab onComplete={handleProfileComplete} isRegistration={!isRegistered} currentLang={language} />}
         </div>
 
-        {/* НИЖНИЙ ТАБ-БАР */}
+        {/* НИЖНИЙ ТАБ-БАР (Локализован через словарь t) */}
         {isRegistered ? (
           <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-100 shadow-lg">
             <div className="w-full max-w-md mx-auto px-4 py-2 flex justify-around items-center">
@@ -81,7 +85,7 @@ export default function App() {
                 }`}
               >
                 <Home className="w-5 h-5 mb-1 stroke-[1.75]" />
-                <span className="text-[10px]">Главная</span>
+                <span className="text-[10px]">{t.nav.home}</span>
               </button>
 
               <button
@@ -91,7 +95,7 @@ export default function App() {
                 }`}
               >
                 <Users className="w-5 h-5 mb-1 stroke-[1.75]" />
-                <span className="text-[10px]">GymBro</span>
+                <span className="text-[10px]">{t.nav.gymbro}</span>
               </button>
 
               <button
@@ -101,7 +105,7 @@ export default function App() {
                 }`}
               >
                 <MessageSquare className="w-5 h-5 mb-1 stroke-[1.75]" />
-                <span className="text-[10px]">Отзывы</span>
+                <span className="text-[10px]">{t.nav.reviews}</span>
               </button>
 
               <button
@@ -111,7 +115,7 @@ export default function App() {
                 }`}
               >
                 <Utensils className="w-5 h-5 mb-1 stroke-[1.75]" />
-                <span className="text-[10px]">Питание</span>
+                <span className="text-[10px]">{t.nav.nutrition}</span>
               </button>
 
               <button
@@ -121,7 +125,7 @@ export default function App() {
                 }`}
               >
                 <User className="w-5 h-5 mb-1 stroke-[1.75]" />
-                <span className="text-[10px]">Профиль</span>
+                <span className="text-[10px]">{t.nav.profile}</span>
               </button>
 
             </div>
@@ -129,7 +133,7 @@ export default function App() {
         ) : (
           /* Подсказка для нового пользователя внизу экрана */
           <div className="fixed bottom-0 left-0 right-0 z-50 bg-blue-600 text-white text-center py-3 text-xs font-medium shadow-lg">
-            Заполните анкету профиля для доступа к GymConnect
+            {language === 'kk' ? 'GymConnect қолжетімділігі үшін профиль сауалнамасын толтырыңыз' : 'Заполните анкету профиля для доступа к GymConnect'}
           </div>
         )}
 
