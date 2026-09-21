@@ -9,7 +9,7 @@
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    padding-bottom: 40px;
+    padding-bottom: 36px;
     z-index: 99999;
     opacity: 1;
     transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
@@ -27,17 +27,17 @@
     z-index: 10;
     width: 92%;
     max-width: 380px;
-    padding: 26px 20px;
-    background: rgba(11, 19, 38, 0.82); /* Глубокое синее стекло */
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
-    border: 1px solid rgba(56, 189, 248, 0.2);
+    padding: 24px 18px;
+    background: rgba(9, 14, 26, 0.92); /* Плотное контрастное темное стекло */
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(56, 189, 248, 0.3);
     border-radius: 32px;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.85);
     animation: cardSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -48,15 +48,32 @@
 
 .splash-badge {
     display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(56, 189, 248, 0.1);
-    padding: 5px 12px;
-    border-radius: 20px;
+    align-items: flex-start;
+    gap: 8px;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    padding: 6px 12px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    text-align: left;
+}
+
+.badge-text-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.badge-text-col span:first-child {
     font-size: 11px;
     font-weight: 600;
     color: #38bdf8;
-    margin-bottom: 12px;
+}
+
+.badge-sub {
+    font-size: 10px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .splash-brand {
@@ -64,7 +81,7 @@
     font-weight: 700;
     color: #ffffff;
     letter-spacing: -0.5px;
-    margin: 0 0 6px 0;
+    margin: 0 0 4px 0;
     display: flex;
     justify-content: center;
 }
@@ -98,7 +115,7 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     animation: fadeInSlogans 0.6s ease-out 0.4s both;
 }
 
@@ -125,14 +142,14 @@
 
 .feature-box {
     width: 100%;
-    background: rgba(30, 41, 59, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(30, 41, 59, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 14px;
     padding: 10px 12px;
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
     animation: fadeInOutFeature 1.6s ease infinite;
 }
 
@@ -184,13 +201,26 @@
 .splash-progress-info {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    font-size: 11px;
+    align-items: flex-end;
+    font-size: 10px;
     color: rgba(255, 255, 255, 0.6);
     font-weight: 500;
+    text-align: left;
+}
+
+.progress-text-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.prog-sub {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.45);
 }
 
 .splash-percent {
+    font-size: 12px;
     font-weight: 700;
     color: #38bdf8;
 }
