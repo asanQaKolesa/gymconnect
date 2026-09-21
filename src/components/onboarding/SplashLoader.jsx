@@ -54,12 +54,12 @@ const SplashLoader = ({ onFinish }) => {
             <AlmatyMapBackground />
 
             <div className="splash-card-contrast">
-                {/* Честный бейджик с актуальной информацией о базе данных */}
+                {/* Честный бейдж с уменьшенным шрифтом для идеальной одной строки */}
                 <div className="splash-badge">
                     <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
                     <div className="badge-text-col">
-                        <span className="badge-kk">Алматыдағы 230+ фитнес-орталық біздің базада</span>
-                        <span className="badge-ru">230+ фитнес-центров Алматы уже в нашей базе</span>
+                        <span className="badge-kk">Алматыдағы 230+ зал үшін бірыңғай платформа</span>
+                        <span className="badge-ru">Единая платформа для 230+ залов Алматы</span>
                     </div>
                 </div>
 
