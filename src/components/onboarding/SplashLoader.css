@@ -26,8 +26,8 @@
     position: relative;
     width: 90%;
     max-width: 360px;
-    padding: 36px 24px;
-    background: rgba(28, 28, 30, 0.75);
+    padding: 38px 24px;
+    background: rgba(28, 28, 30, 0.85);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -36,7 +36,7 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
     animation: cardAppear 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -52,7 +52,13 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
+    animation: bounceIcon 3s ease-in-out infinite;
+}
+
+@keyframes bounceIcon {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
 }
 
 .icon-ring {
@@ -61,13 +67,13 @@
     height: 100%;
     border-radius: 50%;
     background: linear-gradient(135deg, #3b82f6, #6366f1);
-    opacity: 0.25;
+    opacity: 0.3;
     animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @keyframes pulseRing {
     0% { transform: scale(1); opacity: 0.4; }
-    50% { transform: scale(1.25); opacity: 0; }
+    70% { transform: scale(1.3); opacity: 0; }
     100% { transform: scale(1); opacity: 0.4; }
 }
 
@@ -84,19 +90,47 @@
     box-shadow: 0 8px 16px rgba(0,0,0,0.3);
 }
 
+/* Эффект сборки букв GymConnect */
 .splash-brand {
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 700;
     color: #ffffff;
     letter-spacing: -0.5px;
-    margin: 0 0 12px 0;
+    margin: 0 0 10px 0;
+    display: flex;
+    justify-content: center;
+}
+
+.splash-brand span {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(15px) scale(0.8);
+    animation: assembleLetters 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.splash-brand span:nth-child(1) { animation-delay: 0.1s; }
+.splash-brand span:nth-child(2) { animation-delay: 0.15s; }
+.splash-brand span:nth-child(3) { animation-delay: 0.2s; }
+.splash-brand span:nth-child(4) { animation-delay: 0.25s; }
+.splash-brand span:nth-child(5) { animation-delay: 0.3s; }
+.splash-brand span:nth-child(6) { animation-delay: 0.35s; }
+.splash-brand span:nth-child(7) { animation-delay: 0.4s; }
+.splash-brand span:nth-child(8) { animation-delay: 0.45s; }
+.splash-brand span:nth-child(9) { animation-delay: 0.5s; }
+.splash-brand span:nth-child(10) { animation-delay: 0.55s; }
+
+@keyframes assembleLetters {
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .slogans-container {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 }
 
 .slogan-kk {
@@ -108,29 +142,38 @@
 }
 
 .slogan-ru {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 400;
     color: rgba(255, 255, 255, 0.65);
     letter-spacing: -0.2px;
     margin: 0;
 }
 
-.feature-dynamic-text {
-    height: 24px;
+.feature-dynamic-box {
+    height: 46px;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: 24px;
+    animation: fadeInOutBox 1.6s ease infinite;
 }
 
-.fade-text {
+.dyn-kk {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.85);
-    font-weight: 500;
-    animation: fadeInOut 1.3s ease infinite;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
 }
 
-@keyframes fadeInOut {
+.dyn-ru {
+    font-size: 11px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+}
+
+@keyframes fadeInOutBox {
     0% { opacity: 0; transform: translateY(6px); }
     20% { opacity: 1; transform: translateY(0); }
     80% { opacity: 1; transform: translateY(0); }
@@ -151,7 +194,8 @@
     background: linear-gradient(90deg, #3b82f6, #6366f1, #38bdf8);
     border-radius: 4px;
     transform-origin: left;
-    animation: progressAnimation 4.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    /* Установлено точное время анимации прогресс-бара — 7 секунд */
+    animation: progressAnimation 7s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
 @keyframes progressAnimation {
