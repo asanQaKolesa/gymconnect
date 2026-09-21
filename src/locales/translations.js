@@ -9,13 +9,22 @@ export const translations = {
             nutrition: "Қоректну",
             profile: "Профиль"
         },
-        profileModal: {
-            title: "Анкетanı толтырыңыз",
+        profileOnboarding: {
+            badge: "Қош келдіңіз!",
+            title: "Анкетаңызды толтырыңыз",
             subtitle: "GymBro табу және КБЖУ есептеу үшін қажет",
-            name: "Аты-жөні",
-            username: "Telegram никнеймі (@)",
-            city: "Қала / Аудан",
-            save: "Анкетаны сақтау және бастау"
+            nameLabel: "Аты-жөніңіз",
+            namePlaceholder: "Атыңызды енгізіңіз",
+            usernameLabel: "Telegram никнеймі",
+            usernamePlaceholder: "@username",
+            gymLabel: "Негізгі фитнес-залыңыз",
+            gymPlaceholder: "Мысалы: Invictus Go, Banzai...",
+            goalLabel: "Сіздің мақсатыңыз",
+            goalMass: "Бұлшықет жинау",
+            goalCut: "Арықтау / Кето",
+            goalStrength: "Күшті арттыру",
+            goalTone: "Тонус және денсауlık",
+            saveBtn: "Анкетаны сақтау және бастау"
         },
         common: {
             loading: "Жүктелуде...",
@@ -31,13 +40,22 @@ export const translations = {
             nutrition: "Питание",
             profile: "Профиль"
         },
-        profileModal: {
-            title: "Заполните анкету",
+        profileOnboarding: {
+            badge: "Добро пожаловать!",
+            title: "Заполните вашу анкету",
             subtitle: "Нужно для поиска GymBro и расчета КБЖУ",
-            name: "Имя и фамилия",
-            username: "Telegram никнейм (@)",
-            city: "Город / Район",
-            save: "Сохранить анкету и войти"
+            nameLabel: "Ваше имя и фамилия",
+            namePlaceholder: "Введите ваше имя",
+            usernameLabel: "Telegram никнейм",
+            usernamePlaceholder: "@username",
+            gymLabel: "Ваш основной фитнес-зал",
+            gymPlaceholder: "Например: Invictus Go, Banzai...",
+            goalLabel: "Ваша главная цель",
+            goalMass: "Набор массы",
+            goalCut: "Сушка / Похудение",
+            goalStrength: "Развитие силы",
+            goalTone: "Тонус и здоровье",
+            saveBtn: "Сохранить анкету и войти"
         },
         common: {
             loading: "Загрузка...",
