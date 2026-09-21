@@ -1,7 +1,7 @@
 // src/components/admin/AdminPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { ShieldCheck, Users, Dumbbell, Building2, LogOut, RefreshCw, Search, Trash2, Edit3, X, Crown, Download, TrendingUp } from 'lucide-react';
+import { ShieldCheck, Users, Dumbbell, Building2, LogOut, RefreshCw, Search, Trash2, Edit3, X, Crown, Download } from 'lucide-react';
 
 export default function AdminPanel({ onBack }) {
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
@@ -12,6 +12,7 @@ export default function AdminPanel({ onBack }) {
   const [password, setPassword] = useState('');
   
   const [profiles, setProfiles] = useState([]);
+  const [trainers, setTrainers] = useState([]); // База тренеров
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('users'); // 'users', 'trainers', 'gyms'
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,9 +22,9 @@ export default function AdminPanel({ onBack }) {
   const [selectedGoalFilter, setSelectedGoalFilter] = useState('all');
 
   // Модальные окна
-  const [editingProfile, setEditingProfile] = useState(null); // Для редактирования и Pro
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false); // Для добавления
-  const [proMonths, setProMonths] = useState(1); // Выбор месяцев для Pro (от 1 до 12)
+  const [editingProfile, setEditingProfile] = useState(null); 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false); 
+  const [proMonths, setProMonths] = useState(1);
 
   const [newProfileData, setNewProfileData] = useState({
     first_name: '',
@@ -49,7 +50,7 @@ export default function AdminPanel({ onBack }) {
     if (login === 'admin' && password === 'gymconnect2026') {
       setIsAdminAuth(true);
       sessionStorage.setItem('gymconnect_admin_auth', 'true');
-      fetchProfiles();
+      fetchAllData();
     } else {
       alert('Неверный логин или пароль администратора!');
     }
@@ -60,24 +61,30 @@ export default function AdminPanel({ onBack }) {
     sessionStorage.removeItem('gymconnect_admin_auth');
   };
 
-  const fetchProfiles = async () => {
+  const fetchAllData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    // Загружаем атлетов
+    const { data: usersData, error: usersError } = await supabase
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Ошибка загрузки базы:', error.message);
-    } else {
-      setProfiles(data || []);
-    }
+    if (!usersError) setProfiles(usersData || []);
+
+    // Загружаем тренеров из новой таблицы
+    const { data: trainersData, error: trainersError } = await supabase
+      .from('trainer_profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!trainersError) setTrainers(trainersData || []);
+
     setLoading(false);
   };
 
   useEffect(() => {
     if (isAdminAuth) {
-      fetchProfiles();
+      fetchAllData();
     }
   }, [isAdminAuth]);
 
@@ -93,7 +100,18 @@ export default function AdminPanel({ onBack }) {
     }
   };
 
-  // Сохранение отредактированного профиля / выдача Pro
+  // Удаление тренера
+  const handleDeleteTrainer = async (id, name) => {
+    if (!window.confirm(`Удалить тренера ${name} из базы партнёров?`)) return;
+
+    const { error } = await supabase.from('trainer_profiles').delete().eq('id', id);
+    if (error) {
+      alert('Ошибка удаления: ' + error.message);
+    } else {
+      setTrainers(prev => prev.filter(t => t.id !== id));
+    }
+  };
+
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     const { error } = await supabase
@@ -106,11 +124,10 @@ export default function AdminPanel({ onBack }) {
     } else {
       setProfiles(prev => prev.map(p => p.id === editingProfile.id ? editingProfile : p));
       setEditingProfile(null);
-      alert('Изменения успешно сохранены в Supabase!');
+      alert('Изменения успешно сохранены!');
     }
   };
 
-  // Функция активации Pro-подписки через Kaspi (ручная выдача)
   const handleGrantPro = async (months) => {
     const expiresDate = new Date();
     expiresDate.setMonth(expiresDate.getMonth() + Number(months));
@@ -131,11 +148,10 @@ export default function AdminPanel({ onBack }) {
     } else {
       setEditingProfile(updated);
       setProfiles(prev => prev.map(p => p.id === updated.id ? updated : p));
-      alert(`Pro-подписка успешно активирована на ${months} мес. (до ${expiresDate.toLocaleDateString()})!`);
+      alert(`Pro-подписка активирована на ${months} мес.`);
     }
   };
 
-  // Отключение Pro-подписки
   const handleRevokePro = async () => {
     const updated = {
       ...editingProfile,
@@ -157,7 +173,6 @@ export default function AdminPanel({ onBack }) {
     }
   };
 
-  // Ручное добавление атлета через CRM
   const handleCreateProfile = async (e) => {
     e.preventDefault();
     const payload = {
@@ -177,33 +192,22 @@ export default function AdminPanel({ onBack }) {
     } else {
       if (data) setProfiles(prev => [data[0], ...prev]);
       setIsAddModalOpen(false);
-      alert('Атлет успешно добавлен в базу!');
+      alert('Атлет успешно добавлен!');
     }
   };
 
-  // Экспорт базы в CSV (Excel)
   const exportToCSV = () => {
-    const headers = ['ID', 'Имя', 'Фамилия', 'Telegram', 'Возраст', 'Пол', 'Зал', 'Цель', 'Абонемент', 'Тренер', 'Pro статус', 'Дата создания'];
+    const headers = ['ID', 'Имя', 'Фамилия', 'Telegram', 'Возраст', 'Зал', 'Цель', 'Pro статус', 'Дата'];
     const rows = profiles.map(p => [
-      p.id,
-      p.first_name || '',
-      p.last_name || '',
-      p.username || '',
-      p.age || '',
-      p.gender || '',
-      `"${(p.gym || '').replace(/"/g, '""')}"`,
-      p.goal || '',
-      p.membership_term || '',
-      p.trainer_username || '',
-      p.is_pro ? 'PRO' : 'Free',
-      p.created_at || ''
+      p.id, p.first_name || '', p.last_name || '', p.username || '', p.age || '',
+      `"${(p.gym || '').replace(/"/g, '""')}"`, p.goal || '', p.is_pro ? 'PRO' : 'Free', p.created_at || ''
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `GymConnect_Athletes_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", `GymConnect_Athletes.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -265,7 +269,6 @@ export default function AdminPanel({ onBack }) {
     );
   }
 
-  // Фильтрация
   const filteredProfiles = profiles.filter(p => {
     const matchesSearch = 
       (p.first_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
@@ -276,11 +279,14 @@ export default function AdminPanel({ onBack }) {
     const matchesGym = selectedGymFilter === 'all' || p.gym === selectedGymFilter;
     const matchesGoal = selectedGoalFilter === 'all' || p.goal === selectedGoalFilter;
 
-    if (activeTab === 'users') return matchesSearch && matchesGym && matchesGoal && (p.role === 'user' || !p.role);
-    if (activeTab === 'trainers') return matchesSearch && (p.role === 'trainer' || p.trainer_username);
-    if (activeTab === 'gyms') return matchesSearch; 
     return matchesSearch && matchesGym && matchesGoal;
   });
+
+  const filteredTrainers = trainers.filter(t => 
+    (t.first_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (t.last_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (t.username?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+  );
 
   const uniqueGyms = [...new Set(profiles.map(p => p.gym))].filter(Boolean);
   const uniqueGoals = [...new Set(profiles.map(p => p.goal))].filter(Boolean);
@@ -298,14 +304,13 @@ export default function AdminPanel({ onBack }) {
             </div>
             <div>
               <h1 className="text-base font-bold text-slate-900">GymConnect Founder CRM</h1>
-              <p className="text-xs text-slate-500">База: {profiles.length} чел. | Pro: {proCount} аккаунтов</p>
+              <p className="text-xs text-slate-500">Атлеты: {profiles.length} | Тренеры: {trainers.length} | Pro: {proCount}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button 
               onClick={exportToCSV}
               className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
-              title="Экспорт базы в CSV / Excel"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Экспорт Excel</span>
@@ -317,9 +322,9 @@ export default function AdminPanel({ onBack }) {
               <span>+ Добавить атлета</span>
             </button>
             <button 
-              onClick={fetchProfiles}
+              onClick={fetchAllData}
               className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors"
-              title="Обновить данные"
+              title="Обновить"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -347,21 +352,21 @@ export default function AdminPanel({ onBack }) {
 
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных Pro (Kaspi)</p>
-              <h3 className="text-xl font-black text-amber-600">{proCount}</h3>
+              <p className="text-[10px] text-slate-400 uppercase font-semibold">Партнеров-тренеров</p>
+              <h3 className="text-xl font-black text-indigo-600">{trainers.length}</h3>
             </div>
-            <div className="w-9 h-9 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
-              <Crown className="w-5 h-5" />
+            <div className="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+              <Dumbbell className="w-5 h-5" />
             </div>
           </div>
 
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-[10px] text-slate-400 uppercase font-semibold">Подключено клубов</p>
-              <h3 className="text-xl font-black text-emerald-600">{uniqueGyms.length}</h3>
+              <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных Pro (Kaspi)</p>
+              <h3 className="text-xl font-black text-amber-600">{proCount}</h3>
             </div>
-            <div className="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
-              <Building2 className="w-5 h-5" />
+            <div className="w-9 h-9 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+              <Crown className="w-5 h-5" />
             </div>
           </div>
         </div>
@@ -375,7 +380,7 @@ export default function AdminPanel({ onBack }) {
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Атлеты ({profiles.filter(p => p.role === 'user' || !p.role).length})</span>
+            <span>Атлеты ({profiles.length})</span>
           </button>
           
           <button
@@ -385,7 +390,7 @@ export default function AdminPanel({ onBack }) {
             }`}
           >
             <Dumbbell className="w-4 h-4" />
-            <span>Тренеры ({profiles.filter(p => p.trainer_username).length})</span>
+            <span>Тренеры ({trainers.length})</span>
           </button>
 
           <button
@@ -412,34 +417,38 @@ export default function AdminPanel({ onBack }) {
             />
           </div>
 
-          <div>
-            <select
-              value={selectedGymFilter}
-              onChange={(e) => setSelectedGymFilter(e.target.value)}
-              className="w-full py-2.5 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-sm cursor-pointer"
-            >
-              <option value="all">🏋️‍♂️ Все фитнес-залы</option>
-              {uniqueGyms.map((gym, idx) => (
-                <option key={idx} value={gym}>{gym}</option>
-              ))}
-            </select>
-          </div>
+          {activeTab === 'users' && (
+            <>
+              <div>
+                <select
+                  value={selectedGymFilter}
+                  onChange={(e) => setSelectedGymFilter(e.target.value)}
+                  className="w-full py-2.5 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 shadow-sm cursor-pointer"
+                >
+                  <option value="all">Все фитнес-залы</option>
+                  {uniqueGyms.map((gym, idx) => (
+                    <option key={idx} value={gym}>{gym}</option>
+                  ))}
+                </select>
+              </div>
 
-          <div>
-            <select
-              value={selectedGoalFilter}
-              onChange={(e) => setSelectedGoalFilter(e.target.value)}
-              className="w-full py-2.5 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-sm cursor-pointer"
-            >
-              <option value="all">🎯 Все цели тренировок</option>
-              {uniqueGoals.map((goal, idx) => (
-                <option key={idx} value={goal}>{goal}</option>
-              ))}
-            </select>
-          </div>
+              <div>
+                <select
+                  value={selectedGoalFilter}
+                  onChange={(e) => setSelectedGoalFilter(e.target.value)}
+                  className="w-full py-2.5 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 shadow-sm cursor-pointer"
+                >
+                  <option value="all">Все цели тренировок</option>
+                  {uniqueGoals.map((goal, idx) => (
+                    <option key={idx} value={goal}>{goal}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Таблицы данных */}
+        {/* РЕНДЕР ВКЛАДОК */}
         {activeTab === 'gyms' ? (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-sm font-bold text-slate-900 mb-4">Аналитика по фитнес-клубам Алматы</h2>
@@ -450,7 +459,7 @@ export default function AdminPanel({ onBack }) {
                   <div key={index} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
                     <div>
                       <h4 className="text-xs font-bold text-slate-800">{gymName}</h4>
-                      <p className="text-[10px] text-slate-500">Активных пользователей в базе</p>
+                      <p className="text-[10px] text-slate-500">Пользователей в базе</p>
                     </div>
                     <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">
                       {count} чел.
@@ -460,7 +469,72 @@ export default function AdminPanel({ onBack }) {
               })}
             </div>
           </div>
+        ) : activeTab === 'trainers' ? (
+          /* ТАБЛИЦА ТРЕНЕРОВ */
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
+                    <th className="p-3 w-12 text-center">№</th>
+                    <th className="p-3">Тренер</th>
+                    <th className="p-3">Telegram / WhatsApp</th>
+                    <th className="p-3">Instagram</th>
+                    <th className="p-3">Специализации</th>
+                    <th className="p-3">Залы</th>
+                    <th className="p-3 text-right">Действия</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {filteredTrainers.length > 0 ? (
+                    filteredTrainers.map((t, index) => (
+                      <tr key={t.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3 text-center text-slate-400 font-mono">{index + 1}</td>
+                        <td className="p-3 font-medium text-slate-900">
+                          {t.first_name} {t.last_name}
+                          <div className="text-[10px] text-slate-400">{t.experience_years} опыта</div>
+                        </td>
+                        <td className="p-3">
+                          <div className="text-blue-600 font-mono">{t.username}</div>
+                          <div className="text-[10px] text-slate-400">{t.phone}</div>
+                        </td>
+                        <td className="p-3 text-indigo-600 font-mono">
+                          {t.instagram || '—'}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {t.specializations?.map((s, i) => (
+                              <span key={i} className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px]">{s}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-3 max-w-[160px] truncate" title={(t.gyms || []).join(', ')}>
+                          {(t.gyms || []).join(', ') || '—'}
+                        </td>
+                        <td className="p-3 text-right">
+                          <button 
+                            onClick={() => handleDeleteTrainer(t.id, `${t.first_name} ${t.last_name}`)}
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors inline-flex items-center"
+                            title="Удалить тренера"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="7" className="p-8 text-center text-slate-400">
+                        {loading ? 'Загрузка...' : 'Зарегистрированных тренеров пока нет'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : (
+          /* ТАБЛИЦА АТЛЕТОВ */
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
@@ -489,21 +563,15 @@ export default function AdminPanel({ onBack }) {
                             {p.username}
                           </span>
                         </td>
-                        <td className="p-3 max-w-[180px] truncate" title={p.gym}>
-                          {p.gym}
-                        </td>
-                        <td className="p-3 font-semibold">
-                          {p.goal}
-                        </td>
+                        <td className="p-3 max-w-[180px] truncate" title={p.gym}>{p.gym}</td>
+                        <td className="p-3 font-semibold">{p.goal}</td>
                         <td className="p-3">
                           {p.is_pro ? (
                             <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md text-[10px] font-bold inline-flex items-center gap-1">
                               <Crown className="w-3 h-3" /> PRO
                             </span>
                           ) : (
-                            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md text-[10px]">
-                              Free
-                            </span>
+                            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md text-[10px]">Free</span>
                           )}
                         </td>
                         <td className="p-3 text-right space-x-1">
@@ -527,7 +595,7 @@ export default function AdminPanel({ onBack }) {
                   ) : (
                     <tr>
                       <td colSpan="7" className="p-8 text-center text-slate-400">
-                        {loading ? 'Загрузка данных из базы...' : 'Данные не найдены'}
+                        {loading ? 'Загрузка данных...' : 'Данные не найдены'}
                       </td>
                     </tr>
                   )}
@@ -537,36 +605,26 @@ export default function AdminPanel({ onBack }) {
           </div>
         )}
 
-        {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ И ВЫДАЧИ PRO */}
+        {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ И PRO */}
         {editingProfile && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span>Редактирование & Pro</span>
-                </h3>
+                <h3 className="text-base font-bold text-slate-900">Редактирование & Pro</h3>
                 <button onClick={() => setEditingProfile(null)} className="text-slate-400 hover:text-slate-600">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Блок ручной активации Pro через Kaspi */}
               <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-amber-800 font-bold text-xs">
-                    <Crown className="w-4 h-4 text-amber-600" />
-                    <span>Управление Pro-подпиской</span>
-                  </div>
+                  <span className="text-amber-800 font-bold text-xs flex items-center gap-1">
+                    <Crown className="w-4 h-4 text-amber-600" /> Pro-подписка (Kaspi)
+                  </span>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${editingProfile.is_pro ? 'bg-amber-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
                     {editingProfile.is_pro ? 'АКТИВНА' : 'НЕАКТИВНА'}
                   </span>
                 </div>
-
-                {editingProfile.pro_expires_at && (
-                  <p className="text-[11px] text-amber-900 mb-2">
-                    Действует до: <b>{new Date(editingProfile.pro_expires_at).toLocaleDateString()}</b>
-                  </p>
-                )}
 
                 <div className="flex items-center gap-2 mt-2">
                   <select 
@@ -577,23 +635,20 @@ export default function AdminPanel({ onBack }) {
                     <option value={1}>1 месяц</option>
                     <option value={3}>3 месяца</option>
                     <option value={6}>6 месяцев</option>
-                    <option value={12}>12 месяцев (1 год)</option>
+                    <option value={12}>1 год</option>
                   </select>
-
                   <button
                     type="button"
                     onClick={() => handleGrantPro(proMonths)}
-                    className="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
+                    className="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm"
                   >
                     Активировать Pro
                   </button>
-
                   {editingProfile.is_pro && (
                     <button
                       type="button"
                       onClick={handleRevokePro}
-                      className="py-2 px-3 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl text-xs font-bold transition-all"
-                      title="Отключить Pro"
+                      className="py-2 px-3 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl text-xs font-bold"
                     >
                       Снять
                     </button>
@@ -643,120 +698,9 @@ export default function AdminPanel({ onBack }) {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block font-medium text-slate-700 mb-1">Цель</label>
-                    <input 
-                      type="text"
-                      value={editingProfile.goal || ''}
-                      onChange={(e) => setEditingProfile({...editingProfile, goal: e.target.value})}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-medium text-slate-700 mb-1">Тренер</label>
-                    <input 
-                      type="text"
-                      value={editingProfile.trainer_username || ''}
-                      onChange={(e) => setEditingProfile({...editingProfile, trainer_username: e.target.value})}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                    />
-                  </div>
-                </div>
-
                 <div className="flex justify-end gap-2 pt-3">
-                  <button 
-                    type="button" 
-                    onClick={() => setEditingProfile(null)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-medium"
-                  >
-                    Отмена
-                  </button>
-                  <button 
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-md"
-                  >
-                    Сохранить
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* МОДАЛЬНОЕ ОКНО ДОБАВЛЕНИЯ АТЛЕТА */}
-        {isAddModalOpen && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-base font-bold text-slate-900">Добавить атлета вручную</h3>
-                <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateProfile} className="space-y-3 text-xs">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block font-medium text-slate-700 mb-1">Имя *</label>
-                    <input 
-                      type="text"
-                      required
-                      value={newProfileData.first_name}
-                      onChange={(e) => setNewProfileData({...newProfileData, first_name: e.target.value})}
-                      placeholder="Иван"
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-medium text-slate-700 mb-1">Фамилия *</label>
-                    <input 
-                      type="text"
-                      required
-                      value={newProfileData.last_name}
-                      onChange={(e) => setNewProfileData({...newProfileData, last_name: e.target.value})}
-                      placeholder="Иванов"
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-medium text-slate-700 mb-1">Telegram Username *</label>
-                  <input 
-                    type="text"
-                    required
-                    value={newProfileData.username}
-                    onChange={(e) => setNewProfileData({...newProfileData, username: e.target.value})}
-                    placeholder="@username"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-medium text-slate-700 mb-1">Фитнес-зал</label>
-                  <input 
-                    type="text"
-                    value={newProfileData.gym}
-                    onChange={(e) => setNewProfileData({...newProfileData, gym: e.target.value})}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-3">
-                  <button 
-                    type="button" 
-                    onClick={() => setIsAddModalOpen(false)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-medium"
-                  >
-                    Отмена
-                  </button>
-                  <button 
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-md"
-                  >
-                    Добавить
-                  </button>
+                  <button type="button" onClick={() => setEditingProfile(null)} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-medium">Отмена</button>
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold shadow-md">Сохранить</button>
                 </div>
               </form>
             </div>
