@@ -7,17 +7,19 @@ const LanguageSelector = ({ currentLang, onSelectLanguage }) => {
     return (
         <div className="language-overlay">
             <div className="language-card">
-                {/* Иконка и заголовок */}
+                {/* Иконка */}
                 <div className="lang-icon-wrap">
                     <Globe className="w-6 h-6 text-blue-600" />
                 </div>
                 
-                <h2 className="lang-title">Тілді таңдаңыз / Выберите язык</h2>
-                <p className="lang-subtitle">Интерфейс пен мәзір үшін тілді таңдаңыз</p>
+                {/* Заголовки на двух языках (Казахский первый) */}
+                <h2 className="lang-title">Тілді таңдаңыз</h2>
+                <h3 className="lang-title-ru">Выберите язык интерфейса</h3>
+                <p className="lang-subtitle">Қолданбаны ыңғайлы пайдалану үшін тілді таңдаңыз<br/>Выберите язык для комфортного использования</p>
 
                 {/* Список языков (Казахский строго первый) */}
                 <div className="lang-options-list">
-                    {/* Казахский язык (Первый) */}
+                    {/* Казахский язык */}
                     <button 
                         className={`lang-option-btn ${currentLang === 'kk' ? 'active' : ''}`}
                         onClick={() => onSelectLanguage('kk')}
@@ -31,7 +33,7 @@ const LanguageSelector = ({ currentLang, onSelectLanguage }) => {
                         </div>
                     </button>
 
-                    {/* Русский язык (Второй) */}
+                    {/* Русский язык */}
                     <button 
                         className={`lang-option-btn ${currentLang === 'ru' ? 'active' : ''}`}
                         onClick={() => onSelectLanguage('ru')}
@@ -46,7 +48,7 @@ const LanguageSelector = ({ currentLang, onSelectLanguage }) => {
                     </button>
                 </div>
 
-                {/* Кнопка продолжения */}
+                {/* Кнопка продолжения на двух языках */}
                 <button 
                     className="lang-continue-btn"
                     onClick={() => onSelectLanguage(currentLang || 'kk')}
