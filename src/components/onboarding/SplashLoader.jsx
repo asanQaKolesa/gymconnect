@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import './SplashLoader.css';
 import AlmatyMapBackground from './AlmatyMapBackground';
-import { MapPin, Users, Utensils, MessageSquare, Dumbbell, Ticket, Shield, Flame, Building2 } from 'lucide-react';
+import { MapPin, Users, Utensils, MessageSquare, Dumbbell, Ticket, Shield, Flame, UsersRound } from 'lucide-react';
 
 const SplashLoader = ({ onFinish }) => {
     const [isVisible, setIsVisible] = useState(true);
@@ -54,12 +54,12 @@ const SplashLoader = ({ onFinish }) => {
             <AlmatyMapBackground />
 
             <div className="splash-card-contrast">
-                {/* Честный бейдж с уменьшенным шрифтом для идеальной одной строки */}
+                {/* Бейдж с акцентом на спортивное комьюнити 230+ залов */}
                 <div className="splash-badge">
-                    <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <UsersRound className="w-4 h-4 text-blue-600 shrink-0" />
                     <div className="badge-text-col">
-                        <span className="badge-kk">Алматыдағы 230+ зал үшін бірыңғай платформа</span>
-                        <span className="badge-ru">Единая платформа для 230+ залов Алматы</span>
+                        <span className="badge-kk">Алматыдағы 230+ залдың спорттық қауымдастығы</span>
+                        <span className="badge-ru">Спортивное сообщество 230+ залов Алматы</span>
                     </div>
                 </div>
 
