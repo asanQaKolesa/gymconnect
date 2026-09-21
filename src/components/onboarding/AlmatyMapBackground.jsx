@@ -4,43 +4,40 @@ import './AlmatyMapBackground.css';
 import { Dumbbell } from 'lucide-react';
 
 const AlmatyMapBackground = () => {
-    // Список залов с координатами выше зоны карточки
-    const mapGyms = [
-        { id: 1, name: "БАНЗАЙ Fitness", top: "15%", left: "70%" },
-        { id: 2, name: "Adrenaline", top: "22%", left: "30%" },
-        { id: 3, name: "Invictus Go", top: "28%", left: "52%" },
-        { id: 4, name: "Iron House", top: "12%", left: "25%" },
-        { id: 5, name: "FitnessBlitz", top: "35%", left: "78%" },
-        { id: 6, name: "WORKOUT", top: "18%", left: "48%" },
-        { id: 7, name: "Underground Big", top: "40%", left: "22%" },
-        { id: 8, name: "Urban Gym", top: "25%", left: "85%" },
-        { id: 9, name: "Balance", top: "45%", left: "40%" },
-        { id: 10, name: "S89 Fitness", top: "10%", left: "55%" }
+    // Равномерно распределенные пины реальных залов выше карточки
+    const patternGyms = [
+        { id: 1, name: "БАНЗАЙ Fitness", top: "12%", left: "75%" },
+        { id: 2, name: "Adrenaline", top: "18%", left: "22%" },
+        { id: 3, name: "Invictus Go", top: "25%", left: "55%" },
+        { id: 4, name: "Iron House", top: "10%", left: "35%" },
+        { id: 5, name: "FitnessBlitz", top: "32%", left: "82%" },
+        { id: 6, name: "WORKOUT", top: "15%", left: "80%" },
+        { id: 7, name: "Underground Big", top: "35%", left: "18%" },
+        { id: 8, name: "Urban Gym", top: "22%", left: "88%" },
+        { id: 9, name: "Balance", top: "40%", left: "38%" },
+        { id: 10, name: "S89 Fitness", top: "8%", left: "62%" },
+        { id: 11, name: "Technofit", top: "38%", left: "68%" },
+        { id: 12, name: "K1 Fitness", top: "28%", left: "38%" }
     ];
 
     return (
-        <div className="almaty-map-bg-gis">
-            {/* Дороги и кварталы */}
-            <div className="gis-roads-layer">
-                <div className="road-main r-1"></div>
-                <div className="road-main r-2"></div>
-                <div className="road-sub s-1"></div>
-                <div className="road-sub s-2"></div>
-            </div>
+        <div className="fitness-pattern-bg">
+            {/* Премиальная геометрическая сетка-паттерн */}
+            <div className="pattern-grid-overlay"></div>
 
-            {/* Пины с иконками фитнеса и полупрозрачным текстом */}
-            {mapGyms.map((gym, index) => (
+            {/* Аккуратные пины фитнес-залов */}
+            {patternGyms.map((gym, index) => (
                 <div 
                     key={gym.id} 
-                    className="gis-gym-pin"
-                    style={{ top: gym.top, left: gym.left, animationDelay: `${index * 0.3}s` }}
+                    className="pattern-gym-pin"
+                    style={{ top: gym.top, left: gym.left, animationDelay: `${index * 0.25}s` }}
                 >
-                    <div className="gis-pin-pulse"></div>
-                    <div className="gis-pin-icon-wrap">
+                    <div className="pin-pulse-ring"></div>
+                    <div className="pin-icon-box">
                         <Dumbbell className="w-3 h-3 text-blue-600" />
                     </div>
-                    <div className="gis-pin-card-trans">
-                        <span className="gis-pin-text">{gym.name}</span>
+                    <div className="pin-name-tag">
+                        <span>{gym.name}</span>
                     </div>
                 </div>
             ))}
