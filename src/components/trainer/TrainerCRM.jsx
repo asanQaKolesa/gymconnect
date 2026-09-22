@@ -1,8 +1,10 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X } from 'lucide-react';
+import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, UserPlus } from 'lucide-react';
 import StudentsListTab from './tabs/StudentsListTab';
+import WorkoutsTab from './tabs/WorkoutsTab';
+import ProgressTab from './tabs/ProgressTab';
 
 export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [students, setStudents] = useState([]);
@@ -167,7 +169,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </button>
         </div>
 
-        {/* Активная вкладка */}
+        {/* Рендер активной вкладки */}
         {activeTab === 'students' && (
           <StudentsListTab 
             students={students} 
@@ -177,20 +179,14 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         )}
 
         {activeTab === 'workouts' && (
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center text-slate-500 text-xs shadow-sm">
-            <h3 className="font-bold text-sm text-slate-900 mb-2">Конструктор тренировочных программ</h3>
-            <p>Модуль составления персональных сплитов и упражнений для учеников.</p>
-          </div>
+          <WorkoutsTab students={students} />
         )}
 
         {activeTab === 'progress' && (
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center text-slate-500 text-xs shadow-sm">
-            <h3 className="font-bold text-sm text-slate-900 mb-2">Дневник прогресса и замеров</h3>
-            <p>Модуль отслеживания динамики веса и результатов подопечных.</p>
-          </div>
+          <ProgressTab students={students} />
         )}
 
-        {/* Модальное окно добавления */}
+        {/* Модальное окно добавления ученика */}
         {isAddModalOpen && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100">
