@@ -239,7 +239,7 @@ const ALMATY_GYMS = [
 export default function TrainerOnboarding({ onComplete }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // Состояние для глазка
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     first_name: '',
@@ -314,10 +314,13 @@ export default function TrainerOnboarding({ onComplete }) {
         cleanGyms.push(formData.custom_gym.trim());
       }
 
+      const cleanUsername = formData.username.trim().replace('@', '');
+      const formattedUsername = `@${cleanUsername}`;
+
       const payload = {
         first_name: formData.first_name,
         last_name: formData.last_name,
-        username: formData.username.startsWith('@') ? formData.username : `@${formData.username}`,
+        username: formattedUsername,
         password: formData.password,
         phone: formData.phone,
         instagram: formData.instagram ? `@${formData.instagram.replace('@', '')}` : '',
@@ -335,11 +338,12 @@ export default function TrainerOnboarding({ onComplete }) {
       if (error) throw error;
 
       localStorage.setItem('gymconnect_trainer_registered', 'true');
-      localStorage.setItem('gymconnect_trainer_username', payload.username);
-      if (onComplete) onComplete(payload.username);
+      localStorage.setItem('gymconnect_trainer_username', formattedUsername);
+      
+      setLoading(false);
+      if (onComplete) onComplete(formattedUsername);
     } catch (err) {
       alert('Ошибка регистрации: ' + err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -408,7 +412,7 @@ export default function TrainerOnboarding({ onComplete }) {
               </div>
             </div>
 
-            {/* Поле Пароля с иконкой глазка */}
+            {/* Поле Пароля с гладком */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Придумайте пароль *</label>
               <div className="relative flex items-center">
@@ -426,7 +430,6 @@ export default function TrainerOnboarding({ onComplete }) {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 text-slate-400 hover:text-slate-600 focus:outline-none"
-                  title={showPassword ? "Скрыть пароль" : "Показать пароль"}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -482,7 +485,7 @@ export default function TrainerOnboarding({ onComplete }) {
               type="button"
               onClick={() => {
                 if (!formData.first_name || !formData.last_name || !formData.username || !formData.password || formData.password.length < 6 || formData.phone.length !== 10) {
-                  alert('Заполните все обязательные поля корректно (пароль должен быть не менее 6 символов, а телефон ровно 10 цифр)');
+                  alert('Заполните все обязательные поля корректно (пароль не менее 6 символов, телефон ровно 10 цифр)');
                   return;
                 }
                 setStep(2);
