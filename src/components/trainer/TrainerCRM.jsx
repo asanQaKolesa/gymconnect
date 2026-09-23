@@ -1,7 +1,7 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Calendar, Clock } from 'lucide-react';
+import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock } from 'lucide-react';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
 import ProgressTab from './tabs/ProgressTab';
@@ -13,14 +13,13 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
-  // Локальное состояние для редактирования финансовых данных и расписания ученика в модалке
+  // Локальное состояние для редактирования финансовых данных и расписания ученика
   const [studentFinances, setStudentFinances] = useState({
     monthly_price: 50000,
     package_type: 'individual', // individual, mini_group, couple
     total_trainings: 12,
-    left_trainings: 10,
+    left_trainings: 12,
     is_burnable: false, // false - несгораемые, true - сгораемые
-    workout_days: ['Понедельник', 'Среда', 'Пятница'],
     workout_time: 'Вечер (18:00 - 20:00)'
   });
 
@@ -61,14 +60,13 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
       monthly_price: student.monthly_price || 50000,
       package_type: student.package_type || 'individual',
       total_trainings: student.total_trainings || 12,
-      left_trainings: student.left_trainings || 12,
+      left_trainings: student.left_trainings !== undefined ? student.left_trainings : 12,
       is_burnable: student.is_burnable || false,
-      workout_days: student.workout_days || ['Понедельник', 'Среда', 'Пятница'],
-      workout_time: student.workout_time || 'Вечер'
+      workout_time: student.workout_time || 'Вечер (18:00 - 20:00)'
     });
   };
 
-  // Сохранение финансовых настроек и расписания ученика
+  // Сохранение финансовых настроек и расписания ученика в Supabase
   const handleSaveStudentFinances = async (e) => {
     e.preventDefault();
     if (!selectedStudent) return;
@@ -81,7 +79,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         total_trainings: studentFinances.total_trainings,
         left_trainings: studentFinances.left_trainings,
         is_burnable: studentFinances.is_burnable,
-        workout_days: studentFinances.workout_days,
         workout_time: studentFinances.workout_time
       })
       .eq('id', selectedStudent.id);
@@ -288,7 +285,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         )}
 
-        {/* Модальное окно ПРОФИЛЯ УЧЕНИКА, УПРАВЛЕНИЯ ФИНАНСАМИ И РАСПИСАНИЕМ */}
+        {/* МОДАЛЬНОЕ ОКНО ПРОФИЛЯ УЧЕНИКА, ФИНАНСОВ И РАСПИСАНИЯ */}
         {selectedStudent && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
@@ -367,7 +364,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Всего тренировок в пакете</label>
+                      <label className="block font-medium text-slate-700 mb-1">Всего тренировок</label>
                       <input 
                         type="number"
                         value={studentFinances.total_trainings}
@@ -377,7 +374,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                     </div>
 
                     <div>
-                      <label className="block font-medium text-slate-700 mb-1">Осталось тренировок</label>
+                      <label className="block font-medium text-slate-700 mb-1">Остаток тренировок</label>
                       <input 
                         type="number"
                         value={studentFinances.left_trainings}
@@ -423,7 +420,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                         type="text"
                         value={studentFinances.workout_time}
                         onChange={(e) => setStudentFinances({...studentFinances, workout_time: e.target.value})}
-                        placeholder="Например: Вечер (18:00 - 20:00)"
+                        placeholder="Например: Пн, Ср, Пт — Вечер (18:00 - 20:00)"
                         className="w-full p-2 bg-white border border-slate-200 rounded-xl"
                       />
                     </div>
