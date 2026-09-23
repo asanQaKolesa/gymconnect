@@ -7,8 +7,8 @@ export default function WorkoutsTab({ students }) {
   
   // Параметры программы
   const [workoutType, setWorkoutType] = useState('fullbody'); // 'fullbody' | 'split'
-  const [experienceLevel, setExperienceLevel] = useState('beginner_1'); // Расширенная градация
-  const [frequency, setFrequency] = useState(3); // 2, 3, 4 или 5 дней
+  const [experienceLevel, setExperienceLevel] = useState('beginner_1');
+  const [frequency, setFrequency] = useState(3);
 
   // Кардио, разминка и ограничения
   const [warmup, setWarmup] = useState('Суставная разминка 10 мин');
@@ -26,23 +26,21 @@ export default function WorkoutsTab({ students }) {
     'Пресс / Кор': ['Скручивания на полу', 'Подъем ног в висе', 'Планка', 'Русские скручивания']
   };
 
-  // Сегментация по дням: объект, где ключ — день (1, 2, 3...), а значение — массив упражнений
   const [daysWorkouts, setDaysWorkouts] = useState({
-    1: { title: 'День 1: Верх тела / Грудь-Спина', exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: '8-10', weight: '60 кг' }] },
-    2: { title: 'День 2: Низ тела / Ноги', exercises: [{ muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: '10-12', weight: '50 кг' }] },
-    3: { title: 'День 3: Плечи и Руки', exercises: [{ muscleGroup: 'Плечи', name: 'Жим штанги стоя (Армейский)', sets: 3, reps: '10-12', weight: '30 кг' }] }
+    1: { title: 'День 1: Верх тела / Грудь-Спина', exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 10, weight: 60, exerciseType: 'Сет' }] },
+    2: { title: 'День 2: Низ тела / Ноги', exercises: [{ muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 10, weight: 50, exerciseType: 'Сет' }] },
+    3: { title: 'День 3: Плечи и Руки', exercises: [{ muscleGroup: 'Плечи', name: 'Жим штанги стоя (Армейский)', sets: 3, reps: 12, weight: 30, exerciseType: 'Сет' }] }
   });
 
   const [activeDay, setActiveDay] = useState(1);
 
-  // Обработка изменения количества дней
   const handleFrequencyChange = (newFreq) => {
     setFrequency(newFreq);
     const updatedDays = {};
     for (let i = 1; i <= newFreq; i++) {
       updatedDays[i] = daysWorkouts[i] || {
         title: `День ${i}: Тренировка ${i}`,
-        exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 3, reps: '10', weight: '0 кг' }]
+        exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 3, reps: 10, weight: 40, exerciseType: 'Сет' }]
       };
     }
     setDaysWorkouts(updatedDays);
@@ -55,7 +53,7 @@ export default function WorkoutsTab({ students }) {
       ...daysWorkouts,
       [activeDay]: {
         ...daysWorkouts[activeDay],
-        exercises: [...currentExercises, { muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 3, reps: '10', weight: '0 кг' }]
+        exercises: [...currentExercises, { muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 3, reps: 10, weight: 40, exerciseType: 'Сет' }]
       }
     });
   };
@@ -64,7 +62,6 @@ export default function WorkoutsTab({ students }) {
     const currentExercises = [...daysWorkouts[activeDay].exercises];
     currentExercises[index][field] = value;
     
-    // Если поменялась группа мышц, сбрасываем название упражнения на первое из списка
     if (field === 'muscleGroup') {
       currentExercises[index]['name'] = exerciseDatabase[value]?.[0] || '';
     }
@@ -151,7 +148,6 @@ export default function WorkoutsTab({ students }) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-          {/* Расширенная градация уровня подготовки */}
           <div>
             <label className="block font-medium text-slate-700 mb-1">Уровень подготовки</label>
             <select
@@ -168,7 +164,6 @@ export default function WorkoutsTab({ students }) {
             </select>
           </div>
 
-          {/* Частота в неделю */}
           <div>
             <label className="block font-medium text-slate-700 mb-1">Дней тренировок в неделю</label>
             <div className="grid grid-cols-4 gap-1.5">
@@ -236,7 +231,7 @@ export default function WorkoutsTab({ students }) {
         </div>
       </div>
 
-      {/* ШАГ 3: Сегментация по дням и упражнения с подходами и весом */}
+      {/* ШАГ 3: Сегментация по дням и упражнения с подходами, повторами, весом и типами сетов */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
         <div className="flex justify-between items-center pb-2 border-b border-slate-100">
           <div className="flex items-center gap-2">
@@ -261,7 +256,6 @@ export default function WorkoutsTab({ students }) {
           ))}
         </div>
 
-        {/* Название текущего дня */}
         <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
           <label className="block font-semibold text-slate-700">Название тренировки (День {activeDay})</label>
           <input 
@@ -276,7 +270,6 @@ export default function WorkoutsTab({ students }) {
           />
         </div>
 
-        {/* Список упражнений для выбранного дня */}
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <h4 className="font-bold text-slate-800">Упражнения для Дня {activeDay}:</h4>
@@ -289,7 +282,7 @@ export default function WorkoutsTab({ students }) {
             </button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {(daysWorkouts[activeDay]?.exercises || []).map((ex, index) => {
               const currentMuscle = ex.muscleGroup || 'Грудь';
               const availableExercises = exerciseDatabase[currentMuscle] || [];
@@ -297,8 +290,8 @@ export default function WorkoutsTab({ students }) {
               return (
                 <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
                   
-                  {/* Выбор группы мышц */}
-                  <div className="md:col-span-3">
+                  {/* Группа мышц */}
+                  <div className="md:col-span-2">
                     <label className="block text-[10px] text-slate-400 mb-0.5">Группа мышц</label>
                     <select
                       value={currentMuscle}
@@ -311,8 +304,8 @@ export default function WorkoutsTab({ students }) {
                     </select>
                   </div>
 
-                  {/* Выбор упражнения из базы или свое */}
-                  <div className="md:col-span-4">
+                  {/* Упражнение */}
+                  <div className="md:col-span-3">
                     <label className="block text-[10px] text-slate-400 mb-0.5">Упражнение</label>
                     <select
                       value={ex.name}
@@ -325,7 +318,7 @@ export default function WorkoutsTab({ students }) {
                     </select>
                   </div>
 
-                  {/* Подходы с кнопками плюс/минус */}
+                  {/* Подходы (+ / -) до 10 */}
                   <div className="md:col-span-2">
                     <label className="block text-[10px] text-slate-400 mb-0.5">Подходы</label>
                     <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -344,7 +337,7 @@ export default function WorkoutsTab({ students }) {
                       />
                       <button
                         type="button"
-                        onClick={() => handleExerciseChange(index, 'sets', Number(ex.sets || 3) + 1)}
+                        onClick={() => handleExerciseChange(index, 'sets', Math.min(10, Number(ex.sets || 3) + 1))}
                         className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
                       >
                         +
@@ -352,43 +345,85 @@ export default function WorkoutsTab({ students }) {
                     </div>
                   </div>
 
-                  {/* Повторения */}
-                  <div className="md:col-span-1">
-                    <label className="block text-[10px] text-slate-400 mb-0.5">Повторы</label>
-                    <input 
-                      type="text"
-                      value={ex.reps}
-                      onChange={(e) => handleExerciseChange(index, 'reps', e.target.value)}
-                      placeholder="10"
-                      className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-center"
-                    />
+                  {/* Повторы (+ / -) от 1 до 30 */}
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] text-slate-400 mb-0.5">Повторения (1-30)</label>
+                    <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => handleExerciseChange(index, 'reps', Math.max(1, Number(ex.reps || 10) - 1))}
+                        className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+                      >
+                        -
+                      </button>
+                      <input 
+                        type="number"
+                        value={ex.reps}
+                        onChange={(e) => handleExerciseChange(index, 'reps', Number(e.target.value))}
+                        className="w-full p-1.5 text-center text-xs font-bold focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleExerciseChange(index, 'reps', Math.min(30, Number(ex.reps || 10) + 1))}
+                        className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Вес в кг */}
-                  <div className="md:col-span-1">
+                  {/* Вес в кг (+ / -) от 0 до 200 кг с шагом 5 */}
+                  <div className="md:col-span-2">
                     <label className="block text-[10px] text-slate-400 mb-0.5">Вес (кг)</label>
-                    <input 
-                      type="text"
-                      value={ex.weight}
-                      onChange={(e) => handleExerciseChange(index, 'weight', e.target.value)}
-                      placeholder="0 кг"
-                      className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-center font-mono"
-                    />
+                    <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => handleExerciseChange(index, 'weight', Math.max(0, Number(ex.weight || 0) - 5))}
+                        className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+                      >
+                        -
+                      </button>
+                      <input 
+                        type="number"
+                        value={ex.weight}
+                        onChange={(e) => handleExerciseChange(index, 'weight', Number(e.target.value))}
+                        className="w-full p-1.5 text-center text-xs font-bold focus:outline-none font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleExerciseChange(index, 'weight', Math.min(200, Number(ex.weight || 0) + 5))}
+                        className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Кнопка удаления упражнения */}
-                  <div className="md:col-span-1 text-right pt-4">
+                  {/* Тип сета (Сет / Суперсет / Дропсет) и Удаление */}
+                  <div className="md:col-span-1 flex items-center justify-between gap-1 pt-3">
+                    <select
+                      value={ex.exerciseType || 'Сет'}
+                      onChange={(e) => handleExerciseChange(index, 'exerciseType', e.target.value)}
+                      className="p-1 bg-amber-50 text-amber-800 border border-amber-200 rounded text-[10px] font-bold"
+                      title="Тип выполнения"
+                    >
+                      <option value="Сет">Сет</option>
+                      <option value="Суперсет">Суперсет</option>
+                      <option value="Дропсет">Дропсет</option>
+                    </select>
+
                     {daysWorkouts[activeDay].exercises.length > 1 && (
                       <button 
                         type="button"
                         onClick={() => handleRemoveExercise(index)}
-                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors inline-block"
-                        title="Удалить упражнение"
+                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Удалить"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
+
                 </div>
               );
             })}
