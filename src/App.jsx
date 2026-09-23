@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+// src/App.jsx
+import React, { useState, useEffect } from 'react';
+import { supabase } from './supabaseClient';
 import HomeTab from './components/home/HomeTab';
 import ReviewsTab from './components/reviews/ReviewsTab';
 import GymBroTab from './components/gymbro/GymBroTab';
@@ -21,6 +23,27 @@ export default function App() {
     return localStorage.getItem('gymconnect_trainer_username') || '';
   });
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
+
+  // Проверка существования тренера в Supabase при старте
+  useEffect(() => {
+    async function verifyTrainer() {
+      if (trainerUsername) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('username', trainerUsername)
+          .maybeSingle();
+
+        if (error || !data) {
+          // Если тренера удалили из базы, сбрасываем сессию на клиенте
+          localStorage.removeItem('gymconnect_trainer_registered');
+          localStorage.removeItem('gymconnect_trainer_username');
+          setTrainerUsername('');
+        }
+      }
+    }
+    verifyTrainer();
+  }, [trainerUsername]);
 
   if (isTrainerRoute) {
     if (!trainerUsername) {
