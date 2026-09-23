@@ -252,7 +252,7 @@ export default function TrainerOnboarding({ onComplete }) {
     specializations: [],
     formats: ['offline'],
     gyms: [],
-    custom_gym: '',
+    custom_gym: '', // Необязательное поле
     products: '',
     certificate_url: '',
     agree_verification: false
@@ -309,7 +309,8 @@ export default function TrainerOnboarding({ onComplete }) {
     setLoading(true);
     try {
       const cleanGyms = [...formData.gyms];
-      if (formData.custom_gym.trim()) {
+      // Если введено кастомное название зала, добавляем его в массив
+      if (formData.custom_gym && formData.custom_gym.trim()) {
         cleanGyms.push(formData.custom_gym.trim());
       }
 
@@ -537,7 +538,7 @@ export default function TrainerOnboarding({ onComplete }) {
             </div>
 
             <div className="relative">
-              <label className="block text-xs font-medium text-slate-700 mb-1">Фитнес-клубы, где вы работаете:</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Фитнес-клубы из списка (поиск):</label>
               <div className="relative flex items-center">
                 <Search className="absolute left-3 w-4 h-4 text-slate-400" />
                 <input 
@@ -548,7 +549,7 @@ export default function TrainerOnboarding({ onComplete }) {
                     setGymSearchQuery(e.target.value);
                     setIsGymDropdownOpen(true);
                   }}
-                  placeholder="Поиск зала в Алматы..."
+                  placeholder="Начните ввод для поиска зала в Алматы..."
                   className="w-full pl-10 pr-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600"
                 />
                 {gymSearchQuery && (
@@ -598,8 +599,9 @@ export default function TrainerOnboarding({ onComplete }) {
               </div>
             )}
 
+            {/* Необязательное поле для своего зала */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Свой зал / Студия / Другое место</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Свой зал / Студия / Другое место (необязательно)</label>
               <input 
                 type="text"
                 value={formData.custom_gym}
