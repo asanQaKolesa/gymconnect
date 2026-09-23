@@ -24,14 +24,15 @@ export default function App() {
   });
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
 
-  // Проверка существования тренера в Supabase при старте
+  // Проверка существования тренера в правильной таблице 'trainer_profiles' при старте
   useEffect(() => {
     async function verifyTrainer() {
       if (trainerUsername) {
+        const cleanU = trainerUsername.replace('@', '');
         const { data, error } = await supabase
-          .from('profiles')
+          .from('trainer_profiles')
           .select('*')
-          .eq('username', trainerUsername)
+          .or(`username.eq.@${cleanU},username.eq.${cleanU}`)
           .maybeSingle();
 
         if (error || !data) {
@@ -51,6 +52,9 @@ export default function App() {
         return (
           <TrainerOnboarding 
             onComplete={(username) => {
+              // Мгновенная фиксация ключей и обновление стейта для перехода в CRM
+              localStorage.setItem('gymconnect_trainer_registered', 'true');
+              localStorage.setItem('gymconnect_trainer_username', username);
               setTrainerUsername(username);
               setIsTrainerRegistering(false);
             }} 
