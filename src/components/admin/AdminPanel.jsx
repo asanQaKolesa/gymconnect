@@ -12,16 +12,14 @@ export default function AdminPanel({ onBack }) {
   const [password, setPassword] = useState('');
   
   const [profiles, setProfiles] = useState([]);
-  const [trainers, setTrainers] = useState([]); // База тренеров
+  const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('users'); // 'users', 'trainers', 'gyms'
+  const [activeTab, setActiveTab] = useState('users');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Фильтры
   const [selectedGymFilter, setSelectedGymFilter] = useState('all');
   const [selectedGoalFilter, setSelectedGoalFilter] = useState('all');
 
-  // Модальные окна
   const [editingProfile, setEditingProfile] = useState(null); 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false); 
   const [proMonths, setProMonths] = useState(1);
@@ -63,21 +61,36 @@ export default function AdminPanel({ onBack }) {
 
   const fetchAllData = async () => {
     setLoading(true);
-    // Загружаем атлетов
+    // 1. Загружаем атлетов
     const { data: usersData, error: usersError } = await supabase
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (!usersError) setProfiles(usersData || []);
+    const loadedUsers = usersData || [];
+    if (!usersError) setProfiles(loadedUsers);
 
-    // Загружаем тренеров из новой таблицы
+    // 2. Загружаем тренеров и считаем количество учеников для каждого по trainer_username
     const { data: trainersData, error: trainersError } = await supabase
       .from('trainer_profiles')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (!trainersError) setTrainers(trainersData || []);
+    if (!trainersError && trainersData) {
+      const trainersWithCount = trainersData.map(trainer => {
+        const cleanTrainerUsername = (trainer.username || '').replace('@', '').trim().toLowerCase();
+        // Считаем сколько атлетов привязано к этому тренеру
+        const studentsCount = loadedUsers.filter(u => 
+          (u.trainer_username || '').replace('@', '').trim().toLowerCase() === cleanTrainerUsername
+        ).length;
+
+        return {
+          ...trainer,
+          students_count: studentsCount
+        };
+      });
+      setTrainers(trainersWithCount);
+    }
 
     setLoading(false);
   };
@@ -88,7 +101,6 @@ export default function AdminPanel({ onBack }) {
     }
   }, [isAdminAuth]);
 
-  // Удаление пользователя
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Удалить атлета ${name} из базы данных?`)) return;
 
@@ -100,7 +112,6 @@ export default function AdminPanel({ onBack }) {
     }
   };
 
-  // Удаление тренера
   const handleDeleteTrainer = async (id, name) => {
     if (!window.confirm(`Удалить тренера ${name} из базы партнёров?`)) return;
 
@@ -170,29 +181,6 @@ export default function AdminPanel({ onBack }) {
       setEditingProfile(updated);
       setProfiles(prev => prev.map(p => p.id === updated.id ? updated : p));
       alert('Pro-подписка деактивирована.');
-    }
-  };
-
-  const handleCreateProfile = async (e) => {
-    e.preventDefault();
-    const payload = {
-      ...newProfileData,
-      age: Number(newProfileData.age),
-      height: Number(newProfileData.height),
-      weight: Number(newProfileData.weight),
-      agree_terms: true,
-      agree_privacy: true,
-      agree_trainers: true,
-      agree_safety: true
-    };
-
-    const { data, error } = await supabase.from('profiles').insert([payload]).select();
-    if (error) {
-      alert('Ошибка создания: ' + error.message);
-    } else {
-      if (data) setProfiles(prev => [data[0], ...prev]);
-      setIsAddModalOpen(false);
-      alert('Атлет успешно добавлен!');
     }
   };
 
@@ -316,12 +304,6 @@ export default function AdminPanel({ onBack }) {
               <span>Экспорт Excel</span>
             </button>
             <button 
-              onClick={() => setIsAddModalOpen(true)}
-              className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
-            >
-              <span>+ Добавить атлета</span>
-            </button>
-            <button 
               onClick={fetchAllData}
               className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors"
               title="Обновить"
@@ -338,7 +320,7 @@ export default function AdminPanel({ onBack }) {
           </div>
         </div>
 
-        {/* Дашборд метрик (KPI) */}
+        {/* Метрики (KPI) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
@@ -404,48 +386,16 @@ export default function AdminPanel({ onBack }) {
           </button>
         </div>
 
-        {/* Фильтры и поиск */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
-            <input 
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск по имени, Telegram или залу..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-sm"
-            />
-          </div>
-
-          {activeTab === 'users' && (
-            <>
-              <div>
-                <select
-                  value={selectedGymFilter}
-                  onChange={(e) => setSelectedGymFilter(e.target.value)}
-                  className="w-full py-2.5 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 shadow-sm cursor-pointer"
-                >
-                  <option value="all">Все фитнес-залы</option>
-                  {uniqueGyms.map((gym, idx) => (
-                    <option key={idx} value={gym}>{gym}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <select
-                  value={selectedGoalFilter}
-                  onChange={(e) => setSelectedGoalFilter(e.target.value)}
-                  className="w-full py-2.5 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 shadow-sm cursor-pointer"
-                >
-                  <option value="all">Все цели тренировок</option>
-                  {uniqueGoals.map((goal, idx) => (
-                    <option key={idx} value={goal}>{goal}</option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
+        {/* Поиск */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+          <input 
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Поиск по имени, Telegram или залу..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-sm"
+          />
         </div>
 
         {/* РЕНДЕР ВКЛАДОК */}
@@ -470,7 +420,7 @@ export default function AdminPanel({ onBack }) {
             </div>
           </div>
         ) : activeTab === 'trainers' ? (
-          /* ТАБЛИЦА ТРЕНЕРОВ */
+          /* ТАБЛИЦА ТРЕНЕРОВ С КОЛИЧЕСТВОМ УЧЕНИКОВ */
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
@@ -478,8 +428,8 @@ export default function AdminPanel({ onBack }) {
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
                     <th className="p-3 w-12 text-center">№</th>
                     <th className="p-3">Тренер</th>
-                    <th className="p-3">Telegram / WhatsApp</th>
-                    <th className="p-3">Instagram</th>
+                    <th className="p-3">Telegram / Телефон</th>
+                    <th className="p-3">Учеников в CRM</th>
                     <th className="p-3">Специализации</th>
                     <th className="p-3">Залы</th>
                     <th className="p-3 text-right">Действия</th>
@@ -492,17 +442,19 @@ export default function AdminPanel({ onBack }) {
                         <td className="p-3 text-center text-slate-400 font-mono">{index + 1}</td>
                         <td className="p-3 font-medium text-slate-900">
                           {t.first_name} {t.last_name}
-                          <div className="text-[10px] text-slate-400">{t.experience_years} опыта</div>
+                          <div className="text-[10px] text-slate-400">{t.experience_years || 'Стаж не указан'}</div>
                         </td>
                         <td className="p-3">
-                          <div className="text-blue-600 font-mono">{t.username}</div>
-                          <div className="text-[10px] text-slate-400">{t.phone}</div>
-                        </td>
-                        <td className="p-3 text-indigo-600 font-mono">
-                          {t.instagram || '—'}
+                          <div className="text-blue-600 font-mono">@{t.username}</div>
+                          <div className="text-[10px] text-slate-400">{t.phone || '—'}</div>
                         </td>
                         <td className="p-3">
-                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                          <span className="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold text-xs">
+                            {t.students_count} учеников
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-1 max-w-[180px]">
                             {t.specializations?.map((s, i) => (
                               <span key={i} className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px]">{s}</span>
                             ))}
@@ -543,6 +495,7 @@ export default function AdminPanel({ onBack }) {
                     <th className="p-3 w-12 text-center">№</th>
                     <th className="p-3">Имя / Фамилия</th>
                     <th className="p-3">Telegram</th>
+                    <th className="p-3">Тренер (ник)</th>
                     <th className="p-3">Зал</th>
                     <th className="p-3">Цель</th>
                     <th className="p-3">Статус</th>
@@ -560,10 +513,15 @@ export default function AdminPanel({ onBack }) {
                         </td>
                         <td className="p-3">
                           <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-mono text-[11px]">
-                            {p.username}
+                            @{p.username}
                           </span>
                         </td>
-                        <td className="p-3 max-w-[180px] truncate" title={p.gym}>{p.gym}</td>
+                        <td className="p-3">
+                          <span className="text-indigo-600 font-mono text-[11px]">
+                            {p.trainer_username ? `@${p.trainer_username}` : '—'}
+                          </span>
+                        </td>
+                        <td className="p-3 max-w-[150px] truncate" title={p.gym}>{p.gym}</td>
                         <td className="p-3 font-semibold">{p.goal}</td>
                         <td className="p-3">
                           {p.is_pro ? (
@@ -594,7 +552,7 @@ export default function AdminPanel({ onBack }) {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="7" className="p-8 text-center text-slate-400">
+                      <td colSpan="8" className="p-8 text-center text-slate-400">
                         {loading ? 'Загрузка данных...' : 'Данные не найдены'}
                       </td>
                     </tr>
@@ -685,6 +643,17 @@ export default function AdminPanel({ onBack }) {
                     value={editingProfile.username || ''}
                     onChange={(e) => setEditingProfile({...editingProfile, username: e.target.value})}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Telegram Тренера (привязка)</label>
+                  <input 
+                    type="text"
+                    value={editingProfile.trainer_username || ''}
+                    onChange={(e) => setEditingProfile({...editingProfile, trainer_username: e.target.value})}
+                    placeholder="ник тренера"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
                   />
                 </div>
 
