@@ -9,7 +9,7 @@ import ProgressTab from './tabs/ProgressTab';
 export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('students'); // 'students', 'workouts', 'progress'
+  const [activeTab, setActiveTab] = useState('students');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
@@ -19,13 +19,12 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     username: '',
     gym: 'Invictus Go | Улица Навои, 97',
     goal: 'mass',
-    membership_term: '1_month',
-    status: 'active',
     monthly_price: 50000
   });
 
   const fetchMyStudents = async () => {
     setLoading(true);
+    // Загружаем всех пользователей, у которых в поле trainer_username указан наш ник тренера
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -47,30 +46,61 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
 
   const handleAddStudent = async (e) => {
     e.preventDefault();
-    const payload = {
-      ...newStudent,
-      trainer_username: trainerUsername,
-      role: 'user',
-      city: 'Алматы'
-    };
+    
+    // Очищаем юзернейм от символа @
+    const cleanUsername = newStudent.username.replace('@', '').trim();
 
-    const { data, error } = await supabase.from('profiles').insert([payload]).select();
-    if (error) {
-      alert('Ошибка добавления: ' + error.message);
+    // 1. Ищем пользователя в общей таблице profiles по Telegram нику
+    const { data: existingUser, error: searchError } = await supabase
+      .from('profiles')
+      .select('*')
+      .ilike('username', cleanUsername)
+      .maybeSingle();
+
+    if (existingUser) {
+      // 2. ЕСЛИ НАШЛИ: обновляем его профиль, привязывая к текущему тренеру
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          trainer_username: trainerUsername,
+          monthly_price: newStudent.monthly_price,
+          gym: newStudent.gym,
+          goal: newStudent.goal,
+          status: 'active'
+        })
+        .eq('id', existingUser.id);
+
+      if (updateError) {
+        alert('Ошибка привязки ученика: ' + updateError.message);
+      } else {
+        fetchMyStudents();
+        setIsAddModalOpen(false);
+        setNewStudent({ first_name: '', last_name: '', username: '', gym: 'Invictus Go | Улица Навои, 97', goal: 'mass', monthly_price: 50000 });
+        alert(`Ученик @${cleanUsername} найден в базе! Его данные (вес, рост) автоматически подтянуты в ваш кабинет.`);
+      }
     } else {
-      if (data) setStudents(prev => [data[0], ...prev]);
-      setIsAddModalOpen(false);
-      setNewStudent({
-        first_name: '',
-        last_name: '',
-        username: '',
-        gym: 'Invictus Go | Улица Навои, 97',
-        goal: 'mass',
-        membership_term: '1_month',
+      // 3. ЕСЛИ НЕ НАШЛИ: создаем новую запись-заглушку в базе
+      const payload = {
+        first_name: newStudent.first_name,
+        last_name: newStudent.last_name,
+        username: cleanUsername,
+        trainer_username: trainerUsername,
+        gym: newStudent.gym,
+        goal: newStudent.goal,
+        monthly_price: newStudent.monthly_price,
         status: 'active',
-        monthly_price: 50000
-      });
-      alert('Ученик успешно добавлен!');
+        role: 'user'
+      };
+
+      const { data, error } = await supabase.from('profiles').insert([payload]).select();
+      if (error) {
+        alert('Ошибка добавления: ' + error.message);
+      } else {
+        if (data) setStudents(prev => [data[0], ...prev]);
+        setIsAddModalOpen(false);
+        setNewStudent({ first_name: '', last_name: '', username: '', gym: 'Invictus Go | Улица Навои, 97', goal: 'mass', monthly_price: 50000 });
+        alert('Ученик добавлен в CRM!');
+      }
     }
   };
 
@@ -222,14 +252,16 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                 </div>
 
                 <div>
-                  <label className="block font-medium text-slate-700 mb-1">Telegram Username</label>
+                  <label className="block font-medium text-slate-700 mb-1">Telegram Username ученика *</label>
                   <input 
                     type="text"
+                    required
                     value={newStudent.username}
                     onChange={(e) => setNewStudent({...newStudent, username: e.target.value})}
                     placeholder="@username"
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
                   />
+                  <p className="text-[10px] text-slate-400 mt-1">Если ученик уже зарегистрирован, его данные (вес, рост) подтянутся автоматически.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -276,7 +308,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         )}
 
-        {/* Модальное окно деталей ученика */}
+        {/* Модальное окно деталей ученика с антропометрией для тренера */}
         {selectedStudent && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100">
@@ -290,8 +322,16 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
               </div>
 
               <div className="space-y-3 text-xs text-slate-700">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                  <p className="font-semibold text-blue-600 mb-1">Данные для программы тренировок:</p>
+                  <p><b>Telegram:</b> @{selectedStudent.username || 'Не указан'}</p>
+                  <p><b>Рост:</b> {selectedStudent.height ? `${selectedStudent.height} см` : 'Не указан учеником'}</p>
+                  <p><b>Вес:</b> {selectedStudent.weight ? `${selectedStudent.weight} кг` : 'Не указан учеником'}</p>
+                  <p><b>Возраст:</b> {selectedStudent.age ? `${selectedStudent.age} лет` : 'Не указан'}</p>
+                  <p><b>Пол:</b> {selectedStudent.gender || 'Не указан'}</p>
+                </div>
+
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                  <p><b>Telegram:</b> {selectedStudent.username || 'Не указан'}</p>
                   <p><b>Зал:</b> {selectedStudent.gym}</p>
                   <p><b>Цель:</b> {selectedStudent.goal}</p>
                   <p><b>Оплата:</b> {selectedStudent.monthly_price || 0} ₸ / месяц</p>
@@ -300,7 +340,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
 
               <div className="flex justify-end pt-4">
                 <button onClick={() => setSelectedStudent(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium text-xs">Закрыть</button>
-              </div>
+                </div>
             </div>
           </div>
         )}
