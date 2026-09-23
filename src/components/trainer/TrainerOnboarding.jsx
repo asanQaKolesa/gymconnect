@@ -1,7 +1,7 @@
 // src/components/trainer/TrainerOnboarding.jsx
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Dumbbell, CheckCircle2, ArrowRight, ArrowLeft, Search, X, Lock } from 'lucide-react';
+import { Dumbbell, CheckCircle2, ArrowRight, ArrowLeft, Search, X, Lock, Eye, EyeOff } from 'lucide-react';
 
 const ALMATY_GYMS = [
   "БАНЗАЙ Fitness | Проспект Абая, 150, Алматы",
@@ -239,6 +239,7 @@ const ALMATY_GYMS = [
 export default function TrainerOnboarding({ onComplete }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // Состояние для глазка
 
   const [formData, setFormData] = useState({
     first_name: '',
@@ -252,7 +253,7 @@ export default function TrainerOnboarding({ onComplete }) {
     specializations: [],
     formats: ['offline'],
     gyms: [],
-    custom_gym: '', // Необязательное поле
+    custom_gym: '',
     products: '',
     certificate_url: '',
     agree_verification: false
@@ -309,7 +310,6 @@ export default function TrainerOnboarding({ onComplete }) {
     setLoading(true);
     try {
       const cleanGyms = [...formData.gyms];
-      // Если введено кастомное название зала, добавляем его в массив
       if (formData.custom_gym && formData.custom_gym.trim()) {
         cleanGyms.push(formData.custom_gym.trim());
       }
@@ -363,7 +363,7 @@ export default function TrainerOnboarding({ onComplete }) {
           </span>
         </div>
 
-        {/* ШАГ 1: Контакты и Пароль */}
+        {/* ШАГ 1: Контакты и Пароль с глазком */}
         {step === 1 && (
           <div className="space-y-4">
             <h2 className="text-sm font-bold text-slate-800">1. Основная информация и безопасность</h2>
@@ -408,20 +408,28 @@ export default function TrainerOnboarding({ onComplete }) {
               </div>
             </div>
 
-            {/* Поле Пароля */}
+            {/* Поле Пароля с иконкой глазка */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Придумайте пароль *</label>
               <div className="relative flex items-center">
                 <Lock className="absolute left-3.5 w-4 h-4 text-slate-400" />
                 <input 
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   minLength={6}
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
                   placeholder="Минимум 6 символов"
-                  className="w-full pl-10 pr-3.5 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
+                  className="w-full pl-10 pr-10 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  title={showPassword ? "Скрыть пароль" : "Показать пароль"}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
               <span className="text-[10px] text-slate-400 mt-0.5 block">Используйте для безопасного входа в CRM</span>
             </div>
@@ -599,7 +607,6 @@ export default function TrainerOnboarding({ onComplete }) {
               </div>
             )}
 
-            {/* Необязательное поле для своего зала */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Свой зал / Студия / Другое место (необязательно)</label>
               <input 
