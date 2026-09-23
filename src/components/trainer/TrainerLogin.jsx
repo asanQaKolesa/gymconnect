@@ -14,29 +14,35 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
     if (!cleanUsername || !password) return;
 
     setLoading(true);
+    
+    // Надежный поиск тренера в базе
     const { data, error } = await supabase
       .from('trainer_profiles')
       .select('*')
       .or(`username.eq.@${cleanUsername},username.eq.${cleanUsername}`)
-      .maybeSingle();
+      .limit(1);
 
-    if (error || !data) {
+    if (error || !data || data.length === 0) {
       alert('Тренер с таким Telegram ником не найден. Пожалуйста, пройдите регистрацию.');
       setLoading(false);
       return;
     }
 
+    const trainer = data[0];
+
     // Проверка введенного пароля
-    if (data.password && data.password !== password) {
+    if (trainer.password && trainer.password !== password) {
       alert('Неверный пароль. Пожалуйста, проверьте введенные данные.');
       setLoading(false);
       return;
     }
 
+    // Сохраняем оба ключа в localStorage, чтобы сессия зафиксировалась
     localStorage.setItem('gymconnect_trainer_registered', 'true');
-    localStorage.setItem('gymconnect_trainer_username', data.username);
-    onLoginSuccess(data.username);
+    localStorage.setItem('gymconnect_trainer_username', trainer.username);
+    
     setLoading(false);
+    onLoginSuccess(trainer.username);
   };
 
   return (
