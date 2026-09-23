@@ -1,7 +1,7 @@
 // src/components/trainer/TrainerOnboarding.jsx
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Dumbbell, CheckCircle2, ArrowRight, ArrowLeft, Search, X } from 'lucide-react';
+import { Dumbbell, CheckCircle2, ArrowRight, ArrowLeft, Search, X, Lock } from 'lucide-react';
 
 const ALMATY_GYMS = [
   "БАНЗАЙ Fitness | Проспект Абая, 150, Алматы",
@@ -244,10 +244,11 @@ export default function TrainerOnboarding({ onComplete }) {
     first_name: '',
     last_name: '',
     username: '',
+    password: '',
     phone: '',
     instagram: '',
     experience_years: '',
-    role_type: 'personal', // personal, group, both
+    role_type: 'personal',
     specializations: [],
     formats: ['offline'],
     gyms: [],
@@ -257,7 +258,6 @@ export default function TrainerOnboarding({ onComplete }) {
     agree_verification: false
   });
 
-  // Поиск по залам
   const [gymSearchQuery, setGymSearchQuery] = useState('');
   const [isGymDropdownOpen, setIsGymDropdownOpen] = useState(false);
 
@@ -284,13 +284,11 @@ export default function TrainerOnboarding({ onComplete }) {
     });
   };
 
-  // Валидация телефона (строго 10 цифр после +7)
   const handlePhoneChange = (e) => {
     const val = e.target.value.replace(/\D/g, '').slice(0, 10);
     setFormData({...formData, phone: val});
   };
 
-  // Валидация Instagram (только английские буквы, цифры, точки и подчеркивания)
   const handleInstagramChange = (e) => {
     const val = e.target.value.replace(/[^a-zA-Z0-9._]/g, '');
     setFormData({...formData, instagram: val});
@@ -300,6 +298,11 @@ export default function TrainerOnboarding({ onComplete }) {
     e.preventDefault();
     if (!formData.agree_verification) {
       alert('Подтвердите согласие на верификацию квалификации.');
+      return;
+    }
+
+    if (!formData.password || formData.password.length < 6) {
+      alert('Пароль должен содержать минимум 6 символов.');
       return;
     }
 
@@ -314,6 +317,7 @@ export default function TrainerOnboarding({ onComplete }) {
         first_name: formData.first_name,
         last_name: formData.last_name,
         username: formData.username.startsWith('@') ? formData.username : `@${formData.username}`,
+        password: formData.password,
         phone: formData.phone,
         instagram: formData.instagram ? `@${formData.instagram.replace('@', '')}` : '',
         experience_years: Number(formData.experience_years) || 0,
@@ -358,10 +362,10 @@ export default function TrainerOnboarding({ onComplete }) {
           </span>
         </div>
 
-        {/* ШАГ 1: Контакты */}
+        {/* ШАГ 1: Контакты и Пароль */}
         {step === 1 && (
           <div className="space-y-4">
-            <h2 className="text-sm font-bold text-slate-800">1. Основная информация и контакты</h2>
+            <h2 className="text-sm font-bold text-slate-800">1. Основная информация и безопасность</h2>
             
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -388,7 +392,6 @@ export default function TrainerOnboarding({ onComplete }) {
               </div>
             </div>
 
-            {/* Telegram Username со встроенной собачкой */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Telegram Username *</label>
               <div className="relative flex items-center">
@@ -404,7 +407,24 @@ export default function TrainerOnboarding({ onComplete }) {
               </div>
             </div>
 
-            {/* Телефон с маской +7 и ограничением */}
+            {/* Поле Пароля */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Придумайте пароль *</label>
+              <div className="relative flex items-center">
+                <Lock className="absolute left-3.5 w-4 h-4 text-slate-400" />
+                <input 
+                  type="password"
+                  required
+                  minLength={6}
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  placeholder="Минимум 6 символов"
+                  className="w-full pl-10 pr-3.5 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
+                />
+              </div>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Используйте для безопасного входа в CRM</span>
+            </div>
+
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Номер телефона WhatsApp *</label>
               <div className="relative flex items-center">
@@ -419,10 +439,8 @@ export default function TrainerOnboarding({ onComplete }) {
                   className="w-full pl-12 pr-3.5 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
                 />
               </div>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Введите 10 цифр без +7 (например: 7011234567)</span>
             </div>
 
-            {/* Instagram (латиница) со встроенной собачкой */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Instagram профиль</label>
               <div className="relative flex items-center">
@@ -435,10 +453,8 @@ export default function TrainerOnboarding({ onComplete }) {
                   className="w-full pl-8 pr-3.5 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
                 />
               </div>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Только английские буквы, цифры и символы . _</span>
             </div>
 
-            {/* Опыт работы */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Опыт работы тренером (лет) *</label>
               <input 
@@ -456,8 +472,8 @@ export default function TrainerOnboarding({ onComplete }) {
             <button 
               type="button"
               onClick={() => {
-                if (!formData.first_name || !formData.last_name || !formData.username || formData.phone.length !== 10) {
-                  alert('Заполните все обязательные поля корректно (номер телефона должен содержать ровно 10 цифр)');
+                if (!formData.first_name || !formData.last_name || !formData.username || !formData.password || formData.password.length < 6 || formData.phone.length !== 10) {
+                  alert('Заполните все обязательные поля корректно (пароль должен быть не менее 6 символов, а телефон ровно 10 цифр)');
                   return;
                 }
                 setStep(2);
@@ -475,7 +491,6 @@ export default function TrainerOnboarding({ onComplete }) {
           <div className="space-y-4">
             <h2 className="text-sm font-bold text-slate-800">2. Кем работаете и где тренируете</h2>
             
-            {/* Кем работает (Роль) */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1.5">Формат деятельности (Кем работаете): *</label>
               <div className="grid grid-cols-3 gap-2">
@@ -498,7 +513,6 @@ export default function TrainerOnboarding({ onComplete }) {
               </div>
             </div>
 
-            {/* Специализация / Цели */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1.5">Специализация (направления):</label>
               <div className="grid grid-cols-2 gap-2">
@@ -522,7 +536,6 @@ export default function TrainerOnboarding({ onComplete }) {
               </div>
             </div>
 
-            {/* Поиск по фитнес-клубам */}
             <div className="relative">
               <label className="block text-xs font-medium text-slate-700 mb-1">Фитнес-клубы, где вы работаете:</label>
               <div className="relative flex items-center">
@@ -572,7 +585,6 @@ export default function TrainerOnboarding({ onComplete }) {
               )}
             </div>
 
-            {/* Выбранные клубы чипсы */}
             {formData.gyms.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {formData.gyms.map((g, idx) => (
@@ -586,7 +598,6 @@ export default function TrainerOnboarding({ onComplete }) {
               </div>
             )}
 
-            {/* Свой зал / Свой формат */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Свой зал / Студия / Другое место</label>
               <input 
@@ -598,7 +609,6 @@ export default function TrainerOnboarding({ onComplete }) {
               />
             </div>
 
-            {/* Форматы работы */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1.5">Формат ведения клиентов:</label>
               <div className="grid grid-cols-3 gap-2">
