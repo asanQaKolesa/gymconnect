@@ -1,8 +1,8 @@
 // src/components/profile/ProfileTab.jsx
 import React, { useState } from 'react';
 import { translations } from '../../locales/translations';
-import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown, Camera, Calendar, Scale, Ruler, Search, X, Clock, CreditCard } from 'lucide-react';
-import { supabase } from '../../supabaseClient'; // Подключаем твой Supabase клиент
+import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown, Camera, Calendar, Scale, Ruler, Search, X, Clock, CreditCard, Phone, Instagram } from 'lucide-react';
+import { supabase } from '../../supabaseClient';
 
 import ProfileHeader from './ProfileHeader';
 import ProfileCard from './ProfileCard';
@@ -263,7 +263,9 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     return {
       firstName: savedProfile.firstName || tgUser?.first_name || '',
       lastName: savedProfile.lastName || tgUser?.last_name || '',
-      username: savedProfile.username || (tgUser?.username ? `@${tgUser.username}` : ''),
+      username: savedProfile.username || (tgUser?.username ? tgUser.username : ''),
+      phone: savedProfile.phone || '',
+      instagram: savedProfile.instagram || '',
       avatar: savedProfile.avatar || tgUser?.photo_url || '',
       age: savedProfile.age || '',
       gender: savedProfile.gender || 'male',
@@ -306,6 +308,18 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Валидация телефона (максимум 10 цифр)
+  const handlePhoneChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+    handleChange('phone', val);
+  };
+
+  // Валидация Instagram (только английские буквы, цифры, точки и подчеркивания)
+  const handleInstagramChange = (e) => {
+    const val = e.target.value.replace(/[^a-zA-Z0-9._]/g, '');
+    handleChange('instagram', val);
+  };
+
   const toggleWorkoutDay = (dayId) => {
     setFormData(prev => {
       const currentDays = prev.workoutDays || [];
@@ -328,7 +342,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     }
   };
 
-  // ФУНКЦИЯ СОХРАНЕНИЯ В SUPABASE И LOCALSTORAGE
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -353,11 +366,14 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       return;
     }
 
-    // Данные для отправки в Supabase
+    const cleanTg = formData.username.replace('@', '').trim();
+
     const profilePayload = {
       first_name: formData.firstName,
       last_name: formData.lastName,
-      username: formData.username,
+      username: cleanTg ? `@${cleanTg}` : '',
+      phone: formData.phone,
+      instagram: formData.instagram ? `@${formData.instagram.replace('@', '')}` : '',
       age: Number(formData.age),
       gender: formData.gender,
       height: Number(formData.height),
@@ -368,7 +384,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       membership_term: formData.membershipTerm,
       experience_level: formData.experienceLevel,
       trainer_need: formData.trainerNeed,
-      trainer_username: formData.trainerUsername || null,
+      trainer_username: formData.trainerUsername ? `@${formData.trainerUsername.replace('@', '')}` : null,
       specialization: formData.specialization,
       goal: formData.goal,
       looking_for: formData.lookingFor,
@@ -384,7 +400,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       agree_safety: formData.agreeSafety
     };
 
-    // Отправка в Supabase таблицу 'profiles'
     const { error } = await supabase
       .from('profiles')
       .upsert([profilePayload], { onConflict: 'username' });
@@ -395,8 +410,9 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       return;
     }
 
-    // Сохранение локально и завершение онбординга
+    // Сохранение локально и установка флага регистрации
     localStorage.setItem('gymconnect_user_data', JSON.stringify(formData));
+    localStorage.setItem('gymconnect_profile_filled', 'true');
     if (onComplete) onComplete();
   };
 
@@ -467,20 +483,55 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* Telegram Username */}
+            {/* Telegram Username со встроенной собачкой */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Telegram Username *</label>
               <div className="relative flex items-center">
-                <AtSign className="absolute left-3 w-4 h-4 text-slate-400" />
+                <span className="absolute left-3.5 text-slate-400 font-mono text-sm">@</span>
                 <input 
                   type="text"
                   required
                   value={formData.username}
-                  onChange={(e) => handleChange('username', e.target.value)}
-                  placeholder="@username"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                  onChange={(e) => handleChange('username', e.target.value.replace('@', ''))}
+                  placeholder="username"
+                  className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
                 />
               </div>
+            </div>
+
+            {/* Телефон с маской и ограничением в 10 цифр */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Номер телефона *</label>
+              <div className="relative flex items-center">
+                <span className="absolute left-3.5 text-slate-500 font-mono text-xs font-semibold">+7</span>
+                <Phone className="absolute left-9 w-4 h-4 text-slate-400" />
+                <input 
+                  type="tel"
+                  required
+                  value={formData.phone}
+                  onChange={handlePhoneChange}
+                  placeholder="7011234567"
+                  maxLength={10}
+                  className="w-full pl-16 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
+                />
+              </div>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Введите 10 цифр без +7 (например: 7011234567)</span>
+            </div>
+
+            {/* Instagram (латиница) */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Instagram (необязательно)</label>
+              <div className="relative flex items-center">
+                <span className="absolute left-3.5 text-slate-400 font-mono text-sm">@</span>
+                <input 
+                  type="text"
+                  value={formData.instagram}
+                  onChange={handleInstagramChange}
+                  placeholder="username_insta"
+                  className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
+                />
+              </div>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Только английские буквы, цифры и символы . _</span>
             </div>
 
             {/* Возраст и Пол */}
@@ -693,19 +744,19 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </select>
             </div>
 
-            {/* Telegram никнейм тренера (если есть) */}
+            {/* Telegram никнейм тренера со встроенной собачкой */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Тренеріңіздің Telegram никнеймі (міндетті емес)' : 'Telegram никнейм вашего тренера (необязательно)'}
               </label>
               <div className="relative flex items-center">
-                <AtSign className="absolute left-3 w-4 h-4 text-slate-400" />
+                <span className="absolute left-3.5 text-slate-400 font-mono text-sm">@</span>
                 <input 
                   type="text"
                   value={formData.trainerUsername}
-                  onChange={(e) => handleChange('trainerUsername', e.target.value)}
-                  placeholder="@trainer_username"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                  onChange={(e) => handleChange('trainerUsername', e.target.value.replace('@', ''))}
+                  placeholder="trainer_username"
+                  className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
                 />
               </div>
             </div>
