@@ -1,7 +1,7 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User } from 'lucide-react';
+import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Calendar, Clock } from 'lucide-react';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
 import ProgressTab from './tabs/ProgressTab';
@@ -12,6 +12,17 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [activeTab, setActiveTab] = useState('students');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+
+  // Локальное состояние для редактирования финансовых данных и расписания ученика в модалке
+  const [studentFinances, setStudentFinances] = useState({
+    monthly_price: 50000,
+    package_type: 'individual', // individual, mini_group, couple
+    total_trainings: 12,
+    left_trainings: 10,
+    is_burnable: false, // false - несгораемые, true - сгораемые
+    workout_days: ['Понедельник', 'Среда', 'Пятница'],
+    workout_time: 'Вечер (18:00 - 20:00)'
+  });
 
   const [newStudent, setNewStudent] = useState({
     first_name: '',
@@ -43,6 +54,47 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     }
   }, [trainerUsername]);
 
+  // При открытии карточки ученика подтягиваем его финансовые данные
+  const handleOpenStudentProfile = (student) => {
+    setSelectedStudent(student);
+    setStudentFinances({
+      monthly_price: student.monthly_price || 50000,
+      package_type: student.package_type || 'individual',
+      total_trainings: student.total_trainings || 12,
+      left_trainings: student.left_trainings || 12,
+      is_burnable: student.is_burnable || false,
+      workout_days: student.workout_days || ['Понедельник', 'Среда', 'Пятница'],
+      workout_time: student.workout_time || 'Вечер'
+    });
+  };
+
+  // Сохранение финансовых настроек и расписания ученика
+  const handleSaveStudentFinances = async (e) => {
+    e.preventDefault();
+    if (!selectedStudent) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        monthly_price: studentFinances.monthly_price,
+        package_type: studentFinances.package_type,
+        total_trainings: studentFinances.total_trainings,
+        left_trainings: studentFinances.left_trainings,
+        is_burnable: studentFinances.is_burnable,
+        workout_days: studentFinances.workout_days,
+        workout_time: studentFinances.workout_time
+      })
+      .eq('id', selectedStudent.id);
+
+    if (error) {
+      alert('Ошибка сохранения абонемента: ' + error.message);
+    } else {
+      alert('Финансовые данные и расписание ученика успешно обновлены!');
+      fetchMyStudents();
+      setSelectedStudent(null);
+    }
+  };
+
   const handleAddStudent = async (e) => {
     e.preventDefault();
     const cleanUsername = newStudent.username.replace('@', '').trim();
@@ -71,7 +123,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         fetchMyStudents();
         setIsAddModalOpen(false);
         setNewStudent({ first_name: '', last_name: '', username: '', gym: 'Invictus Go | Улица Навои, 97', goal: 'mass', monthly_price: 50000 });
-        alert(`Ученик @${cleanUsername} успешно привязан! Данные подтянуты.`);
+        alert(`Ученик @${cleanUsername} успешно привязан!`);
       }
     } else {
       const payload = {
@@ -98,7 +150,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     }
   };
 
-  // Функции для красивого отображения на русском языке
   const formatGoal = (goal) => {
     switch (goal) {
       case 'mass': return 'Набор массы';
@@ -181,7 +232,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         </div>
 
         {activeTab === 'students' && (
-          <StudentsListTab students={students} onSelectStudent={(student) => setSelectedStudent(student)} onOpenAddModal={() => setIsAddModalOpen(true)} />
+          <StudentsListTab students={students} onSelectStudent={(student) => handleOpenStudentProfile(student)} onOpenAddModal={() => setIsAddModalOpen(true)} />
         )}
         {activeTab === 'workouts' && <WorkoutsTab students={students} />}
         {activeTab === 'progress' && <ProgressTab students={students} />}
@@ -237,10 +288,10 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         )}
 
-        {/* Модальное окно ПОЛНОГО ПРОФИЛЯ УЧЕНИКА для тренера */}
+        {/* Модальное окно ПРОФИЛЯ УЧЕНИКА, УПРАВЛЕНИЯ ФИНАНСАМИ И РАСПИСАНИЕМ */}
         {selectedStudent && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center font-bold">
@@ -256,39 +307,137 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                 <button onClick={() => setSelectedStudent(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
               </div>
 
-              <div className="space-y-3 text-xs text-slate-700">
+              <div className="space-y-4 text-xs text-slate-700">
                 {/* Антропометрия */}
                 <div className="p-3.5 bg-blue-50/50 rounded-2xl border border-blue-100 space-y-2">
                   <p className="font-bold text-blue-900 flex items-center gap-1.5">
-                    <User className="w-4 h-4 text-blue-600" /> Антропометрия и здоровье
+                    <User className="w-4 h-4 text-blue-600" /> Антропометрия атлета
                   </p>
-                  <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className="grid grid-cols-4 gap-2 pt-1 text-center">
                     <div className="bg-white p-2 rounded-xl border border-blue-100">
                       <span className="text-[10px] text-slate-400 block">Рост</span>
-                      <span className="font-bold text-slate-800">{selectedStudent.height ? `${selectedStudent.height} см` : 'Не указан'}</span>
+                      <span className="font-bold text-slate-800">{selectedStudent.height ? `${selectedStudent.height} см` : '—'}</span>
                     </div>
                     <div className="bg-white p-2 rounded-xl border border-blue-100">
                       <span className="text-[10px] text-slate-400 block">Вес</span>
-                      <span className="font-bold text-slate-800">{selectedStudent.weight ? `${selectedStudent.weight} кг` : 'Не указан'}</span>
+                      <span className="font-bold text-slate-800">{selectedStudent.weight ? `${selectedStudent.weight} кг` : '—'}</span>
                     </div>
                     <div className="bg-white p-2 rounded-xl border border-blue-100">
                       <span className="text-[10px] text-slate-400 block">Возраст</span>
-                      <span className="font-bold text-slate-800">{selectedStudent.age ? `${selectedStudent.age} лет` : 'Не указан'}</span>
+                      <span className="font-bold text-slate-800">{selectedStudent.age ? `${selectedStudent.age} л.` : '—'}</span>
                     </div>
                     <div className="bg-white p-2 rounded-xl border border-blue-100">
                       <span className="text-[10px] text-slate-400 block">Пол</span>
                       <span className="font-bold text-slate-800">{formatGender(selectedStudent.gender)}</span>
                     </div>
                   </div>
+                  <p className="text-[11px] text-slate-600 pt-1"><b>Цель:</b> {formatGoal(selectedStudent.goal)} | <b>Зал:</b> {selectedStudent.gym || 'Не указан'}</p>
                 </div>
 
-                {/* Данные абонемента и целей */}
-                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
-                  <p className="font-semibold text-slate-900 mb-1">Данные абонемента и целей</p>
-                  <p><b>Фитнес-зал:</b> {selectedStudent.gym || 'Не указан'}</p>
-                  <p><b>Цель:</b> {formatGoal(selectedStudent.goal)}</p>
-                  <p><b>Стоимость:</b> {selectedStudent.monthly_price ? `${selectedStudent.monthly_price} ₸ / месяц` : 'Бесплатно'}</p>
-                </div>
+                {/* ФИНАНСОВЫЙ БЛОК И УПРАВЛЕНИЕ АБОНЕМЕНТОМ */}
+                <form onSubmit={handleSaveStudentFinances} className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                  <p className="font-bold text-slate-900 flex items-center gap-1.5 text-sm">
+                    <DollarSign className="w-4 h-4 text-emerald-600" /> Финансы и посещения
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-medium text-slate-700 mb-1">Тип тарифа</label>
+                      <select 
+                        value={studentFinances.package_type}
+                        onChange={(e) => setStudentFinances({...studentFinances, package_type: e.target.value})}
+                        className="w-full p-2 bg-white border border-slate-200 rounded-xl"
+                      >
+                        <option value="individual">Персональный (1 на 1)</option>
+                        <option value="mini_group">Мини-группа</option>
+                        <option value="couple">Сплит (вдвоем)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-medium text-slate-700 mb-1">Стоимость (₸ / мес)</label>
+                      <input 
+                        type="number"
+                        value={studentFinances.monthly_price}
+                        onChange={(e) => setStudentFinances({...studentFinances, monthly_price: Number(e.target.value)})}
+                        className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-medium text-slate-700 mb-1">Всего тренировок в пакете</label>
+                      <input 
+                        type="number"
+                        value={studentFinances.total_trainings}
+                        onChange={(e) => setStudentFinances({...studentFinances, total_trainings: Number(e.target.value)})}
+                        className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-medium text-slate-700 mb-1">Осталось тренировок</label>
+                      <input 
+                        type="number"
+                        value={studentFinances.left_trainings}
+                        onChange={(e) => setStudentFinances({...studentFinances, left_trainings: Number(e.target.value)})}
+                        className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono text-emerald-600 font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Политика сгорания тренировок</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setStudentFinances({...studentFinances, is_burnable: false})}
+                        className={`py-2 px-3 rounded-xl font-semibold border transition-all text-center ${
+                          !studentFinances.is_burnable ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        Несгораемые (перенос)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStudentFinances({...studentFinances, is_burnable: true})}
+                        className={`py-2 px-3 rounded-xl font-semibold border transition-all text-center ${
+                          studentFinances.is_burnable ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        Сгораемые (при пропуске)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* РАСПИСАНИЕ И ТАЙМ-СЛОТЫ */}
+                  <div className="pt-2 border-t border-slate-200 space-y-2">
+                    <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                      <Clock className="w-4 h-4 text-blue-600" /> График и время тренировок
+                    </p>
+
+                    <div>
+                      <label className="block font-medium text-slate-700 mb-1">Тайм-слот / Время посещения</label>
+                      <input 
+                        type="text"
+                        value={studentFinances.workout_time}
+                        onChange={(e) => setStudentFinances({...studentFinances, workout_time: e.target.value})}
+                        placeholder="Например: Вечер (18:00 - 20:00)"
+                        className="w-full p-2 bg-white border border-slate-200 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-3">
+                    <button
+                      type="submit"
+                      className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md transition-all text-xs"
+                    >
+                      Сохранить абонемент и расписание ученика
+                    </button>
+                  </div>
+                </form>
               </div>
 
               <div className="flex justify-end pt-4">
