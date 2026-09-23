@@ -1,7 +1,7 @@
 // src/components/admin/AdminPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { ShieldCheck, Users, Dumbbell, Building2, LogOut, RefreshCw, Search, Trash2, Edit3, X, Crown, Download } from 'lucide-react';
+import { ShieldCheck, Users, Dumbbell, Building2, LogOut, RefreshCw, Search, Trash2, Edit3, Eye, X, Crown, Download, User } from 'lucide-react';
 
 export default function AdminPanel({ onBack }) {
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
@@ -21,27 +21,9 @@ export default function AdminPanel({ onBack }) {
   const [selectedGoalFilter, setSelectedGoalFilter] = useState('all');
 
   const [editingProfile, setEditingProfile] = useState(null); 
+  const [viewingProfile, setViewingProfile] = useState(null); // Новое состояние для просмотра карточки атлета
   const [isAddModalOpen, setIsAddModalOpen] = useState(false); 
   const [proMonths, setProMonths] = useState(1);
-
-  const [newProfileData, setNewProfileData] = useState({
-    first_name: '',
-    last_name: '',
-    username: '',
-    age: 25,
-    gender: 'male',
-    height: 175,
-    weight: 70,
-    city: 'Алматы',
-    district: 'Медеуский',
-    gym: 'Invictus Go | Улица Навои, 97, Алматы',
-    membership_term: '6_months',
-    experience_level: 'independent',
-    goal: 'mass',
-    role: 'user',
-    is_pro: false,
-    pro_expires_at: null
-  });
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -61,7 +43,6 @@ export default function AdminPanel({ onBack }) {
 
   const fetchAllData = async () => {
     setLoading(true);
-    // 1. Загружаем атлетов
     const { data: usersData, error: usersError } = await supabase
       .from('profiles')
       .select('*')
@@ -70,7 +51,6 @@ export default function AdminPanel({ onBack }) {
     const loadedUsers = usersData || [];
     if (!usersError) setProfiles(loadedUsers);
 
-    // 2. Загружаем тренеров и считаем количество учеников для каждого по trainer_username
     const { data: trainersData, error: trainersError } = await supabase
       .from('trainer_profiles')
       .select('*')
@@ -79,7 +59,6 @@ export default function AdminPanel({ onBack }) {
     if (!trainersError && trainersData) {
       const trainersWithCount = trainersData.map(trainer => {
         const cleanTrainerUsername = (trainer.username || '').replace('@', '').trim().toLowerCase();
-        // Считаем сколько атлетов привязано к этому тренеру
         const studentsCount = loadedUsers.filter(u => 
           (u.trainer_username || '').replace('@', '').trim().toLowerCase() === cleanTrainerUsername
         ).length;
@@ -185,9 +164,9 @@ export default function AdminPanel({ onBack }) {
   };
 
   const exportToCSV = () => {
-    const headers = ['ID', 'Имя', 'Фамилия', 'Telegram', 'Возраст', 'Зал', 'Цель', 'Pro статус', 'Дата'];
+    const headers = ['ID', 'Имя', 'Фамилия', 'Telegram', 'Возраст', 'Рост', 'Вес', 'Зал', 'Цель', 'Pro статус', 'Дата'];
     const rows = profiles.map(p => [
-      p.id, p.first_name || '', p.last_name || '', p.username || '', p.age || '',
+      p.id, p.first_name || '', p.last_name || '', p.username || '', p.age || '', p.height || '', p.weight || '',
       `"${(p.gym || '').replace(/"/g, '""')}"`, p.goal || '', p.is_pro ? 'PRO' : 'Free', p.created_at || ''
     ]);
 
@@ -420,7 +399,7 @@ export default function AdminPanel({ onBack }) {
             </div>
           </div>
         ) : activeTab === 'trainers' ? (
-          /* ТАБЛИЦА ТРЕНЕРОВ С КОЛИЧЕСТВОМ УЧЕНИКОВ */
+          /* ТАБЛИЦА ТРЕНЕРОВ */
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
@@ -533,6 +512,15 @@ export default function AdminPanel({ onBack }) {
                           )}
                         </td>
                         <td className="p-3 text-right space-x-1">
+                          {/* Кнопка Просмотра карточки */}
+                          <button 
+                            onClick={() => setViewingProfile(p)}
+                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors inline-flex items-center"
+                            title="Просмотреть данные атлета"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          {/* Кнопка Редактирования */}
                           <button 
                             onClick={() => setEditingProfile(p)}
                             className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors inline-flex items-center"
@@ -540,6 +528,7 @@ export default function AdminPanel({ onBack }) {
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
+                          {/* Кнопка Удаления */}
                           <button 
                             onClick={() => handleDelete(p.id, `${p.first_name} ${p.last_name}`)}
                             className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors inline-flex items-center"
@@ -559,6 +548,74 @@ export default function AdminPanel({ onBack }) {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* МОДАЛЬНОЕ ОКНО ПРОСМОТРА ПОЛНОЙ КАРТОЧКИ АТЛЕТА (БЕЗ РЕДАКТИРОВАНИЯ) */}
+        {viewingProfile && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center font-bold">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">{viewingProfile.first_name} {viewingProfile.last_name}</h3>
+                    <p className="text-[11px] text-slate-500 font-mono">@{viewingProfile.username || 'не указан'}</p>
+                  </div>
+                </div>
+                <button onClick={() => setViewingProfile(null)} className="text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs text-slate-700">
+                {/* Антропометрия */}
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                  <p className="font-bold text-slate-900">Антропометрия</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-white p-2 rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-400 block">Возраст</span>
+                      <span className="font-bold text-slate-800">{viewingProfile.age ? `${viewingProfile.age} лет` : '—'}</span>
+                    </div>
+                    <div className="bg-white p-2 rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-400 block">Пол</span>
+                      <span className="font-bold text-slate-800">{viewingProfile.gender === 'male' ? 'Мужской' : viewingProfile.gender === 'female' ? 'Женский' : '—'}</span>
+                    </div>
+                    <div className="bg-white p-2 rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-400 block">Рост</span>
+                      <span className="font-bold text-slate-800">{viewingProfile.height ? `${viewingProfile.height} см` : '—'}</span>
+                    </div>
+                    <div className="bg-white p-2 rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-400 block">Вес</span>
+                      <span className="font-bold text-slate-800">{viewingProfile.weight ? `${viewingProfile.weight} кг` : '—'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Локация и зал */}
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                  <p className="font-bold text-slate-900">Локация и цель</p>
+                  <p><b>Город / Район:</b> {viewingProfile.city || 'Алматы'}, {viewingProfile.district || '—'}</p>
+                  <p><b>Фитнес-зал:</b> {viewingProfile.gym || '—'}</p>
+                  <p><b>Цель тренировок:</b> {viewingProfile.goal || '—'}</p>
+                  <p><b>Уровень подготовки:</b> {viewingProfile.experience_level || '—'}</p>
+                </div>
+
+                {/* Статус и Тренер */}
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                  <p className="font-bold text-slate-900">Связь и подписка</p>
+                  <p><b>Персональный тренер:</b> <span className="text-indigo-600 font-mono">{viewingProfile.trainer_username ? `@${viewingProfile.trainer_username}` : 'Самостоятельно'}</span></p>
+                  <p><b>Статус подписки:</b> {viewingProfile.is_pro ? 'PRO (Активна)' : 'Free (Базовый)'}</p>
+                  <p><b>Дата регистрации:</b> {viewingProfile.created_at ? new Date(viewingProfile.created_at).toLocaleDateString() : '—'}</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <button onClick={() => setViewingProfile(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium text-xs">Закрыть</button>
+              </div>
             </div>
           </div>
         )}
