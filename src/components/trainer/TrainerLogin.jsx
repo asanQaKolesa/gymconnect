@@ -45,14 +45,17 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Ваш Telegram Username</label>
-            <input 
-              type="text"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="@username"
-              className="w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
-            />
+            <div className="relative flex items-center">
+              <span className="absolute left-3.5 text-slate-400 font-mono text-sm">@</span>
+              <input 
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value.replace('@', ''))}
+                placeholder="username"
+                className="w-full pl-8 pr-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
+              />
+            </div>
           </div>
 
           <button
@@ -68,6 +71,7 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
         <div className="mt-6 pt-6 border-t border-slate-100 text-center">
           <p className="text-xs text-slate-500 mb-2">Еще нет аккаунта партнера?</p>
           <button
+            type="button"
             onClick={onSwitchToRegister}
             className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-blue-600 rounded-xl text-xs font-semibold transition-all border border-slate-200 flex items-center justify-center gap-2"
           >
