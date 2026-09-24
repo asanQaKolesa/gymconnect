@@ -48,8 +48,8 @@ export default function AdminPanel({ onBack }) {
   const handleLogin = (e) => {
     e.preventDefault();
     
-    // Берем пароль из переменной окружения, а если она недоступна — используем защищенный дефолт
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'Gk#9mP!vQz2$xL8w';
+    // Пароль берется строго из защищенной переменной окружения GitHub Secrets
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
 
     if (login === 'admin' && password === adminPassword) {
       setIsAdminAuth(true);
@@ -730,7 +730,7 @@ export default function AdminPanel({ onBack }) {
                     />
                   </div>
                   <div>
-                    <label className="block font-medium text-slate-700 mb-1">Фамилия</label>
+                    <label className="label block font-medium text-slate-700 mb-1">Фамилия</label>
                     <input 
                       type="text"
                       value={editingProfile.last_name || ''}
