@@ -265,6 +265,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       lastName: savedProfile.lastName || tgUser?.last_name || '',
       username: savedProfile.username ? savedProfile.username.replace(/^@+/, '') : (tgUser?.username ? tgUser.username.replace(/^@+/, '') : ''),
       phone: savedProfile.phone || '',
+      whatsapp: savedProfile.whatsapp || '',
       instagram: savedProfile.instagram ? savedProfile.instagram.replace(/^@+/, '') : '',
       avatar: savedProfile.avatar || tgUser?.photo_url || '',
       age: savedProfile.age || '',
@@ -311,6 +312,11 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
   const handlePhoneChange = (e) => {
     const val = e.target.value.replace(/\D/g, '').slice(0, 10);
     handleChange('phone', val);
+  };
+
+  const handleWhatsAppChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+    handleChange('whatsapp', val);
   };
 
   const handleInstagramChange = (e) => {
@@ -374,7 +380,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       return;
     }
 
-    // Чистим и формируем строго по одной собачке
     const cleanTg = formData.username.trim().replace(/^@+/, '');
     const formattedUsername = cleanTg ? `@${cleanTg}` : '';
 
@@ -389,6 +394,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       last_name: formData.lastName,
       username: formattedUsername,
       phone: formData.phone,
+      whatsapp: formData.whatsapp || null, // Сохраняем WhatsApp (скрыт от публичного просмотра)
       instagram: formattedInstagram,
       age: Number(formData.age),
       gender: formData.gender,
@@ -527,6 +533,26 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 />
               </div>
               <span className="text-[10px] text-slate-400 mt-0.5 block">Введите 10 цифр без +7 (например: 7011234567)</span>
+            </div>
+
+            {/* WhatsApp номер для связи с тренером (необязательно, скрыт от публики) */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                WhatsApp для связи с тренером (необязательно)
+              </label>
+              <div className="relative flex items-center">
+                <span className="absolute left-3.5 text-slate-500 font-mono text-xs font-semibold">+7</span>
+                <Phone className="absolute left-9 w-4 h-4 text-emerald-600" />
+                <input 
+                  type="tel"
+                  value={formData.whatsapp}
+                  onChange={handleWhatsAppChange}
+                  placeholder="7011234567"
+                  maxLength={10}
+                  className="w-full pl-16 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
+                />
+              </div>
+              <span className="text-[10px] text-slate-500 mt-0.5 block">Не отображается в публичном профиле. Нужен исключительно для связи с вашим тренером.</span>
             </div>
 
             <div>
