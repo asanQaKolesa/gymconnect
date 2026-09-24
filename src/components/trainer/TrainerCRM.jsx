@@ -1,7 +1,7 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, Utensils, ShieldCheck, Zap, ArrowUpRight, UserPlus } from 'lucide-react';
+import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, Utensils, ShieldCheck, Zap, ArrowUpRight, UserPlus, Info } from 'lucide-react';
 import OverviewTab from './tabs/OverviewTab';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
@@ -104,32 +104,35 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     }
   }, [trainerUsername]);
 
-  // Обработчик создания нового ученика в базе Supabase
+  // Гибридный обработчик: добавляем или обновляем ученика через upsert по username без дублей
   const handleCreateStudent = async (e) => {
     e.preventDefault();
     const cleanU = trainerUsername.replace('@', '');
-    const studentUsername = newStudentForm.username ? (newStudentForm.username.startsWith('@') ? newStudentForm.username : `@${newStudentForm.username}`) : `@student_${Date.now()}`;
+    const cleanStudentU = newStudentForm.username ? newStudentForm.username.trim().replace(/^@+/, '') : '';
+    const formattedUsername = cleanStudentU ? `@${cleanStudentU}` : `@student_${Date.now()}`;
+
+    const studentPayload = {
+      first_name: newStudentForm.first_name,
+      last_name: newStudentForm.last_name,
+      username: formattedUsername,
+      phone: newStudentForm.phone || null,
+      monthly_price: Number(newStudentForm.monthly_price),
+      package_type: newStudentForm.package_type,
+      total_trainings: Number(newStudentForm.total_trainings),
+      left_trainings: Number(newStudentForm.left_trainings),
+      gym: newStudentForm.gym || 'Invictus Go',
+      trainer_username: `@${cleanU}`,
+      status: 'active'
+    };
 
     const { error } = await supabase
       .from('profiles')
-      .insert([{
-        first_name: newStudentForm.first_name,
-        last_name: newStudentForm.last_name,
-        username: studentUsername,
-        phone: newStudentForm.phone,
-        monthly_price: Number(newStudentForm.monthly_price),
-        package_type: newStudentForm.package_type,
-        total_trainings: Number(newStudentForm.total_trainings),
-        left_trainings: Number(newStudentForm.left_trainings),
-        gym: newStudentForm.gym,
-        trainer_username: `@${cleanU}`,
-        status: 'active'
-      }]);
+      .upsert([studentPayload], { onConflict: 'username' });
 
     if (error) {
       alert('Ошибка добавления ученика: ' + error.message);
     } else {
-      alert('Ученик успешно добавлен в вашу CRM!');
+      alert('Ученик успешно добавлен в CRM! Если он зарегистрирован в боте, данные синхронизированы.');
       setIsAddModalOpen(false);
       setNewStudentForm({
         first_name: '',
@@ -409,7 +412,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         {activeTab === 'finance' && <FinanceTab students={students} onUpdate={fetchTrainerAndStudents} />}
         {activeTab === 'notes' && <NotesTab students={students} onUpdate={fetchTrainerAndStudents} />}
 
-        {/* Модальное окно добавления ученика */}
+        {/* Модальное окно добавления ученика с подсказкой */}
         {isAddModalOpen && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
@@ -418,9 +421,15 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                   <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center font-bold">
                     <UserPlus className="w-4 h-4" />
                   </div>
-                  <h3 className="text-base font-bold text-slate-900">Добавить нового ученика</h3>
+                  <h3 className="text-base font-bold text-slate-900">Добавить ученика в CRM</h3>
                 </div>
                 <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+              </div>
+
+              {/* Информативная подсказка гибридного подхода */}
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-2.5 text-[11px] text-blue-900">
+                <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <span>Если ученик уже зарегистрирован в боте GymConnect, укажите его Telegram username — карточка автоматически привяжется к вашему аккаунту без создания дублей!</span>
               </div>
 
               <form onSubmit={handleCreateStudent} className="space-y-3 text-xs">
