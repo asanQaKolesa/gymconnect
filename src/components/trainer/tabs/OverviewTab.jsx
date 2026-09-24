@@ -152,7 +152,7 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
 
   return (
     <div className="space-y-4 text-xs">
-      {/* Сетка KPI */}
+      {/* Сетка KPI с обновленным названием карточки */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
           <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных</p>
@@ -167,7 +167,7 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
           <h3 className="text-2xl font-black text-rose-600 mt-1">{leftCount}</h3>
         </div>
         <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-          <p className="text-[10px] text-slate-400 uppercase font-semibold">Продление</p>
+          <p className="text-[10px] text-slate-400 uppercase font-semibold">Мало занятий (≤2)</p>
           <h3 className={`text-2xl font-black mt-1 ${lowBalanceCount > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
             {lowBalanceCount}
           </h3>
