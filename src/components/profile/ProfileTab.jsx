@@ -263,9 +263,9 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     return {
       firstName: savedProfile.firstName || tgUser?.first_name || '',
       lastName: savedProfile.lastName || tgUser?.last_name || '',
-      username: savedProfile.username || (tgUser?.username ? tgUser.username : ''),
+      username: savedProfile.username ? savedProfile.username.replace(/^@+/, '') : (tgUser?.username ? tgUser.username.replace(/^@+/, '') : ''),
       phone: savedProfile.phone || '',
-      instagram: savedProfile.instagram || '',
+      instagram: savedProfile.instagram ? savedProfile.instagram.replace(/^@+/, '') : '',
       avatar: savedProfile.avatar || tgUser?.photo_url || '',
       age: savedProfile.age || '',
       gender: savedProfile.gender || 'male',
@@ -277,7 +277,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       
       experienceLevel: savedProfile.experienceLevel || 'independent',
       trainerNeed: savedProfile.trainerNeed || 'self',
-      trainerUsername: savedProfile.trainerUsername || '',
+      trainerUsername: savedProfile.trainerUsername ? savedProfile.trainerUsername.replace(/^@+/, '') : '',
       membershipTerm: savedProfile.membershipTerm || '6_months',
 
       specialization: savedProfile.specialization || 'athlete',
@@ -308,16 +308,24 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Валидация телефона (максимум 10 цифр)
   const handlePhoneChange = (e) => {
     const val = e.target.value.replace(/\D/g, '').slice(0, 10);
     handleChange('phone', val);
   };
 
-  // Валидация Instagram (только английские буквы, цифры, точки и подчеркивания)
   const handleInstagramChange = (e) => {
-    const val = e.target.value.replace(/[^a-zA-Z0-9._]/g, '');
+    const val = e.target.value.replace(/[@\s]/g, '').replace(/[^a-zA-Z0-9._]/g, '');
     handleChange('instagram', val);
+  };
+
+  const handleUsernameChange = (e) => {
+    const val = e.target.value.replace(/[@\s]/g, '');
+    handleChange('username', val);
+  };
+
+  const handleTrainerUsernameChange = (e) => {
+    const val = e.target.value.replace(/[@\s]/g, '');
+    handleChange('trainerUsername', val);
   };
 
   const toggleWorkoutDay = (dayId) => {
@@ -366,14 +374,22 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       return;
     }
 
-    const cleanTg = formData.username.replace('@', '').trim();
+    // Чистим и формируем строго по одной собачке
+    const cleanTg = formData.username.trim().replace(/^@+/, '');
+    const formattedUsername = cleanTg ? `@${cleanTg}` : '';
+
+    const cleanInst = formData.instagram.trim().replace(/^@+/, '');
+    const formattedInstagram = cleanInst ? `@${cleanInst}` : '';
+
+    const cleanTrainerTg = formData.trainerUsername.trim().replace(/^@+/, '');
+    const formattedTrainerUsername = cleanTrainerTg ? `@${cleanTrainerTg}` : null;
 
     const profilePayload = {
       first_name: formData.firstName,
       last_name: formData.lastName,
-      username: cleanTg ? `@${cleanTg}` : '',
+      username: formattedUsername,
       phone: formData.phone,
-      instagram: formData.instagram ? `@${formData.instagram.replace('@', '')}` : '',
+      instagram: formattedInstagram,
       age: Number(formData.age),
       gender: formData.gender,
       height: Number(formData.height),
@@ -384,7 +400,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       membership_term: formData.membershipTerm,
       experience_level: formData.experienceLevel,
       trainer_need: formData.trainerNeed,
-      trainer_username: formData.trainerUsername ? `@${formData.trainerUsername.replace('@', '')}` : null,
+      trainer_username: formattedTrainerUsername,
       specialization: formData.specialization,
       goal: formData.goal,
       looking_for: formData.lookingFor,
@@ -410,7 +426,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       return;
     }
 
-    // Сохранение локально и установка флага регистрации
     localStorage.setItem('gymconnect_user_data', JSON.stringify(formData));
     localStorage.setItem('gymconnect_profile_filled', 'true');
     if (onComplete) onComplete();
@@ -435,7 +450,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
 
           <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* Аватар профиля */}
             <div className="flex flex-col items-center mb-4">
               <div className="relative w-20 h-20 bg-slate-100 rounded-full border-2 border-slate-200 overflow-hidden flex items-center justify-center shadow-inner">
                 {formData.avatar ? (
@@ -453,7 +467,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </span>
             </div>
 
-            {/* Имя и Фамилия */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
@@ -483,7 +496,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* Telegram Username со встроенной собачкой */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Telegram Username *</label>
               <div className="relative flex items-center">
@@ -492,14 +504,13 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                   type="text"
                   required
                   value={formData.username}
-                  onChange={(e) => handleChange('username', e.target.value.replace('@', ''))}
+                  onChange={handleUsernameChange}
                   placeholder="username"
                   className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
                 />
               </div>
             </div>
 
-            {/* Телефон с маской и ограничением в 10 цифр */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Номер телефона *</label>
               <div className="relative flex items-center">
@@ -518,7 +529,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               <span className="text-[10px] text-slate-400 mt-0.5 block">Введите 10 цифр без +7 (например: 7011234567)</span>
             </div>
 
-            {/* Instagram (латиница) */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Instagram (необязательно)</label>
               <div className="relative flex items-center">
@@ -534,7 +544,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               <span className="text-[10px] text-slate-400 mt-0.5 block">Только английские буквы, цифры и символы . _</span>
             </div>
 
-            {/* Возраст и Пол */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
@@ -569,7 +578,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* Рост и Вес */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
@@ -605,7 +613,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* Город и Район */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">{currentLang === 'kk' ? 'Қала' : 'Город'} *</label>
@@ -638,7 +645,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* Интерактивный поиск зала */}
             <div className="relative">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Негізгі фитнес-залыңыз' : 'Ваш основной фитнес-зал'} *
@@ -688,7 +694,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               )}
             </div>
 
-            {/* Срок абонемента в клубе */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Абонемент мерзімі' : 'Срок вашего абонемента в клубе'} *
@@ -710,7 +715,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* Стаж тренировок */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Жаттығу стажы' : 'Ваш стаж тренировок'} *
@@ -727,7 +731,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </select>
             </div>
 
-            {/* Потребность в тренере */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Тренер форматы' : 'Формат работы с тренером'} *
@@ -744,7 +747,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </select>
             </div>
 
-            {/* Telegram никнейм тренера со встроенной собачкой */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Тренеріңіздің Telegram никнеймі (міндетті емес)' : 'Telegram никнейм вашего тренера (необязательно)'}
@@ -754,14 +756,13 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                 <input 
                   type="text"
                   value={formData.trainerUsername}
-                  onChange={(e) => handleChange('trainerUsername', e.target.value.replace('@', ''))}
+                  onChange={handleTrainerUsernameChange}
                   placeholder="trainer_username"
                   className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
                 />
               </div>
             </div>
 
-            {/* Спортивная специализация */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Спорттық бағытыңыз' : 'Спортивная специализация'} *
@@ -779,7 +780,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </select>
             </div>
 
-            {/* Главная цель тренировок */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Негізгі мақсатыңыз' : 'Главная цель тренировок'} *
@@ -809,7 +809,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* БЛОК GYMBRO-МАТЧИНГА */}
             <div className="pt-2 border-t border-slate-100">
               <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">
                 {currentLang === 'kk' ? 'GymBro іздеу параметрлері' : 'Параметры поиска GymBro'}
@@ -916,7 +915,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* ЮРИДИЧЕСКИЙ БЛОК */}
             <div className="pt-3 border-t border-slate-100 flex flex-col gap-2.5">
               <div className="flex items-start gap-2">
                 <input 
@@ -988,7 +986,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* Кнопка сохранения */}
             <button
               type="submit"
               className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2"
@@ -1003,7 +1000,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     );
   }
 
-  // ОБЫЧНЫЙ ПРОФИЛЬ ПОСЛЕ РЕГИСТРАЦИИ
   return (
     <div className="p-4 max-w-md mx-auto flex flex-col pb-24 animate-in fade-in duration-200">
       <ProfileHeader />
