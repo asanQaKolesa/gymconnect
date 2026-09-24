@@ -1,6 +1,6 @@
 // src/components/trainer/tabs/OverviewTab.jsx
 import React, { useState } from 'react';
-import { Calendar, ChevronRight, CheckCircle2, Dumbbell, Clock, UserCheck, UserX, Eye, Gift } from 'lucide-react';
+import { Calendar, ChevronRight, CheckCircle2, Dumbbell, Clock, UserCheck, UserX, Eye, UserPlus, Send, Sparkles } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 
 export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBalanceCount, totalEarnings, students, onSelectStudent, onOpenAddModal }) {
@@ -34,25 +34,6 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
     // Если слот явно вечерний ИЛИ если он не попал ни в утро, ни в обед (чтобы никто не терялся)
     return slot.includes('вечер') || (!slot.includes('утро') && !slot.includes('обед') && !slot.includes('день'));
   });
-
-  // Логика проверки дней рождения в ближайшие 7 дней
-  const getUpcomingBirthdays = () => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentDay = now.getDate();
-
-    return students.filter(s => {
-      if (!s.birth_date) return false;
-      const bDate = new Date(s.birth_date);
-      const bMonth = bDate.getMonth();
-      const bDay = bDate.getDate();
-
-      const diffDays = (new Date(now.getFullYear(), bMonth, bDay) - new Date(now.getFullYear(), currentMonth, currentDay)) / (1000 * 60 * 60 * 24);
-      return diffDays >= 0 && diffDays <= 7;
-    });
-  };
-
-  const birthdayStudents = getUpcomingBirthdays();
 
   // Кнопка «Был» — списываем занятие
   const handleAttendanceYes = async (e, student) => {
@@ -197,24 +178,25 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
         </div>
       </div>
 
-      {/* Виджет дней рождения на этой неделе */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm flex items-center gap-3">
-        <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center border border-amber-100 shrink-0">
-          <Gift className="w-5 h-5" />
+      {/* Блок «Быстрые действия» */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h4 className="font-bold text-sm">Быстрые действия тренера</h4>
+            <p className="text-[11px] text-blue-100">Управление базой и моментальная связь с атлетами</p>
+          </div>
         </div>
-        <div className="flex-1">
-          <h4 className="font-bold text-slate-900 text-xs">Дни рождения на этой неделе</h4>
-          {birthdayStudents.length > 0 ? (
-            <div className="flex flex-wrap gap-1 mt-1">
-              {birthdayStudents.map(st => (
-                <span key={st.id} className="text-[10px] bg-amber-50 text-amber-800 px-2 py-0.5 rounded-md font-semibold border border-amber-200">
-                  🎂 {st.first_name} ({new Date(st.birth_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })})
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="text-[11px] text-slate-500">Именинников на этой неделе нет 🎉</p>
-          )}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button 
+            onClick={onOpenAddModal}
+            className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-blue-700 hover:bg-blue-50 rounded-2xl font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>+ Добавить ученика</span>
+          </button>
         </div>
       </div>
 
