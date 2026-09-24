@@ -1,7 +1,7 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings } from 'lucide-react';
+import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, Utensils } from 'lucide-react';
 import OverviewTab from './tabs/OverviewTab';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
@@ -9,7 +9,6 @@ import ProgressTab from './tabs/ProgressTab';
 import ScheduleTab from './tabs/ScheduleTab';
 import FinanceTab from './tabs/FinanceTab';
 import NotesTab from './tabs/NotesTab';
-import CalendarTodayTab from './tabs/CalendarTodayTab';
 
 export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [trainerProfile, setTrainerProfile] = useState(null);
@@ -236,13 +235,13 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         </div>
 
-        {/* Навигация (Табы) */}
+        {/* Навигация (Табы) — Заменена вкладка «На сегодня» на «Питание» */}
         <div className="grid grid-cols-4 md:grid-cols-7 gap-1.5">
           <button onClick={() => setActiveTab('overview')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'overview' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Обзор</button>
           <button onClick={() => setActiveTab('students')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'students' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Ученики</button>
           <button onClick={() => setActiveTab('workouts')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'workouts' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Программы</button>
           <button onClick={() => setActiveTab('schedule')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'schedule' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Смены</button>
-          <button onClick={() => setActiveTab('today')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'today' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>На сегодня</button>
+          <button onClick={() => setActiveTab('nutrition')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'nutrition' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Питание</button>
           <button onClick={() => setActiveTab('finance')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'finance' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Касса</button>
           <button onClick={() => setActiveTab('notes')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'notes' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Заметки</button>
         </div>
@@ -265,7 +264,13 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         )}
         {activeTab === 'workouts' && <WorkoutsTab students={students} />}
         {activeTab === 'schedule' && <ScheduleTab trainerProfile={trainerProfile} onUpdate={fetchTrainerAndStudents} />}
-        {activeTab === 'today' && <CalendarTodayTab students={students} onUpdate={fetchTrainerAndStudents} />}
+        {activeTab === 'nutrition' && (
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm text-center py-16 space-y-2">
+            <Utensils className="w-10 h-10 text-blue-600 mx-auto mb-2" />
+            <h3 className="font-bold text-base text-slate-900">Раздел «Питание и рационы» в разработке</h3>
+            <p className="text-xs text-slate-500">Скоро здесь появится конструктор КБЖУ и назначение планов питания для подопечных.</p>
+          </div>
+        )}
         {activeTab === 'finance' && <FinanceTab students={students} onUpdate={fetchTrainerAndStudents} />}
         {activeTab === 'notes' && <NotesTab students={students} onUpdate={fetchTrainerAndStudents} />}
 
