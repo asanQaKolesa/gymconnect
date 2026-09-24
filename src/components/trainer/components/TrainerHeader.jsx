@@ -43,7 +43,7 @@ export default function TrainerHeader({ trainerProfile, trainerUsername, loading
         </div>
       </div>
 
-      {/* Виджет подписки и таргета */}
+      {/* Виджет подписки и продвижения профиля */}
       <div className="pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
         {subscription.isActive ? (
           <div className="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100 flex items-center justify-between gap-3">
@@ -89,12 +89,12 @@ export default function TrainerHeader({ trainerProfile, trainerUsername, loading
               <Zap className="w-4 h-4" />
             </div>
             <div>
-              <p className="font-bold text-slate-900">Продвижение профиля (Таргет)</p>
+              <p className="font-bold text-slate-900">Продвижение профиля</p>
               <p className="text-[11px] text-slate-500">Получайте новых клиентов в свой зал</p>
             </div>
           </div>
           <button
-            onClick={() => alert('Скоро здесь появится модуль настройки лидогенерации и таргета!')}
+            onClick={() => alert('Скоро здесь появится модуль настройки лидогенерации и продвижения!')}
             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition-all text-[11px] flex items-center gap-1"
           >
             <span>Скоро</span>
