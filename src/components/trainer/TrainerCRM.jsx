@@ -39,7 +39,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     status: 'active',
     payment_method: 'Перевод Kaspi',
     workout_days: ['Понедельник', 'Среда', 'Пятница'],
-    workout_time_slot: 'Вечер (18:00)'
+    workout_time_slot: 'Вечер (16:00 - 21:00)'
   });
 
   const fetchTrainerAndStudents = async () => {
@@ -123,7 +123,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
       status: student.status || 'active',
       payment_method: student.payment_method || 'Перевод Kaspi',
       workout_days: student.workout_days || ['Понедельник', 'Среда', 'Пятница'],
-      workout_time_slot: student.workout_time_slot || 'Вечер'
+      workout_time_slot: student.workout_time_slot || 'Вечер (16:00 - 21:00)'
     });
   };
 
@@ -169,7 +169,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     const g = goal.toLowerCase();
     if (g === 'mass' || g.includes('набор')) return 'Набор массы и гипертрофия';
     if (g === 'cut' || g.includes('сушка') || g.includes('похудение')) return 'Похудение и сушка';
-    if (g === 'recomp' || g.includes('рекомпозиция')) return 'Рекомпозиция тела';
+    if (g === 'tone' || g.includes('рекомпозиция') || g.includes('тонус')) return 'Тонус и рекомпозиция';
     if (g === 'functional' || g.includes('функционал')) return 'Функциональный тренинг';
     return goal;
   };
@@ -190,7 +190,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
   const lowBalanceStudents = students.filter(s => (s.status === 'active' || !s.status) && (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2);
 
   const daysOfWeek = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
-  const timeSlots = ['Утро (08:00 - 12:00)', 'Обед (12:00 - 16:00)', 'Вечер (16:00 - 21:00)', 'Свободный график'];
+  const timeSlots = ['Утро (08:00 - 12:00)', 'Обед (12:00 - 16:00)', 'Вечер (16:00 - 21:00)'];
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 p-4 pb-20">
@@ -552,15 +552,23 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
 
                   <div className="space-y-1.5 pt-1">
                     <label className="block font-medium text-slate-700">Время / Тайм-слот</label>
-                    <select
-                      value={studentFinances.workout_time_slot}
-                      onChange={(e) => setStudentFinances({...studentFinances, workout_time_slot: e.target.value})}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-xl font-medium"
-                    >
-                      {timeSlots.map((slot, idx) => (
-                        <option key={idx} value={slot}>{slot}</option>
-                      ))}
-                    </select>
+                    <div className="grid grid-cols-3 gap-2">
+                      {timeSlots.map((slot, idx) => {
+                        const isSelected = studentFinances.workout_time_slot === slot;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setStudentFinances({...studentFinances, workout_time_slot: slot})}
+                            className={`py-2 px-1 rounded-xl font-semibold text-[11px] border transition-all text-center ${
+                              isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            {slot.split(' ')[0]}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="flex justify-end pt-3">
