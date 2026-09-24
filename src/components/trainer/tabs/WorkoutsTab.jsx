@@ -1,5 +1,6 @@
 // src/components/trainer/tabs/WorkoutsTab.jsx
 import React, { useState } from 'react';
+import { supabase } from '../../../supabaseClient';
 import { Dumbbell, Plus, Trash2, CheckCircle2, Activity, Flame, Calendar } from 'lucide-react';
 
 export default function WorkoutsTab({ students }) {
@@ -86,12 +87,34 @@ export default function WorkoutsTab({ students }) {
     });
   };
 
-  const handleSaveProgram = () => {
+  // Сохранение программы прямо в Supabase в карточку ученика
+  const handleSaveProgram = async () => {
     if (!selectedStudentId) {
       alert('Выберите ученика!');
       return;
     }
-    alert(`Многодневная программа тренировок (${frequency} дня/нед) успешно сохранена и назначена ученику!`);
+
+    const programPayload = {
+      frequency,
+      workoutType,
+      experienceLevel,
+      warmup,
+      cardioBefore,
+      cardioAfter,
+      contraindications,
+      days: daysWorkouts
+    };
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ assigned_program: programPayload })
+      .eq('id', selectedStudentId);
+
+    if (error) {
+      alert('Ошибка сохранения программы: ' + error.message);
+    } else {
+      alert(`Многодневная программа (${frequency} дня/нед) успешно сохранена и назначена ученику!`);
+    }
   };
 
   return (
@@ -198,7 +221,7 @@ export default function WorkoutsTab({ students }) {
               type="text"
               value={warmup}
               onChange={(e) => setWarmup(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
             />
           </div>
           <div>
@@ -216,7 +239,7 @@ export default function WorkoutsTab({ students }) {
               type="text"
               value={cardioBefore}
               onChange={(e) => setCardioBefore(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
             />
           </div>
           <div>
@@ -225,13 +248,13 @@ export default function WorkoutsTab({ students }) {
               type="text"
               value={cardioAfter}
               onChange={(e) => setCardioAfter(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
             />
           </div>
         </div>
       </div>
 
-      {/* ШАГ 3: Сегментация по дням и упражнения с подходами, повторами, весом и типами сетов */}
+      {/* ШАГ 3: Сегментация по дням и упражнения */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
         <div className="flex justify-between items-center pb-2 border-b border-slate-100">
           <div className="flex items-center gap-2">
@@ -240,7 +263,7 @@ export default function WorkoutsTab({ students }) {
           </div>
         </div>
 
-        {/* Переключатель дней недели */}
+        {/* Переключатель дней */}
         <div className="flex gap-2 overflow-x-auto pb-1">
           {Array.from({ length: frequency }, (_, i) => i + 1).map((dayNum) => (
             <button
@@ -266,7 +289,7 @@ export default function WorkoutsTab({ students }) {
               updated[activeDay].title = e.target.value;
               setDaysWorkouts(updated);
             }}
-            className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs"
+            className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-900"
           />
         </div>
 
@@ -310,7 +333,7 @@ export default function WorkoutsTab({ students }) {
                     <select
                       value={ex.name}
                       onChange={(e) => handleExerciseChange(index, 'name', e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold"
+                      className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900"
                     >
                       {availableExercises.map((item, i) => (
                         <option key={i} value={item}>{item}</option>
@@ -318,7 +341,7 @@ export default function WorkoutsTab({ students }) {
                     </select>
                   </div>
 
-                  {/* Подходы (+ / -) до 10 */}
+                  {/* Подходы */}
                   <div className="md:col-span-2">
                     <label className="block text-[10px] text-slate-400 mb-0.5">Подходы</label>
                     <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -333,7 +356,7 @@ export default function WorkoutsTab({ students }) {
                         type="number"
                         value={ex.sets}
                         onChange={(e) => handleExerciseChange(index, 'sets', Number(e.target.value))}
-                        className="w-full p-1.5 text-center text-xs font-bold focus:outline-none"
+                        className="w-full p-1.5 text-center text-xs font-bold focus:outline-none text-slate-900"
                       />
                       <button
                         type="button"
@@ -345,7 +368,7 @@ export default function WorkoutsTab({ students }) {
                     </div>
                   </div>
 
-                  {/* Повторы (+ / -) от 1 до 30 */}
+                  {/* Повторения */}
                   <div className="md:col-span-2">
                     <label className="block text-[10px] text-slate-400 mb-0.5">Повторения (1-30)</label>
                     <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -360,7 +383,7 @@ export default function WorkoutsTab({ students }) {
                         type="number"
                         value={ex.reps}
                         onChange={(e) => handleExerciseChange(index, 'reps', Number(e.target.value))}
-                        className="w-full p-1.5 text-center text-xs font-bold focus:outline-none"
+                        className="w-full p-1.5 text-center text-xs font-bold focus:outline-none text-slate-900"
                       />
                       <button
                         type="button"
@@ -372,7 +395,7 @@ export default function WorkoutsTab({ students }) {
                     </div>
                   </div>
 
-                  {/* Вес в кг (+ / -) от 0 до 200 кг с шагом 5 */}
+                  {/* Вес */}
                   <div className="md:col-span-2">
                     <label className="block text-[10px] text-slate-400 mb-0.5">Вес (кг)</label>
                     <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -387,7 +410,7 @@ export default function WorkoutsTab({ students }) {
                         type="number"
                         value={ex.weight}
                         onChange={(e) => handleExerciseChange(index, 'weight', Number(e.target.value))}
-                        className="w-full p-1.5 text-center text-xs font-bold focus:outline-none font-mono"
+                        className="w-full p-1.5 text-center text-xs font-bold focus:outline-none font-mono text-slate-900"
                       />
                       <button
                         type="button"
@@ -399,13 +422,12 @@ export default function WorkoutsTab({ students }) {
                     </div>
                   </div>
 
-                  {/* Тип сета (Сет / Суперсет / Дропсет) и Удаление */}
+                  {/* Удаление */}
                   <div className="md:col-span-1 flex items-center justify-between gap-1 pt-3">
                     <select
                       value={ex.exerciseType || 'Сет'}
                       onChange={(e) => handleExerciseChange(index, 'exerciseType', e.target.value)}
                       className="p-1 bg-amber-50 text-amber-800 border border-amber-200 rounded text-[10px] font-bold"
-                      title="Тип выполнения"
                     >
                       <option value="Сет">Сет</option>
                       <option value="Суперсет">Суперсет</option>
