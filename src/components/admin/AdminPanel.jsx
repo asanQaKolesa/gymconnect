@@ -47,7 +47,11 @@ export default function AdminPanel({ onBack }) {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (login === 'admin' && password === 'gymconnect2026') {
+    
+    // Берем пароль администратора из переменной окружения Vite (или используем заглушку для локальной среды)
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'gymconnect2026';
+
+    if (login === 'admin' && password === adminPassword) {
       setIsAdminAuth(true);
       sessionStorage.setItem('gymconnect_admin_auth', 'true');
       fetchAllData();
