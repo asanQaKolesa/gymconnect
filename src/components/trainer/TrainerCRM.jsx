@@ -25,16 +25,18 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     phone: '',
     instagram: '',
     experience_years: '',
-    products: ''
+    products: '',
+    avatar_url: ''
   });
 
   const [studentFinances, setStudentFinances] = useState({
     monthly_price: 50000,
-    package_type: 'individual',
+    package_type: 'Персональный (1 на 1)',
     total_trainings: 12,
     left_trainings: 12,
     is_burnable: false,
     status: 'active',
+    payment_method: 'Перевод Kaspi',
     workout_days: ['Понедельник', 'Среда', 'Пятница'],
     workout_time_slot: 'Вечер (18:00)'
   });
@@ -57,7 +59,8 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         phone: tData.phone || '',
         instagram: tData.instagram || '',
         experience_years: tData.experience_years || '',
-        products: tData.products || ''
+        products: tData.products || '',
+        avatar_url: tData.avatar_url || ''
       });
     }
 
@@ -90,7 +93,8 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         phone: trainerEditForm.phone,
         instagram: trainerEditForm.instagram,
         experience_years: Number(trainerEditForm.experience_years) || 0,
-        products: trainerEditForm.products
+        products: trainerEditForm.products,
+        avatar_url: trainerEditForm.avatar_url
       })
       .eq('id', trainerProfile.id);
 
@@ -107,11 +111,12 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     setSelectedStudent(student);
     setStudentFinances({
       monthly_price: student.monthly_price || 50000,
-      package_type: student.package_type || 'individual',
+      package_type: student.package_type || 'Персональный (1 на 1)',
       total_trainings: student.total_trainings || 12,
       left_trainings: student.left_trainings !== undefined ? student.left_trainings : 12,
       is_burnable: student.is_burnable || false,
       status: student.status || 'active',
+      payment_method: student.payment_method || 'Перевод Kaspi',
       workout_days: student.workout_days || ['Понедельник', 'Среда', 'Пятница'],
       workout_time_slot: student.workout_time_slot || 'Вечер'
     });
@@ -139,6 +144,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         left_trainings: studentFinances.left_trainings,
         is_burnable: studentFinances.is_burnable,
         status: studentFinances.status,
+        payment_method: studentFinances.payment_method,
         workout_days: studentFinances.workout_days,
         workout_time_slot: studentFinances.workout_time_slot
       })
@@ -176,10 +182,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     .filter(s => s.status === 'active' || !s.status)
     .reduce((sum, s) => sum + (Number(s.monthly_price) || 0), 0);
 
-  const totalLeftTrainingsCount = students
-    .filter(s => s.status === 'active' || !s.status)
-    .reduce((sum, s) => sum + (Number(s.left_trainings !== undefined ? s.left_trainings : 12)), 0);
-
   const lowBalanceStudents = students.filter(s => (s.status === 'active' || !s.status) && (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2);
 
   const daysOfWeek = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
@@ -192,9 +194,13 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         {/* Шапка кабинета тренера */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center font-bold text-base shadow-md shadow-blue-600/20">
-              {trainerProfile?.first_name?.[0] || 'T'}
-            </div>
+            {trainerProfile?.avatar_url ? (
+              <img src={trainerProfile.avatar_url} alt="Trainer" className="w-12 h-12 rounded-2xl object-cover shadow-md border border-slate-200" />
+            ) : (
+              <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center font-bold text-base shadow-md shadow-blue-600/20">
+                {trainerProfile?.first_name?.[0] || 'T'}
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-bold text-slate-900">
@@ -225,15 +231,11 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         </div>
 
-        {/* Метрики (KPI) с остатками тренировок */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Метрики (KPI) без общего некорректного остатка */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
             <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных учеников</p>
             <h3 className="text-2xl font-black text-slate-900 mt-1">{activeCount}</h3>
-          </div>
-          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-            <p className="text-[10px] text-slate-400 uppercase font-semibold">Остаток занятий (всего)</p>
-            <h3 className="text-2xl font-black text-indigo-600 mt-1">{totalLeftTrainingsCount} <span className="text-xs font-normal text-slate-500">зан.</span></h3>
           </div>
           <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
             <p className="text-[10px] text-slate-400 uppercase font-semibold">Требуют продления</p>
@@ -312,6 +314,17 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                 </div>
 
                 <div>
+                  <label className="block font-medium text-slate-700 mb-1">Ссылка на фото (Avatar URL)</label>
+                  <input 
+                    type="text"
+                    value={trainerEditForm.avatar_url}
+                    onChange={(e) => setTrainerEditForm({...trainerEditForm, avatar_url: e.target.value})}
+                    placeholder="https://..."
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                  />
+                </div>
+
+                <div>
                   <label className="block font-medium text-slate-700 mb-1">Телефон WhatsApp</label>
                   <input 
                     type="text"
@@ -360,7 +373,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         )}
 
-        {/* Модальное окно управления учеником */}
+        {/* Модальное окно управления учеником с русскими тарифами и выбором способа оплаты */}
         {selectedStudent && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
@@ -449,11 +462,11 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                       <select 
                         value={studentFinances.package_type}
                         onChange={(e) => setStudentFinances({...studentFinances, package_type: e.target.value})}
-                        className="w-full p-2 bg-white border border-slate-200 rounded-xl"
+                        className="w-full p-2 bg-white border border-slate-200 rounded-xl font-medium"
                       >
-                        <option value="individual">Персональный (1 на 1)</option>
-                        <option value="mini_group">Мини-группа</option>
-                        <option value="couple">Сплит (вдвоем)</option>
+                        <option value="Персональный (1 на 1)">Персональный (1 на 1)</option>
+                        <option value="Мини-группа">Мини-группа</option>
+                        <option value="Сплит (вдвоем)">Сплит (вдвоем)</option>
                       </select>
                     </div>
 
@@ -466,6 +479,19 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                         className="w-full p-2 bg-white border border-slate-200 rounded-xl font-mono"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Способ оплаты</label>
+                    <select 
+                      value={studentFinances.payment_method}
+                      onChange={(e) => setStudentFinances({...studentFinances, payment_method: e.target.value})}
+                      className="w-full p-2 bg-white border border-slate-200 rounded-xl font-medium"
+                    >
+                      <option value="Перевод Kaspi">Перевод Kaspi</option>
+                      <option value="Наличные">Наличные</option>
+                      <option value="Безналичный расчет">Безналичный расчет</option>
+                    </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
