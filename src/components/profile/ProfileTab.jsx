@@ -268,6 +268,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       instagram: savedProfile.instagram ? savedProfile.instagram.replace(/^@+/, '') : '',
       avatar: savedProfile.avatar || tgUser?.photo_url || '',
       age: savedProfile.age || '',
+      birthDate: savedProfile.birthDate || '',
       gender: savedProfile.gender || 'male',
       height: savedProfile.height || '',
       weight: savedProfile.weight || '',
@@ -323,11 +324,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     handleChange('username', val);
   };
 
-  const handleTrainerUsernameChange = (e) => {
-    const val = e.target.value.replace(/[@\s]/g, '');
-    handleChange('trainerUsername', val);
-  };
-
   const toggleWorkoutDay = (dayId) => {
     setFormData(prev => {
       const currentDays = prev.workoutDays || [];
@@ -356,6 +352,11 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     const ageNum = Number(formData.age);
     if (!ageNum || ageNum < 18 || ageNum > 80) {
       alert(currentLang === 'kk' ? 'Жасыңыз 18 бен 80 аралығында болуы тиіс!' : 'Возраст должен быть от 18 до 80 лет!');
+      return;
+    }
+
+    if (!formData.birthDate) {
+      alert(currentLang === 'kk' ? 'Туған күніңізді көрсетіңіз!' : 'Укажите дату рождения!');
       return;
     }
 
@@ -390,6 +391,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       whatsapp: formData.whatsapp || null,
       instagram: formattedInstagram,
       age: Number(formData.age),
+      birth_date: formData.birthDate || null,
       gender: formData.gender,
       height: Number(formData.height),
       weight: Number(formData.weight),
@@ -405,7 +407,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       looking_for: formData.lookingFor,
       workout_time: formData.workoutTime,
       custom_time: formData.customTime || null,
-      workout_days: formData.workoutDays, // Теперь здесь сохраняются русские дни ('Понедельник', 'Вторник' и т.д.)
+      workout_days: formData.workoutDays,
       bio: formData.bio || null,
       avatar_url: formData.avatar || null,
       agree_terms: formData.agreeTerms,
@@ -576,6 +578,23 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
+            {/* Новое поле: Дата рождения */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                {currentLang === 'kk' ? 'Туған күні' : 'Дата рождения'} *
+              </label>
+              <div className="relative flex items-center">
+                <Calendar className="absolute left-3 w-4 h-4 text-slate-400" />
+                <input 
+                  type="date"
+                  required
+                  value={formData.birthDate}
+                  onChange={(e) => handleChange('birthDate', e.target.value)}
+                  className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
@@ -692,7 +711,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               )}
             </div>
 
-            {/* Выбор дней тренировок на русском языке */}
+            {/* Выбор дней тренировок */}
             <div className="mb-3">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Жаттығу күндерін таңдаңыз' : 'Выберите дни тренировок'} *
