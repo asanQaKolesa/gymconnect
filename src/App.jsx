@@ -17,14 +17,14 @@ import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
 import { translations } from './locales/translations';
 
 export default function App() {
-  // 1. СТРОГАЯ ПРОВЕРКА ТРЕНЕРСКОГО РОУТА (?trainer=true)
+  // 1. СТРОГАЯ И ГЛАВНАЯ ПРОВЕРКА ТРЕНЕРСКОГО РОУТА (?trainer=true)
   const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
   const [trainerUsername, setTrainerUsername] = useState(() => {
     return localStorage.getItem('gymconnect_trainer_username') || '';
   });
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
 
-  // Проверка существования тренера в правильной таблице 'trainer_profiles' при старте
+  // Проверка существования тренера в таблице 'trainer_profiles' при старте
   useEffect(() => {
     async function verifyTrainer() {
       if (trainerUsername) {
@@ -64,6 +64,8 @@ export default function App() {
         return (
           <TrainerLogin 
             onLoginSuccess={(username) => {
+              localStorage.setItem('gymconnect_trainer_registered', 'true');
+              localStorage.setItem('gymconnect_trainer_username', username);
               setTrainerUsername(username);
             }}
             onSwitchToRegister={() => setIsTrainerRegistering(true)}
