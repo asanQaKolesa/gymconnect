@@ -25,6 +25,26 @@ export default function AdminPanel({ onBack }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false); 
   const [proMonths, setProMonths] = useState(1);
 
+  const formatGoal = (goal) => {
+    if (!goal) return 'Не указана';
+    const g = goal.toLowerCase();
+    if (g === 'mass' || g.includes('набор')) return 'Набор массы и гипертрофия';
+    if (g === 'cut' || g.includes('сушка') || g.includes('похудение')) return 'Похудение и сушка';
+    if (g === 'tone' || g.includes('рекомпозиция') || g.includes('тонус')) return 'Тонус и рекомпозиция';
+    if (g === 'functional' || g.includes('функционал')) return 'Функциональный тренинг';
+    return goal;
+  };
+
+  const formatExperience = (exp) => {
+    if (!exp) return 'Не указан';
+    const e = exp.toLowerCase();
+    if (e.includes('with_trainer') || e.includes('trainer')) return 'Занимается с тренером';
+    if (e.includes('beginner') || e.includes('новичок')) return 'Новичок';
+    if (e.includes('intermediate') || e.includes('средний')) return 'Опытный';
+    if (e.includes('advanced') || e.includes('профи')) return 'Профессионал';
+    return exp;
+  };
+
   const handleLogin = (e) => {
     e.preventDefault();
     if (login === 'admin' && password === 'gymconnect2026') {
@@ -167,7 +187,7 @@ export default function AdminPanel({ onBack }) {
     const headers = ['ID', 'Имя', 'Фамилия', 'Telegram', 'Возраст', 'Рост', 'Вес', 'Зал', 'Цель', 'Pro статус', 'Дата'];
     const rows = profiles.map(p => [
       p.id, p.first_name || '', p.last_name || '', p.username || '', p.age || '', p.height || '', p.weight || '',
-      `"${(p.gym || '').replace(/"/g, '""')}"`, p.goal || '', p.is_pro ? 'PRO' : 'Free', p.created_at || ''
+      `"${(p.gym || '').replace(/"/g, '""')}"`, formatGoal(p.goal), p.is_pro ? 'PRO' : 'Free', p.created_at || ''
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
@@ -508,7 +528,7 @@ export default function AdminPanel({ onBack }) {
                           </span>
                         </td>
                         <td className="p-3 max-w-[150px] truncate" title={p.gym}>{p.gym}</td>
-                        <td className="p-3 font-semibold">{p.goal}</td>
+                        <td className="p-3 font-semibold">{formatGoal(p.goal)}</td>
                         <td className="p-3">
                           {p.is_pro ? (
                             <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md text-[10px] font-bold inline-flex items-center gap-1">
@@ -602,8 +622,8 @@ export default function AdminPanel({ onBack }) {
                   <p className="font-bold text-slate-900">Локация и цель</p>
                   <p><b>Город / Район:</b> {viewingProfile.city || 'Алматы'}, {viewingProfile.district || '—'}</p>
                   <p><b>Фитнес-зал:</b> {viewingProfile.gym || '—'}</p>
-                  <p><b>Цель тренировок:</b> {viewingProfile.goal || '—'}</p>
-                  <p><b>Уровень подготовки:</b> {viewingProfile.experience_level || '—'}</p>
+                  <p><b>Цель тренировок:</b> {formatGoal(viewingProfile.goal)}</p>
+                  <p><b>Уровень подготовки:</b> {formatExperience(viewingProfile.experience_level)}</p>
                 </div>
 
                 <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
