@@ -680,7 +680,7 @@ export default function AdminPanel({ onBack }) {
                       type="text"
                       value={editingProfile.first_name || ''}
                       onChange={(e) => setEditingProfile({...editingProfile, first_name: e.target.value})}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
                     />
                   </div>
                   <div>
@@ -689,7 +689,7 @@ export default function AdminPanel({ onBack }) {
                       type="text"
                       value={editingProfile.last_name || ''}
                       onChange={(e) => setEditingProfile({...editingProfile, last_name: e.target.value})}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
                     />
                   </div>
                 </div>
@@ -700,7 +700,7 @@ export default function AdminPanel({ onBack }) {
                     type="text"
                     value={editingProfile.username || ''}
                     onChange={(e) => setEditingProfile({...editingProfile, username: e.target.value})}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
                   />
                 </div>
 
@@ -711,7 +711,7 @@ export default function AdminPanel({ onBack }) {
                     value={editingProfile.trainer_username || ''}
                     onChange={(e) => setEditingProfile({...editingProfile, trainer_username: e.target.value})}
                     placeholder="ник тренера"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono"
                   />
                 </div>
 
@@ -721,7 +721,7 @@ export default function AdminPanel({ onBack }) {
                     type="text"
                     value={editingProfile.gym || ''}
                     onChange={(e) => setEditingProfile({...editingProfile, gym: e.target.value})}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
                   />
                 </div>
 
