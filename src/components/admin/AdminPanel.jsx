@@ -1,7 +1,7 @@
 // src/components/admin/AdminPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { ShieldCheck, Users, Dumbbell, Building2, LogOut, RefreshCw, Search, Trash2, Edit3, Eye, X, Crown, Download, User, Key } from 'lucide-react';
+import { ShieldCheck, Users, Dumbbell, Building2, LogOut, RefreshCw, Search, Trash2, Edit3, Eye, X, Crown, Download, User } from 'lucide-react';
 
 export default function AdminPanel({ onBack }) {
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
@@ -423,7 +423,7 @@ export default function AdminPanel({ onBack }) {
             </div>
           </div>
         ) : activeTab === 'trainers' ? (
-          /* ТАБЛИЦА ТРЕНЕРОВ С УЧЕТОМ ПАРОЛЕЙ И ЛОГИНОВ */
+          /* ТАБЛИЦА ТРЕНЕРОВ БЕЗ ПАРОЛЕЙ */
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
@@ -432,7 +432,6 @@ export default function AdminPanel({ onBack }) {
                     <th className="p-3 w-12 text-center">№</th>
                     <th className="p-3">Тренер</th>
                     <th className="p-3">Telegram / Телефон</th>
-                    <th className="p-3">Пароль в CRM</th>
                     <th className="p-3">Учеников в CRM</th>
                     <th className="p-3">Специализации</th>
                     <th className="p-3">Залы</th>
@@ -462,12 +461,6 @@ export default function AdminPanel({ onBack }) {
                           <div className="text-[10px] text-slate-400">+7 {t.phone || '—'}</div>
                         </td>
                         <td className="p-3">
-                          <span className="bg-slate-100 text-slate-800 px-2 py-1 rounded-md font-mono text-xs font-bold inline-flex items-center gap-1">
-                            <Key className="w-3 h-3 text-slate-500" />
-                            {t.password || '—'}
-                          </span>
-                        </td>
-                        <td className="p-3">
                           <span className="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold text-xs">
                             {t.students_count} учеников
                           </span>
@@ -495,7 +488,7 @@ export default function AdminPanel({ onBack }) {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="8" className="p-8 text-center text-slate-400">
+                      <td colSpan="7" className="p-8 text-center text-slate-400">
                         {loading ? 'Загрузка...' : 'Зарегистрированных тренеров пока нет'}
                       </td>
                     </tr>
@@ -730,7 +723,7 @@ export default function AdminPanel({ onBack }) {
                     />
                   </div>
                   <div>
-                    <label className="label block font-medium text-slate-700 mb-1">Фамилия</label>
+                    <label className="block font-medium text-slate-700 mb-1">Фамилия</label>
                     <input 
                       type="text"
                       value={editingProfile.last_name || ''}
