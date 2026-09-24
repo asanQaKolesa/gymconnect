@@ -1,7 +1,7 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Utensils } from 'lucide-react';
+import { Utensils, X, Settings } from 'lucide-react';
 import OverviewTab from './tabs/OverviewTab';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
@@ -39,6 +39,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     expiresAt: '25.10.2026'
   });
 
+  // Расширенная форма профиля тренера с полями залов и формата
   const [trainerEditForm, setTrainerEditForm] = useState({
     first_name: '',
     last_name: '',
@@ -46,20 +47,9 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     instagram: '',
     experience_years: '',
     products: '',
-    avatar_url: ''
-  });
-
-  const [studentFinances, setStudentFinances] = useState({
-    monthly_price: 50000,
-    package_type: 'Персональный (1 на 1)',
-    total_trainings: 12,
-    left_trainings: 12,
-    is_burnable: false,
-    status: 'active',
-    payment_method: 'Перевод Kaspi',
-    workout_days: ['Понедельник', 'Среда', 'Пятница'],
-    workout_time_slot: 'Вечер (16:00 - 21:00)',
-    birth_date: ''
+    avatar_url: '',
+    gyms: 'Invictus Go',
+    work_format: 'Офлайн'
   });
 
   const fetchTrainerAndStudents = async () => {
@@ -81,7 +71,9 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         instagram: tData.instagram || '',
         experience_years: tData.experience_years || '',
         products: tData.products || '',
-        avatar_url: tData.avatar_url || ''
+        avatar_url: tData.avatar_url || '',
+        gyms: tData.gyms || 'Invictus Go',
+        work_format: tData.work_format || 'Офлайн'
       });
     }
 
@@ -105,6 +97,35 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
       fetchTrainerAndStudents();
     }
   }, [trainerUsername]);
+
+  // Обработчик обновления настроек тренера (включая залы и формат)
+  const handleUpdateTrainerProfile = async (e) => {
+    e.preventDefault();
+    if (!trainerProfile) return;
+
+    const { error } = await supabase
+      .from('trainer_profiles')
+      .update({
+        first_name: trainerEditForm.first_name,
+        last_name: trainerEditForm.last_name,
+        phone: trainerEditForm.phone,
+        instagram: trainerEditForm.instagram,
+        experience_years: Number(trainerEditForm.experience_years) || 0,
+        products: trainerEditForm.products,
+        avatar_url: trainerEditForm.avatar_url,
+        gyms: trainerEditForm.gyms,
+        work_format: trainerEditForm.work_format
+      })
+      .eq('id', trainerProfile.id);
+
+    if (error) {
+      alert('Ошибка обновления профиля: ' + error.message);
+    } else {
+      alert('Настройки залов и формата успешно сохранены!');
+      setIsProfileModalOpen(false);
+      fetchTrainerAndStudents();
+    }
+  };
 
   const handleCreateStudent = async (e) => {
     e.preventDefault();
@@ -229,6 +250,122 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           setForm={setNewStudentForm}
           onSubmit={handleCreateStudent}
         />
+
+        {/* Модальное окно настроек профиля тренера с выбором залов и формата */}
+        {isProfileModalOpen && trainerProfile && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-base font-bold text-slate-900">Настройки профиля и залов</h3>
+                <button onClick={() => setIsProfileModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+              </div>
+
+              <form onSubmit={handleUpdateTrainerProfile} className="space-y-3 text-xs">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Имя</label>
+                    <input 
+                      type="text"
+                      value={trainerEditForm.first_name}
+                      onChange={(e) => setTrainerEditForm({...trainerEditForm, first_name: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Фамилия</label>
+                    <input 
+                      type="text"
+                      value={trainerEditForm.last_name}
+                      onChange={(e) => setTrainerEditForm({...trainerEditForm, last_name: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Мои залы (через запятую)</label>
+                  <input 
+                    type="text"
+                    value={trainerEditForm.gyms}
+                    onChange={(e) => setTrainerEditForm({...trainerEditForm, gyms: e.target.value})}
+                    placeholder="Invictus Go, World Class"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Укажите клубы, в которых вы проводите офлайн-тренировки.</p>
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Основной формат работы</label>
+                  <select 
+                    value={trainerEditForm.work_format}
+                    onChange={(e) => setTrainerEditForm({...trainerEditForm, work_format: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  >
+                    <option value="Офлайн">Офлайн (в залах)</option>
+                    <option value="Онлайн">Онлайн (удаленно)</option>
+                    <option value="Смешанный">Смешанный (Офлайн + Онлайн)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Ссылка на фото (Avatar URL)</label>
+                  <input 
+                    type="text"
+                    value={trainerEditForm.avatar_url}
+                    onChange={(e) => setTrainerEditForm({...trainerEditForm, avatar_url: e.target.value})}
+                    placeholder="https://..."
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Телефон WhatsApp</label>
+                  <input 
+                    type="text"
+                    value={trainerEditForm.phone}
+                    onChange={(e) => setTrainerEditForm({...trainerEditForm, phone: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Instagram</label>
+                  <input 
+                    type="text"
+                    value={trainerEditForm.instagram}
+                    onChange={(e) => setTrainerEditForm({...trainerEditForm, instagram: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Опыт работы (лет)</label>
+                  <input 
+                    type="number"
+                    value={trainerEditForm.experience_years}
+                    onChange={(e) => setTrainerEditForm({...trainerEditForm, experience_years: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Мои продукты / программы</label>
+                  <textarea 
+                    rows="2"
+                    value={trainerEditForm.products}
+                    onChange={(e) => setTrainerEditForm({...trainerEditForm, products: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3">
+                  <button type="button" onClick={() => setIsProfileModalOpen(false)} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-medium">Отмена</button>
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold shadow-md">Сохранить</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
