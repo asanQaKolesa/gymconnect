@@ -1,6 +1,6 @@
 // src/components/trainer/tabs/StudentsListTab.jsx
 import React, { useState } from 'react';
-import { ChevronRight, MessageCircle, Calendar, Dumbbell, Eye, AlertCircle, Cake } from 'lucide-react';
+import { ChevronRight, MessageCircle, Calendar, Dumbbell, Eye, AlertCircle, Cake, FileText } from 'lucide-react';
 
 export default function StudentsListTab({ students, formatGoal, onSelectStudent, onOpenAddModal }) {
   const [expandedStudentId, setExpandedStudentId] = useState(null);
@@ -127,6 +127,14 @@ export default function StudentsListTab({ students, formatGoal, onSelectStudent,
                       <p className="text-xs text-slate-500 mt-0.5">
                         Цель: <span className="text-blue-600 font-medium">{getLocalizedGoal(student.goal)}</span> | Зал: {student.gym || 'Не указан'}
                       </p>
+
+                      {/* Блок вывода заметки тренера, если она сохранена */}
+                      {student.trainer_notes && (
+                        <div className="flex items-start gap-1.5 mt-1.5 bg-amber-50/80 border border-amber-200 p-2 rounded-xl text-[11px] text-amber-900">
+                          <FileText className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                          <span><b>Заметка:</b> {student.trainer_notes}</span>
+                        </div>
+                      )}
 
                       <div className="flex flex-wrap items-center gap-2 mt-2">
                         <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200 font-mono">
