@@ -7,7 +7,7 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
   
   const [expandedStudentId, setExpandedStudentId] = useState(null);
 
-  // Определяем день недели и текущую дату (сегодня пятница, 25 сентября 2026)
+  // Определяем день недели и текущую дату
   const daysMap = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
   const todayName = daysMap[new Date().getDay()];
   const formattedDate = "Пятница, 25 сентября"; // Точная дата для сегодняшнего дня
@@ -49,7 +49,6 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
   const handleAttendanceNo = async (e, student) => {
     e.stopPropagation();
     alert(`Пропуск зафиксирован. Занятие для ${student.first_name} отмечено как прогул.`);
-    // Здесь можно добавить сохранение статистики пропусков в базу при необходимости
   };
 
   // Красивое форматирование тарифа (замена individual на Индивидуальный)
@@ -167,12 +166,12 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
         </div>
       </div>
 
-      {/* Тренировки на сегодня с точной датой и разделением по времени */}
+      {/* Тренировки на сегодня без дублей в дате */}
       <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
-            <h3 className="font-bold text-sm text-slate-900">Тренировки на сегодня ({formattedDate}, {todayName})</h3>
+            <h3 className="font-bold text-sm text-slate-900">Тренировки на сегодня ({formattedDate})</h3>
           </div>
           <span className="bg-blue-50 text-blue-700 font-bold px-3 py-1 rounded-xl text-xs font-mono">
             Всего: {todayStudents.length} атлетов
