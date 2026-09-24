@@ -1,7 +1,7 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, Utensils } from 'lucide-react';
+import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, Utensils, ShieldCheck, Zap, ArrowUpRight } from 'lucide-react';
 import OverviewTab from './tabs/OverviewTab';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
@@ -18,6 +18,12 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+
+  // Статус подписки тренера (можно будет привязать к базе данных в будущем)
+  const [subscription, setSubscription] = useState({
+    isActive: true, // Поставь false, чтобы проверить состояние «Нет подписки»
+    expiresAt: '25.10.2026'
+  });
 
   const [trainerEditForm, setTrainerEditForm] = useState({
     first_name: '',
@@ -163,6 +169,17 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     }
   };
 
+  // Редирект в твой Telegram для оплаты/продления
+  const handleTelegramRedirect = (actionType) => {
+    const cleanUsername = trainerUsername.replace('@', '');
+    const message = encodeURIComponent(
+      actionType === 'buy' 
+        ? `Привет! Хочу оформить подписку на GymConnect CRM для тренера @${cleanUsername}`
+        : `Привет! Хочу продлить подписку на GymConnect CRM для тренера @${cleanUsername}`
+    );
+    window.open(`https://t.me/asanali_kk?text=${message}`, '_blank');
+  };
+
   const formatGoal = (goal) => {
     if (!goal) return 'Не указана';
     const g = goal.toLowerCase();
@@ -196,46 +213,110 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
       <div className="max-w-4xl mx-auto space-y-4">
         
         {/* Шапка кабинета тренера */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            {trainerProfile?.avatar_url ? (
-              <img src={trainerProfile.avatar_url} alt="Trainer" className="w-12 h-12 rounded-2xl object-cover shadow-md border border-slate-200" />
-            ) : (
-              <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center font-bold text-base shadow-md shadow-blue-600/20">
-                {trainerProfile?.first_name?.[0] || 'T'}
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              {trainerProfile?.avatar_url ? (
+                <img src={trainerProfile.avatar_url} alt="Trainer" className="w-12 h-12 rounded-2xl object-cover shadow-md border border-slate-200" />
+              ) : (
+                <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center font-bold text-base shadow-md shadow-blue-600/20">
+                  {trainerProfile?.first_name?.[0] || 'T'}
+                </div>
+              )}
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-base font-bold text-slate-900">
+                    {trainerProfile ? `${trainerProfile.first_name} ${trainerProfile.last_name}` : 'Кабинет тренера'}
+                  </h1>
+                  <span className="bg-blue-50 text-blue-600 text-[10px] font-mono px-2 py-0.5 rounded-md border border-blue-100">
+                    {trainerProfile?.role_type === 'group' ? 'Групповой тренинг' : trainerProfile?.role_type === 'both' ? 'Универсал' : 'Персональный тренер'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">@{trainerUsername.replace('@', '')} • {trainerProfile?.experience_years || 0} лет стажа</p>
               </div>
-            )}
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold text-slate-900">
-                  {trainerProfile ? `${trainerProfile.first_name} ${trainerProfile.last_name}` : 'Кабинет тренера'}
-                </h1>
-                <span className="bg-blue-50 text-blue-600 text-[10px] font-mono px-2 py-0.5 rounded-md border border-blue-100">
-                  {trainerProfile?.role_type === 'group' ? 'Групповой тренинг' : trainerProfile?.role_type === 'both' ? 'Универсал' : 'Персональный тренер'}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-mono mt-0.5">@{trainerUsername.replace('@', '')} • {trainerProfile?.experience_years || 0} лет стажа</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setIsProfileModalOpen(true)}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
+              >
+                <Settings className="w-4 h-4 text-slate-500" />
+                <span>Мой профиль</span>
+              </button>
+              <button onClick={fetchTrainerAndStudents} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors" title="Обновить">
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+              <button onClick={onLogout} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-colors border border-rose-100" title="Выйти">
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setIsProfileModalOpen(true)}
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
-            >
-              <Settings className="w-4 h-4 text-slate-500" />
-              <span>Мой профиль</span>
-            </button>
-            <button onClick={fetchTrainerAndStudents} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors" title="Обновить">
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-            <button onClick={onLogout} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-colors border border-rose-100" title="Выйти">
-              <LogOut className="w-4 h-4" />
-            </button>
+          {/* Виджет подписки тренера и кнопка продвижения */}
+          <div className="pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            {/* Статус подписки */}
+            {subscription.isActive ? (
+              <div className="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold shrink-0">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">Подписка CRM активна</p>
+                    <p className="text-[11px] text-slate-500">Доступ действителен до <span className="font-semibold text-emerald-700">{subscription.expiresAt}</span></p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleTelegramRedirect('renew')}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-sm transition-all text-[11px]"
+                >
+                  Продлить
+                </button>
+              </div>
+            ) : (
+              <div className="bg-amber-50/50 p-3 rounded-2xl border border-amber-200 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center font-bold shrink-0">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">Подписка не оформлена</p>
+                    <p className="text-[11px] text-slate-500">Оформите доступ для работы с базой учеников</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleTelegramRedirect('buy')}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition-all text-[11px]"
+                >
+                  Оформить
+                </button>
+              </div>
+            )}
+
+            {/* Задел под продвижение тренера через таргет */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-2xl border border-blue-100 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center font-bold shrink-0">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900">Продвижение профиля (Таргет)</p>
+                  <p className="text-[11px] text-slate-500">Получайте новых клиентов в свой зал</p>
+                </div>
+              </div>
+              <button
+                onClick={() => alert('Скоро здесь появится модуль настройки лидогенерации и таргета!')}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition-all text-[11px] flex items-center gap-1"
+              >
+                <span>Скоро</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Навигация (Табы) — Заменена вкладка «На сегодня» на «Питание» */}
+        {/* Навигация (Табы) */}
         <div className="grid grid-cols-4 md:grid-cols-7 gap-1.5">
           <button onClick={() => setActiveTab('overview')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'overview' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Обзор</button>
           <button onClick={() => setActiveTab('students')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'students' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Ученики</button>
@@ -406,6 +487,15 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                       <span className="text-[10px] text-slate-400 block">Пол</span>
                       <span className="font-bold text-slate-800">{formatGender(selectedStudent.gender)}</span>
                     </div>
+                  </div>
+                  <div className="pt-1">
+                    <label className="block text-[10px] font-semibold text-slate-500 mb-1">Дата рождения (для поздравлений)</label>
+                    <input 
+                      type="date"
+                      value={studentFinances.birth_date}
+                      onChange={(e) => setStudentFinances({...studentFinances, birth_date: e.target.value})}
+                      className="w-full p-2 bg-white border border-blue-200 rounded-xl font-mono text-xs"
+                    />
                   </div>
                   <p className="text-[11px] text-slate-600 pt-1"><b>Цель:</b> {formatGoal(selectedStudent.goal)} | <b>Зал:</b> {selectedStudent.gym || 'Не указан'}</p>
                 </div>
