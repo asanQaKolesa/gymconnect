@@ -244,13 +244,13 @@ const ALMATY_GYMS = [
 ];
 
 const DAYS_OF_WEEK = [
-  { id: 'mon', label: 'Пн' },
-  { id: 'tue', label: 'Вт' },
-  { id: 'wed', label: 'Ср' },
-  { id: 'thu', label: 'Чт' },
-  { id: 'fri', label: 'Пт' },
-  { id: 'sat', label: 'Сб' },
-  { id: 'sun', label: 'Вс' }
+  { id: 'Понедельник', label: 'Пн' },
+  { id: 'Вторник', label: 'Вт' },
+  { id: 'Среда', label: 'Ср' },
+  { id: 'Четверг', label: 'Чт' },
+  { id: 'Пятница', label: 'Пт' },
+  { id: 'Суббота', label: 'Сб' },
+  { id: 'Воскресенье', label: 'Вс' }
 ];
 
 export default function ProfileTab({ onComplete, isRegistration, currentLang = 'kk' }) {
@@ -286,7 +286,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       lookingFor: savedProfile.lookingFor || 'gymbro',
       workoutTime: savedProfile.workoutTime || 'evening',
       customTime: savedProfile.customTime || '',
-      workoutDays: savedProfile.workoutDays || ['mon', 'wed', 'fri'],
+      workoutDays: savedProfile.workoutDays || ['Понедельник', 'Среда', 'Пятница'],
       bio: savedProfile.bio || '',
 
       agreeTerms: savedProfile.agreeTerms || false,
@@ -405,7 +405,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
       looking_for: formData.lookingFor,
       workout_time: formData.workoutTime,
       custom_time: formData.customTime || null,
-      workout_days: formData.workoutDays,
+      workout_days: formData.workoutDays, // Теперь здесь сохраняются русские дни ('Понедельник', 'Вторник' и т.д.)
       bio: formData.bio || null,
       avatar_url: formData.avatar || null,
       agree_terms: formData.agreeTerms,
@@ -510,7 +510,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* WhatsApp номер для связи с тренером (необязательный, скрытый от публики) */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 Номер WhatsApp для связи с тренером (необязательно)
@@ -527,9 +526,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                   className="w-full pl-11 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
                 />
               </div>
-              <span className="text-[10px] text-slate-500 mt-1 block leading-tight">
-                Не отображается в публичном профиле. Указывается исключительно для связи с вашим персональным тренером.
-              </span>
             </div>
 
             <div>
@@ -544,7 +540,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
                   className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
                 />
               </div>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Только английские буквы, цифры и символы . _</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -697,295 +692,29 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               )}
             </div>
 
-            <div>
+            {/* Выбор дней тренировок на русском языке */}
+            <div className="mb-3">
               <label className="block text-xs font-medium text-slate-700 mb-1">
-                {currentLang === 'kk' ? 'Абонемент мерзімі' : 'Срок вашего абонемента в клубе'} *
+                {currentLang === 'kk' ? 'Жаттығу күндерін таңдаңыз' : 'Выберите дни тренировок'} *
               </label>
-              <div className="relative flex items-center">
-                <CreditCard className="absolute left-3 w-4 h-4 text-slate-400" />
-                <select
-                  value={formData.membershipTerm}
-                  onChange={(e) => handleChange('membershipTerm', e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
-                >
-                  <option value="1_month">{currentLang === 'kk' ? '1 ай қалды' : 'Остался 1 месяц'}</option>
-                  <option value="3_months">{currentLang === 'kk' ? '3 ай' : '3 месяца'}</option>
-                  <option value="6_months">{currentLang === 'kk' ? '6 ай' : '6 месяцев'}</option>
-                  <option value="1_year">{currentLang === 'kk' ? '1 жыл' : '1 год'}</option>
-                  <option value="guest">{currentLang === 'kk' ? 'Гостевой визит / Разовые' : 'Гостевые визиты'}</option>
-                </select>
-                <ChevronDown className="absolute right-3 w-4 h-4 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                {currentLang === 'kk' ? 'Жаттығу стажы' : 'Ваш стаж тренировок'} *
-              </label>
-              <select
-                value={formData.experienceLevel}
-                onChange={(e) => handleChange('experienceLevel', e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
-              >
-                <option value="beginner">{currentLang === 'kk' ? 'Мен жаңадан бастаушымын (Новичок)' : 'Новичок (до 6 месяцев)'}</option>
-                <option value="minimal">{currentLang === 'kk' ? 'Минималды тәжірибем бар' : 'Минимальный опыт'}</option>
-                <option value="independent">{currentLang === 'kk' ? 'Өз бетімше жаттығамын' : 'Занимаюсь самостоятельно'}</option>
-                <option value="with_trainer">{currentLang === 'kk' ? 'Тренермен жаттығамын' : 'Занимаюсь с тренером'}</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                {currentLang === 'kk' ? 'Тренер форматы' : 'Формат работы с тренером'} *
-              </label>
-              <select
-                value={formData.trainerNeed}
-                onChange={(e) => handleChange('trainerNeed', e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
-              >
-                <option value="self">{currentLang === 'kk' ? 'Өз бетімше айналысамын (Тренер керек емес)' : 'Буду заниматься сам'}</option>
-                <option value="have_trainer">{currentLang === 'kk' ? 'Қазір тренермен жұмыс жасаймын' : 'Занимаюсь с тренером'}</option>
-                <option value="find_online">{currentLang === 'kk' ? 'Онлайн тренер іздегім келеді' : 'Хочу найти онлайн-тренера'}</option>
-                <option value="find_offline">{currentLang === 'kk' ? 'Залда тренер табуды қалаймын (Офлайн)' : 'Хочу найти тренера офлайн в зале'}</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                {currentLang === 'kk' ? 'Тренеріңіздің Telegram никнеймі (міндетті емес)' : 'Telegram никнейм вашего тренера (необязательно)'}
-              </label>
-              <div className="relative flex items-center">
-                <span className="absolute left-3.5 text-slate-400 font-mono text-sm">@</span>
-                <input 
-                  type="text"
-                  value={formData.trainerUsername}
-                  onChange={handleTrainerUsernameChange}
-                  placeholder="trainer_username"
-                  className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                {currentLang === 'kk' ? 'Спорттық бағытыңыз' : 'Спортивная специализация'} *
-              </label>
-              <select
-                value={formData.specialization}
-                onChange={(e) => handleChange('specialization', e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
-              >
-                <option value="powerlifter">🏋️‍♂️ Пауэрлифтер (Силовая база)</option>
-                <option value="crossfitter">⚡ Кроссфитер (Функциональный тренинг)</option>
-                <option value="athlete">🏃‍♂️ Атлет / Бодибилдер (Гипертрофия)</option>
-                <option value="group_lover">🧘‍♀️ Люблю групповые тренировки</option>
-                <option value="fighter">🥊 Единоборства / Бокс / ММА</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                {currentLang === 'kk' ? 'Негізгі мақсатыңыз' : 'Главная цель тренировок'} *
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'mass', label: currentLang === 'kk' ? 'Бұлшықет жинау' : 'Набор массы' },
-                  { id: 'cut', label: currentLang === 'kk' ? 'Арықтау / Сушка' : 'Сушка / Похудение' },
-                  { id: 'recomp', label: currentLang === 'kk' ? 'Рекомпозиция (Масса+Сушка)' : 'Рекомпозиция тела' },
-                  { id: 'strength', label: currentLang === 'kk' ? 'Күшті арттыру' : 'Развитие силы' },
-                  { id: 'tone', label: currentLang === 'kk' ? 'Тонус және денсаулық' : 'Тонус и здоровье' },
-                  { id: 'endurance', label: currentLang === 'kk' ? 'Төзімділік' : 'Выносливость' }
-                ].map((item) => (
-                  <button
-                    type="button"
-                    key={item.id}
-                    onClick={() => handleChange('goal', item.id)}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-medium border text-left transition-all ${
-                      formData.goal === item.id 
-                        ? 'bg-blue-50 border-blue-600 text-blue-700 font-semibold' 
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-slate-100">
-              <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">
-                {currentLang === 'kk' ? 'GymBro іздеу параметрлері' : 'Параметры поиска GymBro'}
-              </h3>
-
-              <div className="mb-3">
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  {currentLang === 'kk' ? 'Кімді іздересіз?' : 'Кого вы ищете для тренировок?'}
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: 'gymbro', label: 'GymBro' },
-                    { id: 'gymgirl', label: 'GymGirl' },
-                    { id: 'anyone', label: currentLang === 'kk' ? 'Бәрібир' : 'Любой' }
-                  ].map((item) => (
+              <div className="grid grid-cols-7 gap-1">
+                {DAYS_OF_WEEK.map((day) => {
+                  const isSelected = formData.workoutDays?.includes(day.id);
+                  return (
                     <button
                       type="button"
-                      key={item.id}
-                      onClick={() => handleChange('lookingFor', item.id)}
-                      className={`py-2 px-2 rounded-xl text-xs font-medium border text-center transition-all ${
-                        formData.lookingFor === item.id 
-                          ? 'bg-blue-50 border-blue-600 text-blue-700 font-semibold' 
+                      key={day.id}
+                      onClick={() => toggleWorkoutDay(day.id)}
+                      className={`py-2.5 rounded-xl text-xs font-semibold border transition-all flex flex-col items-center justify-center ${
+                        isSelected 
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm' 
                           : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                       }`}
                     >
-                      {item.label}
+                      {day.label}
                     </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  {currentLang === 'kk' ? 'Ыңғайлы уақыт' : 'Удобное время суток'}
-                </label>
-                <div className="grid grid-cols-3 gap-2 mb-2">
-                  {[
-                    { id: 'morning', label: currentLang === 'kk' ? 'Таңертең' : 'Утро' },
-                    { id: 'afternoon', label: currentLang === 'kk' ? 'Күндіз' : 'День' },
-                    { id: 'evening', label: currentLang === 'kk' ? 'Кешкілік' : 'Вечер' }
-                  ].map((item) => (
-                    <button
-                      type="button"
-                      key={item.id}
-                      onClick={() => handleChange('workoutTime', item.id)}
-                      className={`py-2 px-2 rounded-xl text-xs font-medium border text-center transition-all ${
-                        formData.workoutTime === item.id 
-                          ? 'bg-blue-50 border-blue-600 text-blue-700 font-semibold' 
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="relative flex items-center">
-                  <Clock className="absolute left-3 w-4 h-4 text-slate-400" />
-                  <input 
-                    type="text"
-                    value={formData.customTime}
-                    onChange={(e) => handleChange('customTime', e.target.value)}
-                    placeholder={currentLang === 'kk' ? 'Нақты уақыт (мысалы: 18:00 - 20:00)' : 'Точное время (например: 18:00 - 20:00)'}
-                    className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  {currentLang === 'kk' ? 'Жаттығу күндерін таңдаңыз' : 'Выберите дни тренировок'} *
-                </label>
-                <div className="grid grid-cols-7 gap-1">
-                  {DAYS_OF_WEEK.map((day) => {
-                    const isSelected = formData.workoutDays?.includes(day.id);
-                    return (
-                      <button
-                        type="button"
-                        key={day.id}
-                        onClick={() => toggleWorkoutDay(day.id)}
-                        className={`py-2.5 rounded-xl text-xs font-semibold border transition-all flex flex-col items-center justify-center ${
-                          isSelected 
-                            ? 'bg-blue-600 border-blue-600 text-white shadow-sm' 
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                        }`}
-                      >
-                        {day.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  {currentLang === 'kk' ? 'Өзіңіз туралы (GymBro карточкасы үшін)' : 'О себе (для карточки GymBro)'}
-                </label>
-                <textarea
-                  rows="2"
-                  value={formData.bio}
-                  onChange={(e) => handleChange('bio', e.target.value)}
-                  placeholder={currentLang === 'kk' ? 'Мысалы: Базалық жаттығулар, серіктес іздеймін...' : 'Например: Качаю базу, ищу напарника на вечер...'}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600 transition-all resize-none"
-                ></textarea>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 flex flex-col gap-2.5">
-              <div className="flex items-start gap-2">
-                <input 
-                  type="checkbox"
-                  required
-                  id="terms"
-                  checked={formData.agreeTerms}
-                  onChange={(e) => handleChange('agreeTerms', e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
-                />
-                <label htmlFor="terms" className="text-[11px] text-slate-600 leading-tight cursor-pointer">
-                  {currentLang === 'kk' ? 'Жария оферта шарттарымен келісемін' : 'Я ознакомлен(а) и согласен(а) с Договором публичной оферты'}
-                </label>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <input 
-                  type="checkbox"
-                  required
-                  id="privacy"
-                  checked={formData.agreePrivacy}
-                  onChange={(e) => handleChange('agreePrivacy', e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
-                />
-                <label htmlFor="privacy" className="text-[11px] text-slate-600 leading-tight cursor-pointer">
-                  {currentLang === 'kk' ? 'Деректерді өңдеуге келісім беремін' : 'Даю согласие на обработку персональных данных'}
-                </label>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <input 
-                  type="checkbox"
-                  id="marketing"
-                  checked={formData.agreeMarketing}
-                  onChange={(e) => handleChange('agreeMarketing', e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
-                />
-                <label htmlFor="marketing" className="text-[11px] text-slate-600 leading-tight cursor-pointer">
-                  {currentLang === 'kk' ? 'Telegram арқылы жарнама мен ақпарат алуға келісемін' : 'Согласен(а) на получение рассылок и персонализированной рекламы в Telegram'}
-                </label>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <input 
-                  type="checkbox"
-                  required
-                  id="trainers"
-                  checked={formData.agreeTrainers}
-                  onChange={(e) => handleChange('agreeTrainers', e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
-                />
-                <label htmlFor="trainers" className="text-[11px] text-slate-600 leading-tight cursor-pointer">
-                  {currentLang === 'kk' ? 'Тренерлердің өз қызметтерін ұсынуына анкеттаны беруге келісім беремін' : 'Даю согласие на передачу анкетных данных сертифицированным тренерам для получения персональных предложений услуг'}
-                </label>
-              </div>
-
-              <div className="flex items-start gap-2 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
-                <input 
-                  type="checkbox"
-                  required
-                  id="safety"
-                  checked={formData.agreeSafety}
-                  onChange={(e) => handleChange('agreeSafety', e.target.checked)}
-                  className="mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500 cursor-pointer shrink-0"
-                />
-                <label htmlFor="safety" className="text-[10px] text-amber-900 leading-tight cursor-pointer">
-                  <strong>{currentLang === 'kk' ? 'Қауіпсіздік ескертуі:' : 'Предупреждение о безопасности:'}</strong> {currentLang === 'kk' ? 'Платформа қауіпсіздік үшін жауап бермейді. Қыздарға тек қыздарды таңдау ұсынылады.' : 'Платформа не несет ответственности за безопасность при личных встречах. Девушкам рекомендуется выбирать в поиске девушек.'}
-                </label>
+                  );
+                })}
               </div>
             </div>
 
