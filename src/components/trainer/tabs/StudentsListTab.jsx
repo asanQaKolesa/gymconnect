@@ -1,6 +1,6 @@
 // src/components/trainer/tabs/StudentsListTab.jsx
 import React from 'react';
-import { ChevronRight, DollarSign, MessageCircle, Calendar } from 'lucide-react';
+import { ChevronRight, MessageCircle, Calendar } from 'lucide-react';
 
 export default function StudentsListTab({ students, formatGoal, onSelectStudent, onOpenAddModal }) {
 
@@ -12,6 +12,13 @@ export default function StudentsListTab({ students, formatGoal, onSelectStudent,
     }
     const cleanPhone = phone.replace(/\D/g, '');
     window.open(`https://wa.me/7${cleanPhone}`, '_blank');
+  };
+
+  // Функция для очистки дублирующихся собачек в никнейме
+  const formatUsername = (username) => {
+    if (!username) return 'Без Telegram';
+    const clean = username.replace(/^@+/, '');
+    return `@${clean}`;
   };
 
   return (
@@ -58,10 +65,10 @@ export default function StudentsListTab({ students, formatGoal, onSelectStudent,
 
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200 font-mono">
-                      @{student.username || 'Без Telegram'}
+                      {formatUsername(student.username)}
                     </span>
-                    <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md border border-emerald-100 font-semibold flex items-center gap-1">
-                      <DollarSign className="w-3 h-3" /> {student.monthly_price ? `${student.monthly_price} ₸` : '0 ₸'}
+                    <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md border border-emerald-100 font-semibold">
+                      {student.monthly_price ? `${student.monthly_price.toLocaleString()} ₸` : '0 ₸'}
                     </span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold flex items-center gap-1 ${
                       leftTrainings <= 2 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-indigo-50 text-indigo-700 border-indigo-100'
