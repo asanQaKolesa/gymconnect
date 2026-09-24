@@ -291,8 +291,15 @@ export default function TrainerOnboarding({ onComplete }) {
   };
 
   const handleInstagramChange = (e) => {
-    const val = e.target.value.replace(/[^a-zA-Z0-9._]/g, '');
+    // Удаляем любые собачки и пробелы прямо при вводе
+    const val = e.target.value.replace(/[@\s]/g, '');
     setFormData({...formData, instagram: val});
+  };
+
+  const handleUsernameChange = (e) => {
+    // Удаляем любые собачки и пробелы прямо при вводе
+    const val = e.target.value.replace(/[@\s]/g, '');
+    setFormData({...formData, username: val});
   };
 
   const handleSubmit = async (e) => {
@@ -314,8 +321,12 @@ export default function TrainerOnboarding({ onComplete }) {
         cleanGyms.push(formData.custom_gym.trim());
       }
 
-      const cleanUsername = formData.username.trim().replace('@', '');
+      // Гарантированно очищаем от любых дублирующихся собачек и формируем корректный ник
+      const cleanUsername = formData.username.trim().replace(/^@+/, '');
       const formattedUsername = `@${cleanUsername}`;
+
+      const cleanInstagramVal = formData.instagram.trim().replace(/^@+/, '');
+      const formattedInstagram = cleanInstagramVal ? `@${cleanInstagramVal}` : '';
 
       const payload = {
         first_name: formData.first_name,
@@ -323,7 +334,7 @@ export default function TrainerOnboarding({ onComplete }) {
         username: formattedUsername,
         password: formData.password,
         phone: formData.phone,
-        instagram: formData.instagram ? `@${formData.instagram.replace('@', '')}` : '',
+        instagram: formattedInstagram,
         experience_years: Number(formData.experience_years) || 0,
         role_type: formData.role_type,
         specializations: formData.specializations,
@@ -405,14 +416,14 @@ export default function TrainerOnboarding({ onComplete }) {
                   type="text"
                   required
                   value={formData.username}
-                  onChange={(e) => setFormData({...formData, username: e.target.value.replace('@', '')})}
+                  onChange={handleUsernameChange}
                   placeholder="askar_coach"
                   className="w-full pl-8 pr-3.5 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
                 />
               </div>
             </div>
 
-            {/* Поле Пароля с гладком */}
+            {/* Поле Пароля с глазком */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Придумайте пароль *</label>
               <div className="relative flex items-center">
