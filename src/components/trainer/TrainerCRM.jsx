@@ -1,10 +1,11 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, Edit3, Shield } from 'lucide-react';
+import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, Shield } from 'lucide-react';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
 import ProgressTab from './tabs/ProgressTab';
+import ScheduleTab from './tabs/ScheduleTab'; // Новая вкладка графика в зале
 
 export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [trainerProfile, setTrainerProfile] = useState(null);
@@ -241,14 +242,17 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         </div>
 
         {/* НАВИГАЦИЯ (ТАБЫ) */}
-        <div className="grid grid-cols-3 gap-2">
-          <button onClick={() => setActiveTab('students')} className={`py-3 px-4 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${activeTab === 'students' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
+        <div className="grid grid-cols-4 gap-2">
+          <button onClick={() => setActiveTab('students')} className={`py-3 px-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeTab === 'students' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
             <Users className="w-4 h-4" /><span>Ученики ({students.length})</span>
           </button>
-          <button onClick={() => setActiveTab('workouts')} className={`py-3 px-4 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${activeTab === 'workouts' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
+          <button onClick={() => setActiveTab('workouts')} className={`py-3 px-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeTab === 'workouts' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
             <Dumbbell className="w-4 h-4" /><span>Программы</span>
           </button>
-          <button onClick={() => setActiveTab('progress')} className={`py-3 px-4 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${activeTab === 'progress' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
+          <button onClick={() => setActiveTab('schedule')} className={`py-3 px-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeTab === 'schedule' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
+            <Calendar className="w-4 h-4" /><span>График в зале</span>
+          </button>
+          <button onClick={() => setActiveTab('progress')} className={`py-3 px-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeTab === 'progress' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
             <TrendingUp className="w-4 h-4" /><span>Прогресс</span>
           </button>
         </div>
@@ -258,6 +262,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           <StudentsListTab students={students} formatGoal={formatGoal} onSelectStudent={(student) => handleOpenStudentProfile(student)} onOpenAddModal={() => setIsAddModalOpen(true)} />
         )}
         {activeTab === 'workouts' && <WorkoutsTab students={students} />}
+        {activeTab === 'schedule' && <ScheduleTab trainerProfile={trainerProfile} onUpdate={fetchTrainerAndStudents} />}
         {activeTab === 'progress' && <ProgressTab students={students} />}
 
         {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ ПРОФИЛЯ ТРЕНЕРА */}
