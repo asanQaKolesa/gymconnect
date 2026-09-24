@@ -1,7 +1,7 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Utensils, X, Settings } from 'lucide-react';
+import { Utensils, MapPin, Globe, CheckCircle2 } from 'lucide-react';
 import OverviewTab from './tabs/OverviewTab';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
@@ -22,6 +22,10 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
+  // Состояния для фильтрации по залам и формату (Онлайн / Офлайн)
+  const [selectedGymFilter, setSelectedGymFilter] = useState('all');
+  const [selectedFormatFilter, setSelectedFormatFilter] = useState('all'); // 'all', 'offline', 'online'
+
   const [newStudentForm, setNewStudentForm] = useState({
     first_name: '',
     last_name: '',
@@ -31,7 +35,8 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     package_type: 'Персональный (1 на 1)',
     total_trainings: 12,
     left_trainings: 12,
-    gym: 'Invictus Go'
+    gym: 'Invictus Go',
+    format: 'Офлайн'
   });
 
   const [subscription, setSubscription] = useState({
@@ -39,7 +44,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     expiresAt: '25.10.2026'
   });
 
-  // Расширенная форма профиля тренера с полями залов и формата
   const [trainerEditForm, setTrainerEditForm] = useState({
     first_name: '',
     last_name: '',
@@ -98,7 +102,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     }
   }, [trainerUsername]);
 
-  // Обработчик обновления настроек тренера (включая залы и формат)
   const handleUpdateTrainerProfile = async (e) => {
     e.preventDefault();
     if (!trainerProfile) return;
@@ -143,6 +146,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
       total_trainings: Number(newStudentForm.total_trainings),
       left_trainings: Number(newStudentForm.left_trainings),
       gym: newStudentForm.gym || 'Invictus Go',
+      format: newStudentForm.format || 'Офлайн',
       trainer_username: `@${cleanU}`,
       status: 'active'
     };
@@ -165,7 +169,8 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         package_type: 'Персональный (1 на 1)',
         total_trainings: 12,
         left_trainings: 12,
-        gym: 'Invictus Go'
+        gym: 'Invictus Go',
+        format: 'Офлайн'
       });
       fetchTrainerAndStudents();
     }
@@ -190,14 +195,30 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     return goal;
   };
 
-  const activeCount = students.filter(s => s.status === 'active' || !s.status).length;
-  const pausedCount = students.filter(s => s.status === 'paused').length;
-  const leftCount = students.filter(s => s.status === 'left').length;
-  const totalEarnings = students
+  // Получаем список залов тренера из строки (разделенной запятой или пайпом)
+  const trainerGymsList = trainerProfile?.gyms 
+    ? trainerProfile.gyms.split(',').map(g => g.trim()).filter(Boolean) 
+    : ['Invictus Go'];
+
+  // Фильтрация учеников по выбранному залу и формату
+  const filteredStudents = students.filter(s => {
+    const matchesGym = selectedGymFilter === 'all' || (s.gym || '').toLowerCase() === selectedGymFilter.toLowerCase();
+    const studentFormat = (s.format || 'офлайн').toLowerCase();
+    const matchesFormat = 
+      selectedFormatFilter === 'all' || 
+      (selectedFormatFilter === 'offline' && studentFormat.includes('офлайн')) ||
+      (selectedFormatFilter === 'online' && studentFormat.includes('онлайн'));
+    return matchesGym && matchesFormat;
+  });
+
+  const activeCount = filteredStudents.filter(s => s.status === 'active' || !s.status).length;
+  const pausedCount = filteredStudents.filter(s => s.status === 'paused').length;
+  const leftCount = filteredStudents.filter(s => s.status === 'left').length;
+  const totalEarnings = filteredStudents
     .filter(s => s.status === 'active' || !s.status)
     .reduce((sum, s) => sum + (Number(s.monthly_price) || 0), 0);
 
-  const lowBalanceStudents = students.filter(s => (s.status === 'active' || !s.status) && (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2);
+  const lowBalanceStudents = filteredStudents.filter(s => (s.status === 'active' || !s.status) && (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2);
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 p-4 pb-20">
@@ -214,6 +235,52 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           onTelegramRedirect={handleTelegramRedirect}
         />
 
+        {/* Панель быстрой фильтрации по залам и формату */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-1.5 flex-wrap w-full md:w-auto">
+            <span className="font-bold text-slate-400 mr-1 flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-blue-600" /> Зал:</span>
+            <button
+              onClick={() => setSelectedGymFilter('all')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all ${selectedGymFilter === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
+            >
+              Все залы ({students.length})
+            </button>
+            {trainerGymsList.map(gym => {
+              const count = students.filter(s => (s.gym || '').toLowerCase() === gym.toLowerCase()).length;
+              return (
+                <button
+                  key={gym}
+                  onClick={() => setSelectedGymFilter(gym)}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition-all ${selectedGymFilter.toLowerCase() === gym.toLowerCase() ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
+                >
+                  {gym} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl w-full md:w-auto justify-center">
+            <button
+              onClick={() => setSelectedFormatFilter('all')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all ${selectedFormatFilter === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+            >
+              Все
+            </button>
+            <button
+              onClick={() => setSelectedFormatFilter('offline')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all ${selectedFormatFilter === 'offline' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+            >
+              Офлайн
+            </button>
+            <button
+              onClick={() => setSelectedFormatFilter('online')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all ${selectedFormatFilter === 'online' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+            >
+              Онлайн
+            </button>
+          </div>
+        </div>
+
         <TrainerNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
         {activeTab === 'overview' && (
@@ -223,15 +290,15 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
             leftCount={leftCount} 
             lowBalanceCount={lowBalanceStudents.length} 
             totalEarnings={totalEarnings} 
-            students={students}
+            students={filteredStudents}
             onSelectStudent={(student) => setSelectedStudent(student)}
             onOpenAddModal={() => setIsAddModalOpen(true)}
           />
         )}
         {activeTab === 'students' && (
-          <StudentsListTab students={students} formatGoal={formatGoal} onSelectStudent={(student) => setSelectedStudent(student)} onOpenAddModal={() => setIsAddModalOpen(true)} />
+          <StudentsListTab students={filteredStudents} formatGoal={formatGoal} onSelectStudent={(student) => setSelectedStudent(student)} onOpenAddModal={() => setIsAddModalOpen(true)} />
         )}
-        {activeTab === 'workouts' && <WorkoutsTab students={students} />}
+        {activeTab === 'workouts' && <WorkoutsTab students={filteredStudents} />}
         {activeTab === 'schedule' && <ScheduleTab trainerProfile={trainerProfile} onUpdate={fetchTrainerAndStudents} />}
         {activeTab === 'nutrition' && (
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm text-center py-16 space-y-2">
@@ -240,8 +307,8 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
             <p className="text-xs text-slate-500">Скоро здесь появится конструктор КБЖУ и назначение планов питания.</p>
           </div>
         )}
-        {activeTab === 'finance' && <FinanceTab students={students} onUpdate={fetchTrainerAndStudents} />}
-        {activeTab === 'notes' && <NotesTab students={students} onUpdate={fetchTrainerAndStudents} />}
+        {activeTab === 'finance' && <FinanceTab students={filteredStudents} onUpdate={fetchTrainerAndStudents} />}
+        {activeTab === 'notes' && <NotesTab students={filteredStudents} onUpdate={fetchTrainerAndStudents} />}
 
         <AddStudentModal 
           isOpen={isAddModalOpen}
@@ -251,13 +318,13 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           onSubmit={handleCreateStudent}
         />
 
-        {/* Модальное окно настроек профиля тренера с выбором залов и формата */}
+        {/* Модальное окно настроек профиля тренера */}
         {isProfileModalOpen && trainerProfile && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-base font-bold text-slate-900">Настройки профиля и залов</h3>
-                <button onClick={() => setIsProfileModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+                <button onClick={() => setIsProfileModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
               </div>
 
               <form onSubmit={handleUpdateTrainerProfile} className="space-y-3 text-xs">
@@ -291,7 +358,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                     placeholder="Invictus Go, World Class"
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Укажите клубы, в которых вы проводите офлайн-тренировки.</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Клубы автоматически появятся в быстрых фильтрах на главном экране.</p>
                 </div>
 
                 <div>
