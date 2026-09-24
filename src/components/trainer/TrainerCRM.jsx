@@ -1,7 +1,7 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, Utensils, ShieldCheck, Zap, ArrowUpRight } from 'lucide-react';
+import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, Utensils, ShieldCheck, Zap, ArrowUpRight, UserPlus } from 'lucide-react';
 import OverviewTab from './tabs/OverviewTab';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
@@ -19,9 +19,21 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
-  // Статус подписки тренера (можно будет привязать к базе данных в будущем)
+  // Форма добавления нового ученика тренером
+  const [newStudentForm, setNewStudentForm] = useState({
+    first_name: '',
+    last_name: '',
+    username: '',
+    phone: '',
+    monthly_price: 50000,
+    package_type: 'Персональный (1 на 1)',
+    total_trainings: 12,
+    left_trainings: 12,
+    gym: 'Invictus Go'
+  });
+
   const [subscription, setSubscription] = useState({
-    isActive: true, // Поставь false, чтобы проверить состояние «Нет подписки»
+    isActive: true,
     expiresAt: '25.10.2026'
   });
 
@@ -44,7 +56,8 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     status: 'active',
     payment_method: 'Перевод Kaspi',
     workout_days: ['Понедельник', 'Среда', 'Пятница'],
-    workout_time_slot: 'Вечер (16:00 - 21:00)'
+    workout_time_slot: 'Вечер (16:00 - 21:00)',
+    birth_date: ''
   });
 
   const fetchTrainerAndStudents = async () => {
@@ -91,6 +104,48 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     }
   }, [trainerUsername]);
 
+  // Обработчик создания нового ученика в базе Supabase
+  const handleCreateStudent = async (e) => {
+    e.preventDefault();
+    const cleanU = trainerUsername.replace('@', '');
+    const studentUsername = newStudentForm.username ? (newStudentForm.username.startsWith('@') ? newStudentForm.username : `@${newStudentForm.username}`) : `@student_${Date.now()}`;
+
+    const { error } = await supabase
+      .from('profiles')
+      .insert([{
+        first_name: newStudentForm.first_name,
+        last_name: newStudentForm.last_name,
+        username: studentUsername,
+        phone: newStudentForm.phone,
+        monthly_price: Number(newStudentForm.monthly_price),
+        package_type: newStudentForm.package_type,
+        total_trainings: Number(newStudentForm.total_trainings),
+        left_trainings: Number(newStudentForm.left_trainings),
+        gym: newStudentForm.gym,
+        trainer_username: `@${cleanU}`,
+        status: 'active'
+      }]);
+
+    if (error) {
+      alert('Ошибка добавления ученика: ' + error.message);
+    } else {
+      alert('Ученик успешно добавлен в вашу CRM!');
+      setIsAddModalOpen(false);
+      setNewStudentForm({
+        first_name: '',
+        last_name: '',
+        username: '',
+        phone: '',
+        monthly_price: 50000,
+        package_type: 'Персональный (1 на 1)',
+        total_trainings: 12,
+        left_trainings: 12,
+        gym: 'Invictus Go'
+      });
+      fetchTrainerAndStudents();
+    }
+  };
+
   const handleUpdateTrainerProfile = async (e) => {
     e.preventDefault();
     if (!trainerProfile) return;
@@ -128,7 +183,8 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
       status: student.status || 'active',
       payment_method: student.payment_method || 'Перевод Kaspi',
       workout_days: student.workout_days || ['Понедельник', 'Среда', 'Пятница'],
-      workout_time_slot: student.workout_time_slot || 'Вечер (16:00 - 21:00)'
+      workout_time_slot: student.workout_time_slot || 'Вечер (16:00 - 21:00)',
+      birth_date: student.birth_date || ''
     });
   };
 
@@ -156,7 +212,8 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         status: studentFinances.status,
         payment_method: studentFinances.payment_method,
         workout_days: studentFinances.workout_days,
-        workout_time_slot: studentFinances.workout_time_slot
+        workout_time_slot: studentFinances.workout_time_slot,
+        birth_date: studentFinances.birth_date || null
       })
       .eq('id', selectedStudent.id);
 
@@ -169,7 +226,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     }
   };
 
-  // Редирект в твой Telegram для оплаты/продления
   const handleTelegramRedirect = (actionType) => {
     const cleanUsername = trainerUsername.replace('@', '');
     const message = encodeURIComponent(
@@ -255,7 +311,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
 
           {/* Виджет подписки тренера и кнопка продвижения */}
           <div className="pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-            {/* Статус подписки */}
             {subscription.isActive ? (
               <div className="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
@@ -294,7 +349,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
               </div>
             )}
 
-            {/* Задел под продвижение тренера через таргет */}
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-2xl border border-blue-100 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center font-bold shrink-0">
@@ -354,6 +408,107 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         )}
         {activeTab === 'finance' && <FinanceTab students={students} onUpdate={fetchTrainerAndStudents} />}
         {activeTab === 'notes' && <NotesTab students={students} onUpdate={fetchTrainerAndStudents} />}
+
+        {/* Модальное окно добавления ученика */}
+        {isAddModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center font-bold">
+                    <UserPlus className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900">Добавить нового ученика</h3>
+                </div>
+                <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+              </div>
+
+              <form onSubmit={handleCreateStudent} className="space-y-3 text-xs">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Имя *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={newStudentForm.first_name}
+                      onChange={(e) => setNewStudentForm({...newStudentForm, first_name: e.target.value})}
+                      placeholder="Асанәли"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Фамилия</label>
+                    <input 
+                      type="text"
+                      value={newStudentForm.last_name}
+                      onChange={(e) => setNewStudentForm({...newStudentForm, last_name: e.target.value})}
+                      placeholder="Құсайынов"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Telegram Username</label>
+                  <input 
+                    type="text"
+                    value={newStudentForm.username}
+                    onChange={(e) => setNewStudentForm({...newStudentForm, username: e.target.value})}
+                    placeholder="@username"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Телефон WhatsApp</label>
+                  <input 
+                    type="tel"
+                    value={newStudentForm.phone}
+                    onChange={(e) => setNewStudentForm({...newStudentForm, phone: e.target.value})}
+                    placeholder="7011234567"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Стоимость (₸ / мес)</label>
+                    <input 
+                      type="number"
+                      value={newStudentForm.monthly_price}
+                      onChange={(e) => setNewStudentForm({...newStudentForm, monthly_price: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Всего занятий</label>
+                    <input 
+                      type="number"
+                      value={newStudentForm.total_trainings}
+                      onChange={(e) => setNewStudentForm({...newStudentForm, total_trainings: e.target.value, left_trainings: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Фитнес-зал</label>
+                  <input 
+                    type="text"
+                    value={newStudentForm.gym}
+                    onChange={(e) => setNewStudentForm({...newStudentForm, gym: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3">
+                  <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-medium">Отмена</button>
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold shadow-md">Добавить в CRM</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Модальное окно редактирования профиля тренера */}
         {isProfileModalOpen && trainerProfile && (
