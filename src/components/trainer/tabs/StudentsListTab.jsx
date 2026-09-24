@@ -21,6 +21,18 @@ export default function StudentsListTab({ students, formatGoal, onSelectStudent,
     return `@${clean}`;
   };
 
+  // Надежное локальное форматирование цели (перевод английских кодов в красивый русский текст)
+  const getLocalizedGoal = (goal) => {
+    if (!goal) return 'Не указана';
+    const g = goal.toLowerCase().trim();
+    if (g === 'tone' || g.includes('тонус') || g.includes('рекомпозиция')) return 'Тонус и рекомпозиция';
+    if (g === 'mass' || g.includes('набор')) return 'Набор массы и гипертрофия';
+    if (g === 'cut' || g.includes('сушка') || g.includes('похудение')) return 'Похудение и сушка';
+    if (g === 'functional' || g.includes('функционал')) return 'Функциональный тренинг';
+    // Если переданная функция formatGoal из пропсов доступна, используем её, иначе возвращаем исходное или переведенное
+    return formatGoal ? formatGoal(goal) : goal;
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
       <div className="p-4 border-b border-slate-100 flex justify-between items-center">
@@ -61,7 +73,7 @@ export default function StudentsListTab({ students, formatGoal, onSelectStudent,
                     </h4>
                     
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Цель: <span className="text-blue-600 font-medium">{formatGoal ? formatGoal(student.goal) : student.goal}</span> | Зал: {student.gym || 'Не указан'}
+                      Цель: <span className="text-blue-600 font-medium">{getLocalizedGoal(student.goal)}</span> | Зал: {student.gym || 'Не указан'}
                     </p>
 
                     <div className="flex flex-wrap items-center gap-2 mt-2">
