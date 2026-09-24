@@ -1,7 +1,7 @@
 // src/components/trainer/TrainerOnboarding.jsx
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Dumbbell, CheckCircle2, ArrowRight, ArrowLeft, Search, X, Lock, Eye, EyeOff } from 'lucide-react';
+import { Dumbbell, CheckCircle2, ArrowRight, ArrowLeft, Search, X } from 'lucide-react';
 
 const ALMATY_GYMS = [
   "БАНЗАЙ Fitness | Проспект Абая, 150, Алматы",
@@ -239,13 +239,11 @@ const ALMATY_GYMS = [
 export default function TrainerOnboarding({ onComplete }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
     username: '',
-    password: '',
     phone: '',
     instagram: '',
     experience_years: '',
@@ -291,13 +289,11 @@ export default function TrainerOnboarding({ onComplete }) {
   };
 
   const handleInstagramChange = (e) => {
-    // Удаляем любые собачки и пробелы прямо при вводе
     const val = e.target.value.replace(/[@\s]/g, '');
     setFormData({...formData, instagram: val});
   };
 
   const handleUsernameChange = (e) => {
-    // Удаляем любые собачки и пробелы прямо при вводе
     const val = e.target.value.replace(/[@\s]/g, '');
     setFormData({...formData, username: val});
   };
@@ -309,11 +305,6 @@ export default function TrainerOnboarding({ onComplete }) {
       return;
     }
 
-    if (!formData.password || formData.password.length < 6) {
-      alert('Пароль должен содержать минимум 6 символов.');
-      return;
-    }
-
     setLoading(true);
     try {
       const cleanGyms = [...formData.gyms];
@@ -321,7 +312,6 @@ export default function TrainerOnboarding({ onComplete }) {
         cleanGyms.push(formData.custom_gym.trim());
       }
 
-      // Гарантированно очищаем от любых дублирующихся собачек и формируем корректный ник
       const cleanUsername = formData.username.trim().replace(/^@+/, '');
       const formattedUsername = `@${cleanUsername}`;
 
@@ -332,7 +322,6 @@ export default function TrainerOnboarding({ onComplete }) {
         first_name: formData.first_name,
         last_name: formData.last_name,
         username: formattedUsername,
-        password: formData.password,
         phone: formData.phone,
         instagram: formattedInstagram,
         experience_years: Number(formData.experience_years) || 0,
@@ -378,10 +367,10 @@ export default function TrainerOnboarding({ onComplete }) {
           </span>
         </div>
 
-        {/* ШАГ 1: Контакты и Пароль с глазком */}
+        {/* ШАГ 1: Контакты */}
         {step === 1 && (
           <div className="space-y-4">
-            <h2 className="text-sm font-bold text-slate-800">1. Основная информация и безопасность</h2>
+            <h2 className="text-sm font-bold text-slate-800">1. Основная информация</h2>
             
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -421,31 +410,6 @@ export default function TrainerOnboarding({ onComplete }) {
                   className="w-full pl-8 pr-3.5 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
                 />
               </div>
-            </div>
-
-            {/* Поле Пароля с глазком */}
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Придумайте пароль *</label>
-              <div className="relative flex items-center">
-                <Lock className="absolute left-3.5 w-4 h-4 text-slate-400" />
-                <input 
-                  type={showPassword ? "text" : "password"}
-                  required
-                  minLength={6}
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  placeholder="Минимум 6 символов"
-                  className="w-full pl-10 pr-10 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 text-slate-400 hover:text-slate-600 focus:outline-none"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Используйте для безопасного входа в CRM</span>
             </div>
 
             <div>
@@ -495,8 +459,8 @@ export default function TrainerOnboarding({ onComplete }) {
             <button 
               type="button"
               onClick={() => {
-                if (!formData.first_name || !formData.last_name || !formData.username || !formData.password || formData.password.length < 6 || formData.phone.length !== 10) {
-                  alert('Заполните все обязательные поля корректно (пароль не менее 6 символов, телефон ровно 10 цифр)');
+                if (!formData.first_name || !formData.last_name || !formData.username || formData.phone.length !== 10) {
+                  alert('Заполните все обязательные поля корректно (телефон должен содержать ровно 10 цифр)');
                   return;
                 }
                 setStep(2);
@@ -735,7 +699,7 @@ export default function TrainerOnboarding({ onComplete }) {
                 disabled={loading}
                 className="w-2/3 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-emerald-600/20"
               >
-                {loading ? 'Создание профиля...' : 'Завершить и открыть CRM'}
+                {loading ? 'Создание профиля...' : 'Подать заявку тренера'}
               </button>
             </div>
           </form>
