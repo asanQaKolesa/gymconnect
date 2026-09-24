@@ -1,7 +1,8 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, AlertCircle } from 'lucide-react';
+import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings } from 'lucide-react';
+import OverviewTab from './tabs/OverviewTab';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
 import ProgressTab from './tabs/ProgressTab';
@@ -14,7 +15,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [trainerProfile, setTrainerProfile] = useState(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('students');
+  const [activeTab, setActiveTab] = useState('overview');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -235,55 +236,30 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         </div>
 
-        {/* Расширенная сетка KPI (Активные, На паузе, Ушли, Требуют продления, Доход) */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-            <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных</p>
-            <h3 className="text-2xl font-black text-blue-600 mt-1">{activeCount}</h3>
-          </div>
-          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-            <p className="text-[10px] text-slate-400 uppercase font-semibold">На паузе</p>
-            <h3 className="text-2xl font-black text-amber-600 mt-1">{pausedCount}</h3>
-          </div>
-          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-            <p className="text-[10px] text-slate-400 uppercase font-semibold">Ушли</p>
-            <h3 className="text-2xl font-black text-rose-600 mt-1">{leftCount}</h3>
-          </div>
-          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-            <p className="text-[10px] text-slate-400 uppercase font-semibold">Продление</p>
-            <h3 className={`text-2xl font-black mt-1 ${lowBalanceStudents.length > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-              {lowBalanceStudents.length}
-            </h3>
-          </div>
-          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm col-span-2 md:col-span-1">
-            <p className="text-[10px] text-slate-400 uppercase font-semibold">Доход / мес</p>
-            <h3 className="text-xl font-black text-emerald-600 mt-1">{totalEarnings.toLocaleString()} ₸</h3>
-          </div>
-        </div>
-
         {/* Навигация (Табы) */}
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-          <button onClick={() => setActiveTab('students')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'students' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
-            <Users className="w-3.5 h-3.5" /><span>Ученики</span>
-          </button>
-          <button onClick={() => setActiveTab('workouts')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'workouts' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
-            <Dumbbell className="w-3.5 h-3.5" /><span>Программы</span>
-          </button>
-          <button onClick={() => setActiveTab('schedule')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'schedule' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
-            <Calendar className="w-3.5 h-3.5" /><span>Смены в зале</span>
-          </button>
-          <button onClick={() => setActiveTab('today')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'today' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
-            <Clock className="w-3.5 h-3.5" /><span>На сегодня</span>
-          </button>
-          <button onClick={() => setActiveTab('finance')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'finance' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
-            <DollarSign className="w-3.5 h-3.5" /><span>Касса</span>
-          </button>
-          <button onClick={() => setActiveTab('notes')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'notes' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
-            <User className="w-3.5 h-3.5" /><span>Заметки</span>
-          </button>
+        <div className="grid grid-cols-4 md:grid-cols-7 gap-1.5">
+          <button onClick={() => setActiveTab('overview')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'overview' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Обзор</button>
+          <button onClick={() => setActiveTab('students')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'students' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Ученики</button>
+          <button onClick={() => setActiveTab('workouts')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'workouts' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Программы</button>
+          <button onClick={() => setActiveTab('schedule')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'schedule' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Смены</button>
+          <button onClick={() => setActiveTab('today')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'today' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>На сегодня</button>
+          <button onClick={() => setActiveTab('finance')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'finance' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Касса</button>
+          <button onClick={() => setActiveTab('notes')} className={`py-2 px-2 rounded-xl text-xs font-semibold transition-all ${activeTab === 'notes' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>Заметки</button>
         </div>
 
         {/* Рендер активной вкладки */}
+        {activeTab === 'overview' && (
+          <OverviewTab 
+            activeCount={activeCount} 
+            pausedCount={pausedCount} 
+            leftCount={leftCount} 
+            lowBalanceCount={lowBalanceStudents.length} 
+            totalEarnings={totalEarnings} 
+            students={students}
+            onSelectStudent={handleOpenStudentProfile}
+            onOpenAddModal={() => setIsAddModalOpen(true)}
+          />
+        )}
         {activeTab === 'students' && (
           <StudentsListTab students={students} formatGoal={formatGoal} onSelectStudent={(student) => handleOpenStudentProfile(student)} onOpenAddModal={() => setIsAddModalOpen(true)} />
         )}
@@ -292,7 +268,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         {activeTab === 'today' && <CalendarTodayTab students={students} onUpdate={fetchTrainerAndStudents} />}
         {activeTab === 'finance' && <FinanceTab students={students} onUpdate={fetchTrainerAndStudents} />}
         {activeTab === 'notes' && <NotesTab students={students} onUpdate={fetchTrainerAndStudents} />}
-        {activeTab === 'progress' && <ProgressTab students={students} />}
 
         {/* Модальное окно редактирования профиля тренера */}
         {isProfileModalOpen && trainerProfile && (
