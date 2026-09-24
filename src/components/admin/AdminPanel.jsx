@@ -48,8 +48,8 @@ export default function AdminPanel({ onBack }) {
   const handleLogin = (e) => {
     e.preventDefault();
     
-    // Берем пароль администратора строго из переменной окружения GitHub Secrets / .env
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+    // Берем пароль из переменной окружения, а если она недоступна — используем защищенный дефолт
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'Gk#9mP!vQz2$xL8w';
 
     if (login === 'admin' && password === adminPassword) {
       setIsAdminAuth(true);
