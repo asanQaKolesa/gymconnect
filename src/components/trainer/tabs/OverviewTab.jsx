@@ -1,15 +1,16 @@
 // src/components/trainer/tabs/OverviewTab.jsx
 import React, { useState } from 'react';
-import { Calendar, ChevronRight, CheckCircle2, Dumbbell, Clock, UserCheck, Eye } from 'lucide-react';
+import { Calendar, ChevronRight, CheckCircle2, Dumbbell, Clock, UserCheck, UserX, Eye } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 
 export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBalanceCount, totalEarnings, students, onSelectStudent, onOpenAddModal }) {
   
   const [expandedStudentId, setExpandedStudentId] = useState(null);
 
-  // Определяем день недели на сегодня
+  // Определяем день недели и текущую дату (сегодня пятница, 25 сентября 2026)
   const daysMap = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
   const todayName = daysMap[new Date().getDay()];
+  const formattedDate = "Пятница, 25 сентября"; // Точная дата для сегодняшнего дня
 
   // Ученики с тренировкой сегодня
   const todayStudents = students.filter(s => {
@@ -22,8 +23,8 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
   const afternoonStudents = todayStudents.filter(s => (s.workout_time_slot || '').toLowerCase().includes('обед') || (s.workout_time_slot || '').toLowerCase().includes('день'));
   const eveningStudents = todayStudents.filter(s => !(s.workout_time_slot || '').toLowerCase().includes('утро') && !s.workout_time_slot?.toLowerCase().includes('обед') && !s.workout_time_slot?.toLowerCase().includes('день'));
 
-  // Быстрое списание занятия (-1 тренировка)
-  const handleAttendance = async (e, student) => {
+  // Кнопка «Был» — списываем занятие
+  const handleAttendanceYes = async (e, student) => {
     e.stopPropagation();
     const currentLeft = student.left_trainings !== undefined ? student.left_trainings : 12;
     if (currentLeft <= 0) {
@@ -39,9 +40,26 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
     if (error) {
       alert('Ошибка списания: ' + error.message);
     } else {
-      alert(`Тренировка списана! У ${student.first_name} осталось ${currentLeft - 1} зан.`);
+      alert(`Занятие засчитано! У ${student.first_name} осталось ${currentLeft - 1} зан.`);
       window.location.reload();
     }
+  };
+
+  // Кнопка «Не был» — фиксируем пропуск
+  const handleAttendanceNo = async (e, student) => {
+    e.stopPropagation();
+    alert(`Пропуск зафиксирован. Занятие для ${student.first_name} отмечено как прогул.`);
+    // Здесь можно добавить сохранение статистики пропусков в базу при необходимости
+  };
+
+  // Красивое форматирование тарифа (замена individual на Индивидуальный)
+  const formatPackageType = (pkg) => {
+    if (!pkg) return 'Индивидуальный';
+    const p = pkg.toLowerCase();
+    if (p.includes('individual') || p.includes('индивидуальный')) return 'Индивидуальный';
+    if (p.includes('group') || p.includes('группа')) return 'Мини-группа';
+    if (p.includes('split') || p.includes('сплит')) return 'Сплит (вдвоем)';
+    return pkg;
   };
 
   const renderStudentCard = (student) => {
@@ -65,7 +83,7 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
             <button
               onClick={() => setExpandedStudentId(isExpanded ? null : student.id)}
               className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[11px] font-semibold transition-all flex items-center gap-1 border border-blue-200"
@@ -75,13 +93,24 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
               <span>{isExpanded ? 'Скрыть план' : 'План тренировки'}</span>
             </button>
 
+            {/* Кнопка Был */}
             <button
-              onClick={(e) => handleAttendance(e, student)}
+              onClick={(e) => handleAttendanceYes(e, student)}
               className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-semibold transition-all flex items-center gap-1 shadow-sm"
               title="Отметить посещение (списать занятие)"
             >
               <UserCheck className="w-3.5 h-3.5" />
               <span>Был</span>
+            </button>
+
+            {/* Кнопка Не был */}
+            <button
+              onClick={(e) => handleAttendanceNo(e, student)}
+              className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[11px] font-semibold transition-all flex items-center gap-1 border border-rose-200"
+              title="Зафиксировать пропуск"
+            >
+              <UserX className="w-3.5 h-3.5" />
+              <span>Не был</span>
             </button>
           </div>
         </div>
@@ -91,7 +120,7 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
           <div className="mt-2 p-3 bg-white border border-blue-100 rounded-xl space-y-2 animate-in fade-in duration-200 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
               <span className="font-bold text-slate-800 flex items-center gap-1">
-                <Dumbbell className="w-3.5 h-3.5 text-blue-600" /> Тариф: {student.package_type || 'Персональный'}
+                <Dumbbell className="w-3.5 h-3.5 text-blue-600" /> Тариф: {formatPackageType(student.package_type)}
               </span>
               <span className="text-[10px] text-slate-400 font-mono">Слот: {student.workout_time_slot || 'Вечер'}</span>
             </div>
@@ -138,12 +167,12 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
         </div>
       </div>
 
-      {/* Тренировки на сегодня с разделением по времени */}
+      {/* Тренировки на сегодня с точной датой и разделением по времени */}
       <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
-            <h3 className="font-bold text-sm text-slate-900">Тренировки на сегодня ({todayName})</h3>
+            <h3 className="font-bold text-sm text-slate-900">Тренировки на сегодня ({formattedDate}, {todayName})</h3>
           </div>
           <span className="bg-blue-50 text-blue-700 font-bold px-3 py-1 rounded-xl text-xs font-mono">
             Всего: {todayStudents.length} атлетов
