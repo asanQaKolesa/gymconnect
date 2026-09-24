@@ -26,6 +26,8 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Build
+        env:
+          VITE_ADMIN_PASSWORD: ${{ secrets.VITE_ADMIN_PASSWORD }}
         run: npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
