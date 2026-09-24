@@ -1,7 +1,7 @@
 // src/components/trainer/tabs/NotesTab.jsx
 import React, { useState } from 'react';
 import { supabase } from '../../../supabaseClient';
-import { FileText, Save, User, CheckCircle2 } from 'lucide-react';
+import { FileText, User, CheckCircle2 } from 'lucide-react';
 
 export default function NotesTab({ students, onUpdate }) {
   const [selectedStudentId, setSelectedStudentId] = useState(students[0]?.id || null);
@@ -73,7 +73,7 @@ export default function NotesTab({ students, onUpdate }) {
               <h3 className="font-bold text-sm text-slate-900">
                 Заметки тренера: {currentStudent ? `${currentStudent.first_name} ${currentStudent.last_name}` : 'Выберите ученика'}
               </h3>
-              <p className="text-[10px] text-slate-500">Интимные технические детали, травмы, пожелания (клиент не видит)</p>
+              <p className="text-[10px] text-slate-500">Личные технические детали, травмы, пожелания (клиент не видит)</p>
             </div>
           </div>
         </div>
