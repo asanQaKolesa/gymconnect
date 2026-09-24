@@ -1,21 +1,20 @@
 // src/components/trainer/TrainerLogin.jsx
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Dumbbell, ArrowRight, UserPlus, Lock } from 'lucide-react';
+import { Dumbbell, ArrowRight, UserPlus, Send } from 'lucide-react';
 
 export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     const cleanUsername = username.trim().replace('@', '');
-    if (!cleanUsername || !password) return;
+    if (!cleanUsername) return;
 
     setLoading(true);
     
-    // Надежный поиск тренера в базе
+    // Проверка наличия тренера в базе по Telegram нику
     const { data, error } = await supabase
       .from('trainer_profiles')
       .select('*')
@@ -23,21 +22,14 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
       .limit(1);
 
     if (error || !data || data.length === 0) {
-      alert('Тренер с таким Telegram ником не найден. Пожалуйста, пройдите регистрацию.');
+      alert('Ваш аккаунт тренера еще не подтвержден или не найден. Пожалуйста, дождитесь подтверждения оплаты администратором или пройдите регистрацию.');
       setLoading(false);
       return;
     }
 
     const trainer = data[0];
 
-    // Проверка введенного пароля
-    if (trainer.password && trainer.password !== password) {
-      alert('Неверный пароль. Пожалуйста, проверьте введенные данные.');
-      setLoading(false);
-      return;
-    }
-
-    // Сохраняем оба ключа в localStorage, чтобы сессия зафиксировалась
+    // Сохраняем данные сессии в localStorage
     localStorage.setItem('gymconnect_trainer_registered', 'true');
     localStorage.setItem('gymconnect_trainer_username', trainer.username);
     
@@ -72,29 +64,15 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Пароль</label>
-            <div className="relative flex items-center">
-              <Lock className="absolute left-3.5 w-4 h-4 text-slate-400" />
-              <input 
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••"
-                className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
-              />
-            </div>
-          </div>
-
           <div className="text-right pt-0.5">
             <a 
               href="https://t.me/asanali_kk" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-[11px] text-blue-600 hover:underline"
+              className="text-[11px] text-blue-600 hover:underline flex items-center justify-end gap-1"
             >
-              Забыли пароль? Напишите в техподдержку
+              <Send className="w-3 h-3" />
+              <span>Нужна помощь или оплата? Напишите основателю</span>
             </a>
           </div>
 
@@ -109,7 +87,7 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
         </form>
 
         <div className="mt-5 pt-5 border-t border-slate-100 text-center">
-          <p className="text-xs text-slate-500 mb-2">Еще нет аккаунта партнера?</p>
+          <p className="text-xs text-slate-500 mb-2">Еще не подавали заявку?</p>
           <button
             type="button"
             onClick={onSwitchToRegister}
