@@ -1,6 +1,6 @@
 // src/components/trainer/tabs/OverviewTab.jsx
 import React, { useState } from 'react';
-import { Calendar, ChevronRight, CheckCircle2, Dumbbell, Clock, UserCheck, UserX, Eye, UserPlus, Send, Sparkles } from 'lucide-react';
+import { Calendar, ChevronRight, CheckCircle2, Dumbbell, Clock, UserCheck, UserX, Eye, UserPlus, Send, Sparkles, BellRing } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 
 export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBalanceCount, totalEarnings, students, onSelectStudent, onOpenAddModal }) {
@@ -31,9 +31,27 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
 
   const eveningStudents = todayStudents.filter(s => {
     const slot = (s.workout_time_slot || '').toLowerCase();
-    // Если слот явно вечерний ИЛИ если он не попал ни в утро, ни в обед (чтобы никто не терялся)
     return slot.includes('вечер') || (!slot.includes('утро') && !slot.includes('обед') && !slot.includes('день'));
   });
+
+  // Быстрое действие: Напомнить об оплате тем, у кого мало занятий (≤ 2)
+  const handleRemindLowBalance = () => {
+    const lowStudents = students.filter(s => (s.status === 'active' || !s.status) && (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2);
+    if (lowStudents.length === 0) {
+      alert('У всех активных учеников достаточно оплаченных занятий!');
+      return;
+    }
+    
+    // Находим первого ученика с номером телефона для отправки в WhatsApp
+    const target = lowStudents.find(s => s.phone);
+    if (target) {
+      const cleanPhone = target.phone.replace(/\D/g, '');
+      const message = encodeURIComponent(`Привет, ${target.first_name}! У тебя осталось мало оплаченных занятий (${target.left_trainings} зан.). Напомни, когда сможешь закинуть оплату за следующий абонемент? 💪`);
+      window.open(`https://wa.me/7${cleanPhone}?text=${message}`, '_blank');
+    } else {
+      alert(`Найдено учеников с низким балансом: ${lowStudents.length}, но ни у одного из них не указан номер телефона в профиле.`);
+    }
+  };
 
   // Кнопка «Был» — списываем занятие
   const handleAttendanceYes = async (e, student) => {
@@ -63,7 +81,6 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
     alert(`Пропуск зафиксирован. Занятие для ${student.first_name} отмечено как прогул.`);
   };
 
-  // Красивое форматирование тарифа (замена individual на Индивидуальный)
   const formatPackageType = (pkg) => {
     if (!pkg) return 'Индивидуальный';
     const p = pkg.toLowerCase();
@@ -104,7 +121,6 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
               <span>{isExpanded ? 'Скрыть план' : 'План тренировки'}</span>
             </button>
 
-            {/* Кнопка Был */}
             <button
               onClick={(e) => handleAttendanceYes(e, student)}
               className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-semibold transition-all flex items-center gap-1 shadow-sm"
@@ -114,7 +130,6 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
               <span>Был</span>
             </button>
 
-            {/* Кнопка Не был */}
             <button
               onClick={(e) => handleAttendanceNo(e, student)}
               className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[11px] font-semibold transition-all flex items-center gap-1 border border-rose-200"
@@ -126,7 +141,6 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
           </div>
         </div>
 
-        {/* Раскрывающийся блок с деталями программы тренировки */}
         {isExpanded && (
           <div className="mt-2 p-3 bg-white border border-blue-100 rounded-xl space-y-2 animate-in fade-in duration-200 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
@@ -152,7 +166,7 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
 
   return (
     <div className="space-y-4 text-xs">
-      {/* Сетка KPI с обновленным названием карточки */}
+      {/* Сетка KPI */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
           <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных</p>
@@ -178,8 +192,8 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
         </div>
       </div>
 
-      {/* Блок «Быстрые действия» */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+      {/* Блок «Быстрые действия» с интерактивными кнопками */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
             <Sparkles className="w-5 h-5 text-white" />
@@ -189,10 +203,18 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
             <p className="text-[11px] text-blue-100">Управление базой и моментальная связь с атлетами</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
+          <button 
+            onClick={handleRemindLowBalance}
+            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold text-xs transition-all shadow-sm flex items-center gap-1.5"
+            title="Напомнить ученикам с остатком ≤ 2 занятий"
+          >
+            <BellRing className="w-4 h-4" />
+            <span>Напомнить об оплате</span>
+          </button>
           <button 
             onClick={onOpenAddModal}
-            className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-blue-700 hover:bg-blue-50 rounded-2xl font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5"
+            className="px-3.5 py-2 bg-white text-blue-700 hover:bg-blue-50 rounded-2xl font-bold text-xs transition-all shadow-sm flex items-center gap-1.5"
           >
             <UserPlus className="w-4 h-4" />
             <span>+ Добавить ученика</span>
