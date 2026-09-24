@@ -1,6 +1,7 @@
+// src/components/trainer/tabs/ScheduleTab.jsx
 import React, { useState } from 'react';
 import { supabase } from '../../../supabaseClient';
-import { Calendar, Clock, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { Calendar, Clock, Plus, Trash2, CheckCircle2, BarChart2 } from 'lucide-react';
 
 export default function ScheduleTab({ trainerProfile, onUpdate }) {
   const daysOfWeek = [
@@ -66,15 +67,71 @@ export default function ScheduleTab({ trainerProfile, onUpdate }) {
     }
   };
 
+  // Подсчет общего количества рабочих часов в неделю
+  const totalWeeklyHours = Object.values(schedule).reduce((acc, daySlots) => {
+    if (!Array.isArray(daySlots)) return acc;
+    return acc + daySlots.reduce((sum, slot) => {
+      if (!slot.start || !slot.end) return sum;
+      const [startH, startM] = slot.start.split(':').map(Number);
+      const [endH, endM] = slot.end.split(':').map(Number);
+      const diff = (endH * 60 + endM) - (startH * 60 + startM);
+      return sum + (diff > 0 ? diff / 60 : 0);
+    }, 0);
+  }, 0);
+
   return (
     <div className="space-y-4 text-xs">
+      
+      {/* Визуальная сетка загруженности на неделю */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <BarChart2 className="w-5 h-5 text-blue-600" />
+            <div>
+              <h3 className="font-bold text-sm text-slate-900">Календарь загруженности и «окошки»</h3>
+              <p className="text-[10px] text-slate-500">Наглядная сетка ваших смен в залах на неделю</p>
+            </div>
+          </div>
+          <span className="px-3 py-1 bg-blue-50 text-blue-700 font-bold rounded-xl border border-blue-100 text-[11px]">
+            Всего: {totalWeeklyHours} ч. в неделю
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 pt-1">
+          {daysOfWeek.map(day => {
+            const slots = schedule[day.id] || [];
+            const hasSlots = slots.length > 0;
+            return (
+              <div key={day.id} className={`p-2.5 rounded-xl border text-center flex flex-col justify-between ${hasSlots ? 'bg-blue-50/60 border-blue-200 text-blue-900' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+                <div>
+                  <p className="font-bold text-xs">{day.label.slice(0, 3)}</p>
+                  <p className="text-[10px] mt-1 font-semibold">{hasSlots ? `${slots.length} смены` : 'Выходной'}</p>
+                </div>
+                <div className="mt-2 space-y-1">
+                  {hasSlots ? (
+                    slots.map((s, idx) => (
+                      <div key={idx} className="bg-white p-1 rounded border border-blue-100 font-mono text-[10px] font-bold text-blue-700 shadow-2xs">
+                        {s.start} - {s.end}
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-[10px] italic text-slate-400">-</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Редактор графика присутствия */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
             <div>
-              <h3 className="font-bold text-sm text-slate-900">График присутствия в фитнес-зале</h3>
-              <p className="text-[10px] text-slate-500">Укажите дни, время смен и тип занятий</p>
+              <h3 className="font-bold text-sm text-slate-900">Настройка смен и часов работы</h3>
+              <p className="text-[10px] text-slate-500">Укажите время присутствия в клубах и типы тренировок</p>
             </div>
           </div>
         </div>
