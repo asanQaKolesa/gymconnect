@@ -440,9 +440,18 @@ export default function AdminPanel({ onBack }) {
                     filteredTrainers.map((t, index) => (
                       <tr key={t.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="p-3 text-center text-slate-400 font-mono">{index + 1}</td>
-                        <td className="p-3 font-medium text-slate-900">
-                          {t.first_name} {t.last_name}
-                          <div className="text-[10px] text-slate-400">{t.experience_years || 'Стаж не указан'} лет опыта</div>
+                        <td className="p-3 font-medium text-slate-900 flex items-center gap-2.5">
+                          {t.avatar_url ? (
+                            <img src={t.avatar_url} alt="" className="w-8 h-8 rounded-xl object-cover border border-slate-200" />
+                          ) : (
+                            <div className="w-8 h-8 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-xs">
+                              {t.first_name?.[0] || 'T'}
+                            </div>
+                          )}
+                          <div>
+                            {t.first_name} {t.last_name}
+                            <div className="text-[10px] text-slate-400">{t.experience_years || 'Стаж не указан'} лет опыта</div>
+                          </div>
                         </td>
                         <td className="p-3">
                           <div className="text-blue-600 font-mono">@{t.username}</div>
@@ -513,9 +522,18 @@ export default function AdminPanel({ onBack }) {
                     filteredProfiles.map((p, index) => (
                       <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="p-3 text-center text-slate-400 font-mono">{index + 1}</td>
-                        <td className="p-3 font-medium text-slate-900">
-                          {p.first_name} {p.last_name}
-                          <div className="text-[10px] text-slate-400">{p.age} лет, {p.gender === 'male' ? 'М' : 'Ж'}</div>
+                        <td className="p-3 font-medium text-slate-900 flex items-center gap-2.5">
+                          {p.avatar_url ? (
+                            <img src={p.avatar_url} alt="" className="w-8 h-8 rounded-xl object-cover border border-slate-200 shadow-sm" />
+                          ) : (
+                            <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center font-bold text-xs">
+                              {p.first_name?.[0] || 'A'}
+                            </div>
+                          )}
+                          <div>
+                            {p.first_name} {p.last_name}
+                            <div className="text-[10px] text-slate-400">{p.age} лет, {p.gender === 'male' ? 'М' : 'Ж'}</div>
+                          </div>
                         </td>
                         <td className="p-3">
                           <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-mono text-[11px]">
@@ -581,10 +599,14 @@ export default function AdminPanel({ onBack }) {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center font-bold">
-                    <User className="w-5 h-5" />
-                  </div>
+                <div className="flex items-center gap-3">
+                  {viewingProfile.avatar_url ? (
+                    <img src={viewingProfile.avatar_url} alt="" className="w-12 h-12 rounded-2xl object-cover border border-slate-200 shadow-md" />
+                  ) : (
+                    <div className="w-12 h-12 bg-blue-100 text-blue-700 rounded-2xl flex items-center justify-center font-bold text-base shadow-sm">
+                      {viewingProfile.first_name?.[0] || 'A'}
+                    </div>
+                  )}
                   <div>
                     <h3 className="text-base font-bold text-slate-900">{viewingProfile.first_name} {viewingProfile.last_name}</h3>
                     <p className="text-[11px] text-slate-500 font-mono">@{viewingProfile.username || 'не указан'}</p>
