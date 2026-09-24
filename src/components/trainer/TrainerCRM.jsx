@@ -1,17 +1,29 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar } from 'lucide-react';
+import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, Edit3, Shield } from 'lucide-react';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
 import ProgressTab from './tabs/ProgressTab';
 
 export default function TrainerCRM({ trainerUsername, onLogout }) {
+  const [trainerProfile, setTrainerProfile] = useState(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('students');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+
+  // Состояние для редактирования профиля тренера
+  const [trainerEditForm, setTrainerEditForm] = useState({
+    first_name: '',
+    last_name: '',
+    phone: '',
+    instagram: '',
+    experience_years: '',
+    products: ''
+  });
 
   // Локальное состояние для редактирования ученика
   const [studentFinances, setStudentFinances] = useState({
@@ -20,40 +32,76 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     total_trainings: 12,
     left_trainings: 12,
     is_burnable: false,
-    status: 'active', // 'active', 'paused', 'left'
+    status: 'active',
     workout_days: ['Понедельник', 'Среда', 'Пятница'],
     workout_time_slot: 'Вечер (18:00)'
   });
 
-  const [newStudent, setNewStudent] = useState({
-    first_name: '',
-    last_name: '',
-    username: '',
-    gym: 'Invictus Go | Улица Навои, 97',
-    goal: 'mass',
-    monthly_price: 50000
-  });
-
-  const fetchMyStudents = async () => {
+  const fetchTrainerAndStudents = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const cleanU = trainerUsername.replace('@', '');
+
+    // 1. Загружаем данные самого тренера
+    const { data: tData } = await supabase
+      .from('trainer_profiles')
+      .select('*')
+      .or(`username.eq.@${cleanU},username.eq.${cleanU}`)
+      .maybeSingle();
+
+    if (tData) {
+      setTrainerProfile(tData);
+      setTrainerEditForm({
+        first_name: tData.first_name || '',
+        last_name: tData.last_name || '',
+        phone: tData.phone || '',
+        instagram: tData.instagram || '',
+        experience_years: tData.experience_years || '',
+        products: tData.products || ''
+      });
+    }
+
+    // 2. Загружаем учеников тренера
+    const { data: sData, error: sError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('trainer_username', trainerUsername);
+      .or(`trainer_username.eq.@${cleanU},trainer_username.eq.${cleanU}`);
 
-    if (error) {
-      console.error('Ошибка загрузки учеников:', error.message);
-    } else {
-      setStudents(data || []);
+    if (!sError) {
+      setStudents(sData || []);
     }
     setLoading(false);
   };
 
   useEffect(() => {
     if (trainerUsername) {
-      fetchMyStudents();
+      fetchTrainerAndStudents();
     }
   }, [trainerUsername]);
+
+  const handleUpdateTrainerProfile = async (e) => {
+    e.preventDefault();
+    if (!trainerProfile) return;
+
+    const { error } = await supabase
+      .from('trainer_profiles')
+      .update({
+        first_name: trainerEditForm.first_name,
+        last_name: trainerEditForm.last_name,
+        phone: trainerEditForm.phone,
+        instagram: trainerEditForm.instagram,
+        experience_years: Number(trainerEditForm.experience_years) || 0,
+        products: trainerEditForm.products
+      })
+      .eq('id', trainerProfile.id);
+
+    if (error) {
+      alert('Ошибка обновления профиля: ' + error.message);
+    } else {
+      alert('Данные вашего профиля успешно сохранены!');
+      setIsProfileModalOpen(false);
+      fetchTrainerAndStudents();
+    }
+  };
 
   const handleOpenStudentProfile = (student) => {
     setSelectedStudent(student);
@@ -100,19 +148,20 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
       alert('Ошибка сохранения: ' + error.message);
     } else {
       alert('Данные ученика успешно обновлены!');
-      fetchMyStudents();
+      fetchTrainerAndStudents();
       setSelectedStudent(null);
     }
   };
 
+  // Исправленный и расширенный перевод целей
   const formatGoal = (goal) => {
-    switch (goal) {
-      case 'mass': return 'Набор массы';
-      case 'cut': return 'Похудение / Сушка';
-      case 'recomp': return 'Рекомпозиция';
-      case 'functional': return 'Функциональный';
-      default: return goal || 'Не указана';
-    }
+    if (!goal) return 'Не указана';
+    const g = goal.toLowerCase();
+    if (g === 'mass' || g.includes('набор')) return 'Набор массы и гипертрофия';
+    if (g === 'cut' || g.includes('сушка') || g.includes('похудение')) return 'Похудение и сушка';
+    if (g === 'recomp' || g.includes('рекомпозиция')) return 'Рекомпозиция тела';
+    if (g === 'functional' || g.includes('функционал')) return 'Функциональный тренинг';
+    return goal;
   };
 
   const formatGender = (gender) => {
@@ -133,69 +182,165 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 p-4 pb-20">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto space-y-4">
         
-        {/* Шапка CRM */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-3 mb-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold">
-              TC
+        {/* ШАПКА КАБИНЕТА ТРЕНЕРА + КНОПКА РЕДАКТИРОВАНИЯ ПРОФИЛЯ */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center font-bold text-base shadow-md shadow-blue-600/20">
+              {trainerProfile?.first_name?.[0] || 'T'}
             </div>
             <div>
-              <h1 className="text-base font-bold text-slate-900">Кабинет тренера</h1>
-              <p className="text-xs text-slate-500 font-mono">{trainerUsername}</p>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-bold text-slate-900">
+                  {trainerProfile ? `${trainerProfile.first_name} ${trainerProfile.last_name}` : 'Кабинет тренера'}
+                </h1>
+                <span className="bg-blue-50 text-blue-600 text-[10px] font-mono px-2 py-0.5 rounded-md border border-blue-100">
+                  {trainerProfile?.role_type === 'group' ? 'Групповой тренинг' : trainerProfile?.role_type === 'both' ? 'Универсал' : 'Персональный тренер'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-mono mt-0.5">@{trainerUsername.replace('@', '')} • {trainerProfile?.experience_years || 0} лет стажа</p>
             </div>
           </div>
+
           <div className="flex items-center gap-2">
-            <button onClick={fetchMyStudents} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors">
+            <button 
+              onClick={() => setIsProfileModalOpen(true)}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
+            >
+              <Settings className="w-4 h-4 text-slate-500" />
+              <span>Мой профиль</span>
+            </button>
+            <button onClick={fetchTrainerAndStudents} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors" title="Обновить">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <button onClick={onLogout} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-colors border border-rose-100">
+            <button onClick={onLogout} className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-colors border border-rose-100" title="Выйти">
               <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Метрики */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          <div className="bg-white border border-slate-200 p-3.5 rounded-2xl shadow-sm">
+        {/* МЕТРИКИ (KPI) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
             <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных учеников</p>
-            <h3 className="text-xl font-black text-slate-900 mt-1">{activeCount}</h3>
+            <h3 className="text-2xl font-black text-slate-900 mt-1">{activeCount}</h3>
           </div>
-          <div className="bg-white border border-slate-200 p-3.5 rounded-2xl shadow-sm">
+          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
             <p className="text-[10px] text-slate-400 uppercase font-semibold">На паузе</p>
-            <h3 className="text-xl font-black text-amber-600 mt-1">{pausedCount}</h3>
+            <h3 className="text-2xl font-black text-amber-600 mt-1">{pausedCount}</h3>
           </div>
-          <div className="bg-white border border-slate-200 p-3.5 rounded-2xl shadow-sm">
+          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
             <p className="text-[10px] text-slate-400 uppercase font-semibold">Ушли</p>
-            <h3 className="text-xl font-black text-rose-600 mt-1">{leftCount}</h3>
+            <h3 className="text-2xl font-black text-rose-600 mt-1">{leftCount}</h3>
           </div>
-          <div className="bg-white border border-slate-200 p-3.5 rounded-2xl shadow-sm">
+          <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
             <p className="text-[10px] text-slate-400 uppercase font-semibold">Доход за месяц</p>
-            <h3 className="text-xl font-black text-emerald-600 mt-1">{totalEarnings.toLocaleString()} ₸</h3>
+            <h3 className="text-2xl font-black text-emerald-600 mt-1">{totalEarnings.toLocaleString()} ₸</h3>
           </div>
         </div>
 
-        {/* Навигация */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <button onClick={() => setActiveTab('students')} className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 ${activeTab === 'students' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>
+        {/* НАВИГАЦИЯ (ТАБЫ) */}
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={() => setActiveTab('students')} className={`py-3 px-4 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${activeTab === 'students' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
             <Users className="w-4 h-4" /><span>Ученики ({students.length})</span>
           </button>
-          <button onClick={() => setActiveTab('workouts')} className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 ${activeTab === 'workouts' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>
+          <button onClick={() => setActiveTab('workouts')} className={`py-3 px-4 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${activeTab === 'workouts' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
             <Dumbbell className="w-4 h-4" /><span>Программы</span>
           </button>
-          <button onClick={() => setActiveTab('progress')} className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 ${activeTab === 'progress' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'}`}>
+          <button onClick={() => setActiveTab('progress')} className={`py-3 px-4 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${activeTab === 'progress' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
             <TrendingUp className="w-4 h-4" /><span>Прогресс</span>
           </button>
         </div>
 
+        {/* КОНТЕНТ ВКЛАДОК */}
         {activeTab === 'students' && (
           <StudentsListTab students={students} formatGoal={formatGoal} onSelectStudent={(student) => handleOpenStudentProfile(student)} onOpenAddModal={() => setIsAddModalOpen(true)} />
         )}
         {activeTab === 'workouts' && <WorkoutsTab students={students} />}
         {activeTab === 'progress' && <ProgressTab students={students} />}
 
-        {/* Модальное окно управления учеником */}
+        {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ ПРОФИЛЯ ТРЕНЕРА */}
+        {isProfileModalOpen && trainerProfile && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-base font-bold text-slate-900">Настройки профиля тренера</h3>
+                <button onClick={() => setIsProfileModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+              </div>
+
+              <form onSubmit={handleUpdateTrainerProfile} className="space-y-3 text-xs">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Имя</label>
+                    <input 
+                      type="text"
+                      value={trainerEditForm.first_name}
+                      onChange={(e) => setTrainerEditForm({...trainerEditForm, first_name: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Фамилия</label>
+                    <input 
+                      type="text"
+                      value={trainerEditForm.last_name}
+                      onChange={(e) => setTrainerEditForm({...trainerEditForm, last_name: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Телефон WhatsApp</label>
+                  <input 
+                    type="text"
+                    value={trainerEditForm.phone}
+                    onChange={(e) => setTrainerEditForm({...trainerEditForm, phone: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Instagram</label>
+                  <input 
+                    type="text"
+                    value={trainerEditForm.instagram}
+                    onChange={(e) => setTrainerEditForm({...trainerEditForm, instagram: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Опыт работы (лет)</label>
+                  <input 
+                    type="number"
+                    value={trainerEditForm.experience_years}
+                    onChange={(e) => setTrainerEditForm({...trainerEditForm, experience_years: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Мои продукты / программы</label>
+                  <textarea 
+                    rows="2"
+                    value={trainerEditForm.products}
+                    onChange={(e) => setTrainerEditForm({...trainerEditForm, products: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3">
+                  <button type="button" onClick={() => setIsProfileModalOpen(false)} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-medium">Отмена</button>
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold shadow-md">Сохранить</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* МОДАЛЬНОЕ ОКНО УПРАВЛЕНИЯ УЧЕНИКОМ */}
         {selectedStudent && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
