@@ -1,7 +1,8 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Utensils, MapPin, Globe, CheckCircle2 } from 'lucide-react';
+import { Utensils, MapPin, X } from 'lucide-react';
+
 import OverviewTab from './tabs/OverviewTab';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
@@ -22,9 +23,9 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
-  // Состояния для фильтрации по залам и формату (Онлайн / Офлайн)
+  // Фильтры по залам и формату
   const [selectedGymFilter, setSelectedGymFilter] = useState('all');
-  const [selectedFormatFilter, setSelectedFormatFilter] = useState('all'); // 'all', 'offline', 'online'
+  const [selectedFormatFilter, setSelectedFormatFilter] = useState('all');
 
   const [newStudentForm, setNewStudentForm] = useState({
     first_name: '',
@@ -124,7 +125,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     if (error) {
       alert('Ошибка обновления профиля: ' + error.message);
     } else {
-      alert('Настройки залов и формата успешно сохранены!');
+      alert('Настройки успешно сохранены!');
       setIsProfileModalOpen(false);
       fetchTrainerAndStudents();
     }
@@ -158,7 +159,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     if (error) {
       alert('Ошибка добавления ученика: ' + error.message);
     } else {
-      alert('Ученик успешно добавлен в CRM!');
+      alert('Ученик успешно добавлен!');
       setIsAddModalOpen(false);
       setNewStudentForm({
         first_name: '',
@@ -195,12 +196,10 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     return goal;
   };
 
-  // Получаем список залов тренера из строки (разделенной запятой или пайпом)
   const trainerGymsList = trainerProfile?.gyms 
     ? trainerProfile.gyms.split(',').map(g => g.trim()).filter(Boolean) 
     : ['Invictus Go'];
 
-  // Фильтрация учеников по выбранному залу и формату
   const filteredStudents = students.filter(s => {
     const matchesGym = selectedGymFilter === 'all' || (s.gym || '').toLowerCase() === selectedGymFilter.toLowerCase();
     const studentFormat = (s.format || 'офлайн').toLowerCase();
@@ -318,13 +317,13 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           onSubmit={handleCreateStudent}
         />
 
-        {/* Модальное окно настроек профиля тренера */}
+        {/* Модальное окно настроек профиля */}
         {isProfileModalOpen && trainerProfile && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-base font-bold text-slate-900">Настройки профиля и залов</h3>
-                <button onClick={() => setIsProfileModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+                <button onClick={() => setIsProfileModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
               </div>
 
               <form onSubmit={handleUpdateTrainerProfile} className="space-y-3 text-xs">
@@ -358,7 +357,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                     placeholder="Invictus Go, World Class"
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Клубы автоматически появятся в быстрых фильтрах на главном экране.</p>
                 </div>
 
                 <div>
