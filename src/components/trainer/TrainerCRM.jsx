@@ -9,6 +9,7 @@ import WorkoutsTab from './tabs/WorkoutsTab';
 import ScheduleTab from './tabs/ScheduleTab';
 import FinanceTab from './tabs/FinanceTab';
 import NotesTab from './tabs/NotesTab';
+import AnalyticsTab from './tabs/AnalyticsTab'; // Импортируем компонент аналитики
 
 import TrainerHeader from './components/TrainerHeader';
 import TrainerNav from './components/TrainerNav';
@@ -300,6 +301,10 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         )}
         {activeTab === 'workouts' && <WorkoutsTab students={filteredStudents} />}
         {activeTab === 'schedule' && <ScheduleTab trainerProfile={trainerProfile} onUpdate={fetchTrainerAndStudents} />}
+        
+        {/* Вкладка аналитики посещаемости и прогулов */}
+        {activeTab === 'analytics' && <AnalyticsTab students={filteredStudents} />}
+
         {activeTab === 'nutrition' && (
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm text-center py-16 space-y-2">
             <Utensils className="w-10 h-10 text-blue-600 mx-auto mb-2" />
