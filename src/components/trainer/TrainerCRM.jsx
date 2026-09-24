@@ -69,8 +69,13 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
       .select('*')
       .or(`trainer_username.eq.@${cleanU},trainer_username.eq.${cleanU}`);
 
-    if (!sError) {
-      setStudents(sData || []);
+    if (!sError && sData) {
+      // Надежная защита: исключаем самого тренера из списка его учеников
+      const filteredStudents = sData.filter(s => {
+        const studentU = (s.username || '').replace('@', '').toLowerCase();
+        return studentU !== cleanU.toLowerCase();
+      });
+      setStudents(filteredStudents);
     }
     setLoading(false);
   };
@@ -231,7 +236,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         </div>
 
-        {/* Метрики (KPI) без общего некорректного остатка */}
+        {/* Метрики (KPI) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
             <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных учеников</p>
@@ -249,7 +254,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         </div>
 
-        {/* Навигация (Табы) по всем вкладкам */}
+        {/* Навигация (Табы) */}
         <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
           <button onClick={() => setActiveTab('students')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'students' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
             <Users className="w-3.5 h-3.5" /><span>Ученики</span>
@@ -373,7 +378,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         )}
 
-        {/* Модальное окно управления учеником с русскими тарифами и выбором способа оплаты */}
+        {/* Модальное окно управления учеником */}
         {selectedStudent && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
