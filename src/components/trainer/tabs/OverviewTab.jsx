@@ -10,7 +10,7 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
   // Определяем день недели и текущую дату
   const daysMap = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
   const todayName = daysMap[new Date().getDay()];
-  const formattedDate = "Пятница, 25 сентября"; // Точная дата для сегодняшнего дня
+  const formattedDate = "Пятница, 25 сентября";
 
   // Ученики с тренировкой сегодня
   const todayStudents = students.filter(s => {
@@ -18,10 +18,22 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
     return (s.status === 'active' || !s.status) && days.includes(todayName);
   });
 
-  // Распределение по тайм-слотам
-  const morningStudents = todayStudents.filter(s => (s.workout_time_slot || '').toLowerCase().includes('утро'));
-  const afternoonStudents = todayStudents.filter(s => (s.workout_time_slot || '').toLowerCase().includes('обед') || (s.workout_time_slot || '').toLowerCase().includes('день'));
-  const eveningStudents = todayStudents.filter(s => !(s.workout_time_slot || '').toLowerCase().includes('утро') && !s.workout_time_slot?.toLowerCase().includes('обед') && !s.workout_time_slot?.toLowerCase().includes('день'));
+  // Надежное распределение по тайм-слотам с защитой от пустых значений
+  const morningStudents = todayStudents.filter(s => {
+    const slot = (s.workout_time_slot || '').toLowerCase();
+    return slot.includes('утро');
+  });
+
+  const afternoonStudents = todayStudents.filter(s => {
+    const slot = (s.workout_time_slot || '').toLowerCase();
+    return slot.includes('обед') || slot.includes('день');
+  });
+
+  const eveningStudents = todayStudents.filter(s => {
+    const slot = (s.workout_time_slot || '').toLowerCase();
+    // Если слот явно вечерний ИЛИ если он не попал ни в утро, ни в обед (чтобы никто не терялся)
+    return slot.includes('вечер') || (!slot.includes('утро') && !slot.includes('обед') && !slot.includes('день'));
+  });
 
   // Кнопка «Был» — списываем занятие
   const handleAttendanceYes = async (e, student) => {
@@ -166,7 +178,7 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
         </div>
       </div>
 
-      {/* Тренировки на сегодня без дублей в дате */}
+      {/* Тренировки на сегодня */}
       <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
