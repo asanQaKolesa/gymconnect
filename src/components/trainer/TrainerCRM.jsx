@@ -196,8 +196,9 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     return goal;
   };
 
-  const trainerGymsList = trainerProfile?.gyms 
-    ? trainerProfile.gyms.split(',').map(g => g.trim()).filter(Boolean) 
+  // Безопасный парсинг залов с защитой от null/undefined
+  const trainerGymsList = (trainerProfile && typeof trainerProfile.gyms === 'string')
+    ? trainerProfile.gyms.split(',').map(g => g.trim()).filter(Boolean)
     : ['Invictus Go'];
 
   const filteredStudents = students.filter(s => {
