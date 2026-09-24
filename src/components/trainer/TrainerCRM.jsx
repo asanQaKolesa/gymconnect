@@ -1,11 +1,14 @@
 // src/components/trainer/TrainerCRM.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, Shield } from 'lucide-react';
+import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Clock, Calendar, Settings, AlertCircle } from 'lucide-react';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
 import ProgressTab from './tabs/ProgressTab';
 import ScheduleTab from './tabs/ScheduleTab';
+import FinanceTab from './tabs/FinanceTab';
+import NotesTab from './tabs/NotesTab';
+import CalendarTodayTab from './tabs/CalendarTodayTab';
 
 export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [trainerProfile, setTrainerProfile] = useState(null);
@@ -173,6 +176,12 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     .filter(s => s.status === 'active' || !s.status)
     .reduce((sum, s) => sum + (Number(s.monthly_price) || 0), 0);
 
+  const totalLeftTrainingsCount = students
+    .filter(s => s.status === 'active' || !s.status)
+    .reduce((sum, s) => sum + (Number(s.left_trainings !== undefined ? s.left_trainings : 12)), 0);
+
+  const lowBalanceStudents = students.filter(s => (s.status === 'active' || !s.status) && (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2);
+
   const daysOfWeek = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
   const timeSlots = ['Утро (08:00 - 12:00)', 'Обед (12:00 - 16:00)', 'Вечер (16:00 - 21:00)', 'Свободный график'];
 
@@ -216,19 +225,21 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         </div>
 
-        {/* Метрики (KPI) */}
+        {/* Метрики (KPI) с остатками тренировок */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
             <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных учеников</p>
             <h3 className="text-2xl font-black text-slate-900 mt-1">{activeCount}</h3>
           </div>
           <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-            <p className="text-[10px] text-slate-400 uppercase font-semibold">На паузе</p>
-            <h3 className="text-2xl font-black text-amber-600 mt-1">{pausedCount}</h3>
+            <p className="text-[10px] text-slate-400 uppercase font-semibold">Остаток занятий (всего)</p>
+            <h3 className="text-2xl font-black text-indigo-600 mt-1">{totalLeftTrainingsCount} <span className="text-xs font-normal text-slate-500">зан.</span></h3>
           </div>
           <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-            <p className="text-[10px] text-slate-400 uppercase font-semibold">Ушли</p>
-            <h3 className="text-2xl font-black text-rose-600 mt-1">{leftCount}</h3>
+            <p className="text-[10px] text-slate-400 uppercase font-semibold">Требуют продления</p>
+            <h3 className={`text-2xl font-black mt-1 ${lowBalanceStudents.length > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+              {lowBalanceStudents.length} <span className="text-xs font-normal text-slate-500">уч.</span>
+            </h3>
           </div>
           <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
             <p className="text-[10px] text-slate-400 uppercase font-semibold">Доход за месяц</p>
@@ -236,19 +247,25 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         </div>
 
-        {/* Навигация (Табы) */}
-        <div className="grid grid-cols-4 gap-2">
-          <button onClick={() => setActiveTab('students')} className={`py-3 px-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeTab === 'students' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
-            <Users className="w-4 h-4" /><span>Ученики ({students.length})</span>
+        {/* Навигация (Табы) по всем вкладкам */}
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          <button onClick={() => setActiveTab('students')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'students' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
+            <Users className="w-3.5 h-3.5" /><span>Ученики</span>
           </button>
-          <button onClick={() => setActiveTab('workouts')} className={`py-3 px-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeTab === 'workouts' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
-            <Dumbbell className="w-4 h-4" /><span>Программы</span>
+          <button onClick={() => setActiveTab('workouts')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'workouts' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
+            <Dumbbell className="w-3.5 h-3.5" /><span>Программы</span>
           </button>
-          <button onClick={() => setActiveTab('schedule')} className={`py-3 px-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeTab === 'schedule' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
-            <Calendar className="w-4 h-4" /><span>График в зале</span>
+          <button onClick={() => setActiveTab('schedule')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'schedule' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
+            <Calendar className="w-3.5 h-3.5" /><span>Смены в зале</span>
           </button>
-          <button onClick={() => setActiveTab('progress')} className={`py-3 px-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeTab === 'progress' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
-            <TrendingUp className="w-4 h-4" /><span>Прогресс</span>
+          <button onClick={() => setActiveTab('today')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'today' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
+            <Clock className="w-3.5 h-3.5" /><span>На сегодня</span>
+          </button>
+          <button onClick={() => setActiveTab('finance')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'finance' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
+            <DollarSign className="w-3.5 h-3.5" /><span>Касса</span>
+          </button>
+          <button onClick={() => setActiveTab('notes')} className={`py-2.5 px-2 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${activeTab === 'notes' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
+            <User className="w-3.5 h-3.5" /><span>Заметки</span>
           </button>
         </div>
 
@@ -258,6 +275,9 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         )}
         {activeTab === 'workouts' && <WorkoutsTab students={students} />}
         {activeTab === 'schedule' && <ScheduleTab trainerProfile={trainerProfile} onUpdate={fetchTrainerAndStudents} />}
+        {activeTab === 'today' && <CalendarTodayTab students={students} onUpdate={fetchTrainerAndStudents} />}
+        {activeTab === 'finance' && <FinanceTab students={students} onUpdate={fetchTrainerAndStudents} />}
+        {activeTab === 'notes' && <NotesTab students={students} onUpdate={fetchTrainerAndStudents} />}
         {activeTab === 'progress' && <ProgressTab students={students} />}
 
         {/* Модальное окно редактирования профиля тренера */}
