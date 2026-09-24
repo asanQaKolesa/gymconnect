@@ -5,7 +5,7 @@ import { Users, Dumbbell, TrendingUp, LogOut, RefreshCw, X, User, DollarSign, Cl
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
 import ProgressTab from './tabs/ProgressTab';
-import ScheduleTab from './tabs/ScheduleTab'; // Новая вкладка графика в зале
+import ScheduleTab from './tabs/ScheduleTab';
 
 export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [trainerProfile, setTrainerProfile] = useState(null);
@@ -16,7 +16,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
-  // Состояние для редактирования профиля тренера
   const [trainerEditForm, setTrainerEditForm] = useState({
     first_name: '',
     last_name: '',
@@ -26,7 +25,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     products: ''
   });
 
-  // Локальное состояние для редактирования ученика
   const [studentFinances, setStudentFinances] = useState({
     monthly_price: 50000,
     package_type: 'individual',
@@ -42,7 +40,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     setLoading(true);
     const cleanU = trainerUsername.replace('@', '');
 
-    // 1. Загружаем данные самого тренера
     const { data: tData } = await supabase
       .from('trainer_profiles')
       .select('*')
@@ -61,7 +58,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
       });
     }
 
-    // 2. Загружаем учеников тренера
     const { data: sData, error: sError } = await supabase
       .from('profiles')
       .select('*')
@@ -154,7 +150,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     }
   };
 
-  // Исправленный и расширенный перевод целей
   const formatGoal = (goal) => {
     if (!goal) return 'Не указана';
     const g = goal.toLowerCase();
@@ -185,7 +180,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
     <div className="min-h-screen bg-slate-100 text-slate-900 p-4 pb-20">
       <div className="max-w-4xl mx-auto space-y-4">
         
-        {/* ШАПКА КАБИНЕТА ТРЕНЕРА + КНОПКА РЕДАКТИРОВАНИЯ ПРОФИЛЯ */}
+        {/* Шапка кабинета тренера */}
         <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center font-bold text-base shadow-md shadow-blue-600/20">
@@ -221,7 +216,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         </div>
 
-        {/* МЕТРИКИ (KPI) */}
+        {/* Метрики (KPI) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
             <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных учеников</p>
@@ -241,7 +236,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         </div>
 
-        {/* НАВИГАЦИЯ (ТАБЫ) */}
+        {/* Навигация (Табы) */}
         <div className="grid grid-cols-4 gap-2">
           <button onClick={() => setActiveTab('students')} className={`py-3 px-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${activeTab === 'students' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-white text-slate-600 border border-slate-200'}`}>
             <Users className="w-4 h-4" /><span>Ученики ({students.length})</span>
@@ -257,7 +252,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </button>
         </div>
 
-        {/* КОНТЕНТ ВКЛАДОК */}
+        {/* Рендер активной вкладки */}
         {activeTab === 'students' && (
           <StudentsListTab students={students} formatGoal={formatGoal} onSelectStudent={(student) => handleOpenStudentProfile(student)} onOpenAddModal={() => setIsAddModalOpen(true)} />
         )}
@@ -265,7 +260,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
         {activeTab === 'schedule' && <ScheduleTab trainerProfile={trainerProfile} onUpdate={fetchTrainerAndStudents} />}
         {activeTab === 'progress' && <ProgressTab students={students} />}
 
-        {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ ПРОФИЛЯ ТРЕНЕРА */}
+        {/* Модальное окно редактирования профиля тренера */}
         {isProfileModalOpen && trainerProfile && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
@@ -345,7 +340,7 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
           </div>
         )}
 
-        {/* МОДАЛЬНОЕ ОКНО УПРАВЛЕНИЯ УЧЕНИКОМ */}
+        {/* Модальное окно управления учеником */}
         {selectedStudent && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
@@ -365,7 +360,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
               </div>
 
               <div className="space-y-4 text-xs text-slate-700">
-                {/* Антропометрия */}
                 <div className="p-3.5 bg-blue-50/50 rounded-2xl border border-blue-100 space-y-2">
                   <p className="font-bold text-blue-900 flex items-center gap-1.5">
                     <User className="w-4 h-4 text-blue-600" /> Антропометрия атлета
@@ -391,13 +385,11 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                   <p className="text-[11px] text-slate-600 pt-1"><b>Цель:</b> {formatGoal(selectedStudent.goal)} | <b>Зал:</b> {selectedStudent.gym || 'Не указан'}</p>
                 </div>
 
-                {/* ФИНАНСЫ, СТАТУС И РАСПИСАНИЕ */}
                 <form onSubmit={handleSaveStudentFinances} className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
                   <p className="font-bold text-slate-900 flex items-center gap-1.5 text-sm">
                     <DollarSign className="w-4 h-4 text-emerald-600" /> Статус, Финансы и График
                   </p>
 
-                  {/* Статус клиента */}
                   <div>
                     <label className="block font-medium text-slate-700 mb-1">Статус ученика в CRM</label>
                     <div className="grid grid-cols-3 gap-2">
@@ -502,7 +494,6 @@ export default function TrainerCRM({ trainerUsername, onLogout }) {
                     </div>
                   </div>
 
-                  {/* ВЫБОР ДНЕЙ НЕДЕЛИ И ВРЕМЕНИ */}
                   <div className="pt-2 border-t border-slate-200 space-y-2">
                     <p className="font-bold text-slate-900 flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-blue-600" /> Выбор дней недели
