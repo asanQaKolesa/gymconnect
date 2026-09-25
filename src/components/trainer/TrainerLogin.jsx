@@ -1,7 +1,7 @@
 // src/components/trainer/TrainerLogin.jsx
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Dumbbell, ArrowRight, UserPlus, Send } from 'lucide-react';
+import { Dumbbell, ArrowRight, UserPlus, Send, ArrowLeft } from 'lucide-react';
 
 export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
   const [username, setUsername] = useState('');
@@ -37,10 +37,26 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
     onLoginSuccess(trainer.username);
   };
 
+  const handleBackToProfile = () => {
+    // Убираем параметр trainer из URL и возвращаем пользователя в личный кабинет
+    window.location.href = window.location.pathname;
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-xl border border-slate-200">
-        <div className="text-center mb-6">
+      <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-xl border border-slate-200 relative">
+        
+        {/* Кнопка возврата в личный профиль */}
+        <button
+          type="button"
+          onClick={handleBackToProfile}
+          className="absolute top-5 left-5 w-8 h-8 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center text-slate-600 transition-colors border border-slate-200/60"
+          title="Вернуться в профиль"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+
+        <div className="text-center mb-6 pt-2">
           <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-600/30">
             <Dumbbell className="w-6 h-6" />
           </div>
