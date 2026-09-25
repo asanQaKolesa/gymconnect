@@ -9,6 +9,7 @@ import ProfileTab from './components/profile/ProfileTab';
 import SplashLoader from './components/onboarding/SplashLoader';
 import LanguageSelector from './components/onboarding/LanguageSelector';
 import RegisterProfilePage from './components/onboarding/RegisterProfilePage';
+import LegalDocsPage from './components/profile/LegalDocsPage';
 import AdminPanel from './components/admin/AdminPanel';
 import TrainerLogin from './components/trainer/TrainerLogin';
 import TrainerOnboarding from './components/trainer/TrainerOnboarding';
@@ -28,7 +29,7 @@ export default function App() {
     }
   }, []);
 
-  // 1. РЕАКТИВНЫЙ ТРЕНЕРСКИЙ РОУТ (?trainer=true)
+  // 1. ТРЕНЕРСКИЙ РОУТ (?trainer=true)
   const [isTrainerMode, setIsTrainerMode] = useState(() => {
     return new URLSearchParams(window.location.search).get('trainer') === 'true';
   });
@@ -54,6 +55,11 @@ export default function App() {
     return localStorage.getItem('gymconnect_profile_filled') === 'true';
   });
 
+  // Флаг принятия всех 7 юридических актов
+  const [hasAcceptedLegal, setHasAcceptedLegal] = useState(() => {
+    return localStorage.getItem('gymconnect_legal_accepted') === 'true';
+  });
+
   // Выбранный язык
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('gymconnect_language') || null;
@@ -61,14 +67,13 @@ export default function App() {
 
   const t = translations[language] || translations.kk;
 
-  // Активная вкладка: по умолчанию 'home' или 'profile'
+  // Активная вкладка
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('tab')) return params.get('tab');
     return 'home';
   });
 
-  // Функция гарантированного возврата из тренерского раздела в Профиль атлета
   const handleTrainerBackToProfile = () => {
     const url = new URL(window.location.href);
     url.searchParams.delete('trainer');
@@ -116,6 +121,10 @@ export default function App() {
         if (data && !error) {
           setUserProfile(data);
           setIsRegistered(true);
+          if (data.legal_accepted) {
+            setHasAcceptedLegal(true);
+            localStorage.setItem('gymconnect_legal_accepted', 'true');
+          }
           localStorage.setItem('gymconnect_profile_filled', 'true');
           localStorage.setItem('gymconnect_user_profile', JSON.stringify(data));
         } else if (error) {
@@ -123,13 +132,13 @@ export default function App() {
         } else if (!data && !localStorage.getItem('gymconnect_profile_filled')) {
           setUserProfile(null);
           setIsRegistered(false);
+          setHasAcceptedLegal(false);
         }
       }
     }
     syncAthleteProfile();
   }, []);
 
-  // ОБРАБОТКА ТРЕНЕРСКОГО РЕЖИМА С РАБОТАЮЩЕЙ КНОПКОЙ НАЗАД
   if (isTrainerMode) {
     if (!trainerUsername) {
       if (isTrainerRegistering) {
@@ -214,7 +223,18 @@ export default function App() {
     setIsRegistered(true);
     setUserProfile(newProfile);
     localStorage.setItem('gymconnect_profile_filled', 'true');
-    setActiveTab('profile'); // Сразу открываем личный профиль атлета
+    // Если документы уже были приняты — открываем Home, если нет — LegalDocsPage
+    if (newProfile?.legal_accepted) {
+      setHasAcceptedLegal(true);
+      setActiveTab('home');
+    }
+  };
+
+  // Фиксация согласия с 7 юридическими актами
+  const handleLegalAccepted = () => {
+    setHasAcceptedLegal(true);
+    localStorage.setItem('gymconnect_legal_accepted', 'true');
+    setActiveTab('home');
   };
 
   // Выход из профиля
@@ -224,6 +244,7 @@ export default function App() {
       setIsRegistered(false);
       setUserProfile(null);
       setLanguage(null);
+      setHasAcceptedLegal(false);
       window.location.reload();
     }
   };
@@ -238,6 +259,7 @@ export default function App() {
       setIsRegistered(false);
       setUserProfile(null);
       setLanguage(null);
+      setHasAcceptedLegal(false);
       window.location.reload();
     }
   };
@@ -252,7 +274,7 @@ export default function App() {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
 
-  // ЭКРАН 3: Анкета первичной регистрации (если еще не зарегистрирован)
+  // ЭКРАН 3: Анкета первичной регистрации
   if (!isRegistered) {
     return (
       <RegisterProfilePage 
@@ -262,7 +284,17 @@ export default function App() {
     );
   }
 
-  // ЭКРАН 4: Основное приложение (сразу на вкладку активного раздела)
+  // ЭКРАН 3.5: ОБЯЗАТЕЛЬНЫЙ ЮРИДИЧЕСКИЙ БАРЬЕР (7 актов РК перед допуском к разделам)
+  if (!hasAcceptedLegal) {
+    return (
+      <LegalDocsPage 
+        isMandatory={true}
+        onConsentConfirmed={handleLegalAccepted} 
+      />
+    );
+  }
+
+  // ЭКРАН 4: Основное приложение (доступ открыт после согласия со всеми 7 актами)
   return (
     <div className={`min-h-screen bg-slate-100 flex justify-center ${appleTheme.styles.fontFamily}`}>
       <div className="w-full max-w-md min-h-screen bg-[#F2F2F7] relative pb-28 shadow-2xl flex flex-col justify-between">
