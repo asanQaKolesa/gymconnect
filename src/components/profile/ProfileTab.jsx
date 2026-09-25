@@ -253,7 +253,7 @@ const DAYS_OF_WEEK = [
   { id: 'Воскресенье', label: 'Вс' }
 ];
 
-export default function ProfileTab({ onComplete, isRegistration, currentLang = 'kk' }) {
+export default function ProfileTab({ userProfile, onComplete, isRegistration, currentLang = 'kk' }) {
   const t = translations[currentLang] || translations.kk;
 
   const [formData, setFormData] = useState(() => {
@@ -261,40 +261,40 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
     const savedProfile = JSON.parse(localStorage.getItem('gymconnect_user_data') || '{}');
 
     return {
-      firstName: savedProfile.firstName || tgUser?.first_name || '',
-      lastName: savedProfile.lastName || tgUser?.last_name || '',
-      username: savedProfile.username ? savedProfile.username.replace(/^@+/, '') : (tgUser?.username ? tgUser.username.replace(/^@+/, '') : ''),
-      whatsapp: savedProfile.whatsapp || '',
-      instagram: savedProfile.instagram ? savedProfile.instagram.replace(/^@+/, '') : '',
-      avatar: savedProfile.avatar || tgUser?.photo_url || '',
-      age: savedProfile.age || '',
-      birthDate: savedProfile.birthDate || '',
-      gender: savedProfile.gender || 'male',
-      height: savedProfile.height || '',
-      weight: savedProfile.weight || '',
-      city: savedProfile.city || 'Алматы',
-      district: savedProfile.district || 'Медеуский',
-      gym: savedProfile.gym || '',
+      firstName: userProfile?.first_name || savedProfile.firstName || tgUser?.first_name || '',
+      lastName: userProfile?.last_name || savedProfile.lastName || tgUser?.last_name || '',
+      username: userProfile?.username ? userProfile.username.replace(/^@+/, '') : (savedProfile.username ? savedProfile.username.replace(/^@+/, '') : (tgUser?.username ? tgUser.username.replace(/^@+/, '') : '')),
+      whatsapp: userProfile?.whatsapp || savedProfile.whatsapp || '',
+      instagram: userProfile?.instagram ? userProfile.instagram.replace(/^@+/, '') : (savedProfile.instagram ? savedProfile.instagram.replace(/^@+/, '') : ''),
+      avatar: userProfile?.avatar_url || savedProfile.avatar || tgUser?.photo_url || '',
+      age: userProfile?.age || savedProfile.age || '',
+      birthDate: userProfile?.birth_date || savedProfile.birthDate || '',
+      gender: userProfile?.gender || savedProfile.gender || 'male',
+      height: userProfile?.height || savedProfile.height || '',
+      weight: userProfile?.weight || savedProfile.weight || '',
+      city: userProfile?.city || savedProfile.city || 'Алматы',
+      district: userProfile?.district || savedProfile.district || 'Медеуский',
+      gym: userProfile?.gym || savedProfile.gym || '',
       
-      experienceLevel: savedProfile.experienceLevel || 'independent',
-      trainerNeed: savedProfile.trainerNeed || 'self',
-      trainerUsername: savedProfile.trainerUsername ? savedProfile.trainerUsername.replace(/^@+/, '') : '',
-      membershipTerm: savedProfile.membershipTerm || '6_months',
+      experienceLevel: userProfile?.experience_level || savedProfile.experienceLevel || 'independent',
+      trainerNeed: userProfile?.trainer_need || savedProfile.trainerNeed || 'self',
+      trainerUsername: userProfile?.trainer_username ? userProfile.trainer_username.replace(/^@+/, '') : (savedProfile.trainerUsername ? savedProfile.trainerUsername.replace(/^@+/, '') : ''),
+      membershipTerm: userProfile?.membership_term || savedProfile.membershipTerm || '6_months',
 
-      specialization: savedProfile.specialization || 'athlete',
-      goal: savedProfile.goal || 'mass',
+      specialization: userProfile?.specialization || savedProfile.specialization || 'athlete',
+      goal: userProfile?.goal || savedProfile.goal || 'mass',
       
-      lookingFor: savedProfile.lookingFor || 'gymbro',
-      workoutTime: savedProfile.workoutTime || 'evening',
-      customTime: savedProfile.customTime || '',
-      workoutDays: savedProfile.workoutDays || ['Понедельник', 'Среда', 'Пятница'],
-      bio: savedProfile.bio || '',
+      lookingFor: userProfile?.looking_for || savedProfile.lookingFor || 'gymbro',
+      workoutTime: userProfile?.workout_time || savedProfile.workoutTime || 'evening',
+      customTime: userProfile?.custom_time || savedProfile.customTime || '',
+      workoutDays: userProfile?.workout_days || savedProfile.workoutDays || ['Понедельник', 'Среда', 'Пятница'],
+      bio: userProfile?.bio || savedProfile.bio || '',
 
-      agreeTerms: savedProfile.agreeTerms || false,
-      agreePrivacy: savedProfile.agreePrivacy || false,
-      agreeMarketing: savedProfile.agreeMarketing || false,
-      agreeTrainers: savedProfile.agreeTrainers || false,
-      agreeSafety: savedProfile.agreeSafety || false
+      agreeTerms: userProfile?.agree_terms || savedProfile.agreeTerms || false,
+      agreePrivacy: userProfile?.agree_privacy || savedProfile.agreePrivacy || false,
+      agreeMarketing: userProfile?.agree_marketing || savedProfile.agreeMarketing || false,
+      agreeTrainers: userProfile?.agree_trainers || savedProfile.agreeTrainers || false,
+      agreeSafety: userProfile?.agree_safety || savedProfile.agreeSafety || false
     };
   });
 
@@ -429,7 +429,7 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
 
     localStorage.setItem('gymconnect_user_data', JSON.stringify(formData));
     localStorage.setItem('gymconnect_profile_filled', 'true');
-    if (onComplete) onComplete();
+    if (onComplete) onComplete(profilePayload);
   };
 
   if (isRegistration) {
@@ -578,7 +578,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               </div>
             </div>
 
-            {/* Новое поле: Дата рождения */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Туған күні' : 'Дата рождения'} *
@@ -711,7 +710,6 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
               )}
             </div>
 
-            {/* Выбор дней тренировок */}
             <div className="mb-3">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {currentLang === 'kk' ? 'Жаттығу күндерін таңдаңыз' : 'Выберите дни тренировок'} *
@@ -752,7 +750,45 @@ export default function ProfileTab({ onComplete, isRegistration, currentLang = '
   }
 
   return (
-    <div className="p-4 max-w-md mx-auto flex flex-col pb-24 animate-in fade-in duration-200">
+    <div className="p-4 max-w-md mx-auto flex flex-col pb-24 space-y-4 animate-in fade-in duration-200">
+      
+      {/* Карточка атлета с реальными данными из базы */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
+        <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+          <div className="w-14 h-14 bg-blue-50 rounded-full overflow-hidden border border-blue-200 flex items-center justify-center shrink-0">
+            {userProfile?.avatar_url || formData.avatar ? (
+              <img src={userProfile?.avatar_url || formData.avatar} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-7 h-7 text-blue-600" />
+            )}
+          </div>
+          <div>
+            <h2 className="font-bold text-slate-900 text-base">
+              {userProfile ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}` : `${formData.firstName} ${formData.lastName}`}
+            </h2>
+            <p className="text-xs text-blue-600 font-mono">{userProfile?.username || formData.username || '@username'}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <span className="text-slate-400 block text-[10px]">Остаток занятий</span>
+            <span className="font-bold text-slate-900 text-sm">{userProfile?.left_trainings !== undefined ? userProfile.left_trainings : 12} зан.</span>
+          </div>
+          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <span className="text-slate-400 block text-[10px]">Цель</span>
+            <span className="font-bold text-blue-600 truncate block">
+              {(userProfile?.goal || formData.goal) === 'mass' ? 'Набор массы' : (userProfile?.goal || formData.goal) === 'cut' ? 'Сушка' : 'Тонус'}
+            </span>
+          </div>
+        </div>
+
+        <div className="text-xs text-slate-600 space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <p><b>Фитнес-зал:</b> {userProfile?.gym || formData.gym || 'Не указан'}</p>
+          <p><b>Город / Район:</b> {userProfile?.city || formData.city || 'Алматы'} ({userProfile?.district || formData.district || 'Медеуский'})</p>
+        </div>
+      </div>
+
       <ProfileHeader />
       <ProfileCard />
       <ProfileMenu />
