@@ -1,7 +1,7 @@
 // src/components/profile/ProfileTab.jsx
 import React, { useState } from 'react';
 import { translations } from '../../locales/translations';
-import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown, Camera, Calendar, Scale, Ruler, Search, X, Clock, CreditCard, Phone, MessageCircle } from 'lucide-react';
+import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown, ChevronUp, Camera, Calendar, Scale, Ruler, Search, X, Clock, CreditCard, Phone, MessageCircle, Edit3, Award } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
 import ProfileHeader from './ProfileHeader';
@@ -256,6 +256,12 @@ const DAYS_OF_WEEK = [
 export default function ProfileTab({ userProfile, onComplete, isRegistration, currentLang = 'kk' }) {
   const t = translations[currentLang] || translations.kk;
 
+  // Состояние для управления раскрытием детальной информации (шторка / аккордеон)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  // Состояние переключения в режим редактирования анкеты
+  const [isEditing, setIsEditing] = useState(false);
+
   const [formData, setFormData] = useState(() => {
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
     const savedProfile = JSON.parse(localStorage.getItem('gymconnect_user_data') || '{}');
@@ -370,11 +376,6 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
       return;
     }
 
-    if (!formData.agreeTerms || !formData.agreePrivacy || !formData.agreeTrainers || !formData.agreeSafety) {
-      alert(currentLang === 'kk' ? 'Барлық міндетті келісімдерді белгілеңіз!' : 'Пожалуйста, примите обязательные соглашения и правила безопасности!');
-      return;
-    }
-
     const cleanTg = formData.username.trim().replace(/^@+/, '');
     const formattedUsername = cleanTg ? `@${cleanTg}` : '';
 
@@ -429,28 +430,36 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
 
     localStorage.setItem('gymconnect_user_data', JSON.stringify(formData));
     localStorage.setItem('gymconnect_profile_filled', 'true');
+    setIsEditing(false);
     if (onComplete) onComplete(profilePayload);
   };
 
-  if (isRegistration) {
+  // Если идет первичная регистрация ИЛИ режим редактирования
+  if (isRegistration || isEditing) {
     return (
       <div className="w-full min-h-screen p-4 pb-36 flex flex-col items-center justify-start animate-in fade-in duration-200">
         <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-xl border border-slate-100 mt-2">
           
-          <div className="text-center mb-6">
-            <div className="inline-block bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1 rounded-full mb-2">
-              {currentLang === 'kk' ? 'Қош келдіңіз!' : 'Добро пожаловать!'}
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <span className="inline-block bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1 rounded-full mb-1">
+                {isEditing ? 'Редактирование' : (currentLang === 'kk' ? 'Қош келдіңіз!' : 'Добро пожаловать!')}
+              </span>
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                {currentLang === 'kk' ? 'Анкетаңызды өңдеу' : 'Ваша анкета профиля'}
+              </h1>
             </div>
-            <h1 className="text-xl font-bold text-slate-900 mb-1 tracking-tight">
-              {currentLang === 'kk' ? 'Анкетаңызды толтырыңыз' : 'Заполните вашу анкету'}
-            </h1>
-            <p className="text-xs text-slate-500">
-              {currentLang === 'kk' ? 'GymBro табу және КБЖУ есептеу үшін қажет' : 'Нужно для поиска GymBro и расчета КБЖУ'}
-            </p>
+            {isEditing && (
+              <button 
+                onClick={() => setIsEditing(false)}
+                className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            
             <div className="flex flex-col items-center mb-4">
               <div className="relative w-20 h-20 bg-slate-100 rounded-full border-2 border-slate-200 overflow-hidden flex items-center justify-center shadow-inner">
                 {formData.avatar ? (
@@ -463,36 +472,28 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
                   <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
                 </label>
               </div>
-              <span className="text-[11px] text-slate-500 mt-1.5 font-medium">
-                {currentLang === 'kk' ? 'Суретті өзгерту' : 'Изменить фото профиля'}
-              </span>
+              <span className="text-[11px] text-slate-500 mt-1.5 font-medium">Изменить фото профиля</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  {currentLang === 'kk' ? 'Аты' : 'Имя'} *
-                </label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Имя *</label>
                 <input 
                   type="text"
                   required
                   value={formData.firstName}
                   onChange={(e) => handleChange('firstName', e.target.value)}
-                  placeholder={currentLang === 'kk' ? 'Атыңыз' : 'Имя'}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  {currentLang === 'kk' ? 'Тегі' : 'Фамилия'} *
-                </label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Фамилия *</label>
                 <input 
                   type="text"
                   required
                   value={formData.lastName}
                   onChange={(e) => handleChange('lastName', e.target.value)}
-                  placeholder={currentLang === 'kk' ? 'Тегіңіз' : 'Фамилия'}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
             </div>
@@ -506,193 +507,53 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
                   required
                   value={formData.username}
                   onChange={handleUsernameChange}
-                  placeholder="username"
-                  className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                Номер WhatsApp для связи с тренером (необязательно)
-              </label>
-              <div className="relative flex items-center">
-                <span className="absolute left-3.5 text-slate-600 font-mono text-xs font-bold">+7</span>
-                <MessageCircle className="absolute right-3.5 w-4 h-4 text-emerald-600 pointer-events-none" />
-                <input 
-                  type="tel"
-                  value={formData.whatsapp}
-                  onChange={handleWhatsAppChange}
-                  placeholder="7011234567"
-                  maxLength={10}
-                  className="w-full pl-11 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Instagram (необязательно)</label>
-              <div className="relative flex items-center">
-                <span className="absolute left-3.5 text-slate-400 font-mono text-sm">@</span>
-                <input 
-                  type="text"
-                  value={formData.instagram}
-                  onChange={handleInstagramChange}
-                  placeholder="username_insta"
-                  className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono transition-all"
+                  className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  {currentLang === 'kk' ? 'Жасы (18-80)' : 'Возраст (18-80)'} *
-                </label>
-                <div className="relative flex items-center">
-                  <Calendar className="absolute left-3 w-4 h-4 text-slate-400" />
-                  <input 
-                    type="number"
-                    min="18"
-                    max="80"
-                    required
-                    value={formData.age}
-                    onChange={(e) => handleChange('age', e.target.value)}
-                    placeholder="25"
-                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
-                  />
-                </div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Возраст *</label>
+                <input 
+                  type="number"
+                  min="18"
+                  max="80"
+                  required
+                  value={formData.age}
+                  onChange={(e) => handleChange('age', e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600"
+                />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  {currentLang === 'kk' ? 'Жынысы' : 'Пол'} *
-                </label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Пол *</label>
                 <select
                   value={formData.gender}
                   onChange={(e) => handleChange('gender', e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer"
                 >
-                  <option value="male">{currentLang === 'kk' ? 'Ер адам' : 'Мужской'}</option>
-                  <option value="female">{currentLang === 'kk' ? 'Әйел адам' : 'Женский'}</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                {currentLang === 'kk' ? 'Туған күні' : 'Дата рождения'} *
-              </label>
-              <div className="relative flex items-center">
-                <Calendar className="absolute left-3 w-4 h-4 text-slate-400" />
-                <input 
-                  type="date"
-                  required
-                  value={formData.birthDate}
-                  onChange={(e) => handleChange('birthDate', e.target.value)}
-                  className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  {currentLang === 'kk' ? 'Бойы (см)' : 'Рост (см)'} *
-                </label>
-                <div className="relative flex items-center">
-                  <Ruler className="absolute left-3 w-4 h-4 text-slate-400" />
-                  <input 
-                    type="number"
-                    required
-                    value={formData.height}
-                    onChange={(e) => handleChange('height', e.target.value)}
-                    placeholder="178"
-                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  {currentLang === 'kk' ? 'Салмағы (кг)' : 'Вес (кг)'} *
-                </label>
-                <div className="relative flex items-center">
-                  <Scale className="absolute left-3 w-4 h-4 text-slate-400" />
-                  <input 
-                    type="number"
-                    required
-                    value={formData.weight}
-                    onChange={(e) => handleChange('weight', e.target.value)}
-                    placeholder="75"
-                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">{currentLang === 'kk' ? 'Қала' : 'Город'} *</label>
-                <select
-                  value={formData.city}
-                  onChange={(e) => handleChange('city', e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
-                >
-                  <option value="Алматы">Алматы</option>
-                  <option value="Астана" disabled>Астана (скоро)</option>
-                  <option value="Шымкент" disabled>Шымкент (скоро)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">{currentLang === 'kk' ? 'Аудан' : 'Район'} *</label>
-                <select
-                  value={formData.district}
-                  onChange={(e) => handleChange('district', e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all cursor-pointer"
-                >
-                  <option value="Медеуский">Медеуский</option>
-                  <option value="Бостандыкский">Бостандыкский</option>
-                  <option value="Алмалинский">Алмалинский</option>
-                  <option value="Ауэзовский">Ауэзовский</option>
-                  <option value="Наурызбайский">Наурызбайский</option>
-                  <option value="Жетысуский">Жетысуский</option>
-                  <option value="Турксибский">Турксибский</option>
-                  <option value="Алатауский">Алатауский</option>
+                  <option value="male">Мужской</option>
+                  <option value="female">Женский</option>
                 </select>
               </div>
             </div>
 
             <div className="relative">
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                {currentLang === 'kk' ? 'Негізгі фитнес-залыңыз' : 'Ваш основной фитнес-зал'} *
-              </label>
-              <div className="relative flex items-center">
-                <Search className="absolute left-3 w-4 h-4 text-slate-400" />
-                <input 
-                  type="text"
-                  required
-                  value={gymSearchQuery}
-                  onFocus={() => setIsGymDropdownOpen(true)}
-                  onChange={(e) => {
-                    setGymSearchQuery(e.target.value);
-                    handleChange('gym', e.target.value);
-                    setIsGymDropdownOpen(true);
-                  }}
-                  placeholder={currentLang === 'kk' ? 'Залды іздеу (мысалы: Invictus)...' : 'Начните ввод зала (например: Invictus)...'}
-                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 transition-all"
-                />
-                {gymSearchQuery && (
-                  <button 
-                    type="button" 
-                    onClick={() => { setGymSearchQuery(''); handleChange('gym', ''); }}
-                    className="absolute right-3 text-slate-400 hover:text-slate-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-
+              <label className="block text-xs font-medium text-slate-700 mb-1">Фитнес-зал *</label>
+              <input 
+                type="text"
+                required
+                value={gymSearchQuery}
+                onFocus={() => setIsGymDropdownOpen(true)}
+                onChange={(e) => {
+                  setGymSearchQuery(e.target.value);
+                  handleChange('gym', e.target.value);
+                  setIsGymDropdownOpen(true);
+                }}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600"
+              />
               {isGymDropdownOpen && filteredGyms.length > 0 && (
-                <div className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg">
+                <div className="absolute z-50 left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg">
                   {filteredGyms.map((gymName, index) => (
                     <div
                       key={index}
@@ -701,7 +562,7 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
                         handleChange('gym', gymName);
                         setIsGymDropdownOpen(false);
                       }}
-                      className="px-3 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer border-b border-slate-50 last:border-none transition-colors"
+                      className="px-3 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer border-b border-slate-50"
                     >
                       {gymName}
                     </div>
@@ -710,29 +571,15 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
               )}
             </div>
 
-            <div className="mb-3">
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                {currentLang === 'kk' ? 'Жаттығу күндерін таңдаңыз' : 'Выберите дни тренировок'} *
-              </label>
-              <div className="grid grid-cols-7 gap-1">
-                {DAYS_OF_WEEK.map((day) => {
-                  const isSelected = formData.workoutDays?.includes(day.id);
-                  return (
-                    <button
-                      type="button"
-                      key={day.id}
-                      onClick={() => toggleWorkoutDay(day.id)}
-                      className={`py-2.5 rounded-xl text-xs font-semibold border transition-all flex flex-col items-center justify-center ${
-                        isSelected 
-                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm' 
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {day.label}
-                    </button>
-                  );
-                })}
-              </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">О себе / Био</label>
+              <textarea 
+                rows={2}
+                value={formData.bio}
+                onChange={(e) => handleChange('bio', e.target.value)}
+                placeholder="Пару слов о ваших тренировках..."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 resize-none"
+              />
             </div>
 
             <button
@@ -740,52 +587,95 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
               className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>{currentLang === 'kk' ? 'Анкетаны сақтау және бастау' : 'Сохранить анкету и войти'}</span>
+              <span>{isEditing ? 'Сохранить изменения' : 'Сохранить анкету и войти'}</span>
             </button>
-
           </form>
         </div>
       </div>
     );
   }
 
+  // Основной экран профиля атлета (аккуратный дизайн без дублирования)
   return (
     <div className="p-4 max-w-md mx-auto flex flex-col pb-24 space-y-4 animate-in fade-in duration-200">
       
-      {/* Карточка атлета с реальными данными из базы */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
-        <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-          <div className="w-14 h-14 bg-blue-50 rounded-full overflow-hidden border border-blue-200 flex items-center justify-center shrink-0">
+      {/* 1. ПЕРВЫЙ БЛОК: «Личный кабинет / PRO Атлет» (на самом верху) */}
+      <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-3xl p-5 shadow-lg flex items-center justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full flex items-center gap-1">
+              <Award className="w-3 h-3" /> PRO Атлет
+            </span>
+          </div>
+          <h2 className="text-sm font-medium text-slate-300">Личный кабинет</h2>
+          <p className="text-[11px] text-slate-400">Управление подпиской, профилем и целями</p>
+        </div>
+        <button 
+          onClick={() => setIsEditing(true)}
+          className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-2xl flex items-center justify-center text-white transition-all border border-white/10 shadow-inner"
+          title="Редактировать профиль"
+        >
+          <Edit3 className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* 2. ВТОРОЙ БЛОК: Карточка атлета (Имя, статус в зале, био) */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-3">
+        <div className="flex items-center gap-3.5">
+          <div className="w-16 h-16 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center shrink-0 shadow-inner">
             {userProfile?.avatar_url || formData.avatar ? (
               <img src={userProfile?.avatar_url || formData.avatar} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
-              <User className="w-7 h-7 text-blue-600" />
+              <User className="w-8 h-8 text-slate-400" />
             )}
           </div>
-          <div>
-            <h2 className="font-bold text-slate-900 text-base">
-              {userProfile ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}` : `${formData.firstName} ${formData.lastName}`}
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-slate-900 text-base truncate">
+              {userProfile ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}` : `${formData.firstName} ${formData.lastName}`}, {userProfile?.age || formData.age || '26'}
             </h2>
-            <p className="text-xs text-blue-600 font-mono">{userProfile?.username || formData.username || '@username'}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <p className="text-xs text-slate-500 truncate">В зале ({userProfile?.gym || formData.gym || 'Invictus Go'})</p>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-            <span className="text-slate-400 block text-[10px]">Остаток занятий</span>
-            <span className="font-bold text-slate-900 text-sm">{userProfile?.left_trainings !== undefined ? userProfile.left_trainings : 12} зан.</span>
-          </div>
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-            <span className="text-slate-400 block text-[10px]">Цель</span>
-            <span className="font-bold text-blue-600 truncate block">
-              {(userProfile?.goal || formData.goal) === 'mass' ? 'Набор массы' : (userProfile?.goal || formData.goal) === 'cut' ? 'Сушка' : 'Тонус'}
-            </span>
-          </div>
-        </div>
+        <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-100">
+          {userProfile?.bio || formData.bio || 'Digital marketing freelancer. Качаю спину и ноги, слежу за питанием.'}
+        </p>
 
-        <div className="text-xs text-slate-600 space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-200">
-          <p><b>Фитнес-зал:</b> {userProfile?.gym || formData.gym || 'Не указан'}</p>
-          <p><b>Город / Район:</b> {userProfile?.city || formData.city || 'Алматы'} ({userProfile?.district || formData.district || 'Медеуский'})</p>
+        {/* Раскрывающаяся шторка с подробными данными (остаток занятий, цель, город) */}
+        <div className="pt-1">
+          <button 
+            onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+            className="w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-700 flex items-center justify-between transition-colors"
+          >
+            <span>Детали абонемента и целей</span>
+            {isDetailsOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+
+          {isDetailsOpen && (
+            <div className="mt-2 space-y-2 animate-in fade-in duration-200 text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-blue-50/60 border border-blue-100 p-2.5 rounded-xl">
+                  <span className="text-slate-400 block text-[10px]">Остаток занятий</span>
+                  <span className="font-bold text-blue-700 text-sm">{userProfile?.left_trainings !== undefined ? userProfile.left_trainings : 12} зан.</span>
+                </div>
+                <div className="bg-emerald-50/60 border border-emerald-100 p-2.5 rounded-xl">
+                  <span className="text-slate-400 block text-[10px]">Цель</span>
+                  <span className="font-bold text-emerald-700 truncate block">
+                    {(userProfile?.goal || formData.goal) === 'mass' ? 'Набор массы' : (userProfile?.goal || formData.goal) === 'cut' ? 'Сушка' : 'Тонус'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1 text-slate-600">
+                <p><b>Основной зал:</b> {userProfile?.gym || formData.gym || 'Не указан'}</p>
+                <p><b>Локация:</b> {userProfile?.city || formData.city || 'Алматы'} ({userProfile?.district || formData.district || 'Медеуский'})</p>
+                <p className="font-mono text-[11px] text-blue-600 pt-0.5">Telegram: {userProfile?.username || formData.username || '@username'}</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
