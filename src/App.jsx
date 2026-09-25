@@ -18,8 +18,8 @@ import { appleTheme } from './ui/AppleTheme';
 import { 
   Home, 
   Users, 
-  MessageSquareText, 
-  UtensilsCrossed, 
+  MessageCircle, 
+  Utensils, 
   User 
 } from 'lucide-react';
 import { translations } from './locales/translations';
@@ -80,12 +80,12 @@ export default function App() {
     return 'profile';
   });
 
-  // МГНОВЕННЫЙ ВОЗВРАТ В ПРОФИЛЬ БЕЗ ПЕРЕЗАГРУЗКИ СТРАНИЦЫ И БЕЗ ЗАСТАВКИ
+  // Мгновенный возврат в профиль без перезагрузки и без заставки
   const handleTrainerBackToProfile = () => {
     setIsTrainerMode(false);
     setIsTrainerRegistering(false);
     setActiveTab('profile');
-    setIsLoading(false); // Заставка не включится
+    setIsLoading(false);
     try {
       const url = new URL(window.location.href);
       url.searchParams.delete('trainer');
@@ -302,12 +302,12 @@ export default function App() {
     );
   }
 
-  // Вкладки нижнего бара
+  // Аккуратные, легкие и понятные иконки для таб-бара
   const navigationTabs = [
     { id: 'home', label: t.nav.home, icon: Home },
     { id: 'gymbro', label: t.nav.gymbro, icon: Users },
-    { id: 'reviews', label: t.nav.reviews, icon: MessageSquareText },
-    { id: 'nutrition', label: t.nav.nutrition, icon: UtensilsCrossed },
+    { id: 'reviews', label: t.nav.reviews, icon: MessageCircle },
+    { id: 'nutrition', label: t.nav.nutrition, icon: Utensils },
     { id: 'profile', label: t.nav.profile, icon: User }
   ];
 
@@ -332,9 +332,9 @@ export default function App() {
           )}
         </div>
 
-        {/* Apple Floating Glass Dock Bar */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 backdrop-blur-2xl border-t border-slate-200/60 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] select-none">
-          <div className="w-full max-w-md mx-auto px-2.5 py-1.5 flex justify-between items-center">
+        {/* ================= АККУРАТНЫЙ МИНИМАЛИСТИЧНЫЙ ТАБ-БАР В СТИЛЕ APPLE HIG ================= */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200/70 shadow-sm select-none">
+          <div className="w-full max-w-md mx-auto px-3 py-2 flex justify-between items-center">
             
             {navigationTabs.map((tab) => {
               const Icon = tab.icon;
@@ -345,36 +345,23 @@ export default function App() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-300 active:scale-95 ${
-                    isActive 
-                      ? 'text-blue-600' 
-                      : 'text-slate-400 hover:text-slate-600'
-                  }`}
+                  className="flex-1 flex flex-col items-center justify-center py-1 px-1 transition-all duration-200 active:scale-95"
                 >
-                  {/* Светящаяся неоновая капсула вокруг активного таба */}
-                  {isActive && (
-                    <span className="absolute inset-x-1 inset-y-0.5 bg-blue-500/10 border border-blue-500/25 rounded-2xl shadow-[0_0_16px_rgba(37,99,235,0.25)] animate-in fade-in zoom-in-95 duration-200" />
-                  )}
-
-                  <div className="relative z-10 flex flex-col items-center">
-                    <Icon 
-                      className={`w-[21px] h-[21px] transition-all duration-300 ${
-                        isActive 
-                          ? 'stroke-[2.2] scale-110 drop-shadow-[0_2px_8px_rgba(37,99,235,0.4)] text-blue-600' 
-                          : 'stroke-[1.65] text-slate-400'
-                      }`} 
-                    />
-
-                    {isActive && (
-                      <span className="w-1.5 h-1.5 bg-blue-600 rounded-full shadow-[0_0_8px_#2563eb] mt-0.5 animate-in fade-in zoom-in duration-200" />
-                    )}
-                  </div>
-
-                  <span 
-                    className={`relative z-10 text-[9.5px] tracking-tight mt-0.5 transition-all duration-300 ${
+                  {/* Иконка: без светящихся квадратов и точек, просто мягкое выделение цветом */}
+                  <Icon 
+                    className={`w-5 h-5 transition-colors duration-200 ${
                       isActive 
-                        ? 'text-blue-600 font-extrabold' 
-                        : 'text-slate-400 font-semibold'
+                        ? 'text-blue-600 stroke-[2.2]' 
+                        : 'text-slate-400 stroke-[1.7]'
+                    }`} 
+                  />
+
+                  {/* Подпись: компактная и четкая */}
+                  <span 
+                    className={`text-[10px] tracking-tight mt-1 transition-colors duration-200 ${
+                      isActive 
+                        ? 'text-blue-600 font-bold' 
+                        : 'text-slate-400 font-medium'
                     }`}
                   >
                     {tab.label}
