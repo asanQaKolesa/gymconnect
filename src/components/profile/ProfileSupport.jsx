@@ -4,7 +4,6 @@ import {
   HelpCircle, 
   Send, 
   Instagram, 
-  MessageCircle, 
   ChevronRight, 
   X, 
   ExternalLink 
@@ -16,19 +15,19 @@ export default function ProfileSupport() {
   return (
     <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-2.5 select-none">
       
-      {/* Заголовок блока */}
-      <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-          Служба поддержки и контакты
+      {/* Заголовок без слов «и контакты», бейдж без 24/7 */}
+      <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-100 whitespace-nowrap">
+        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
+          Служба поддержки
         </span>
-        <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-bold border border-slate-200">
-          24/7 Онлайн
+        <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-bold border border-slate-200 shrink-0">
+          На связи
         </span>
       </div>
 
       <div className="space-y-1.5 pt-1">
         
-        {/* 1. Чат заботы и техподдержка */}
+        {/* 1. Чат помощи */}
         <button
           type="button"
           onClick={() => setIsHelpModalOpen(true)}
@@ -43,7 +42,7 @@ export default function ProfileSupport() {
                 Служба поддержки и помощь
               </p>
               <p className="text-[10px] text-slate-500 mt-0.5">
-                Круглосуточный чат заботы в Telegram • Операторы в Алматы
+                Чат заботы в Telegram • Помощь атлетам Алматы
               </p>
             </div>
           </div>
@@ -66,7 +65,7 @@ export default function ProfileSupport() {
                 Telegram-канал комьюнити
               </p>
               <p className="text-[10px] text-slate-500 mt-0.5">
-                Новости залов Алматы, фитнес-события и челенджи
+                Новости залов Алматы, события и фитнес-челенджи
               </p>
             </div>
           </div>
@@ -89,7 +88,7 @@ export default function ProfileSupport() {
                 Instagram @gymconnect_kz
               </p>
               <p className="text-[10px] text-slate-500 mt-0.5">
-                Фотоотчеты, видеообзоры клубов и жизнь атлетов
+                Фотоотчеты, видеообзоры клубов и жизнь сообщества
               </p>
             </div>
           </div>
@@ -98,7 +97,7 @@ export default function ProfileSupport() {
 
       </div>
 
-      {/* Модалка подробной поддержки */}
+      {/* Модалка поддержки без упоминания круглосуточности */}
       {isHelpModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
@@ -120,11 +119,11 @@ export default function ProfileSupport() {
 
             <div className="space-y-2 text-xs text-slate-600 leading-relaxed">
               <p>
-                Возникли трудности с оплатой, подбором напарников GymBro или привязкой клуба? Наша служба заботы работает круглосуточно.
+                Возникли вопросы по фитнес-залам, оплате подписки или подбору напарников GymBro? Напишите нам в чат поддержки.
               </p>
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-1 font-mono text-[11px]">
-                <p>📍 Локация: <b>г. Алматы, Казахстан</b></p>
-                <p>⏰ График: <b>24/7 без выходных</b></p>
+                <p>📍 Город: <b>г. Алматы, Казахстан</b></p>
+                <p>💬 Канал связи: <b>Telegram чат заботы</b></p>
               </div>
             </div>
 
@@ -135,7 +134,7 @@ export default function ProfileSupport() {
               className="w-full py-3 bg-[#229ED9] hover:bg-[#1e8ec3] text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#229ED9]/30 active:scale-98"
             >
               <Send className="w-4 h-4" />
-              <span>Написать в поддержку Telegram</span>
+              <span>Написать оператору в Telegram</span>
             </a>
           </div>
         </div>
