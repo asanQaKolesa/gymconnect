@@ -136,8 +136,10 @@ export default function App() {
   // Состояние заставки для обычного приложения
   const [isLoading, setIsLoading] = useState(true);
 
-  // Выбранный язык (по умолчанию null для показа LanguageSelector)
-  const [language, setLanguage] = useState(null);
+  // Выбранный язык: проверяем localStorage, чтобы не запрашивать повторно
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('gymconnect_language') || null;
+  });
 
   // Получаем словарь текстов для выбранного языка
   const t = translations[language] || translations.kk;
@@ -157,9 +159,10 @@ export default function App() {
     setIsLoading(false);
   };
 
-  // Сохранение выбранного языка
+  // Сохранение выбранного языка в localStorage
   const handleSelectLanguage = (lang) => {
     setLanguage(lang);
+    localStorage.setItem('gymconnect_language', lang);
   };
 
   // Функция успешного завершения онбординга (вызывается из ProfileTab)
@@ -175,7 +178,7 @@ export default function App() {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
-  // 4. Если заставка завершилась, но язык не выбран — показываем выбор языка
+  // 4. Если заставка завершилась, но язык не выбран — показываем выбор языка (только один раз)
   if (!language) {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
