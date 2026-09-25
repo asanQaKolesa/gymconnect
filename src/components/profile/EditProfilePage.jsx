@@ -7,15 +7,15 @@ import {
   X, 
   ShieldAlert, 
   Users, 
-  Check,
-  Camera,
-  UserCheck,
-  Sparkles
+  Check, 
+  Camera, 
+  UserCheck, 
+  Sparkles,
+  Globe2
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
 
-// Безопасное извлечение списка залов из src/data/almatyGyms.js
 const GYM_LIST = GymsData.ALMATY_GYMS || GymsData.almatyGyms || GymsData.default || [];
 
 export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
@@ -24,7 +24,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
   const [isGymDropdownOpen, setIsGymDropdownOpen] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Автоматические данные пользователя из Telegram WebApp API
+  // Данные из Telegram Mini App
   const tgUser = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : null;
 
   // Ограничение возраста от 18 до 80 лет
@@ -38,44 +38,36 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
     return defaultDate.toISOString().split('T')[0];
   }, [user?.birth_date]);
 
-  // Основной стейт формы анкеты
+  // Основной стейт анкеты
   const [formData, setFormData] = useState({
-    // Фотография
     photo_url: user?.photo_url || user?.avatar_url || tgUser?.photo_url || '',
-
-    // 1. Личные данные
     first_name: user?.first_name || tgUser?.first_name || '',
     last_name: user?.last_name || tgUser?.last_name || '',
     gender: user?.gender || 'male',
     bio: user?.bio || '',
 
-    // 2. Контактные данные
     telegram_username: user?.telegram_username || user?.username || tgUser?.username || '',
     whatsapp: user?.whatsapp || user?.phone || '',
     instagram: user?.instagram || '',
 
-    // 3. Формат тренировок и связь с тренером
     training_format: user?.training_format || 'alone',
     trainer_telegram: user?.trainer_telegram || '',
+    allow_trainer_recommendations: user?.allow_trainer_recommendations !== undefined ? Boolean(user.allow_trainer_recommendations) : false,
 
-    // 4. Локация и фитнес-клуб
     city: user?.city || 'Алматы',
     district: user?.district || 'Бостандыкский',
     gym: user?.gym || '',
     custom_gym: user?.custom_gym || '',
 
-    // 5. Параметры тела и дата рождения
     birth_date: defaultBirthDate,
     height: user?.height || '178',
     weight: user?.weight || '75',
     experience_level: user?.experience_level || 'regular',
 
-    // 6. Цель и график
     goal: user?.goal || 'Набор массы',
     workout_days: Array.isArray(user?.workout_days) && user.workout_days.length > 0 ? user.workout_days : ['Пн', 'Ср', 'Пт'],
     workout_time_slot: user?.workout_time_slot || 'Вечер (16:00 - 21:00)',
 
-    // 7. GymBro Matching
     gymbro_search: user?.gymbro_search !== undefined ? Boolean(user.gymbro_search) : false,
     gymbro_radius: user?.gymbro_radius || 'club',
     gymbro_target_gender: user?.gymbro_target_gender || 'any',
@@ -83,7 +75,6 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
     personality_type: user?.personality_type || 'ambivert'
   });
 
-  // Автоматический расчет возраста
   const calculatedAge = useMemo(() => {
     if (!formData.birth_date) return null;
     const birth = new Date(formData.birth_date);
@@ -95,7 +86,6 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
     return ageDiff;
   }, [formData.birth_date]);
 
-  // Города Казахстана (активен пока Алматы)
   const kzCities = [
     { id: 'Алматы', name: 'Алматы', available: true },
     { id: 'Астана', name: 'Астана (Скоро)', available: false },
@@ -104,7 +94,6 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
     { id: 'Актобе', name: 'Актобе (Скоро)', available: false }
   ];
 
-  // Районы Алматы
   const almatyDistricts = [
     'Бостандыкский',
     'Медеуский',
@@ -116,29 +105,8 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
     'Алатауский'
   ];
 
-  // Креативные градации стажа тренировок
-  const experienceOptions = [
-    { id: 'first_time', title: 'Первый раз в зале', desc: 'Осматриваюсь и изучаю тренажеры' },
-    { id: 'scared_beginner', title: 'Пару раз заходил, было страшно', desc: 'Делаю первые уверенные шаги' },
-    { id: 'beginner', title: 'Новичок', desc: 'Освоил базу, стаж до 6 месяцев' },
-    { id: 'regular', title: 'Уверенный любитель', desc: 'Регулярно жму и тяну, стаж 1–2 года' },
-    { id: 'advanced', title: 'Опытный атлет', desc: 'Знаю каждую мышцу, стаж 2–5 лет' },
-    { id: 'pro_monster', title: 'Профи / Монстр базы', desc: 'Выступающий атлет или машина зала' }
-  ];
-
-  // Креативные цели совместных тренировок для GymBro
-  const gymbroGoals = [
-    { id: 'strength', title: 'Страховка на тяжелой базе', desc: 'Жим, присед, тяга до отказа без страха' },
-    { id: 'discipline', title: 'Взаимная дисциплина', desc: 'Не сливаться с тренировок в 7 утра' },
-    { id: 'pump_burn', title: 'Хардкорный пампинг и сушка', desc: 'Высокий темп, дропсеты и огонь в мышцах' },
-    { id: 'cardio_cross', title: 'Кардио и функционал', desc: 'Сжигать калории и бегать кроссы вместе' },
-    { id: 'vibe_coffee', title: 'Спорт-вайб и кофе после зала', desc: 'Тренировки в удовольствие и дружба' },
-    { id: 'technique_learning', title: 'Обмен опытом и техникой', desc: 'Помогать друг другу расти и ставить углы' }
-  ];
-
   const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-  // Фильтр залов из базы
   const filteredGyms = useMemo(() => {
     if (!gymSearchQuery.trim()) return GYM_LIST.slice(0, 40);
     return GYM_LIST.filter(g => typeof g === 'string' && g.toLowerCase().includes(gymSearchQuery.toLowerCase()));
@@ -174,7 +142,6 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
     setFormData({ ...formData, instagram: val });
   };
 
-  // Обработка загрузки фото
   const handlePhotoUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -204,7 +171,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
     }
 
     if (!formData.gym.trim()) {
-      alert('Пожалуйста, выберите ваш основной фитнес-клуб.');
+      alert('Пожалуйста, выберите ваш фитнес-клуб.');
       return;
     }
 
@@ -238,6 +205,8 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
         instagram: cleanInstagram,
         training_format: formData.training_format,
         trainer_telegram: cleanTrainerTelegram,
+        trainer_username: cleanTrainerTelegram,
+        allow_trainer_recommendations: formData.allow_trainer_recommendations,
         city: formData.city,
         district: formData.district,
         gym: selectedGym,
@@ -258,7 +227,6 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
         updated_at: new Date().toISOString()
       };
 
-      // Сохраняем в Supabase
       if (user?.id) {
         const { error } = await supabase
           .from('profiles')
@@ -275,7 +243,6 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
         if (error) throw error;
       }
 
-      // Сохраняем локальное состояние профиля
       localStorage.setItem('gymconnect_profile_filled', 'true');
       localStorage.setItem('gymconnect_user_profile', JSON.stringify(updatedPayload));
 
@@ -326,16 +293,12 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
 
         <form onSubmit={handleSubmit} className="space-y-3 pb-8">
 
-          {/* ================= ФОТО ПРОФИЛЯ ================= */}
+          {/* Фото профиля */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex flex-col items-center text-center">
             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
               <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-blue-500 shadow-md bg-slate-100 flex items-center justify-center relative">
                 {formData.photo_url ? (
-                  <img 
-                    src={formData.photo_url} 
-                    alt="Аватар" 
-                    className="w-full h-full object-cover" 
-                  />
+                  <img src={formData.photo_url} alt="Аватар" className="w-full h-full object-cover" />
                 ) : (
                   <Users className="w-10 h-10 text-slate-400" />
                 )}
@@ -368,7 +331,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
             </p>
           </div>
 
-          {/* ================= 1. ЛИЧНЫЕ ДАННЫЕ ================= */}
+          {/* 1. Личные данные */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -453,7 +416,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
             </div>
           </div>
 
-          {/* ================= 2. КОНТАКТНЫЕ ДАННЫЕ ================= */}
+          {/* 2. Контактные данные */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -479,9 +442,6 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
                   className="w-full pl-7 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">
-                Автоматически подтягивается из Telegram Mini App для быстрой связи.
-              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
@@ -520,7 +480,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
             </div>
           </div>
 
-          {/* ================= 3. ФОРМАТ ТРЕНИРОВОК И ТРЕНЕР ================= */}
+          {/* 3. Формат тренировок и тренер */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -531,56 +491,60 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
               </span>
             </div>
 
-            <div className="space-y-1.5">
-              {[
-                { id: 'alone', label: 'Тренируюсь сам' },
-                { id: 'coach_gym', label: 'Тренируюсь с персональным тренером в зале' },
-                { id: 'coach_online', label: 'Тренируюсь с тренером онлайн' },
-                { id: 'looking_for_coach', label: 'Ищу персонального тренера в Алматы' }
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, training_format: opt.id })}
-                  className={`w-full p-2.5 text-left rounded-xl border text-xs font-semibold transition-all flex items-center justify-between ${
-                    formData.training_format === opt.id
-                      ? 'bg-blue-50/80 border-blue-500 text-blue-900'
-                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>{opt.label}</span>
-                  {formData.training_format === opt.id && (
-                    <Check className="w-4 h-4 text-blue-600 shrink-0 ml-2" />
-                  )}
-                </button>
-              ))}
+            <div>
+              <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                Как вы тренируетесь?
+              </label>
+              <select
+                value={formData.training_format}
+                onChange={e => setFormData({ ...formData, training_format: e.target.value })}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+              >
+                <option value="alone">Тренируюсь самостоятельно</option>
+                <option value="coach_gym">Тренируюсь с персональным тренером в зале</option>
+                <option value="coach_online">Тренируюсь с тренером онлайн</option>
+                <option value="looking_for_coach">Ищу персонального тренера в Алматы</option>
+              </select>
             </div>
 
-            {/* Поле добавления тренера через Telegram для привязки к CRM */}
-            {(formData.training_format === 'coach_gym' || formData.training_format === 'coach_online') && (
-              <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-100 space-y-2 mt-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
-                  <UserCheck className="w-4 h-4 text-blue-600" />
-                  <span>Привязка к тренеру</span>
-                </div>
-                <p className="text-[10px] text-slate-600 leading-tight">
-                  Укажите Telegram вашего тренера. Вы автоматически появитесь в его расписании и списке учеников Trainer CRM.
-                </p>
-                <div className="relative flex items-center">
-                  <span className="absolute left-3 text-slate-400 font-mono text-xs font-bold">@</span>
-                  <input
-                    type="text"
-                    value={formData.trainer_telegram}
-                    onChange={handleTrainerTelegramChange}
-                    placeholder="coach_telegram"
-                    className="w-full pl-7 pr-3 py-2 bg-white border border-blue-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
-                  />
-                </div>
+            {/* Поле добавления тренера через Telegram */}
+            <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-100 space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
+                <UserCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>Привязка к тренеру (Trainer CRM)</span>
               </div>
-            )}
+              <p className="text-[10px] text-slate-600 leading-tight">
+                Укажите Telegram вашего тренера. Вы автоматически появитесь в его расписании и списке учеников Trainer CRM.
+              </p>
+              <div className="relative flex items-center">
+                <span className="absolute left-3 text-slate-400 font-mono text-xs font-bold">@</span>
+                <input
+                  type="text"
+                  value={formData.trainer_telegram}
+                  onChange={handleTrainerTelegramChange}
+                  placeholder="coach_telegram"
+                  className="w-full pl-7 pr-3 py-2 bg-white border border-blue-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+            </div>
+
+            {/* Чекбокс согласия на рекомендации тренеров (ПО УМОЛЧАНИЮ СНЯТ) */}
+            <div 
+              onClick={() => setFormData({ ...formData, allow_trainer_recommendations: !formData.allow_trainer_recommendations })}
+              className="flex items-center gap-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer active:scale-98 transition-all"
+            >
+              <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 border transition-colors ${
+                formData.allow_trainer_recommendations ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+              }`}>
+                {formData.allow_trainer_recommendations && <Check className="w-3 h-3 stroke-[3]" />}
+              </div>
+              <p className="text-[11px] text-slate-700 leading-tight select-none">
+                Разрешаю рекомендовать мне проверенных тренеров GymConnect в моем клубе
+              </p>
+            </div>
           </div>
 
-          {/* ================= 4. ЛОКАЦИЯ И КЛУБ ================= */}
+          {/* 4. Локация и клуб */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -621,7 +585,6 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
               </div>
             </div>
 
-            {/* Выбор клуба с чистым пустым состоянием для первичной регистрации */}
             <div className="relative">
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Основной клуб тренировок <span className="text-rose-500">*</span>
@@ -701,8 +664,8 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
             </div>
           </div>
 
-          {/* ================= 5. ПАРАМЕТРЫ ТЕЛА И ВОЗРАСТ ================= */}
-          <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
+          {/* 5. Параметры тела и Дата рождения */}
+          <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3 overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 5. Параметры тела
@@ -714,14 +677,12 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
               )}
             </div>
 
-            {/* Дата рождения с защитой от вылета за контейнер на смартфонах */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[11px] font-semibold text-slate-600">
-                  Дата рождения <span className="text-rose-500">*</span>
-                </label>
-              </div>
-              <div className="w-full overflow-hidden">
+            <div className="w-full">
+              <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                Дата рождения <span className="text-rose-500">*</span>
+              </label>
+              
+              <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 focus-within:border-blue-600 focus-within:bg-white transition-all">
                 <input
                   type="date"
                   required
@@ -729,9 +690,10 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
                   max={maxDate}
                   value={formData.birth_date}
                   onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
-                  className="w-full max-w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+                  className="w-full min-w-0 max-w-full box-border px-3 py-2.5 bg-transparent text-xs font-medium text-slate-900 outline-none"
                 />
               </div>
+
               <p className="text-[10px] text-slate-400 mt-1">
                 Доступ открыт только совершеннолетним атлетам согласно правилам сервиса.
               </p>
@@ -763,37 +725,26 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
               </div>
             </div>
 
-            {/* Креативные градации стажа */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
+              <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Уровень подготовки в зале
               </label>
-              <div className="space-y-1.5">
-                {experienceOptions.map(exp => (
-                  <button
-                    key={exp.id}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, experience_level: exp.id })}
-                    className={`w-full p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
-                      formData.experience_level === exp.id
-                        ? 'bg-blue-50/80 border-blue-500 text-blue-900'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div>
-                      <p className="text-xs font-bold">{exp.title}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{exp.desc}</p>
-                    </div>
-                    {formData.experience_level === exp.id && (
-                      <Check className="w-4 h-4 text-blue-600 shrink-0 ml-2" />
-                    )}
-                  </button>
-                ))}
-              </div>
+              <select
+                value={formData.experience_level}
+                onChange={e => setFormData({ ...formData, experience_level: e.target.value })}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+              >
+                <option value="first_time">Первый раз в зале (осваиваю тренажеры)</option>
+                <option value="scared_beginner">Пару раз заходил, было страшно (начинающий)</option>
+                <option value="beginner">Новичок (базовые движения, стаж до 6 мес)</option>
+                <option value="regular">Уверенный любитель (регулярно жму, 1–2 года)</option>
+                <option value="advanced">Опытный атлет (знаю базу и мышцы, 2–5 лет)</option>
+                <option value="pro_monster">Профи / Монстр базы (выступающий атлет)</option>
+              </select>
             </div>
           </div>
 
-          {/* ================= 6. ЦЕЛЬ И ГРАФИК ТРЕНИРОВОК ================= */}
+          {/* 6. Цель и график тренировок */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -819,7 +770,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
 
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
-                Дни тренировок (выберите дни)
+                Дни тренировок
               </label>
               <div className="flex gap-1">
                 {daysOfWeek.map(d => {
@@ -859,7 +810,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
             </div>
           </div>
 
-          {/* ================= 7. НАСТРОЙКИ GYMBRO MATCHING ================= */}
+          {/* 7. Настройки GymBro Matching */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <div className="flex items-center gap-1.5">
@@ -875,7 +826,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
               </span>
             </div>
 
-            {/* Главный тумблер участия в тиндере */}
+            {/* Главный тумблер GymBro */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-slate-900">Показывать анкету в GymBro</p>
@@ -899,12 +850,26 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
             {formData.gymbro_search && (
               <div className="space-y-3 pt-1">
                 
-                {/* Информационный бейдж авто-синхронизации графика */}
-                <div className="p-2.5 bg-blue-50/70 rounded-xl border border-blue-100 flex items-center gap-2 text-[10px] text-blue-900 font-medium">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>
-                    Синхронизировано: дни <b>({formData.workout_days.join(', ')})</b> и время <b>({formData.workout_time_slot.split(' ')[0]})</b> берутся из вашего графика выше.
-                  </span>
+                {/* 1. Плашка авто-синхронизации графика */}
+                <div className="p-3 bg-blue-50/80 rounded-2xl border border-blue-100 flex items-start gap-2 text-[11px] text-blue-950 font-medium">
+                  <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  <div className="leading-snug">
+                    <p className="font-bold text-blue-900">График синхронизирован с анкетой:</p>
+                    <p className="text-[10px] text-blue-800 mt-0.5">
+                      Дни <b>({formData.workout_days.join(', ') || 'не выбраны'})</b> и время <b>({formData.workout_time_slot.split(' ')[0]})</b> берутся из ваших основных целей выше.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Плашка о поиске новых знакомств */}
+                <div className="p-3 bg-indigo-50/80 rounded-2xl border border-indigo-100 flex items-start gap-2 text-[11px] text-indigo-950">
+                  <Globe2 className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <div className="leading-snug">
+                    <p className="font-bold text-indigo-900">Не только по залу, но и новые знакомства:</p>
+                    <p className="text-[10px] text-indigo-800 mt-0.5">
+                      Ищите единомышленников по району или всему Алматы: находите напарников по интересам, расширяйте спортивный нетворкинг и общайтесь вне тренировок.
+                    </p>
+                  </div>
                 </div>
 
                 <div>
@@ -913,7 +878,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
                   </label>
                   <div className="grid grid-cols-3 gap-1.5">
                     {[
-                      { id: 'any', label: 'Всех (Любой пол)' },
+                      { id: 'any', label: 'Всех (Любой)' },
                       { id: 'male', label: 'GymBro (Парня)' },
                       { id: 'female', label: 'GymGirl (Девушку)' }
                     ].map(item => (
@@ -944,36 +909,26 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
                   >
                     <option value="club">Только в моем зале ({formData.gym || 'клуб не выбран'})</option>
                     <option value="district">Во всех клубах района ({formData.district})</option>
-                    <option value="city">По всем залам Алматы</option>
+                    <option value="city">По всем залам Алматы (для новых знакомств)</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                     Цель совместных тренировок
                   </label>
-                  <div className="space-y-1.5">
-                    {gymbroGoals.map(goal => (
-                      <button
-                        key={goal.id}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, gymbro_goal: goal.id })}
-                        className={`w-full p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
-                          formData.gymbro_goal === goal.id
-                            ? 'bg-blue-50/80 border-blue-500 text-blue-900'
-                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        <div>
-                          <p className="text-xs font-bold">{goal.title}</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">{goal.desc}</p>
-                        </div>
-                        {formData.gymbro_goal === goal.id && (
-                          <Check className="w-4 h-4 text-blue-600 shrink-0 ml-2" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                  <select
+                    value={formData.gymbro_goal}
+                    onChange={e => setFormData({ ...formData, gymbro_goal: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                  >
+                    <option value="strength">Страховка на тяжелой базе (жим, присед, тяга)</option>
+                    <option value="discipline">Взаимная дисциплина (не сливаться в 7 утра)</option>
+                    <option value="pump_burn">Хардкорный пампинг и сушка (высокий темп, дропсеты)</option>
+                    <option value="cardio_cross">Кардио и функционал (сжигать калории вместе)</option>
+                    <option value="vibe_coffee">Спорт-вайб и кофе после зала (тренировки в удовольствие)</option>
+                    <option value="technique_learning">Обмен опытом и техникой (расти вместе)</option>
+                  </select>
                 </div>
 
                 <div>
@@ -1005,13 +960,12 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
                   </div>
                 </div>
 
-                {/* Юридический дисклеймер */}
                 <div className="p-3 bg-amber-50/80 rounded-2xl border border-amber-200/80 flex items-start gap-2.5 text-[11px] text-amber-900">
                   <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <div className="leading-snug">
                     <p className="font-bold mb-0.5">Безопасность и спортивная этика:</p>
                     <p className="text-[10px] text-amber-800">
-                      GymConnect — исключительно спортивная платформа для тренировок и поиска спортивных партнеров. Администрация не несет ответственности за личное поведение участников вне приложения. Соблюдайте взаимное уважение, этикет и безопасность в залах Алматы.
+                      GymConnect — исключительно спортивная платформа для тренировок и поиска спортивных партнеров. Администрация не несет ответственности за личное поведение участников вне приложения.
                     </p>
                   </div>
                 </div>
