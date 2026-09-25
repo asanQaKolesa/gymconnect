@@ -11,8 +11,7 @@ import {
   UserCheck, 
   ArrowRight,
   Flame,
-  Calendar,
-  ChevronDown
+  Globe2
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
@@ -46,10 +45,10 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
     whatsapp: '',
     instagram: '',
 
-    // Формат тренировок и тренер
+    // Формат тренировок и тренер (галочка снята по умолчанию)
     training_format: 'alone',
     trainer_telegram: '',
-    allow_trainer_recommendations: true,
+    allow_trainer_recommendations: false,
 
     // Локация
     city: 'Алматы',
@@ -68,7 +67,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
     workout_days: ['Пн', 'Ср', 'Пт'],
     workout_time_slot: 'Вечер (16:00 - 21:00)',
 
-    // GymBro
+    // GymBro (отключен по умолчанию)
     gymbro_search: false,
     gymbro_radius: 'club',
     gymbro_target_gender: 'any',
@@ -466,7 +465,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 3. Формат тренировок и тренер (Выпадающий список) */}
+          {/* 3. Формат тренировок и тренер */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -514,10 +513,10 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               </div>
             </div>
 
-            {/* Чекбокс согласия на рекомендации тренеров */}
+            {/* Чекбокс согласия на рекомендации тренеров (ПО УМОЛЧАНИЮ СНЯТ) */}
             <div 
               onClick={() => setFormData({ ...formData, allow_trainer_recommendations: !formData.allow_trainer_recommendations })}
-              className="flex items-center gap-2.5 p-2 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer active:scale-98 transition-all"
+              className="flex items-center gap-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer active:scale-98 transition-all"
             >
               <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 border transition-colors ${
                 formData.allow_trainer_recommendations ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
@@ -525,7 +524,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                 {formData.allow_trainer_recommendations && <Check className="w-3 h-3 stroke-[3]" />}
               </div>
               <p className="text-[11px] text-slate-700 leading-tight select-none">
-                Рекомендовать мне проверенных тренеров GymConnect в моем клубе
+                Разрешаю рекомендовать мне проверенных тренеров GymConnect в моем клубе
               </p>
             </div>
           </div>
@@ -647,7 +646,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 5. Параметры тела и Дата рождения (Исправлено съезжание) */}
+          {/* 5. Параметры тела и Дата рождения */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3 overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -660,7 +659,6 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               )}
             </div>
 
-            {/* Аккуратный контейнер даты без выхода за границы */}
             <div className="w-full">
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Дата рождения <span className="text-rose-500">*</span>
@@ -709,7 +707,6 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               </div>
             </div>
 
-            {/* Выпадающий список уровня подготовки */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Уровень подготовки в зале
@@ -811,6 +808,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               </span>
             </div>
 
+            {/* Главный переключатель GymBro (отключен по умолчанию) */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-slate-900">Участвовать в поиске GymBro</p>
@@ -833,6 +831,29 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
             {formData.gymbro_search && (
               <div className="space-y-3 pt-1">
+                
+                {/* 1. Плашка автоматической синхронизации графика */}
+                <div className="p-3 bg-blue-50/80 rounded-2xl border border-blue-100 flex items-start gap-2 text-[11px] text-blue-950 font-medium">
+                  <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  <div className="leading-snug">
+                    <p className="font-bold text-blue-900">График синхронизирован с анкетой:</p>
+                    <p className="text-[10px] text-blue-800 mt-0.5">
+                      Дни <b>({formData.workout_days.join(', ') || 'не выбраны'})</b> и время <b>({formData.workout_time_slot.split(' ')[0]})</b> берутся из раздела целей выше — повторно заполнять не нужно.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Плашка о поиске новых знакомств и расширении круга общения */}
+                <div className="p-3 bg-indigo-50/80 rounded-2xl border border-indigo-100 flex items-start gap-2 text-[11px] text-indigo-950">
+                  <Globe2 className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <div className="leading-snug">
+                    <p className="font-bold text-indigo-900">Не только по залу, но и новые знакомства:</p>
+                    <p className="text-[10px] text-indigo-800 mt-0.5">
+                      Ищите единомышленников по району или всему Алматы: находите напарников по целям, расширяйте спортивный нетворкинг и общайтесь вне тренировок.
+                    </p>
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                     Кого ищете в качестве напарника?
@@ -870,11 +891,10 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                   >
                     <option value="club">Только в моем зале ({formData.gym || 'клуб не выбран'})</option>
                     <option value="district">Во всех клубах района ({formData.district})</option>
-                    <option value="city">По всем залам Алматы</option>
+                    <option value="city">По всем залам Алматы (для новых знакомств)</option>
                   </select>
                 </div>
 
-                {/* Выпадающий список целей совместных тренировок GymBro */}
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                     Цель совместных тренировок
