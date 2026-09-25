@@ -1,116 +1,157 @@
-import React from 'react';
+// src/components/profile/ProfileMenu.jsx
+import React, { useState } from 'react';
 import { 
-  BarChart2, 
-  Award, 
-  Target, 
-  Tag, 
-  CreditCard, 
-  Briefcase, 
-  Building2, 
-  ChevronRight 
+  Dumbbell, 
+  HelpCircle, 
+  Share2, 
+  ChevronRight, 
+  Sparkles, 
+  X, 
+  Send 
 } from 'lucide-react';
 
 export default function ProfileMenu() {
-  const handleOpenGymPartnership = () => {
-    window.open('https://t.me/gymconnect_support?text=' + encodeURIComponent('Здравствуйте! Интересует сотрудничество и подключение фитнес-зала к GymConnect.'), '_blank');
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+
+  // Переход в тренерский раздел
+  const handleOpenTrainerPortal = () => {
+    window.location.href = window.location.pathname + '?trainer=true';
+  };
+
+  // Поделиться приложением в Telegram
+  const handleShareApp = () => {
+    const text = encodeURIComponent('Присоединяйся к GymConnect — спортивному комьюнити залов Алматы!');
+    const url = encodeURIComponent('https://t.me/gymconnect_almaty_bot');
+    window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
   };
 
   return (
-    <div className="space-y-3">
-      {/* Секция: Основное меню */}
-      <div className="space-y-1.5">
-        <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">ОСНОВНОЕ МЕНЮ</p>
-        <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-xs divide-y divide-slate-100">
-          <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group">
-            <div className="flex items-center gap-3">
-              <BarChart2 className="w-5 h-5 text-slate-600 flex-shrink-0" />
-              <div>
-                <h4 className="text-xs font-semibold text-slate-900">Моя статистика</h4>
-                <p className="text-[10px] text-slate-400">Посещения, дни в зале</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
-          </button>
-
-          <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group">
-            <div className="flex items-center gap-3">
-              <Award className="w-5 h-5 text-slate-600 flex-shrink-0" />
-              <div>
-                <h4 className="text-xs font-semibold text-slate-900">Подписка GymConnect</h4>
-                <p className="text-[10px] text-slate-400">Активна до конца октября</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
-          </button>
-
-          <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group">
-            <div className="flex items-center gap-3">
-              <Target className="w-5 h-5 text-slate-600 flex-shrink-0" />
-              <div>
-                <h4 className="text-xs font-semibold text-slate-900">Персональная программа</h4>
-                <p className="text-[10px] text-slate-400">Настройка целей и дней тренировок</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
-          </button>
-
-          <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group">
-            <div className="flex items-center gap-3">
-              <Tag className="w-5 h-5 text-slate-600 flex-shrink-0" />
-              <div>
-                <h4 className="text-xs font-semibold text-slate-900">Ввести промокод</h4>
-                <p className="text-[10px] text-slate-400">Активация бонусов</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
-          </button>
-
-          <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group">
-            <div className="flex items-center gap-3">
-              <CreditCard className="w-5 h-5 text-slate-600 flex-shrink-0" />
-              <div>
-                <h4 className="text-xs font-semibold text-slate-900">История платежей</h4>
-                <p className="text-[10px] text-slate-400">Чеки и транзакции</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
-          </button>
-        </div>
+    <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-2 select-none">
+      
+      <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          Сервисы и поддержка
+        </span>
+        <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-bold">
+          GymConnect Hub
+        </span>
       </div>
 
-      {/* Секция: Партнёрам и сотрудничество */}
-      <div className="space-y-1.5">
-        <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">ПАРТНЁРАМ И СОТРУДНИЧЕСТВО</p>
-        <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-xs divide-y divide-slate-100">
-          <button 
-            onClick={() => { window.location.href = '?trainer=true'; }}
-            className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group"
-          >
-            <div className="flex items-center gap-3">
-              <Briefcase className="w-5 h-5 text-slate-600 flex-shrink-0" />
-              <div>
-                <h4 className="text-xs font-semibold text-slate-900">Кабинет фитнес-тренера</h4>
-                <p className="text-[10px] text-slate-400">CRM, аналитика, клиенты и календарь</p>
-              </div>
+      <div className="space-y-1.5 pt-1">
+        
+        {/* 1. Сотрудничество для тренеров (Trainer CRM) */}
+        <button
+          type="button"
+          onClick={handleOpenTrainerPortal}
+          className="w-full p-2.5 bg-slate-50 hover:bg-blue-50/60 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all"
+        >
+          <div className="flex items-center gap-2.5 text-left">
+            <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center shrink-0 shadow-sm text-slate-700">
+              <Dumbbell className="w-4 h-4 stroke-[2]" />
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
-          </button>
+            <div>
+              <p className="text-xs font-bold text-slate-900 leading-tight">
+                Для тренеров (Trainer CRM)
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                Личный кабинет, расписание и база подопечных
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
+        </button>
 
-          <button 
-            onClick={handleOpenGymPartnership}
-            className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group"
-          >
-            <div className="flex items-center gap-3">
-              <Building2 className="w-5 h-5 text-slate-600 flex-shrink-0" />
-              <div>
-                <h4 className="text-xs font-semibold text-slate-900">Сотрудничество для фитнес-залов</h4>
-                <p className="text-[10px] text-slate-400">Подключение клубов Алматы и партнерство</p>
+        {/* 2. Восстановленный раздел: Помощь и техподдержка */}
+        <button
+          type="button"
+          onClick={() => setIsSupportModalOpen(true)}
+          className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all"
+        >
+          <div className="flex items-center gap-2.5 text-left">
+            <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center shrink-0 shadow-sm text-slate-700">
+              <HelpCircle className="w-4 h-4 stroke-[2]" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900 leading-tight">
+                Служба поддержки и помощь
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                Частые вопросы, связь с оператором 24/7
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
+        </button>
+
+        {/* 3. Поделиться приложением */}
+        <button
+          type="button"
+          onClick={handleShareApp}
+          className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all"
+        >
+          <div className="flex items-center gap-2.5 text-left">
+            <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center shrink-0 shadow-sm text-slate-700">
+              <Share2 className="w-4 h-4 stroke-[2]" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900 leading-tight">
+                Пригласить друга в GymBro
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                Отправить ссылку на бота в Telegram
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
+        </button>
+
+      </div>
+
+      {/* Модальное окно техподдержки */}
+      {isSupportModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <HelpCircle className="w-4 h-4" />
+                </div>
+                <h3 className="text-xs font-bold text-slate-900">Поддержка GymConnect</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSupportModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-600 leading-relaxed">
+              <p>
+                Возникли вопросы по фитнес-залам, подбору напарников GymBro или работе приложения? Наша служба заботы всегда на связи.
+              </p>
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-1 font-mono text-[11px]">
+                <p>📍 Город: <b>Алматы, Казахстан</b></p>
+                <p>⏰ Режим работы: <b>24/7 онлайн</b></p>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
-          </button>
+
+            <a
+              href="https://t.me/gymconnect_kz"
+              target="_blank"
+              rel="noreferrer"
+              className="w-full py-3 bg-[#229ED9] hover:bg-[#1e8ec3] text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#229ED9]/30 active:scale-98 transition-all"
+            >
+              <Send className="w-4 h-4" />
+              <span>Написать в поддержку Telegram</span>
+            </a>
+
+          </div>
         </div>
-      </div>
+      )}
+
     </div>
   );
 }
