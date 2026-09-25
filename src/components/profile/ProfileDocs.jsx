@@ -1,3 +1,4 @@
+// src/components/profile/ProfileDocs.jsx
 import React from 'react';
 import { FileText, Headphones, ChevronRight } from 'lucide-react';
 
@@ -22,7 +23,7 @@ export default function ProfileDocs() {
               className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:text-blue-600 transition-colors">
+                <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:text-blue-600 group-hover:bg-blue-50 transition-colors">
                   <Icon className="w-5 h-5 stroke-[1.5]" />
                 </div>
                 <div>
