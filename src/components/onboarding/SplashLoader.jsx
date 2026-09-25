@@ -9,8 +9,9 @@ import {
     Dumbbell, 
     MapPin, 
     Flame, 
-    ChevronRight,
-    Map
+    Ticket, 
+    Shield, 
+    ChevronRight 
 } from 'lucide-react';
 
 const SplashLoader = ({ onFinish }) => {
@@ -19,12 +20,15 @@ const SplashLoader = ({ onFinish }) => {
     const [progress, setProgress] = useState(0);
     const hasFinishedRef = useRef(false);
 
+    // 8 ключевых преимуществ экосистемы GymConnect
     const features = [
         { icon: <Users className="w-4 h-4 text-blue-600" />, kk: "Өз залыңнан GymBro тап", ru: "Найди напарника в своем зале" },
-        { icon: <MapPin className="w-4 h-4 text-sky-600" />, kk: "Алматының 230+ залы бірыңғай базада", ru: "230+ клубов города на одной карте" },
-        { icon: <Utensils className="w-4 h-4 text-emerald-600" />, kk: "КБЖУ есептеу және тамақтану рационы", ru: "Умный расчет КБЖУ и планы питания" },
+        { icon: <MapPin className="w-4 h-4 text-sky-600" />, kk: "Алматының 230+ залы бірыңғай базада", ru: "230+ фитнес-клубов на одной карте" },
+        { icon: <Utensils className="w-4 h-4 text-emerald-600" />, kk: "КБЖУ есептеу және тамақтану рационы", ru: "Умный расчет КБЖУ и рацион питания" },
         { icon: <Dumbbell className="w-4 h-4 text-orange-600" />, kk: "Кәсіби жаттықтырушылар базасы", ru: "Подбор квалифицированных тренеров" },
         { icon: <MessageSquare className="w-4 h-4 text-indigo-600" />, kk: "Клубтар жайлы шынайы спортшылар пікірі", ru: "Честные отзывы атлетов о фитнес-залах" },
+        { icon: <Ticket className="w-4 h-4 text-teal-600" />, kk: "Кез келген залға абонемент сатып алу", ru: "Покупка абонемента в любой фитнес-зал" },
+        { icon: <Shield className="w-4 h-4 text-violet-600" />, kk: "Тек тексерілген фитнес орталықтар", ru: "Только проверенные фитнес-центры" },
         { icon: <Flame className="w-4 h-4 text-rose-600" />, kk: "Күн сайын мотивация мен тәртіп", ru: "Дисциплина и мотивация каждый день" }
     ];
 
@@ -38,42 +42,39 @@ const SplashLoader = ({ onFinish }) => {
     };
 
     useEffect(() => {
-        // Быстрая смена ключевых фич
+        // Каждая из 8 фич показывается ровно 1.25 секунды (1250ms * 8 = 10 000ms = 10 секунд)
         const featureInterval = setInterval(() => {
             setFeatureIndex((prev) => (prev < features.length - 1 ? prev + 1 : 0));
-        }, 900);
+        }, 1250);
 
-        // Комфортный прогресс (~3.2 секунды вместо утомительных 10 секунд)
+        // Прогресс заполняется ровно за 10 секунд (по 1% каждые 100ms)
         const progressInterval = setInterval(() => {
             setProgress((prev) => {
                 if (prev >= 100) {
                     clearInterval(progressInterval);
                     return 100;
                 }
-                const increment = Math.floor(Math.random() * 4) + 3;
-                return Math.min(prev + increment, 100);
+                return prev + 1;
             });
         }, 100);
+
+        // Финальный таймер завершения ровно через 10 секунд
+        const exitTimer = setTimeout(() => {
+            if (!hasFinishedRef.current) {
+                hasFinishedRef.current = true;
+                setIsVisible(false);
+                setTimeout(() => {
+                    if (onFinish) onFinish();
+                }, 400);
+            }
+        }, 10000);
 
         return () => {
             clearInterval(featureInterval);
             clearInterval(progressInterval);
+            clearTimeout(exitTimer);
         };
-    }, [features.length]);
-
-    // Завершение по достижении 100%
-    useEffect(() => {
-        if (progress >= 100 && !hasFinishedRef.current) {
-            hasFinishedRef.current = true;
-            const timer = setTimeout(() => {
-                setIsVisible(false);
-                setTimeout(() => {
-                    if (onFinish) onFinish();
-                }, 350);
-            }, 300);
-            return () => clearTimeout(timer);
-        }
-    }, [progress, onFinish]);
+    }, [features.length, onFinish]);
 
     return (
         <div className={`splash-overlay ${!isVisible ? 'splash-fade-out' : ''}`}>
@@ -96,7 +97,7 @@ const SplashLoader = ({ onFinish }) => {
             {/* Контрастная Apple Glass карточка */}
             <div className="splash-card-contrast">
                 
-                {/* Исправленный бейдж: иконка и текст сцентрированы в одну монолитную капсулу */}
+                {/* Симметричный монолитный бейдж по центру */}
                 <div className="splash-badge-pill">
                     <span className="badge-pill-dot"></span>
                     <span className="badge-pill-text">230+ зал • Алматы фитнес қауымдастығы</span>
@@ -122,12 +123,12 @@ const SplashLoader = ({ onFinish }) => {
                     </div>
                 </div>
 
-                {/* Прогресс-бар с индикатором загрузки */}
+                {/* Прогресс-бар (распределен ровно на 10 секунд) */}
                 <div className="splash-progress-wrapper">
                     <div className="splash-progress-info">
                         <div className="progress-text-col">
                             <span className="prog-dot"></span>
-                            <span className="prog-kk">Қосылуда / Подключение...</span>
+                            <span className="prog-kk">Қосылуда / Подключение к залам Алматы...</span>
                         </div>
                         <span className="splash-percent">{progress}%</span>
                     </div>
