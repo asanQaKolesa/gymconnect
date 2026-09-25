@@ -25,10 +25,10 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
   const [isGymDropdownOpen, setIsGymDropdownOpen] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Данные пользователя из Telegram Mini App
+  // Автоматические данные пользователя из Telegram Mini App
   const tgUser = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : null;
 
-  // Ограничение возраста от 18 до 80 лет
+  // Расчет дат для календаря
   const today = new Date();
   const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate()).toISOString().split('T')[0];
   const minDate = new Date(today.getFullYear() - 80, today.getMonth(), today.getDate()).toISOString().split('T')[0];
@@ -156,8 +156,9 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.first_name.trim() || !formData.last_name.trim()) {
-      alert(currentLang === 'kk' ? 'Аты-жөніңізді енгізіңіз' : 'Пожалуйста, укажите имя и фамилию.');
+    // Обязательные поля: Имя, Telegram, Зал, Параметры тела
+    if (!formData.first_name.trim()) {
+      alert(currentLang === 'kk' ? 'Атыңызды енгізіңіз' : 'Пожалуйста, укажите ваше имя.');
       return;
     }
 
@@ -171,8 +172,13 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
       return;
     }
 
-    if (calculatedAge !== null && (calculatedAge < 18 || calculatedAge > 80)) {
-      alert(currentLang === 'kk' ? 'Жас 18 бен 80 аралығында болуы тиіс' : 'Возраст атлета должен быть в диапазоне от 18 до 80 лет.');
+    if (!formData.birth_date) {
+      alert('Пожалуйста, укажите дату рождения.');
+      return;
+    }
+
+    if (!formData.height || !formData.weight) {
+      alert('Пожалуйста, укажите ваш рост и вес.');
       return;
     }
 
@@ -187,7 +193,6 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         ? formData.custom_gym.trim()
         : formData.gym;
 
-      // Получаем или генерируем устойчивый ID
       let tgId = tgUser?.id ? String(tgUser.id) : localStorage.getItem('gymconnect_telegram_id');
       if (!tgId) {
         tgId = `user_${Date.now()}`;
@@ -199,9 +204,9 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         photo_url: formData.photo_url,
         avatar_url: formData.photo_url,
         first_name: formData.first_name.trim(),
-        last_name: formData.last_name.trim(),
+        last_name: formData.last_name ? formData.last_name.trim() : '',
         gender: formData.gender,
-        bio: formData.bio.trim(),
+        bio: formData.bio ? formData.bio.trim() : '',
         telegram_username: cleanTelegram,
         username: cleanTelegram,
         whatsapp: formData.whatsapp,
@@ -228,11 +233,10 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         gymbro_target_gender: formData.gymbro_target_gender,
         gymbro_goal: formData.gymbro_goal,
         personality_type: formData.personality_type,
-        is_pro: false,
-        updated_at: new Date().toISOString()
+        is_pro: false
       };
 
-      // Сохраняем в Supabase с обработкой конфликта
+      // Сохраняем в базу данных Supabase
       const { data, error } = await supabase
         .from('profiles')
         .upsert([newProfilePayload], { onConflict: 'telegram_id' })
@@ -240,7 +244,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         .single();
 
       if (error) {
-        console.error('Ошибка записи в Supabase:', error);
+        console.error('Ошибка сохранения в Supabase:', error);
         alert('Ошибка сохранения в базу данных: ' + error.message);
         return;
       }
@@ -313,7 +317,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             />
 
             <p className="text-xs font-bold text-slate-800 mt-2.5">
-              {formData.first_name ? `${formData.first_name} ${formData.last_name}` : (currentLang === 'kk' ? 'Атлет фотосы' : 'Фотография атлета')}
+              {formData.first_name ? `${formData.first_name} ${formData.last_name || ''}` : (currentLang === 'kk' ? 'Атлет фотосы' : 'Фотография атлета')}
             </p>
             <p className="text-[10px] text-slate-400 mt-0.5">
               {currentLang === 'kk' ? 'Telegram-нан алынды немесе құрылғыдан жүктеңіз' : 'Синхронизировано с Telegram • нажмите для замены'}
@@ -327,7 +331,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                 1. Личные данные
               </span>
               <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
-                Обязательно
+                Имя обязательно
               </span>
             </div>
 
@@ -341,21 +345,20 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                   required
                   value={formData.first_name}
                   onChange={e => setFormData({ ...formData, first_name: e.target.value })}
-                  placeholder="Асанәли"
+                  placeholder="Ваше имя"
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
 
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                  Фамилия <span className="text-rose-500">*</span>
+                  Фамилия <span className="text-slate-400 font-normal text-[10px]">(не обязательно)</span>
                 </label>
                 <input
                   type="text"
-                  required
                   value={formData.last_name}
                   onChange={e => setFormData({ ...formData, last_name: e.target.value })}
-                  placeholder="Құсайынов"
+                  placeholder="Ваша фамилия"
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
@@ -399,7 +402,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                 rows={2}
                 value={formData.bio}
                 onChange={e => setFormData({ ...formData, bio: e.target.value })}
-                placeholder="Фрилансер, тренируюсь 2 года, жму 100 кг, правильное питание."
+                placeholder="Расскажите о своих спортивных увлечениях и опыте"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 resize-none"
               />
             </div>
@@ -469,14 +472,14 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 3. Формат тренировок и тренер */}
+          {/* 3. Формат тренировок и тренер (Не обязательно) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 3. Формат тренировок
               </span>
-              <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
-                Trainer CRM
+              <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-semibold">
+                Не обязательно
               </span>
             </div>
 
@@ -502,7 +505,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                 <span>Привязка к тренеру (Trainer CRM)</span>
               </div>
               <p className="text-[10px] text-slate-600 leading-tight">
-                Укажите Telegram вашего тренера. Вы автоматически появитесь в его расписании и списке учеников Trainer CRM.
+                Укажите Telegram вашего тренера, чтобы связать аккаунты.
               </p>
               <div className="relative flex items-center">
                 <span className="absolute left-3 text-slate-400 font-mono text-xs font-bold">@</span>
@@ -531,20 +534,22 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 4. Локация и клуб */}
+          {/* 4. Локация и клуб (ОБЯЗАТЕЛЬНО) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 4. Локация и фитнес-клуб
               </span>
-              <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold">
-                База 230+ залов
+              <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
+                Обязательно
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Город</label>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Город <span className="text-rose-500">*</span>
+                </label>
                 <select
                   value={formData.city}
                   onChange={e => setFormData({ ...formData, city: e.target.value })}
@@ -559,7 +564,9 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Район Алматы</label>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Район Алматы <span className="text-rose-500">*</span>
+                </label>
                 <select
                   value={formData.district}
                   onChange={e => setFormData({ ...formData, district: e.target.value })}
@@ -648,23 +655,28 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 5. Параметры тела и Дата рождения */}
+          {/* 5. Параметры тела (ОБЯЗАТЕЛЬНО) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3 overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 5. Параметры тела
               </span>
-              {calculatedAge && (
-                <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
-                  {calculatedAge} лет
-                </span>
-              )}
+              <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
+                Обязательно
+              </span>
             </div>
 
             <div className="w-full">
-              <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                Дата рождения <span className="text-rose-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-semibold text-slate-600">
+                  Дата рождения <span className="text-rose-500">*</span>
+                </label>
+                {calculatedAge && (
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                    {calculatedAge} лет
+                  </span>
+                )}
+              </div>
               
               <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 focus-within:border-blue-600 focus-within:bg-white transition-all">
                 <input
@@ -677,17 +689,16 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                   className="w-full min-w-0 max-w-full box-border px-3 py-2.5 bg-transparent text-xs font-medium text-slate-900 outline-none"
                 />
               </div>
-
-              <p className="text-[10px] text-slate-400 mt-1">
-                Доступ открыт только совершеннолетним атлетам (18–80 лет).
-              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Рост (см)</label>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Рост (см) <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="number"
+                  required
                   min="130"
                   max="230"
                   value={formData.height}
@@ -697,9 +708,12 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Вес (кг)</label>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Вес (кг) <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="number"
+                  required
                   min="35"
                   max="200"
                   value={formData.weight}
@@ -711,7 +725,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                Уровень подготовки в зале
+                Уровень подготовки в зале <span className="text-slate-400 font-normal text-[10px]">(не обязательно)</span>
               </label>
               <select
                 value={formData.experience_level}
@@ -728,11 +742,14 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 6. Цель и график тренировок */}
+          {/* 6. Цель и график тренировок (Не обязательно) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 6. Цель и график тренировок
+              </span>
+              <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-semibold">
+                Не обязательно
               </span>
             </div>
 
@@ -815,7 +832,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               <div>
                 <p className="text-xs font-bold text-slate-900">Участвовать в поиске GymBro</p>
                 <p className="text-[10px] text-slate-500 leading-tight mt-0.5">
-                  Другие атлеты смогут находить вас для совместных тренировок
+                  Включите, чтобы находить напарников для совместных тренировок
                 </p>
               </div>
               <button
@@ -834,13 +851,20 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             {formData.gymbro_search && (
               <div className="space-y-3 pt-1">
                 
+                {/* Бейдж обязательности при включении */}
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md font-semibold border border-amber-200">
+                    Все параметры GymBro обязательны для точного подбора
+                  </span>
+                </div>
+
                 {/* 1. Плашка авто-синхронизации графика */}
                 <div className="p-3 bg-blue-50/80 rounded-2xl border border-blue-100 flex items-start gap-2 text-[11px] text-blue-950 font-medium">
                   <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                   <div className="leading-snug">
                     <p className="font-bold text-blue-900">График синхронизирован с анкетой:</p>
                     <p className="text-[10px] text-blue-800 mt-0.5">
-                      Дни <b>({formData.workout_days.join(', ') || 'не выбраны'})</b> и время <b>({formData.workout_time_slot.split(' ')[0]})</b> берутся из ваших основных целей выше.
+                      Дни <b>({formData.workout_days.join(', ') || 'не выбраны'})</b> и время <b>({formData.workout_time_slot.split(' ')[0]})</b> берутся из раздела целей выше.
                     </p>
                   </div>
                 </div>
@@ -851,14 +875,14 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                   <div className="leading-snug">
                     <p className="font-bold text-indigo-900">Не только по залу, но и новые знакомства:</p>
                     <p className="text-[10px] text-indigo-800 mt-0.5">
-                      Ищите единомышленников по району или всему Алматы: находите напарников по интересам, расширяйте спортивный нетворкинг и общайтесь вне тренировок.
+                      Ищите единомышленников по району или всему Алматы: находите напарников по целям, расширяйте спортивный нетворкинг и общайтесь вне тренировок.
                     </p>
                   </div>
                 </div>
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                    Кого вы ищете в качестве напарника?
+                    Кого вы ищете в качестве напарника? <span className="text-rose-500">*</span>
                   </label>
                   <div className="grid grid-cols-3 gap-1.5">
                     {[
@@ -884,7 +908,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                    Охват поиска напарников
+                    Охват поиска напарников <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={formData.gymbro_radius}
@@ -899,7 +923,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                    Цель совместных тренировок
+                    Цель совместных тренировок <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={formData.gymbro_goal}
@@ -917,7 +941,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                    Ваш тренировочный психотип
+                    Ваш тренировочный психотип <span className="text-rose-500">*</span>
                   </label>
                   <div className="grid grid-cols-3 gap-1.5">
                     {[
