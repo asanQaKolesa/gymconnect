@@ -16,19 +16,19 @@ export default function ProfilePartnership({ onOpenTrainer }) {
   return (
     <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-2.5 select-none">
       
-      {/* Заголовок блока */}
-      <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-          Сотрудничество и партнерство
+      {/* Заголовок строго в один ряд без съезжания */}
+      <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-100 whitespace-nowrap">
+        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
+          Сотрудничество
         </span>
-        <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-bold border border-slate-200">
-          B2B & Программа
+        <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-bold border border-slate-200 shrink-0">
+          B2B программа
         </span>
       </div>
 
       <div className="space-y-1.5 pt-1">
         
-        {/* 1. Для тренеров (Trainer CRM) — мгновенный переход без перезагрузки */}
+        {/* 1. Для тренеров (Trainer CRM) */}
         <button
           type="button"
           onClick={onOpenTrainer}
@@ -50,7 +50,7 @@ export default function ProfilePartnership({ onOpenTrainer }) {
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
         </button>
 
-        {/* 2. Для фитнес-залов и клубов */}
+        {/* 2. Для фитнес-клубов и залов */}
         <button
           type="button"
           onClick={() => setPartnerModal('gyms')}
@@ -72,7 +72,7 @@ export default function ProfilePartnership({ onOpenTrainer }) {
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
         </button>
 
-        {/* 3. Для спортивных магазинов (одежда, спортпит) */}
+        {/* 3. Для спортивных магазинов */}
         <button
           type="button"
           onClick={() => setPartnerModal('shops')}
@@ -94,7 +94,7 @@ export default function ProfilePartnership({ onOpenTrainer }) {
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
         </button>
 
-        {/* 4. Для спортивных специалистов (коучи, массажисты, психологи) */}
+        {/* 4. Для спортивных специалистов */}
         <button
           type="button"
           onClick={() => setPartnerModal('specialists')}
@@ -118,7 +118,7 @@ export default function ProfilePartnership({ onOpenTrainer }) {
 
       </div>
 
-      {/* ================= МОДАЛКА ПАРТНЕРСТВА ================= */}
+      {/* Модальное окно B2B сотрудничества */}
       {partnerModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
@@ -130,9 +130,9 @@ export default function ProfilePartnership({ onOpenTrainer }) {
                   {partnerModal === 'specialists' && <Stethoscope className="w-4 h-4" />}
                 </div>
                 <h3 className="text-xs font-bold text-slate-900">
-                  {partnerModal === 'gyms' && 'Партнерство для фитнес-клубов'}
-                  {partnerModal === 'shops' && 'Партнерство для магазинов'}
-                  {partnerModal === 'specialists' && 'Партнерство для специалистов'}
+                  {partnerModal === 'gyms' && 'Сотрудничество с залами'}
+                  {partnerModal === 'shops' && 'Сотрудничество с магазинами'}
+                  {partnerModal === 'specialists' && 'Сотрудничество со специалистами'}
                 </h3>
               </div>
               <button
@@ -148,12 +148,12 @@ export default function ProfilePartnership({ onOpenTrainer }) {
               <p>
                 {partnerModal === 'gyms' && 'Хотите подключить ваш фитнес-клуб к экосистеме GymConnect в Алматы, продавать абонементы и привлекать новых клиентов?'}
                 {partnerModal === 'shops' && 'Хотите предложить спортивное питание, одежду или экипировку для активных атлетов сообщества GymConnect?'}
-                {partnerModal === 'specialists' && 'Вы спортивный массажист, коуч, спортивный психолог или нутрициолог в Алматы? Присоединяйтесь к базе сертифицированных специалистов.'}
+                {partnerModal === 'specialists' && 'Вы спортивный массажист, коуч, спортивный психолог или нутрициолог в Алматы? Присоединяйтесь к базе проверенных специалистов.'}
               </p>
 
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 text-[11px] font-mono space-y-1">
                 <p>📍 Город: <b>Алматы, Казахстан</b></p>
-                <p>🤝 Формат: <b>B2B сотрудничество</b></p>
+                <p>🤝 Формат: <b>Партнерская программа GymConnect</b></p>
               </div>
             </div>
 
@@ -164,7 +164,7 @@ export default function ProfilePartnership({ onOpenTrainer }) {
               className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 active:scale-98"
             >
               <Send className="w-4 h-4" />
-              <span>Обсудить сотрудничество в Telegram</span>
+              <span>Обсудить условия в Telegram</span>
             </a>
           </div>
         </div>
