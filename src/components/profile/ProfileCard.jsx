@@ -1,6 +1,6 @@
 // src/components/profile/ProfileCard.jsx
 import React, { useState } from 'react';
-import { Edit3, ChevronDown, ChevronUp, User, Award, Send, Instagram, Smile } from 'lucide-react';
+import { Edit3, ChevronDown, ChevronUp, User, Award, Send, Instagram } from 'lucide-react';
 
 const STATUS_OPTIONS = [
   { id: 'in_gym', label: 'В зале', color: 'bg-emerald-500' },
@@ -15,17 +15,25 @@ export default function ProfileCard({ userProfile, onEditClick }) {
   const [currentStatus, setCurrentStatus] = useState('in_gym');
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
 
-  const fullName = userProfile ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}` : 'Асанәли Құсайынов';
-  const age = userProfile?.age || 26;
-  const gym = userProfile?.gym || 'Invictus Go';
-  const bio = userProfile?.bio || 'Digital marketing freelancer. Качаю спину и ноги, слежу за питанием.';
-  const avatar = userProfile?.avatar_url;
+  const savedProfile = JSON.parse(localStorage.getItem('gymconnect_user_data') || '{}');
+
+  const fullName = userProfile 
+    ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() 
+    : `${savedProfile.firstName || 'Асанәли'} ${savedProfile.lastName || 'Құсайынов'}`;
+
+  const age = userProfile?.age || savedProfile.age || 26;
+  const gym = userProfile?.gym || savedProfile.gym || 'Invictus Go';
+  const bio = userProfile?.bio || savedProfile.bio || 'Digital marketing freelancer. Качаю спину и ноги, слежу за питанием.';
+  
+  const avatar = userProfile?.avatar_url || userProfile?.avatar || savedProfile.avatar || window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url;
+
   const leftTrainings = userProfile?.left_trainings !== undefined ? userProfile.left_trainings : 12;
-  const goal = userProfile?.goal === 'mass' ? 'Набор массы' : userProfile?.goal === 'cut' ? 'Сушка' : 'Тонус';
-  const city = userProfile?.city || 'Алматы';
-  const district = userProfile?.district || 'Медеуский';
-  const username = userProfile?.username || '';
-  const instagram = userProfile?.instagram || '';
+  const goal = (userProfile?.goal || savedProfile.goal) === 'mass' ? 'Набор массы' : (userProfile?.goal || savedProfile.goal) === 'cut' ? 'Сушка' : 'Тонус';
+  const city = userProfile?.city || savedProfile.city || 'Алматы';
+  const district = userProfile?.district || savedProfile.district || 'Медеуский';
+  
+  const username = userProfile?.username || savedProfile.username || '';
+  const instagramUser = userProfile?.instagram || savedProfile.instagram || '';
 
   const activeStatusObj = STATUS_OPTIONS.find(s => s.id === currentStatus) || STATUS_OPTIONS[0];
 
@@ -46,7 +54,7 @@ export default function ProfileCard({ userProfile, onEditClick }) {
             </span>
             <h2 className="text-sm font-bold text-slate-900 tracking-tight truncate">{fullName}, {age}</h2>
             
-            {/* Интерактивный статус */}
+            {/* Выпадающий статус */}
             <div className="relative mt-0.5">
               <button 
                 onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)}
@@ -78,7 +86,7 @@ export default function ProfileCard({ userProfile, onEditClick }) {
           </div>
         </div>
 
-        {/* Кнопки соцсетей и редактирования сверху */}
+        {/* Кнопки Telegram, Instagram и Редактировать */}
         <div className="flex items-center gap-1.5 shrink-0">
           {username && (
             <a 
@@ -92,9 +100,9 @@ export default function ProfileCard({ userProfile, onEditClick }) {
             </a>
           )}
 
-          {instagram && (
+          {instagramUser && (
             <a 
-              href={`https://instagram.com/${instagram.replace(/^@+/, '')}`} 
+              href={`https://instagram.com/${instagramUser.replace(/^@+/, '')}`} 
               target="_blank" 
               rel="noreferrer"
               className="w-9 h-9 bg-pink-50 hover:bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center transition-all border border-pink-200/60 shadow-inner"
@@ -118,7 +126,7 @@ export default function ProfileCard({ userProfile, onEditClick }) {
         {bio}
       </p>
 
-      {/* Раскрывающаяся шторка с деталями (без дублирования телеграма) */}
+      {/* Шторка деталей */}
       <div className="pt-1">
         <button 
           onClick={() => setIsDetailsOpen(!isDetailsOpen)}
