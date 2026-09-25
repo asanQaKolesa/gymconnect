@@ -10,10 +10,7 @@ import {
   Check,
   Camera,
   UserCheck,
-  Calendar,
-  Clock,
-  Sparkles,
-  Link as LinkIcon
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
@@ -58,7 +55,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
     instagram: user?.instagram || '',
 
     // 3. Формат тренировок и связь с тренером
-    training_format: user?.training_format || 'alone', // 'alone' | 'coach_gym' | 'coach_online' | 'looking_for_coach'
+    training_format: user?.training_format || 'alone',
     trainer_telegram: user?.trainer_telegram || '',
 
     // 4. Локация и фитнес-клуб
@@ -98,7 +95,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
     return ageDiff;
   }, [formData.birth_date]);
 
-  // Города Казахстана (активен Алматы)
+  // Города Казахстана (активен пока Алматы)
   const kzCities = [
     { id: 'Алматы', name: 'Алматы', available: true },
     { id: 'Астана', name: 'Астана (Скоро)', available: false },
@@ -177,7 +174,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
     setFormData({ ...formData, instagram: val });
   };
 
-  // Обработка загрузки локального фото
+  // Обработка загрузки фото
   const handlePhotoUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
