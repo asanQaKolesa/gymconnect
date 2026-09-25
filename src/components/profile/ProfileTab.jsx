@@ -1,7 +1,7 @@
 // src/components/profile/ProfileTab.jsx
 import React, { useState } from 'react';
 import { translations } from '../../locales/translations';
-import { User, CheckCircle2, Camera, X } from 'lucide-react';
+import { User, CheckCircle2, Camera, X, Calendar, Ruler, Scale, Search, MessageCircle } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
 import ProfileHeader from './ProfileHeader';
@@ -430,6 +430,7 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
     if (onComplete) onComplete(profilePayload);
   };
 
+  // Экран регистрации или полного редактирования анкеты (со всеми полями)
   if (isRegistration || isEditing) {
     return (
       <div className="w-full min-h-screen p-4 pb-36 flex flex-col items-center justify-start animate-in fade-in duration-200">
@@ -450,6 +451,7 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            
             <div className="flex flex-col items-center mb-4">
               <div className="relative w-20 h-20 bg-slate-100 rounded-full border-2 border-slate-200 overflow-hidden flex items-center justify-center shadow-inner">
                 {formData.avatar ? <img src={formData.avatar} alt="Avatar" className="w-full h-full object-cover" /> : <User className="w-8 h-8 text-slate-400" />}
@@ -480,6 +482,15 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
               </div>
             </div>
 
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Номер WhatsApp</label>
+              <div className="relative flex items-center">
+                <span className="absolute left-3.5 text-slate-600 font-mono text-xs font-bold">+7</span>
+                <MessageCircle className="absolute right-3.5 w-4 h-4 text-emerald-600 pointer-events-none" />
+                <input type="tel" value={formData.whatsapp} onChange={handleWhatsAppChange} placeholder="7011234567" maxLength={10} className="w-full pl-11 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 font-mono focus:outline-none focus:border-blue-600" />
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Возраст *</label>
@@ -494,9 +505,67 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
               </div>
             </div>
 
+            {/* Дата рождения (теперь отображается корректно и при редактировании) */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Дата рождения *</label>
+              <div className="relative flex items-center">
+                <Calendar className="absolute left-3 w-4 h-4 text-slate-400" />
+                <input type="date" required value={formData.birthDate} onChange={(e) => handleChange('birthDate', e.target.value)} className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Рост (см) *</label>
+                <div className="relative flex items-center">
+                  <Ruler className="absolute left-3 w-4 h-4 text-slate-400" />
+                  <input type="number" required value={formData.height} onChange={(e) => handleChange('height', e.target.value)} placeholder="178" className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Вес (кг) *</label>
+                <div className="relative flex items-center">
+                  <Scale className="absolute left-3 w-4 h-4 text-slate-400" />
+                  <input type="number" required value={formData.weight} onChange={(e) => handleChange('weight', e.target.value)} placeholder="75" className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Город *</label>
+                <select value={formData.city} onChange={(e) => handleChange('city', e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer">
+                  <option value="Алматы">Алматы</option>
+                  <option value="Астана" disabled>Астана (скоро)</option>
+                  <option value="Шымкент" disabled>Шымкент (скоро)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Район *</label>
+                <select value={formData.district} onChange={(e) => handleChange('district', e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer">
+                  <option value="Медеуский">Медеуский</option>
+                  <option value="Бостандыкский">Бостандыкский</option>
+                  <option value="Алмалинский">Алмалинский</option>
+                  <option value="Ауэзовский">Ауэзовский</option>
+                  <option value="Наурызбайский">Наурызбайский</option>
+                  <option value="Жетысуский">Жетысуский</option>
+                  <option value="Турксибский">Турксибский</option>
+                  <option value="Алатауский">Алатауский</option>
+                </select>
+              </div>
+            </div>
+
             <div className="relative">
               <label className="block text-xs font-medium text-slate-700 mb-1">Фитнес-зал *</label>
-              <input type="text" required value={gymSearchQuery} onFocus={() => setIsGymDropdownOpen(true)} onChange={(e) => { setGymSearchQuery(e.target.value); handleChange('gym', e.target.value); setIsGymDropdownOpen(true); }} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600" />
+              <div className="relative flex items-center">
+                <Search className="absolute left-3 w-4 h-4 text-slate-400" />
+                <input type="text" required value={gymSearchQuery} onFocus={() => setIsGymDropdownOpen(true)} onChange={(e) => { setGymSearchQuery(e.target.value); handleChange('gym', e.target.value); setIsGymDropdownOpen(true); }} placeholder="Поиск зала..." className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600" />
+                {gymSearchQuery && (
+                  <button type="button" onClick={() => { setGymSearchQuery(''); handleChange('gym', ''); }} className="absolute right-3 text-slate-400 hover:text-slate-600">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
               {isGymDropdownOpen && filteredGyms.length > 0 && (
                 <div className="absolute z-50 left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg">
                   {filteredGyms.map((gymName, index) => (
@@ -506,6 +575,47 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Выбор дней тренировок */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Дни тренировок *</label>
+              <div className="grid grid-cols-7 gap-1">
+                {DAYS_OF_WEEK.map((day) => {
+                  const isSelected = formData.workoutDays?.includes(day.id);
+                  return (
+                    <button
+                      type="button"
+                      key={day.id}
+                      onClick={() => toggleWorkoutDay(day.id)}
+                      className={`py-2 rounded-xl text-xs font-semibold border transition-all flex flex-col items-center justify-center ${
+                        isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Цель</label>
+                <select value={formData.goal} onChange={(e) => handleChange('goal', e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer">
+                  <option value="mass">Набор массы</option>
+                  <option value="cut">Сушка</option>
+                  <option value="tonus">Тонус</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Ищу (GymBro)</label>
+                <select value={formData.lookingFor} onChange={(e) => handleChange('lookingFor', e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer">
+                  <option value="gymbro">GymBro</option>
+                  <option value="partner">Напарника</option>
+                  <option value="group">Группу</option>
+                </select>
+              </div>
             </div>
 
             <div>
@@ -528,7 +638,7 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
     );
   }
 
-  // Основной экран профиля без лишних отступов и с правильным порядком
+  // Основной экран профиля (компактные отступы, чистая иерархия)
   return (
     <div className="p-4 pt-2 max-w-md mx-auto flex flex-col pb-24 space-y-3 animate-in fade-in duration-200">
       <ProfileHeader />
