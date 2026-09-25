@@ -25,28 +25,17 @@ import {
 import { translations } from './locales/translations';
 
 export default function App() {
-  // Экстренный сброс сессии через URL (?reset=true)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('reset') === 'true') {
-      localStorage.clear();
-      window.history.replaceState({}, document.title, window.location.pathname);
-      window.location.reload();
-    }
-  }, []);
-
-  // 1. ТРЕНЕРСКИЙ РОУТ
+  // ================= 1. ВСЕ ХУКИ USESTATE (СТРОГО ДО УСЛОВНЫХ RETURN) =================
   const [isTrainerMode, setIsTrainerMode] = useState(() => {
     return new URLSearchParams(window.location.search).get('trainer') === 'true';
   });
-  
+
   const [trainerUsername, setTrainerUsername] = useState(() => {
     return localStorage.getItem('gymconnect_trainer_username') || '';
   });
-  
+
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
 
-  // Стейт профиля атлета
   const [userProfile, setUserProfile] = useState(() => {
     try {
       const saved = localStorage.getItem('gymconnect_user_profile');
@@ -56,47 +45,47 @@ export default function App() {
     }
   });
 
-  // Флаг завершенности регистрации
   const [isRegistered, setIsRegistered] = useState(() => {
     return localStorage.getItem('gymconnect_profile_filled') === 'true';
   });
 
-  // Флаг принятия всех 7 документов
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(() => {
     return localStorage.getItem('gymconnect_legal_accepted') === 'true';
   });
 
-  // Выбранный язык
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('gymconnect_language') || null;
   });
 
-  const t = translations[language] || translations.kk;
-
-  // Активная вкладка
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('tab')) return params.get('tab');
     return 'profile';
   });
 
-  // Мгновенный возврат в профиль без перезагрузки и без заставки
-  const handleTrainerBackToProfile = () => {
-    setIsTrainerMode(false);
-    setIsTrainerRegistering(false);
-    setActiveTab('profile');
-    setIsLoading(false);
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('trainer');
-      url.searchParams.set('tab', 'profile');
-      window.history.replaceState({}, document.title, url.pathname + url.search);
-    } catch (e) {
-      console.warn(e);
+  const [isAdminRoute] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('admin') === 'true') {
+      localStorage.setItem('gymconnect_admin_mode', 'true');
+      return true;
     }
-  };
+    return localStorage.getItem('gymconnect_admin_mode') === 'true';
+  });
 
-  // Проверка тренера в БД Supabase
+  const [isLoading, setIsLoading] = useState(true);
+
+  const t = translations[language] || translations.kk;
+
+  // ================= 2. ВСЕ ХУКИ USEEFFECT =================
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('reset') === 'true') {
+      localStorage.clear();
+      window.history.replaceState({}, document.title, window.location.pathname);
+      window.location.reload();
+    }
+  }, []);
+
   useEffect(() => {
     async function verifyTrainer() {
       if (trainerUsername) {
@@ -117,7 +106,6 @@ export default function App() {
     verifyTrainer();
   }, [trainerUsername]);
 
-  // Синхронизация профиля атлета с Supabase
   useEffect(() => {
     async function syncAthleteProfile() {
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -151,76 +139,21 @@ export default function App() {
     syncAthleteProfile();
   }, []);
 
-  // Тренерский режим
-  if (isTrainerMode) {
-    if (!trainerUsername) {
-      if (isTrainerRegistering) {
-        return (
-          <TrainerOnboarding 
-            onBack={() => setIsTrainerRegistering(false)}
-            onExitToProfile={handleTrainerBackToProfile}
-            onComplete={(username) => {
-              localStorage.setItem('gymconnect_trainer_registered', 'true');
-              localStorage.setItem('gymconnect_trainer_username', username);
-              setTrainerUsername(username);
-              setIsTrainerRegistering(false);
-            }} 
-          />
-        );
-      } else {
-        return (
-          <TrainerLogin 
-            onBack={handleTrainerBackToProfile}
-            onLoginSuccess={(username) => {
-              localStorage.setItem('gymconnect_trainer_registered', 'true');
-              localStorage.setItem('gymconnect_trainer_username', username);
-              setTrainerUsername(username);
-            }}
-            onSwitchToRegister={() => setIsTrainerRegistering(true)}
-          />
-        );
-      }
-    } else {
-      return (
-        <TrainerCRM 
-          trainerUsername={trainerUsername}
-          onBack={handleTrainerBackToProfile}
-          onLogout={() => {
-            localStorage.removeItem('gymconnect_trainer_registered');
-            localStorage.removeItem('gymconnect_trainer_username');
-            setTrainerUsername('');
-            setIsTrainerRegistering(false);
-            handleTrainerBackToProfile();
-          }}
-        />
-      );
+  // ================= 3. ОБРАБОТЧИКИ НАВИГАЦИИ =================
+  const handleTrainerBackToProfile = () => {
+    setIsTrainerMode(false);
+    setIsTrainerRegistering(false);
+    setIsLoading(false);
+    setActiveTab('profile');
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('trainer');
+      url.searchParams.set('tab', 'profile');
+      window.history.replaceState({}, document.title, url.pathname + url.search);
+    } catch (e) {
+      console.warn(e);
     }
-  }
-
-  // Админ-панель (?admin=true)
-  const [isAdminRoute] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('admin') === 'true') {
-      localStorage.setItem('gymconnect_admin_mode', 'true');
-      return true;
-    }
-    return localStorage.getItem('gymconnect_admin_mode') === 'true';
-  });
-
-  if (isAdminRoute) {
-    return (
-      <AdminPanel 
-        onBack={() => {
-          localStorage.removeItem('gymconnect_admin_mode');
-          window.history.pushState({}, document.title, window.location.pathname);
-          window.location.reload();
-        }} 
-      />
-    );
-  }
-
-  // Заставка (Splash)
-  const [isLoading, setIsLoading] = useState(true);
+  };
 
   const handleSplashFinish = () => {
     setIsLoading(false);
@@ -272,17 +205,78 @@ export default function App() {
     }
   };
 
-  // ЭКРАН 1: Загрузочная анимация залов (10 секунд)
+  // ================= 4. УСЛОВНЫЕ РЕНДЕРЫ (ТОЛЬКО ПОСЛЕ ВСЕХ ХУКОВ) =================
+
+  // 4.1. ТРЕНЕРСКИЙ РЕЖИМ
+  if (isTrainerMode) {
+    if (!trainerUsername) {
+      if (isTrainerRegistering) {
+        return (
+          <TrainerOnboarding 
+            onBack={() => setIsTrainerRegistering(false)}
+            onExitToProfile={handleTrainerBackToProfile}
+            onComplete={(username) => {
+              localStorage.setItem('gymconnect_trainer_registered', 'true');
+              localStorage.setItem('gymconnect_trainer_username', username);
+              setTrainerUsername(username);
+              setIsTrainerRegistering(false);
+            }} 
+          />
+        );
+      } else {
+        return (
+          <TrainerLogin 
+            onBack={handleTrainerBackToProfile}
+            onLoginSuccess={(username) => {
+              localStorage.setItem('gymconnect_trainer_registered', 'true');
+              localStorage.setItem('gymconnect_trainer_username', username);
+              setTrainerUsername(username);
+            }}
+            onSwitchToRegister={() => setIsTrainerRegistering(true)}
+          />
+        );
+      }
+    } else {
+      return (
+        <TrainerCRM 
+          trainerUsername={trainerUsername}
+          onBack={handleTrainerBackToProfile}
+          onLogout={() => {
+            localStorage.removeItem('gymconnect_trainer_registered');
+            localStorage.removeItem('gymconnect_trainer_username');
+            setTrainerUsername('');
+            setIsTrainerRegistering(false);
+            handleTrainerBackToProfile();
+          }}
+        />
+      );
+    }
+  }
+
+  // 4.2. АДМИН-ПАНЕЛЬ (?admin=true)
+  if (isAdminRoute) {
+    return (
+      <AdminPanel 
+        onBack={() => {
+          localStorage.removeItem('gymconnect_admin_mode');
+          window.history.pushState({}, document.title, window.location.pathname);
+          window.location.reload();
+        }} 
+      />
+    );
+  }
+
+  // 4.3. ЗАСТАВКА (Splash)
   if (isLoading) {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
-  // ЭКРАН 2: Выбор языка
+  // 4.4. ВЫБОР ЯЗЫКА
   if (!language && !isRegistered) {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
 
-  // ЭКРАН 3: Регистрация
+  // 4.5. РЕГИСТРАЦИЯ АТЛЕТА
   if (!isRegistered) {
     return (
       <RegisterProfilePage 
@@ -292,7 +286,7 @@ export default function App() {
     );
   }
 
-  // ЭКРАН 3.5: ОБЯЗАТЕЛЬНЫЙ ЮРИДИЧЕСКИЙ БАРЬЕР (7 актов)
+  // 4.6. ОБЯЗАТЕЛЬНЫЙ ЮРИДИЧЕСКИЙ БАРЬЕР
   if (!hasAcceptedLegal) {
     return (
       <LegalDocsPage 
@@ -302,7 +296,7 @@ export default function App() {
     );
   }
 
-  // Иконки таб-бара
+  // Таб-бар
   const navigationTabs = [
     { id: 'home', label: t.nav.home, icon: Home },
     { id: 'gymbro', label: t.nav.gymbro, icon: Users },
@@ -311,12 +305,12 @@ export default function App() {
     { id: 'profile', label: t.nav.profile, icon: User }
   ];
 
-  // ЭКРАН 4: Основное приложение
+  // 4.7. ОСНОВНОЕ ПРИЛОЖЕНИЕ
   return (
     <div className={`min-h-screen w-full bg-[#F2F2F7] overflow-x-hidden ${appleTheme.styles.fontFamily}`}>
       <div className="w-full max-w-md mx-auto min-h-screen bg-[#F2F2F7] relative pb-28 flex flex-col justify-between">
         
-        {/* Контент активного раздела */}
+        {/* Контент активного экрана */}
         <div className="w-full flex-1 pb-20">
           {activeTab === 'home' && <HomeTab userProfile={userProfile} />}
           {activeTab === 'gymbro' && <GymBroTab />}
