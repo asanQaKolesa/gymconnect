@@ -20,7 +20,7 @@ const SplashLoader = ({ onFinish }) => {
     const [progress, setProgress] = useState(0);
     const hasFinishedRef = useRef(false);
 
-    // 8 ключевых преимуществ экосистемы GymConnect
+    // 8 ключевых преимуществ платформы GymConnect
     const features = [
         { icon: <Users className="w-4 h-4 text-blue-600" />, kk: "Өз залыңнан GymBro тап", ru: "Найди напарника в своем зале" },
         { icon: <MapPin className="w-4 h-4 text-sky-600" />, kk: "Алматының 230+ залы бірыңғай базада", ru: "230+ фитнес-клубов на одной карте" },
@@ -79,66 +79,71 @@ const SplashLoader = ({ onFinish }) => {
     return (
         <div className={`splash-overlay ${!isVisible ? 'splash-fade-out' : ''}`}>
             
-            {/* Интерактивная живая карта фитнес-клубов Алматы */}
+            {/* Интерактивная живая карта залов Алматы (полностью открыта для обзора) */}
             <AlmatyMapBackground />
 
-            {/* Верхняя кнопка быстрого пропуска */}
-            <div className="splash-top-bar">
-                <button
-                    type="button"
-                    onClick={handleSkip}
-                    className="splash-skip-btn active:scale-95"
-                >
-                    <span>Өткізу / Пропустить</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-blue-400" />
-                </button>
-            </div>
-
-            {/* Контрастная Apple Glass карточка */}
-            <div className="splash-card-contrast">
+            {/* Нижний контейнер: кнопка пропуска + белая карточка Apple Glass */}
+            <div className="splash-bottom-stack">
                 
-                {/* Симметричный монолитный бейдж по центру */}
-                <div className="splash-badge-pill">
-                    <span className="badge-pill-dot"></span>
-                    <span className="badge-pill-text">230+ зал • Алматы фитнес қауымдастығы</span>
+                {/* Кнопка «Пропустить» перенесена непосредственно над белой плашкой */}
+                <div className="splash-skip-row">
+                    <button
+                        type="button"
+                        onClick={handleSkip}
+                        className="splash-skip-btn active:scale-95"
+                    >
+                        <span>Өткізу / Пропустить</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-blue-400" />
+                    </button>
                 </div>
 
-                {/* Название бренда */}
-                <h1 className="splash-brand">GymConnect</h1>
-
-                {/* Слоган */}
-                <div className="slogans-container">
-                    <p className="slogan-kk">Бұдан былай жалғыз жаттықпайсың</p>
-                    <p className="slogan-ru">Больше не тренируйся один</p>
-                </div>
-
-                {/* Динамическая карточка преимуществ */}
-                <div className="feature-box">
-                    <div className="feature-icon-wrap">
-                        {features[featureIndex].icon}
+                {/* Контрастная Apple Glass карточка */}
+                <div className="splash-card-contrast">
+                    
+                    {/* Симметричный монолитный бейдж по центру */}
+                    <div className="splash-badge-pill">
+                        <span className="badge-pill-dot"></span>
+                        <span className="badge-pill-text">230+ зал • Алматы фитнес қауымдастығы</span>
                     </div>
-                    <div className="feature-text-wrap">
-                        <p className="dyn-kk">{features[featureIndex].kk}</p>
-                        <p className="dyn-ru">{features[featureIndex].ru}</p>
-                    </div>
-                </div>
 
-                {/* Прогресс-бар (распределен ровно на 10 секунд) */}
-                <div className="splash-progress-wrapper">
-                    <div className="splash-progress-info">
-                        <div className="progress-text-col">
-                            <span className="prog-dot"></span>
-                            <span className="prog-kk">Қосылуда / Подключение к залам Алматы...</span>
+                    {/* Название бренда */}
+                    <h1 className="splash-brand">GymConnect</h1>
+
+                    {/* Слоган */}
+                    <div className="slogans-container">
+                        <p className="slogan-kk">Бұдан былай жалғыз жаттықпайсың</p>
+                        <p className="slogan-ru">Больше не тренируйся один</p>
+                    </div>
+
+                    {/* Динамическая карточка преимуществ */}
+                    <div className="feature-box">
+                        <div className="feature-icon-wrap">
+                            {features[featureIndex].icon}
                         </div>
-                        <span className="splash-percent">{progress}%</span>
+                        <div className="feature-text-wrap">
+                            <p className="dyn-kk">{features[featureIndex].kk}</p>
+                            <p className="dyn-ru">{features[featureIndex].ru}</p>
+                        </div>
                     </div>
 
-                    <div className="splash-progress-track">
-                        <div 
-                            className="splash-progress-fill" 
-                            style={{ width: `${progress}%` }}
-                        ></div>
+                    {/* Прогресс-бар (распределен на 10 секунд) */}
+                    <div className="splash-progress-wrapper">
+                        <div className="splash-progress-info">
+                            <div className="progress-text-col">
+                                <span className="prog-dot"></span>
+                                <span className="prog-kk">Қосылуда / Подключение к залам Алматы...</span>
+                            </div>
+                            <span className="splash-percent">{progress}%</span>
+                        </div>
+
+                        <div className="splash-progress-track">
+                            <div 
+                                className="splash-progress-fill" 
+                                style={{ width: `${progress}%` }}
+                            ></div>
+                        </div>
                     </div>
+
                 </div>
 
             </div>
