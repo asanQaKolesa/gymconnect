@@ -22,7 +22,6 @@ export default function AdminPanel({ onBack }) {
 
   const [editingProfile, setEditingProfile] = useState(null); 
   const [viewingProfile, setViewingProfile] = useState(null); 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false); 
   const [proMonths, setProMonths] = useState(1);
 
   const formatGoal = (goal) => {
@@ -47,8 +46,6 @@ export default function AdminPanel({ onBack }) {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    
-    // Пароль берется строго из защищенной переменной окружения GitHub Secrets
     const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
 
     if (login === 'admin' && password === adminPassword) {
@@ -104,6 +101,7 @@ export default function AdminPanel({ onBack }) {
     }
   }, [isAdminAuth]);
 
+  // Улучшенная функция удаления атлета с подстраховкой по id
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Удалить атлета ${name} из базы данных?`)) return;
 
@@ -111,10 +109,12 @@ export default function AdminPanel({ onBack }) {
     if (error) {
       alert('Ошибка удаления: ' + error.message);
     } else {
+      // Сразу убираем из локального стейта, чтобы строка исчезла в админке
       setProfiles(prev => prev.filter(p => p.id !== id));
     }
   };
 
+  // Улучшенная функция удаления тренера
   const handleDeleteTrainer = async (id, name) => {
     if (!window.confirm(`Удалить тренера ${name} из базы партнёров?`)) return;
 
@@ -280,7 +280,6 @@ export default function AdminPanel({ onBack }) {
   );
 
   const uniqueGyms = [...new Set(profiles.map(p => p.gym))].filter(Boolean);
-  const uniqueGoals = [...new Set(profiles.map(p => p.goal))].filter(Boolean);
   const proCount = profiles.filter(p => p.is_pro).length;
 
   return (
@@ -423,7 +422,6 @@ export default function AdminPanel({ onBack }) {
             </div>
           </div>
         ) : activeTab === 'trainers' ? (
-          /* ТАБЛИЦА ТРЕНЕРОВ БЕЗ ПАРОЛЕЙ */
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
@@ -498,7 +496,6 @@ export default function AdminPanel({ onBack }) {
             </div>
           </div>
         ) : (
-          /* ТАБЛИЦА АТЛЕТОВ */
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
