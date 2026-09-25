@@ -4,15 +4,15 @@ import './AlmatyMapBackground.css';
 import { Dumbbell } from 'lucide-react';
 
 const AlmatyMapBackground = () => {
-    // Топовые клубы Алматы, сбалансированные по радарной карте
+    // Единый регистр и стиль для всех залов на карте (без капслока)
     const patternGyms = [
         { id: 1, name: "Invictus Go", top: "7%", left: "24%", delay: "0s" },
         { id: 2, name: "1Fit Pass", top: "6%", left: "74%", delay: "0.8s" },
         { id: 3, name: "Adrenaline", top: "16%", left: "50%", delay: "0.3s" },
-        { id: 4, name: "БАНЗАЙ Fitness", top: "18%", left: "15%", delay: "1.2s" },
+        { id: 4, name: "Банзай Fitness", top: "18%", left: "15%", delay: "1.2s" },
         { id: 5, name: "Esentai Fit+Spa", top: "19%", left: "84%", delay: "0.5s" },
-        { id: 6, name: "YA. Pilates & Gym", top: "29%", left: "33%", delay: "1.5s" },
-        { id: 7, name: "WORKOUT Forum", top: "28%", left: "67%", delay: "0.2s" },
+        { id: 6, name: "Ya. Pilates & Gym", top: "29%", left: "33%", delay: "1.5s" },
+        { id: 7, name: "Workout Forum", top: "28%", left: "67%", delay: "0.2s" },
         { id: 8, name: "Royal Club", top: "39%", left: "20%", delay: "1.0s" },
         { id: 9, name: "Underground Big", top: "38%", left: "80%", delay: "1.7s" },
         { id: 10, name: "Pyramid Strong", top: "44%", left: "50%", delay: "0.6s" }
