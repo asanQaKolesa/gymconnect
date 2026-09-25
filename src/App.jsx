@@ -30,14 +30,11 @@ export default function App() {
   }, []);
 
   // 1. ТРЕНЕРСКИЙ РОУТ (?trainer=true)
-  const [isTrainerMode, setIsTrainerMode] = useState(() => {
-    return new URLSearchParams(window.location.search).get('trainer') === 'true';
-  });
-  
+  const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
+  const [isTrainerMode, setIsTrainerMode] = useState(isTrainerRoute);
   const [trainerUsername, setTrainerUsername] = useState(() => {
     return localStorage.getItem('gymconnect_trainer_username') || '';
   });
-  
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
 
   // Стейт профиля атлета
@@ -55,7 +52,7 @@ export default function App() {
     return localStorage.getItem('gymconnect_profile_filled') === 'true';
   });
 
-  // Флаг принятия всех 7 юридических актов
+  // Флаг принятия всех 7 документов
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(() => {
     return localStorage.getItem('gymconnect_legal_accepted') === 'true';
   });
@@ -74,14 +71,12 @@ export default function App() {
     return 'home';
   });
 
+  // Гарантированный возврат в профиль атлета (исключает черный экран)
   const handleTrainerBackToProfile = () => {
     const url = new URL(window.location.href);
     url.searchParams.delete('trainer');
     url.searchParams.set('tab', 'profile');
-    window.history.replaceState({}, document.title, url.pathname + url.search);
-    setIsTrainerMode(false);
-    setIsTrainerRegistering(false);
-    setActiveTab('profile');
+    window.location.href = url.pathname + url.search;
   };
 
   // Проверка тренера в БД Supabase
@@ -139,6 +134,7 @@ export default function App() {
     syncAthleteProfile();
   }, []);
 
+  // Тренерский режим
   if (isTrainerMode) {
     if (!trainerUsername) {
       if (isTrainerRegistering) {
@@ -184,7 +180,7 @@ export default function App() {
     }
   }
 
-  // 2. АДМИН-РЕЖИМ (?admin=true)
+  // Админ-панель (?admin=true)
   const [isAdminRoute] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('admin') === 'true') {
@@ -218,26 +214,22 @@ export default function App() {
     localStorage.setItem('gymconnect_language', lang);
   };
 
-  // Завершение первичной регистрации
   const handleRegistrationComplete = (newProfile) => {
     setIsRegistered(true);
     setUserProfile(newProfile);
     localStorage.setItem('gymconnect_profile_filled', 'true');
-    // Если документы уже были приняты — открываем Home, если нет — LegalDocsPage
     if (newProfile?.legal_accepted) {
       setHasAcceptedLegal(true);
-      setActiveTab('home');
+      setActiveTab('profile');
     }
   };
 
-  // Фиксация согласия с 7 юридическими актами
   const handleLegalAccepted = () => {
     setHasAcceptedLegal(true);
     localStorage.setItem('gymconnect_legal_accepted', 'true');
-    setActiveTab('home');
+    setActiveTab('profile');
   };
 
-  // Выход из профиля
   const handleLogout = () => {
     if (window.confirm('Вы действительно хотите выйти из своего профиля?')) {
       localStorage.clear();
@@ -249,7 +241,6 @@ export default function App() {
     }
   };
 
-  // Полное удаление аккаунта
   const handleDeleteAccount = async () => {
     if (window.confirm('Вы уверены, что хотите безвозвратно удалить свой профиль?')) {
       if (userProfile?.id) {
@@ -284,7 +275,7 @@ export default function App() {
     );
   }
 
-  // ЭКРАН 3.5: ОБЯЗАТЕЛЬНЫЙ ЮРИДИЧЕСКИЙ БАРЬЕР (7 актов РК перед допуском к разделам)
+  // ЭКРАН 3.5: ОБЯЗАТЕЛЬНЫЙ ЮРИДИЧЕСКИЙ БАРЬЕР (7 актов РК перед допуском к приложению)
   if (!hasAcceptedLegal) {
     return (
       <LegalDocsPage 
@@ -294,7 +285,7 @@ export default function App() {
     );
   }
 
-  // ЭКРАН 4: Основное приложение (доступ открыт после согласия со всеми 7 актами)
+  // ЭКРАН 4: Основное приложение
   return (
     <div className={`min-h-screen bg-slate-100 flex justify-center ${appleTheme.styles.fontFamily}`}>
       <div className="w-full max-w-md min-h-screen bg-[#F2F2F7] relative pb-28 shadow-2xl flex flex-col justify-between">
