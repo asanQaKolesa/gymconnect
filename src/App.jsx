@@ -302,7 +302,7 @@ export default function App() {
     );
   }
 
-  // Аккуратные, легкие и понятные иконки для таб-бара
+  // Иконки таб-бара
   const navigationTabs = [
     { id: 'home', label: t.nav.home, icon: Home },
     { id: 'gymbro', label: t.nav.gymbro, icon: Users },
@@ -328,11 +328,13 @@ export default function App() {
               onLogout={handleLogout}
               onDeleteAccount={handleDeleteAccount}
               onOpenTrainer={() => setIsTrainerMode(true)}
+              currentLang={language}
+              onLanguageChange={handleSelectLanguage}
             />
           )}
         </div>
 
-        {/* ================= АККУРАТНЫЙ МИНИМАЛИСТИЧНЫЙ ТАБ-БАР В СТИЛЕ APPLE HIG ================= */}
+        {/* Нативный аккуратный таб-бар */}
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200/70 shadow-sm select-none">
           <div className="w-full max-w-md mx-auto px-3 py-2 flex justify-between items-center">
             
@@ -347,7 +349,6 @@ export default function App() {
                   onClick={() => setActiveTab(tab.id)}
                   className="flex-1 flex flex-col items-center justify-center py-1 px-1 transition-all duration-200 active:scale-95"
                 >
-                  {/* Иконка: без светящихся квадратов и точек, просто мягкое выделение цветом */}
                   <Icon 
                     className={`w-5 h-5 transition-colors duration-200 ${
                       isActive 
@@ -356,7 +357,6 @@ export default function App() {
                     }`} 
                   />
 
-                  {/* Подпись: компактная и четкая */}
                   <span 
                     className={`text-[10px] tracking-tight mt-1 transition-colors duration-200 ${
                       isActive 
