@@ -149,8 +149,10 @@ export default function App() {
     return localStorage.getItem('gymconnect_profile_filled') === 'true';
   });
 
-  // Активная вкладка: если не зарегистрирован, открываем профиль/анкету, иначе главную
+  // Активная вкладка: проверяем URL параметр ?tab=profile или статус регистрации
   const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'profile') return 'profile';
     return localStorage.getItem('gymconnect_profile_filled') === 'true' ? 'home' : 'profile';
   });
 
