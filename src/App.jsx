@@ -68,10 +68,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('tab')) return params.get('tab');
-    return 'home';
+    return 'profile';
   });
 
-  // Гарантированный возврат в профиль атлета (исключает черный экран)
+  // Гарантированный возврат в профиль атлета
   const handleTrainerBackToProfile = () => {
     const url = new URL(window.location.href);
     url.searchParams.delete('trainer');
@@ -260,12 +260,12 @@ export default function App() {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
-  // ЭКРАН 2: Выбор языка (только для новых пользователей)
+  // ЭКРАН 2: Выбор языка
   if (!language && !isRegistered) {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
 
-  // ЭКРАН 3: Анкета первичной регистрации
+  // ЭКРАН 3: Регистрация
   if (!isRegistered) {
     return (
       <RegisterProfilePage 
@@ -275,7 +275,7 @@ export default function App() {
     );
   }
 
-  // ЭКРАН 3.5: ОБЯЗАТЕЛЬНЫЙ ЮРИДИЧЕСКИЙ БАРЬЕР (7 актов РК перед допуском к приложению)
+  // ЭКРАН 3.5: ОБЯЗАТЕЛЬНЫЙ ЮРИДИЧЕСКИЙ БАРЬЕР (7 актов)
   if (!hasAcceptedLegal) {
     return (
       <LegalDocsPage 
@@ -285,10 +285,10 @@ export default function App() {
     );
   }
 
-  // ЭКРАН 4: Основное приложение
+  // ЭКРАН 4: Основное приложение (Фон #F2F2F7 растянут на 100% без черных полос)
   return (
-    <div className={`min-h-screen bg-slate-100 flex justify-center ${appleTheme.styles.fontFamily}`}>
-      <div className="w-full max-w-md min-h-screen bg-[#F2F2F7] relative pb-28 shadow-2xl flex flex-col justify-between">
+    <div className={`min-h-screen w-full bg-[#F2F2F7] overflow-x-hidden ${appleTheme.styles.fontFamily}`}>
+      <div className="w-full max-w-md mx-auto min-h-screen bg-[#F2F2F7] relative pb-28 flex flex-col justify-between">
         
         {/* Контент активного раздела */}
         <div className="w-full flex-1 pb-20">
@@ -305,8 +305,8 @@ export default function App() {
           )}
         </div>
 
-        {/* Нижний стеклянный Dock Bar */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-100 shadow-lg">
+        {/* Нижний стеклянный Dock Bar на всю ширину */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-100 shadow-lg">
           <div className="w-full max-w-md mx-auto px-4 py-2 flex justify-around items-center">
             
             <button
