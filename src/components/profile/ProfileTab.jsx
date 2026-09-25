@@ -15,7 +15,6 @@ import {
   Building2, 
   HelpCircle, 
   FileText, 
-  ShieldCheck, 
   LogOut, 
   Trash2, 
   Check, 
@@ -23,10 +22,7 @@ import {
   Calendar,
   X,
   Save,
-  Scale,
-  AlertTriangle,
-  Mail,
-  UserCheck
+  ShieldCheck
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
@@ -36,7 +32,7 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  // Состояние модалки редактирования
+  // Модалка редактирования профиля
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -52,10 +48,10 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
     workout_days: []
   });
 
-  // Состояние модалки документов
+  // Модалка списка документов и отдельного документа
+  const [isDocsListOpen, setIsDocsListOpen] = useState(false);
   const [activeDoc, setActiveDoc] = useState(null);
 
-  // Список залов Алматы
   const almatyGyms = [
     'Invictus Go (Almaty)',
     'Invictus Fitness (Dostyk Plaza)',
@@ -69,53 +65,53 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
 
   const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-  // Документы в точности из реестра сайта
+  // Реестр 7 документов из базы сайта
   const legalDocs = [
     {
       id: 'privacy',
-      title: 'ПОЛИТИКА ОБРАБОТКИ И ЗАЩИТЫ ПЕРСОНАЛЬНЫХ ДАННЫХ',
+      title: 'Политика обработки и защиты персональных данных',
       slug: '/privacy-ru',
       content: 'Настоящая Политика определяет порядок обработки и защиты персональных данных пользователей сервиса GymConnect в соответствии с Законом Республики Казахстан "О персональных данных и их защите". Мы гарантируем конфиденциальность, безопасность передачи и нераспространение информации третьим лицам.'
     },
     {
       id: 'offer',
-      title: 'ПУБЛИЧНЫЙ ДОГОВОР-ОФЕРТА',
+      title: 'Публичный договор-оферта',
       slug: '/offer-ru',
       content: 'Официальное предложение (публичная оферта) платформы GymConnect для физических лиц на оказание информационных услуг, предоставление доступа к CRM-системе тренеров, подбору тренировочных программ и сервису поиска напарников.'
     },
     {
       id: 'consent',
-      title: 'СОГЛАСИЕ НА СБОР И ОБРАБОТКУ ПЕРСОНАЛЬНЫХ ДАННЫХ',
+      title: 'Согласие на сбор и обработку персональных данных',
       slug: '/consent-ru',
       content: 'Регистрируясь в приложении, субъект персональных данных дает безусловное согласие ТОО "GymConnect" на сбор, накопление, хранение, уточнение и использование данных (ФИО, контакты, параметры тела) исключительно в целях функционирования сервиса.'
     },
     {
       id: 'payment',
-      title: 'РЕГЛАМЕНТ ОПЛАТЫ И ВОЗВРАТА (KASPI PAY TERMS)',
+      title: 'Регламент оплаты и возврата (Kaspi Pay Terms)',
       slug: '/payment-terms-ru',
       content: 'Все платежи за PRO-подписки и пакеты тренировок осуществляются в тенге (KZT) через защищенный шлюз Kaspi Pay / Kaspi QR. Возврат денежных средств регламентируется Законом РК "О защите прав потребителей". Неиспользованный период подписки подлежит перерасчету по запросу в поддержку.'
     },
     {
       id: 'rules',
-      title: 'ПРАВИЛА СООБЩЕСТВА И БЕЗОПАСНОСТИ GYMCONNECT',
+      title: 'Правила сообщества и безопасности GymConnect',
       slug: '/rules-ru',
       content: 'Нормы этичного поведения в фитнес-клубах и внутреннем чате GymBro. Запрещены спам, агрессия, навязывание запрещенных добавок и коммерческая реклама без согласования с администрацией.'
     },
     {
       id: 'disclaimer',
-      title: 'МЕДИЦИНСКИЙ ОТКАЗ ОТ ОТВЕТСТВЕННОСТИ И ПРЕДУПРЕЖДЕНИЕ О РИСКАХ ДЛЯ ЗДОРОВЬЯ (MEDICAL DISCLAIMER)',
+      title: 'Медицинский отказ от ответственности (Medical Disclaimer)',
       slug: '/disclaimer-ru',
       content: 'Материалы приложения, калькулятор КБЖУ и программы тренировок носят исключительно информационно-рекомендательный характер и не заменяют консультацию квалифицированного врача. Перед началом интенсивных физических нагрузок обязательно проконсультируйтесь со специалистом.'
     },
     {
       id: 'marketing',
-      title: 'СОГЛАСИЕ НА ПОЛУЧЕНИЕ РЕКЛАМНЫХ И ИНФОРМАЦИОННЫХ РАССЫЛОК',
+      title: 'Согласие на получение рекламных и информационных рассылок',
       slug: '/marketing-consent-ru',
       content: 'Пользователь соглашается получать сервисные пуш-уведомления через Telegram-бота о статусах тренировок, акциях клубов Алматы и обновлениях приложения. От рассылки можно отказаться в любой момент.'
     }
   ];
 
-  // Гарантированное получение аватара (Telegram WebApp API + Supabase)
+  // Гарантированное подтягивание аватара из Telegram WebApp API
   const getAvatarUrl = () => {
     if (user?.photo_url) return user.photo_url;
     if (user?.avatar_url) return user.avatar_url;
@@ -173,24 +169,22 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
     window.open('https://t.me/gymconnect_support?text=' + encodeURIComponent('Здравствуйте! Интересует сотрудничество и подключение фитнес-зала к GymConnect.'), '_blank');
   };
 
-  // Открытие модального окна редактирования
   const handleOpenEdit = () => {
     setEditForm({
-      first_name: user?.first_name || '',
-      last_name: user?.last_name || '',
+      first_name: user?.first_name || 'Assanali',
+      last_name: user?.last_name || 'Kussainov',
       bio: user?.bio || 'Gymrat',
       gym: user?.gym || 'Invictus Go (Almaty)',
       goal: user?.goal || 'Набор массы',
       height: user?.height || '182',
       weight: user?.weight || '78',
-      telegram_username: user?.telegram_username || user?.username || '',
+      telegram_username: user?.telegram_username || user?.username || 'assanali',
       instagram: user?.instagram || 'gymconnect.kz',
       workout_days: Array.isArray(user?.workout_days) ? user.workout_days : ['Пн', 'Ср', 'Пт']
     });
     setIsEditModalOpen(true);
   };
 
-  // Переключение дней тренировок в форме
   const toggleDay = (day) => {
     if (editForm.workout_days.includes(day)) {
       setEditForm({ ...editForm, workout_days: editForm.workout_days.filter(d => d !== day) });
@@ -199,7 +193,6 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
     }
   };
 
-  // Сохранение изменений в Supabase
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -219,20 +212,16 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
       };
 
       if (user?.id) {
-        const { error } = await supabase
+        await supabase
           .from('profiles')
           .update(updatedData)
           .eq('id', user.id);
-
-        if (error) throw error;
       }
 
       setUser(prev => ({ ...prev, ...updatedData }));
       setIsEditModalOpen(false);
-      alert('Профиль успешно обновлен!');
     } catch (err) {
-      console.error('Ошибка сохранения профиля:', err);
-      // Локальное обновление при сбое сети
+      console.error('Ошибка сохранения:', err);
       setUser(prev => ({ ...prev, ...editForm }));
       setIsEditModalOpen(false);
     } finally {
@@ -243,21 +232,21 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
   const avatar = getAvatarUrl();
 
   return (
-    <div className="min-h-screen bg-[#F2F2F7] pb-24 pt-3 px-4 select-none">
-      <div className="max-w-md mx-auto space-y-3.5">
+    <div className="min-h-screen bg-[#F2F2F7] pb-24 pt-2.5 px-4 select-none">
+      <div className="max-w-md mx-auto space-y-3">
         
         {/* Плашка шапки: Личный кабинет */}
-        <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100/80">
+        <div className="bg-white rounded-3xl p-4 shadow-xs border border-slate-100">
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Личный кабинет</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Управление подпиской, профилем и целями</p>
+          <p className="text-xs text-slate-400 mt-0.5">Управление подпиской, профилем и целями</p>
         </div>
 
         {/* Карточка профиля атлета */}
-        <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100/80 space-y-3">
+        <div className="bg-white rounded-3xl p-4 shadow-xs border border-slate-100 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              {/* Аватар с автоподтягиванием */}
-              <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200/80 shadow-xs">
+              {/* Аватар */}
+              <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200/60 shadow-xs">
                 {avatar ? (
                   <img 
                     src={avatar} 
@@ -269,16 +258,16 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
                     }}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center font-bold text-slate-600 text-lg bg-slate-100">
+                  <div className="w-full h-full flex items-center justify-center font-bold text-slate-400 text-lg bg-slate-50">
                     {user?.first_name?.[0] || 'A'}
                   </div>
                 )}
               </div>
 
-              {/* Имя, статус PRO и статус активности */}
+              {/* Имя, бейдж PRO и статус активности */}
               <div className="min-w-0">
-                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-800 text-[10px] font-bold uppercase tracking-wider mb-1">
-                  <Award className="w-3 h-3 text-slate-700" />
+                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-700 text-[10px] font-bold tracking-wide mb-1">
+                  <Award className="w-3 h-3 text-emerald-600" />
                   <span>PRO Атлет</span>
                 </div>
                 
@@ -286,11 +275,11 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
                   {user?.first_name || 'Assanali'} {user?.last_name || 'Kussainov'} , {calculateAge(user?.birth_date)}
                 </h2>
 
-                {/* Селектор статуса */}
+                {/* Селектор статуса в зале */}
                 <div className="relative mt-1">
                   <button 
                     onClick={() => setIsStatusOpen(!isStatusOpen)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100/80 border border-slate-200 rounded-full text-xs text-slate-700 hover:bg-slate-200/60 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200/80 rounded-full text-xs text-slate-700 hover:bg-slate-100 transition-colors"
                   >
                     <span className={`w-2 h-2 rounded-full ${currentStatus.color}`} />
                     <span className="text-[11px] font-medium max-w-[150px] truncate">{currentStatus.label}</span>
@@ -307,14 +296,14 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
                             setIsStatusOpen(false);
                           }}
                           className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors ${
-                            gymStatus === st.id ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-700 hover:bg-slate-50'
+                            gymStatus === st.id ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700 hover:bg-slate-50'
                           }`}
                         >
                           <div className="flex items-center gap-2">
                             <span className={`w-2 h-2 rounded-full ${st.color}`} />
                             <span>{st.label}</span>
                           </div>
-                          {gymStatus === st.id && <Check className="w-3.5 h-3.5 text-slate-800" />}
+                          {gymStatus === st.id && <Check className="w-3.5 h-3.5 text-blue-600" />}
                         </button>
                       ))}
                     </div>
@@ -323,25 +312,25 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
               </div>
             </div>
 
-            {/* Монохромные кнопки действий: Telegram, Instagram, Редактировать */}
+            {/* Аккуратные круглые кнопки в стиле iOS */}
             <div className="flex items-center gap-1.5 flex-shrink-0 self-start">
               <button 
                 onClick={handleOpenTelegram}
-                className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center shadow-xs"
-                title="Telegram профиль"
+                className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 active:scale-95 transition-all flex items-center justify-center border border-blue-100"
+                title="Telegram"
               >
                 <Send className="w-4 h-4 ml-0.5" />
               </button>
               <button 
                 onClick={handleOpenInstagram}
-                className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center shadow-xs"
-                title="Instagram профиль"
+                className="w-9 h-9 rounded-full bg-slate-50 text-slate-700 hover:bg-slate-100 active:scale-95 transition-all flex items-center justify-center border border-slate-200"
+                title="Instagram"
               >
                 <Instagram className="w-4 h-4" />
               </button>
               <button 
                 onClick={handleOpenEdit}
-                className="w-9 h-9 rounded-full bg-slate-900 text-white hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center shadow-xs"
+                className="w-9 h-9 rounded-full bg-slate-50 text-slate-700 hover:bg-slate-100 active:scale-95 transition-all flex items-center justify-center border border-slate-200"
                 title="Редактировать анкету"
               >
                 <Edit3 className="w-4 h-4" />
@@ -349,13 +338,13 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
             </div>
           </div>
 
-          {/* Био */}
+          {/* Плашка Bio */}
           <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs text-slate-600">
             {user?.bio || 'Gymrat'}
           </div>
 
-          {/* Интерактивная шторка деталей абонемента и целей */}
-          <div className="border border-slate-200/80 rounded-2xl overflow-hidden bg-slate-50/50">
+          {/* Интерактивная шторка абонемента */}
+          <div className="border border-slate-200/70 rounded-2xl overflow-hidden bg-slate-50/50">
             <button 
               onClick={() => setIsDetailsOpen(!isDetailsOpen)}
               className="w-full px-3.5 py-2.5 flex items-center justify-between text-xs font-semibold text-slate-700 hover:bg-slate-100/70 transition-colors"
@@ -382,12 +371,12 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
                 </div>
 
                 <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-600">
-                  <MapPin className="w-3.5 h-3.5 text-slate-700 flex-shrink-0" />
+                  <MapPin className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
                   <span className="truncate">Клуб: <b>{user?.gym || 'Invictus Go (Almaty)'}</b></span>
                 </div>
 
                 <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-600">
-                  <Calendar className="w-3.5 h-3.5 text-slate-700 flex-shrink-0" />
+                  <Calendar className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
                   <span>Дни тренировок: <b>{Array.isArray(user?.workout_days) ? user.workout_days.join(', ') : 'Пн, Ср, Пт'}</b></span>
                 </div>
               </div>
@@ -395,17 +384,15 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
           </div>
         </div>
 
-        {/* Секция: Основное меню (Монохромные иконки) */}
+        {/* Секция: Основное меню (Легкие иконки Apple HIG без квадратных коробок) */}
         <div className="space-y-1.5">
           <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">ОСНОВНОЕ МЕНЮ</p>
-          <div className="bg-white rounded-3xl overflow-hidden border border-slate-100/80 shadow-sm divide-y divide-slate-100">
+          <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-xs divide-y divide-slate-100">
             <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
-                  <BarChart2 className="w-4.5 h-4.5" />
-                </div>
+                <BarChart2 className="w-5 h-5 text-slate-600 flex-shrink-0" />
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Моя статистика</h4>
+                  <h4 className="text-xs font-semibold text-slate-900">Моя статистика</h4>
                   <p className="text-[10px] text-slate-400">Посещения, дни в зале</p>
                 </div>
               </div>
@@ -414,12 +401,10 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
 
             <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
-                  <Award className="w-4.5 h-4.5" />
-                </div>
+                <Award className="w-5 h-5 text-slate-600 flex-shrink-0" />
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Подписка GymConnect</h4>
-                  <p className="text-[10px] text-slate-500 font-medium">Активна до конца октября</p>
+                  <h4 className="text-xs font-semibold text-slate-900">Подписка GymConnect</h4>
+                  <p className="text-[10px] text-slate-400">Активна до конца октября</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
@@ -427,11 +412,9 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
 
             <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
-                  <Target className="w-4.5 h-4.5" />
-                </div>
+                <Target className="w-5 h-5 text-slate-600 flex-shrink-0" />
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Персональная программа</h4>
+                  <h4 className="text-xs font-semibold text-slate-900">Персональная программа</h4>
                   <p className="text-[10px] text-slate-400">Настройка целей и дней тренировок</p>
                 </div>
               </div>
@@ -440,11 +423,9 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
 
             <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
-                  <Tag className="w-4.5 h-4.5" />
-                </div>
+                <Tag className="w-5 h-5 text-slate-600 flex-shrink-0" />
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Ввести промокод</h4>
+                  <h4 className="text-xs font-semibold text-slate-900">Ввести промокод</h4>
                   <p className="text-[10px] text-slate-400">Активация бонусов</p>
                 </div>
               </div>
@@ -453,11 +434,9 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
 
             <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
-                  <CreditCard className="w-4.5 h-4.5" />
-                </div>
+                <CreditCard className="w-5 h-5 text-slate-600 flex-shrink-0" />
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">История платежей</h4>
+                  <h4 className="text-xs font-semibold text-slate-900">История платежей</h4>
                   <p className="text-[10px] text-slate-400">Чеки и транзакции</p>
                 </div>
               </div>
@@ -469,17 +448,15 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
         {/* Секция: Партнёрам и сотрудничество */}
         <div className="space-y-1.5">
           <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">ПАРТНЁРАМ И СОТРУДНИЧЕСТВО</p>
-          <div className="bg-white rounded-3xl overflow-hidden border border-slate-100/80 shadow-sm divide-y divide-slate-100">
+          <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-xs divide-y divide-slate-100">
             <button 
               onClick={() => { window.location.href = '?trainer=true'; }}
               className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
-                  <Briefcase className="w-4.5 h-4.5" />
-                </div>
+                <Briefcase className="w-5 h-5 text-slate-600 flex-shrink-0" />
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Кабинет фитнес-тренера</h4>
+                  <h4 className="text-xs font-semibold text-slate-900">Кабинет фитнес-тренера</h4>
                   <p className="text-[10px] text-slate-400">CRM, аналитика, клиенты и календарь</p>
                 </div>
               </div>
@@ -491,12 +468,10 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
               className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
-                  <Building2 className="w-4.5 h-4.5" />
-                </div>
+                <Building2 className="w-5 h-5 text-slate-600 flex-shrink-0" />
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Сотрудничество для фитнес-залов</h4>
-                  <p className="text-[10px] text-slate-400">Интеграция клубов Алматы и партнерская программа</p>
+                  <h4 className="text-xs font-semibold text-slate-900">Сотрудничество для фитнес-залов</h4>
+                  <p className="text-[10px] text-slate-400">Подключение клубов Алматы и партнерство</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
@@ -504,63 +479,56 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
           </div>
         </div>
 
-        {/* Секция: Информационная помощь (Полный реестр 7 документов) */}
+        {/* Секция: Информационная помощь (Компактно и аккуратно) */}
         <div className="space-y-1.5">
-          <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">ИНФОРМАЦИОННАЯ ПОМОЩЬ И ДОКУМЕНТАЦИЯ</p>
-          <div className="bg-white rounded-3xl overflow-hidden border border-slate-100/80 shadow-sm divide-y divide-slate-100">
-            {/* Чат поддержки */}
+          <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">ИНФОРМАЦИОННАЯ ПОМОЩЬ</p>
+          <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-xs divide-y divide-slate-100">
             <button 
               onClick={() => window.open('https://t.me/gymconnect_support', '_blank')}
               className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
-                  <HelpCircle className="w-4.5 h-4.5" />
-                </div>
+                <HelpCircle className="w-5 h-5 text-slate-600 flex-shrink-0" />
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800">Поддержка пользователей</h4>
-                  <p className="text-[10px] text-slate-400">Онлайн-чат службы заботы в Telegram</p>
+                  <h4 className="text-xs font-semibold text-slate-900">Поддержка пользователей</h4>
+                  <p className="text-[10px] text-slate-400">Чат службы заботы в Telegram</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
             </button>
 
-            {/* 7 официальных документов */}
-            {legalDocs.map((doc) => (
-              <button 
-                key={doc.id}
-                onClick={() => setActiveDoc(doc)}
-                className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="min-w-0 pr-2">
-                    <h4 className="text-xs font-bold text-slate-800 truncate uppercase">{doc.title}</h4>
-                    <p className="text-[10px] text-slate-400 font-mono">{doc.slug}</p>
-                  </div>
+            {/* Аккуратная единая кнопка для всех 7 документов */}
+            <button 
+              onClick={() => setIsDocsListOpen(true)}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group"
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-slate-600 flex-shrink-0" />
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-900">Официальные документы и оферта</h4>
+                  <p className="text-[10px] text-slate-400">Политика, регламент Kaspi Pay и правила</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors flex-shrink-0" />
-              </button>
-            ))}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">7 актов</span>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+              </div>
+            </button>
           </div>
         </div>
 
         {/* Секция: Зона опасности */}
         <div className="space-y-1.5 pt-0.5">
           <p className="px-2 text-[11px] font-bold text-rose-500 tracking-wider uppercase">ЗОНА ОПАСНОСТИ</p>
-          <div className="bg-white rounded-3xl overflow-hidden border border-rose-100 shadow-sm divide-y divide-rose-50">
+          <div className="bg-white rounded-3xl overflow-hidden border border-rose-100 shadow-xs divide-y divide-rose-50">
             <button 
               onClick={onLogout}
               className="w-full px-4 py-3 flex items-center justify-between hover:bg-rose-50/50 transition-colors text-left group"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                  <LogOut className="w-4.5 h-4.5" />
-                </div>
+                <LogOut className="w-5 h-5 text-rose-500 flex-shrink-0" />
                 <div>
-                  <h4 className="text-xs font-bold text-rose-600">Выйти из аккаунта</h4>
+                  <h4 className="text-xs font-semibold text-rose-600">Выйти из аккаунта</h4>
                   <p className="text-[10px] text-slate-400">Завершить сессию на этом устройстве</p>
                 </div>
               </div>
@@ -572,12 +540,10 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
               className="w-full px-4 py-3 flex items-center justify-between hover:bg-rose-50/70 transition-colors text-left group"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center">
-                  <Trash2 className="w-4.5 h-4.5" />
-                </div>
+                <Trash2 className="w-5 h-5 text-rose-600 flex-shrink-0" />
                 <div>
-                  <h4 className="text-xs font-bold text-rose-700">Удалить профиль</h4>
-                  <p className="text-[10px] text-rose-400">Безвозвратное удаление всех данных</p>
+                  <h4 className="text-xs font-semibold text-rose-700">Удалить профиль</h4>
+                  <p className="text-[10px] text-rose-400">Безвозвратное удаление данных</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-rose-500 transition-colors" />
@@ -587,11 +553,95 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
 
       </div>
 
+      {/* ШТОРКА СПИСКА ВСЕХ 7 ДОКУМЕНТОВ */}
+      {isDocsListOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
+          <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base text-slate-900">Правовые документы</h3>
+                <p className="text-xs text-slate-400">Официальные положения платформы GymConnect</p>
+              </div>
+              <button 
+                onClick={() => setIsDocsListOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 overflow-y-auto divide-y divide-slate-100">
+              {legalDocs.map((doc) => (
+                <button
+                  key={doc.id}
+                  onClick={() => {
+                    setActiveDoc(doc);
+                    setIsDocsListOpen(false);
+                  }}
+                  className="w-full p-3 flex items-center justify-between hover:bg-slate-50 rounded-2xl transition-colors text-left group"
+                >
+                  <div className="flex items-center gap-3 pr-2">
+                    <ShieldCheck className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <div>
+                      <h4 className="text-xs font-medium text-slate-800 leading-snug">{doc.title}</h4>
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">{doc.slug}</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 flex-shrink-0" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* МОДАЛКА ПРОСМОТРА КОНКРЕТНОГО ДОКУМЕНТА */}
+      {activeDoc && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
+          <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 leading-snug">{activeDoc.title}</h3>
+                <p className="text-[10px] text-slate-400 font-mono mt-0.5">{activeDoc.slug}</p>
+              </div>
+              <button 
+                onClick={() => setActiveDoc(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-5 overflow-y-auto space-y-3 text-xs leading-relaxed text-slate-600">
+              <p className="font-semibold text-slate-800">Редакция от 2026 года • Алматы, Казахстан</p>
+              <p>{activeDoc.content}</p>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-3xl flex gap-2">
+              <button
+                onClick={() => {
+                  setActiveDoc(null);
+                  setIsDocsListOpen(true);
+                }}
+                className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs hover:bg-slate-200 transition-colors"
+              >
+                Все документы
+              </button>
+              <button
+                onClick={() => setActiveDoc(null)}
+                className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition-colors"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ ПРОФИЛЯ */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-xs p-0 sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
           <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200">
-            {/* Шапка модалки */}
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-base text-slate-900">Редактирование профиля</h3>
@@ -605,7 +655,6 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
               </button>
             </div>
 
-            {/* Тело формы со скроллом */}
             <form onSubmit={handleSaveProfile} className="p-5 space-y-4 overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -636,7 +685,7 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
                   value={editForm.bio} 
                   onChange={e => setEditForm({...editForm, bio: e.target.value})}
                   className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-slate-800"
-                  placeholder="Gymrat, 5 лет стажа"
+                  placeholder="Gymrat"
                 />
               </div>
 
@@ -688,7 +737,6 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
                 </select>
               </div>
 
-              {/* Дни тренировок */}
               <div>
                 <label className="text-[11px] font-bold text-slate-500 uppercase block mb-1.5">Дни тренировок</label>
                 <div className="flex gap-1.5">
@@ -701,7 +749,7 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
                         onClick={() => toggleDay(d)}
                         className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
                           isSelected 
-                            ? 'bg-slate-900 text-white shadow-xs' 
+                            ? 'bg-slate-900 text-white' 
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
@@ -712,7 +760,6 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
                 </div>
               </div>
 
-              {/* Соцсети */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-bold text-slate-500 uppercase">Telegram @username</label>
@@ -736,8 +783,7 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
                 </div>
               </div>
 
-              {/* Кнопка отправки */}
-              <div className="pt-3">
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isSaving}
@@ -748,43 +794,6 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* МОДАЛЬНОЕ ОКНО ПРОСМОТРА ОФИЦИАЛЬНОЙ ДОКУМЕНТАЦИИ */}
-      {activeDoc && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-xs p-0 sm:p-4">
-          <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-sm text-slate-900 uppercase tracking-tight">{activeDoc.title}</h3>
-                <p className="text-[10px] text-slate-400 font-mono mt-0.5">{activeDoc.slug}</p>
-              </div>
-              <button 
-                onClick={() => setActiveDoc(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            
-            <div className="p-5 overflow-y-auto space-y-3 text-xs leading-relaxed text-slate-600">
-              <p className="font-semibold text-slate-800">Редакция от 2026 года • Алматы, Казахстан</p>
-              <p>{activeDoc.content}</p>
-              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-[11px] text-slate-500">
-                Полный текст документа доступен для официального скачивания в PDF по запросу в службу заботы GymConnect.
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-3xl">
-              <button
-                onClick={() => setActiveDoc(null)}
-                className="w-full py-2.5 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition-colors"
-              >
-                Понятно
-              </button>
-            </div>
           </div>
         </div>
       )}
