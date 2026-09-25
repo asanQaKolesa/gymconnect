@@ -10,8 +10,7 @@ import {
   Camera, 
   UserCheck, 
   ArrowRight,
-  Flame,
-  Award
+  Flame
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
@@ -796,3 +795,177 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
               >
                 <option value="Утро (07:00 - 12:00)">Утро (07:00 - 12:00)</option>
+                <option value="День / Обед (12:00 - 16:00)">День / Обед (12:00 - 16:00)</option>
+                <option value="Вечер (16:00 - 21:00)">Вечер (16:00 - 21:00)</option>
+                <option value="Поздний вечер (после 21:00)">Поздний вечер (после 21:00)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* 7. GymBro Matching */}
+          <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div className="flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-blue-600" />
+                <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">
+                  7. Поиск напарника GymBro
+                </span>
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                formData.gymbro_search ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+              }`}>
+                {formData.gymbro_search ? 'Включен' : 'Отключен'}
+              </span>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-slate-900">Участвовать в поиске GymBro</p>
+                <p className="text-[10px] text-slate-500 leading-tight mt-0.5">
+                  Другие атлеты смогут находить вас для совместных тренировок
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, gymbro_search: !formData.gymbro_search })}
+                className={`w-11 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                  formData.gymbro_search ? 'bg-blue-600' : 'bg-slate-300'
+                }`}
+              >
+                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  formData.gymbro_search ? 'translate-x-5' : 'translate-x-0'
+                }`} />
+              </button>
+            </div>
+
+            {formData.gymbro_search && (
+              <div className="space-y-3 pt-1">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                    Кого ищете в качестве напарника?
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      { id: 'any', label: 'Всех (Любой)' },
+                      { id: 'male', label: 'GymBro (Парня)' },
+                      { id: 'female', label: 'GymGirl (Девушку)' }
+                    ].map(item => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, gymbro_target_gender: item.id })}
+                        className={`py-2 px-1 rounded-xl text-[11px] font-semibold border transition-all text-center ${
+                          formData.gymbro_target_gender === item.id
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                            : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                    Охват поиска напарников
+                  </label>
+                  <select
+                    value={formData.gymbro_radius}
+                    onChange={e => setFormData({ ...formData, gymbro_radius: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                  >
+                    <option value="club">Только в моем зале ({formData.gym || 'клуб не выбран'})</option>
+                    <option value="district">Во всех клубах района ({formData.district})</option>
+                    <option value="city">По всем залам Алматы</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
+                    Цель совместных тренировок
+                  </label>
+                  <div className="space-y-1.5">
+                    {gymbroGoals.map(goal => (
+                      <button
+                        key={goal.id}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, gymbro_goal: goal.id })}
+                        className={`w-full p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
+                          formData.gymbro_goal === goal.id
+                            ? 'bg-blue-50/80 border-blue-500 text-blue-900'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div>
+                          <p className="text-xs font-bold">{goal.title}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">{goal.desc}</p>
+                        </div>
+                        {formData.gymbro_goal === goal.id && (
+                          <Check className="w-4 h-4 text-blue-600 shrink-0 ml-2" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                    Тренировочный психотип
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      { id: 'introvert', label: 'Интроверт', desc: 'Фокус и работа' },
+                      { id: 'ambivert', label: 'Амбиверт', desc: 'Баланс и вайб' },
+                      { id: 'extravert', label: 'Экстраверт', desc: 'Энергия зала' }
+                    ].map(type => (
+                      <button
+                        key={type.id}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, personality_type: type.id })}
+                        className={`p-2 rounded-xl text-center border transition-all ${
+                          formData.personality_type === type.id
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                            : 'bg-slate-50 text-slate-700 border-slate-200'
+                        }`}
+                      >
+                        <p className="text-xs font-bold">{type.label}</p>
+                        <p className={`text-[9px] ${formData.personality_type === type.id ? 'text-blue-100' : 'text-slate-400'}`}>
+                          {type.desc}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-amber-50/80 rounded-2xl border border-amber-200/80 flex items-start gap-2.5 text-[11px] text-amber-900">
+                  <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="leading-snug">
+                    <p className="font-bold mb-0.5">Безопасность и спортивная этика:</p>
+                    <p className="text-[10px] text-amber-800">
+                      GymConnect — исключительно спортивная платформа для тренировок и поиска спортивных партнеров. Администрация не несет ответственности за личное поведение участников вне приложения.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Большая финальная кнопка регистрации */}
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-blue-600/30 active:scale-98 transition-all disabled:opacity-50"
+            >
+              <span>{isSaving ? 'Создание профиля атлета...' : (currentLang === 'kk' ? 'Тіркелуді аяқтау және бастау' : 'Завершить регистрацию и войти')}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  );
+}
