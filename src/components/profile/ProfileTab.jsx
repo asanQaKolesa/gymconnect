@@ -505,7 +505,7 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
               </div>
             </div>
 
-            {/* Дата рождения (теперь отображается корректно и при редактировании) */}
+            {/* Дата рождения */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Дата рождения *</label>
               <div className="relative flex items-center">
@@ -638,9 +638,9 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
     );
   }
 
-  // Основной экран профиля (компактные отступы, чистая иерархия)
+  // Основной экран профиля (убран верхний отступ pt-4 / pt-2, теперь вплотную к шапке)
   return (
-    <div className="p-4 pt-2 max-w-md mx-auto flex flex-col pb-24 space-y-3 animate-in fade-in duration-200">
+    <div className="p-3 pt-0 max-w-md mx-auto flex flex-col pb-24 space-y-2.5 animate-in fade-in duration-200">
       <ProfileHeader />
       <ProfileCard userProfile={userProfile} onEditClick={() => setIsEditing(true)} />
       <ProfileMenu />
