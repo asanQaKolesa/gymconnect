@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import HomeTab from './components/home/HomeTab';
@@ -18,7 +17,7 @@ import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
 import { translations } from './locales/translations';
 
 export default function App() {
-  // Возможность экстренного сброса сессии через URL (?reset=true)
+  // Экстренный сброс сессии через URL (?reset=true)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('reset') === 'true') {
@@ -85,20 +84,18 @@ export default function App() {
           .maybeSingle();
 
         if (data && !error) {
-          // Пользователь найден в базе — обновляем локальные данные
           setUserProfile(data);
           setIsRegistered(true);
           localStorage.setItem('gymconnect_profile_filled', 'true');
           localStorage.setItem('gymconnect_user_profile', JSON.stringify(data));
         } else {
-          // ПОЛЬЗОВАТЕЛЬ УДАЛЕН ИЗ БАЗЫ: очищаем локальную память и сбрасываем на первичную регистрацию!
+          // Если в Supabase профиля нет — очищаем локальную память и открываем регистрацию
           setUserProfile(null);
           setIsRegistered(false);
           localStorage.removeItem('gymconnect_profile_filled');
           localStorage.removeItem('gymconnect_user_profile');
         }
       } else {
-        // Если идентификатора нет — регистрация не пройдена
         if (!localStorage.getItem('gymconnect_profile_filled')) {
           setIsRegistered(false);
           setUserProfile(null);
@@ -170,10 +167,10 @@ export default function App() {
     );
   }
 
-  // Состояние сплэш-экрана загрузки
+  // Состояние заставки
   const [isLoading, setIsLoading] = useState(true);
 
-  // Выбранный язык (если выбран ранее — не спрашиваем)
+  // Выбранный язык
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('gymconnect_language') || null;
   });
@@ -237,7 +234,7 @@ export default function App() {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
 
-  // ЭКРАН 3: Анкета первичной регистрации (если в Supabase профиля нет)
+  // ЭКРАН 3: Анкета первичной регистрации
   if (!isRegistered) {
     return (
       <RegisterProfilePage 
@@ -247,4 +244,84 @@ export default function App() {
     );
   }
 
-  // ЭКРАН 4: Основное приложение (для зарегистриров
+  // ЭКРАН 4: Основное приложение (для зарегистрированных пользователей)
+  return (
+    <div className={`min-h-screen bg-slate-100 flex justify-center ${appleTheme.styles.fontFamily}`}>
+      <div className="w-full max-w-md min-h-screen bg-[#F2F2F7] relative pb-28 shadow-2xl flex flex-col justify-between">
+        
+        {/* Контент активного раздела */}
+        <div className="w-full flex-1 pb-20">
+          {activeTab === 'home' && <HomeTab userProfile={userProfile} />}
+          {activeTab === 'gymbro' && <GymBroTab />}
+          {activeTab === 'reviews' && <ReviewsTab />}
+          {activeTab === 'nutrition' && <NutritionTab />}
+          {activeTab === 'profile' && (
+            <ProfileTab 
+              user={userProfile}
+              onLogout={handleLogout}
+              onDeleteAccount={handleDeleteAccount}
+            />
+          )}
+        </div>
+
+        {/* Нижний стеклянный Dock Bar */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-100 shadow-lg">
+          <div className="w-full max-w-md mx-auto px-4 py-2 flex justify-around items-center">
+            
+            <button
+              onClick={() => setActiveTab('home')}
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'home' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Home className="w-5 h-5 mb-1 stroke-[1.75]" />
+              <span className="text-[10px]">{t.nav.home}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('gymbro')}
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'gymbro' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Users className="w-5 h-5 mb-1 stroke-[1.75]" />
+              <span className="text-[10px]">{t.nav.gymbro}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'reviews' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <MessageSquare className="w-5 h-5 mb-1 stroke-[1.75]" />
+              <span className="text-[10px]">{t.nav.reviews}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('nutrition')}
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'nutrition' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Utensils className="w-5 h-5 mb-1 stroke-[1.75]" />
+              <span className="text-[10px]">{t.nav.nutrition}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'profile' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <User className="w-5 h-5 mb-1 stroke-[1.75]" />
+              <span className="text-[10px]">{t.nav.profile}</span>
+            </button>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
