@@ -14,7 +14,6 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
 
     setLoading(true);
     
-    // Проверка наличия тренера в базе по Telegram нику
     const { data, error } = await supabase
       .from('trainer_profiles')
       .select('*')
@@ -29,7 +28,6 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
 
     const trainer = data[0];
 
-    // Сохраняем данные сессии в localStorage
     localStorage.setItem('gymconnect_trainer_registered', 'true');
     localStorage.setItem('gymconnect_trainer_username', trainer.username);
     
@@ -38,8 +36,8 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
   };
 
   const handleBackToProfile = () => {
-    // Убираем параметр trainer из URL и возвращаем пользователя в личный кабинет
-    window.location.href = window.location.pathname;
+    // Возвращаем пользователя в приложение сразу на вкладку профиля
+    window.location.href = window.location.pathname + '?tab=profile';
   };
 
   return (
