@@ -1,6 +1,6 @@
 // src/components/trainer/TrainerLogin.jsx
 import React, { useState } from 'react';
-import { ArrowLeft, KeyRound, UserCheck, ShieldCheck, Check } from 'lucide-react';
+import { ArrowLeft, KeyRound, UserCheck } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
 export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister, onBack }) {
@@ -58,7 +58,6 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister, onBac
         return;
       }
 
-      // Успешный вход в Trainer CRM
       onLoginSuccess(data.username);
     } catch (err) {
       console.error('Ошибка входа тренера:', err);
@@ -72,7 +71,7 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister, onBac
     <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col justify-between p-4 overflow-y-auto select-none">
       <div className="max-w-md mx-auto w-full space-y-4 pt-2">
         
-        {/* Кнопка Назад в профиль атлета */}
+        {/* Кнопка возврата в профиль */}
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -83,27 +82,26 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister, onBac
             <span>Назад в профиль</span>
           </button>
           
-          <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+          <span className="text-[11px] font-bold text-slate-700 bg-white px-2.5 py-1 rounded-full border border-slate-200">
             GymConnect Partner
           </span>
         </div>
 
         {/* Заголовок */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 text-center space-y-2">
-          <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-blue-500/25">
+          <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto shadow-md">
             <KeyRound className="w-7 h-7" />
           </div>
           <h1 className="text-lg font-black text-slate-900 tracking-tight">
             Вход в Trainer CRM
           </h1>
           <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
-            Экосистема для сертифицированных тренеров: учет учеников, расписание и финансовая аналитика
+            Экосистема для сертифицированных тренеров Алматы
           </p>
         </div>
 
         {/* Форма входа */}
         <form onSubmit={handleLogin} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-4">
-          
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1.5">
               Ваш Telegram Username
@@ -119,9 +117,6 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister, onBac
                 className="w-full pl-8 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-mono font-medium text-slate-900 focus:outline-none focus:border-blue-600"
               />
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">
-              Укажите ник Telegram, под которым вы подавали заявку
-            </p>
           </div>
 
           {errorMsg && (
@@ -136,12 +131,10 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister, onBac
             className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 active:scale-98 transition-all disabled:opacity-50"
           >
             <UserCheck className="w-4 h-4" />
-            <span>{isLoading ? 'Проверка аккаунта...' : 'Войти в панель тренера'}</span>
+            <span>{isLoading ? 'Проверка...' : 'Войти в панель тренера'}</span>
           </button>
-
         </form>
 
-        {/* Переход к подаче заявки */}
         <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 text-center space-y-2">
           <p className="text-xs text-slate-600">Еще не являетесь партнером?</p>
           <button
