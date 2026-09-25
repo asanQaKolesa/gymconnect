@@ -8,26 +8,34 @@ import NutritionTab from './components/nutrition/NutritionTab';
 import ProfileTab from './components/profile/ProfileTab';
 import SplashLoader from './components/onboarding/SplashLoader';
 import LanguageSelector from './components/onboarding/LanguageSelector';
-import AdminPanel from './components/admin/AdminPanel'; // Фаундерская CRM
-import TrainerLogin from './components/trainer/TrainerLogin'; // Вход тренера
-import TrainerOnboarding from './components/trainer/TrainerOnboarding'; // Регистрация тренера
-import TrainerCRM from './components/trainer/TrainerCRM'; // CRM тренера
+import RegisterProfilePage from './components/onboarding/RegisterProfilePage';
+import AdminPanel from './components/admin/AdminPanel';
+import TrainerLogin from './components/trainer/TrainerLogin';
+import TrainerOnboarding from './components/trainer/TrainerOnboarding';
+import TrainerCRM from './components/trainer/TrainerCRM';
 import { appleTheme } from './ui/AppleTheme';
 import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
 import { translations } from './locales/translations';
 
 export default function App() {
-  // 1. СТРОГАЯ И ГЛАВНАЯ ПРОВЕРКА ТРЕНЕРСКОГО РОУТА (?trainer=true)
+  // 1. ПРОВЕРКА ТРЕНЕРСКОГО РОУТА (?trainer=true)
   const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
   const [trainerUsername, setTrainerUsername] = useState(() => {
     return localStorage.getItem('gymconnect_trainer_username') || '';
   });
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
 
-  // Состояние для профиля атлета из базы Supabase
-  const [userProfile, setUserProfile] = useState(null);
+  // Состояние профиля атлета
+  const [userProfile, setUserProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gymconnect_user_profile');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
-  // Проверка существования тренера в таблице 'trainer_profiles' при старте
+  // Проверка тренера в БД
   useEffect(() => {
     async function verifyTrainer() {
       if (trainerUsername) {
@@ -48,11 +56,11 @@ export default function App() {
     verifyTrainer();
   }, [trainerUsername]);
 
-  // Загрузка данных атлета из Supabase (например, по Telegram WebApp или сохраненному ID)
+  // Загрузка существующего профиля атлета из Supabase
   useEffect(() => {
     async function fetchAthleteProfile() {
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      const savedTelegramId = tgUser?.id || localStorage.getItem('gymconnect_telegram_id');
+      const savedTelegramId = tgUser?.id ? String(tgUser.id) : localStorage.getItem('gymconnect_telegram_id');
 
       if (savedTelegramId) {
         const { data, error } = await supabase
@@ -65,6 +73,7 @@ export default function App() {
           setUserProfile(data);
           setIsRegistered(true);
           localStorage.setItem('gymconnect_profile_filled', 'true');
+          localStorage.setItem('gymconnect_user_profile', JSON.stringify(data));
         }
       }
     }
@@ -111,7 +120,7 @@ export default function App() {
     }
   }
 
-  // 2. СТРОГАЯ ПРОВЕРКА АДМИН-РЕЖИМА ФАУНДЕРА (?admin=true)
+  // 2. ПРОВЕРКА АДМИН-РЕЖИМА (?admin=true)
   const [isAdminRoute] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('admin') === 'true') {
@@ -133,143 +142,164 @@ export default function App() {
     );
   }
 
-  // Состояние заставки для обычного приложения
+  // Состояние заставки загрузки
   const [isLoading, setIsLoading] = useState(true);
 
-  // Выбранный язык: проверяем localStorage, чтобы не запрашивать повторно
+  // Выбранный язык (если уже выбран ранее — не спрашиваем)
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('gymconnect_language') || null;
   });
 
-  // Получаем словарь текстов для выбранного языка
+  // Получаем тексты интерфейса
   const t = translations[language] || translations.kk;
 
-  // Проверяем, заполнил ли пользователь профиль (анкету)
+  // Проверка: завершил ли пользователь регистрацию
   const [isRegistered, setIsRegistered] = useState(() => {
     return localStorage.getItem('gymconnect_profile_filled') === 'true';
   });
 
-  // Активная вкладка: проверяем URL параметр ?tab=profile или статус регистрации
+  // Активная вкладка нижнего таб-бара
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('tab') === 'profile') return 'profile';
-    return localStorage.getItem('gymconnect_profile_filled') === 'true' ? 'home' : 'profile';
+    if (params.get('tab')) return params.get('tab');
+    return 'home';
   });
 
-  // Обработка окончания показа заставки
   const handleSplashFinish = () => {
     setIsLoading(false);
   };
 
-  // Сохранение выбранного языка в localStorage
   const handleSelectLanguage = (lang) => {
     setLanguage(lang);
     localStorage.setItem('gymconnect_language', lang);
   };
 
-  // Функция успешного завершения онбординга (вызывается из ProfileTab)
-  const handleProfileComplete = (profileData) => {
+  // Завершение первичной регистрации
+  const handleRegistrationComplete = (newProfile) => {
     setIsRegistered(true);
-    setUserProfile(profileData);
+    setUserProfile(newProfile);
     localStorage.setItem('gymconnect_profile_filled', 'true');
     setActiveTab('home');
   };
 
-  // 3. Если заставка еще активна
+  // Выход из профиля
+  const handleLogout = () => {
+    if (window.confirm('Вы действительно хотите выйти из своего профиля?')) {
+      localStorage.removeItem('gymconnect_profile_filled');
+      localStorage.removeItem('gymconnect_user_profile');
+      setIsRegistered(false);
+      setUserProfile(null);
+      window.location.reload();
+    }
+  };
+
+  // Удаление аккаунта
+  const handleDeleteAccount = async () => {
+    if (window.confirm('Вы точно хотите удалить свой профиль и все данные? Действие необратимо.')) {
+      if (userProfile?.id) {
+        await supabase.from('profiles').delete().eq('id', userProfile.id);
+      }
+      localStorage.clear();
+      window.location.reload();
+    }
+  };
+
+  // 3. ЭКРАН 1: Заставка загрузки
   if (isLoading) {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
-  // 4. Если заставка завершилась, но язык не выбран — показываем выбор языка (только один раз)
+  // 4. ЭКРАН 2: Выбор языка (только один раз при первом входе)
   if (!language) {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
 
-  // 5. Основной интерфейс приложения (Telegram Mini App)
+  // 5. ЭКРАН 3: Первичная регистрация (только для новых пользователей)
+  if (!isRegistered) {
+    return (
+      <RegisterProfilePage 
+        currentLang={language} 
+        onComplete={handleRegistrationComplete} 
+      />
+    );
+  }
+
+  // 6. ОСНОВНОЕ ПРИЛОЖЕНИЕ (для зарегистрированных атлетов)
   return (
     <div className={`min-h-screen bg-slate-100 flex justify-center ${appleTheme.styles.fontFamily}`}>
-      
-      {/* ЖЕСТКИЙ МОБИЛЬНЫЙ КОНТЕЙНЕР */}
-      <div className={`w-full max-w-md min-h-screen bg-[${appleTheme.colors.bg}] relative pb-28 shadow-2xl flex flex-col justify-between`}>
+      <div className="w-full max-w-md min-h-screen bg-[#F2F2F7] relative pb-28 shadow-2xl flex flex-col justify-between">
         
-        {/* Рендер активной вкладки */}
-        <div className="w-full flex-1 pb-24">
+        {/* Контент активного раздела */}
+        <div className="w-full flex-1 pb-20">
           {activeTab === 'home' && <HomeTab userProfile={userProfile} />}
           {activeTab === 'gymbro' && <GymBroTab />}
           {activeTab === 'reviews' && <ReviewsTab />}
           {activeTab === 'nutrition' && <NutritionTab />}
           {activeTab === 'profile' && (
             <ProfileTab 
-              userProfile={userProfile}
-              onComplete={handleProfileComplete} 
-              isRegistration={!isRegistered} 
-              currentLang={language} 
+              user={userProfile}
+              onLogout={handleLogout}
+              onDeleteAccount={handleDeleteAccount}
             />
           )}
         </div>
 
-        {/* НИЖНИЙ ТАБ-БАР ИЛИ ПОДСКАЗКА РЕГИСТРАЦИИ */}
-        {isRegistered ? (
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-100 shadow-lg">
-            <div className="w-full max-w-md mx-auto px-4 py-2 flex justify-around items-center">
-              
-              <button
-                onClick={() => setActiveTab('home')}
-                className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
-                  activeTab === 'home' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <Home className="w-5 h-5 mb-1 stroke-[1.75]" />
-                <span className="text-[10px]">{t.nav.home}</span>
-              </button>
+        {/* Нижний стеклянный Dock Bar */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-100 shadow-lg">
+          <div className="w-full max-w-md mx-auto px-4 py-2 flex justify-around items-center">
+            
+            <button
+              onClick={() => setActiveTab('home')}
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'home' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Home className="w-5 h-5 mb-1 stroke-[1.75]" />
+              <span className="text-[10px]">{t.nav.home}</span>
+            </button>
 
-              <button
-                onClick={() => setActiveTab('gymbro')}
-                className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
-                  activeTab === 'gymbro' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <Users className="w-5 h-5 mb-1 stroke-[1.75]" />
-                <span className="text-[10px]">{t.nav.gymbro}</span>
-              </button>
+            <button
+              onClick={() => setActiveTab('gymbro')}
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'gymbro' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Users className="w-5 h-5 mb-1 stroke-[1.75]" />
+              <span className="text-[10px]">{t.nav.gymbro}</span>
+            </button>
 
-              <button
-                onClick={() => setActiveTab('reviews')}
-                className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
-                  activeTab === 'reviews' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <MessageSquare className="w-5 h-5 mb-1 stroke-[1.75]" />
-                <span className="text-[10px]">{t.nav.reviews}</span>
-              </button>
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'reviews' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <MessageSquare className="w-5 h-5 mb-1 stroke-[1.75]" />
+              <span className="text-[10px]">{t.nav.reviews}</span>
+            </button>
 
-              <button
-                onClick={() => setActiveTab('nutrition')}
-                className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
-                  activeTab === 'nutrition' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <Utensils className="w-5 h-5 mb-1 stroke-[1.75]" />
-                <span className="text-[10px]">{t.nav.nutrition}</span>
-              </button>
+            <button
+              onClick={() => setActiveTab('nutrition')}
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'nutrition' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Utensils className="w-5 h-5 mb-1 stroke-[1.75]" />
+              <span className="text-[10px]">{t.nav.nutrition}</span>
+            </button>
 
-              <button
-                onClick={() => setActiveTab('profile')}
-                className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
-                  activeTab === 'profile' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <User className="w-5 h-5 mb-1 stroke-[1.75]" />
-                <span className="text-[10px]">{t.nav.profile}</span>
-              </button>
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
+                activeTab === 'profile' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <User className="w-5 h-5 mb-1 stroke-[1.75]" />
+              <span className="text-[10px]">{t.nav.profile}</span>
+            </button>
 
-            </div>
           </div>
-        ) : (
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-blue-600 text-white text-center py-3 text-xs font-medium shadow-lg">
-            {language === 'kk' ? 'GymConnect қолжетімділігі үшін профиль сауалнамасын толтырыңыз' : 'Заполните анкету профиля для доступа к GymConnect'}
-          </div>
-        )}
+        </div>
 
       </div>
     </div>
