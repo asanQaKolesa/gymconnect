@@ -1,139 +1,158 @@
+// src/components/trainer/TrainerLogin.jsx
 import React, { useState } from 'react';
+import { ArrowLeft, KeyRound, UserCheck, ShieldCheck, Check } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
-import { Dumbbell, ArrowRight, UserPlus, Send, ArrowLeft } from 'lucide-react';
 
 export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister, onBack }) {
   const [username, setUsername] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleBackAction = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('trainer');
+      url.searchParams.set('tab', 'profile');
+      window.location.href = url.pathname + url.search;
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    const cleanUsername = username.trim().replace('@', '');
-    if (!cleanUsername) return;
-
-    setLoading(true);
-    
-    const { data, error } = await supabase
-      .from('trainer_profiles')
-      .select('*')
-      .or(`username.eq.@${cleanUsername},username.eq.${cleanUsername}`)
-      .limit(1);
-
-    if (error || !data || data.length === 0) {
-      alert('Ваш аккаунт тренера еще не подтвержден или не найден. Пожалуйста, дождитесь подтверждения оплаты администратором или пройдите регистрацию.');
-      setLoading(false);
+    if (!username.trim()) {
+      setErrorMsg('Введите ваш Telegram Username');
       return;
     }
 
-    const trainer = data[0];
+    setIsLoading(true);
+    setErrorMsg('');
 
-    localStorage.setItem('gymconnect_trainer_registered', 'true');
-    localStorage.setItem('gymconnect_trainer_username', trainer.username);
-    
-    setLoading(false);
-    onLoginSuccess(trainer.username);
-  };
+    try {
+      const cleanU = username.trim().replace('@', '');
+      
+      const { data, error } = await supabase
+        .from('trainer_profiles')
+        .select('*')
+        .or(`username.eq.@${cleanU},username.eq.${cleanU}`)
+        .maybeSingle();
 
-  const handleBackToProfile = () => {
-    // 1. Если передан родительский обработчик выхода из Trainer-модуля
-    if (typeof onBack === 'function') {
-      onBack();
-      return;
-    }
+      if (error) throw error;
 
-    // 2. Устанавливаем флаг пропуска анимации загрузки
-    sessionStorage.setItem('skip_splash', 'true');
-
-    // 3. Убираем ?trainer=true из URL без перезагрузки страницы браузера
-    const url = new URL(window.location.href);
-    url.searchParams.delete('trainer');
-    url.searchParams.set('tab', 'profile');
-    window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : ''));
-
-    // 4. Оповещаем React о смене маршрута и активной вкладки
-    window.dispatchEvent(new Event('popstate'));
-    window.dispatchEvent(new CustomEvent('navigate_tab', { detail: 'profile' }));
-
-    // 5. Мягкий fallback для компонентов, привязанных к searchParams
-    setTimeout(() => {
-      const isStillTrainer = new URLSearchParams(window.location.search).get('trainer');
-      if (isStillTrainer === 'true') {
-        window.location.replace(window.location.origin + window.location.pathname + '?tab=profile');
+      if (!data) {
+        setErrorMsg('Тренер с таким username не найден. Подайте заявку на регистрацию.');
+        setIsLoading(false);
+        return;
       }
-    }, 50);
+
+      if (data.status === 'pending') {
+        setErrorMsg('Ваша заявка находится на модерации администратора.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.status === 'rejected') {
+        setErrorMsg('Ваша заявка была отклонена администратором.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Успешный вход в Trainer CRM
+      onLoginSuccess(data.username);
+    } catch (err) {
+      console.error('Ошибка входа тренера:', err);
+      setErrorMsg('Ошибка связи с базой данных: ' + err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-xl border border-slate-200 relative">
+    <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col justify-between p-4 overflow-y-auto select-none">
+      <div className="max-w-md mx-auto w-full space-y-4 pt-2">
         
-        {/* Кнопка возврата в личный профиль без анимации SplashLoader */}
-        <button
-          type="button"
-          onClick={handleBackToProfile}
-          className="absolute top-5 left-5 w-8 h-8 bg-slate-50 hover:bg-slate-100 rounded-full flex items-center justify-center text-slate-600 transition-colors border border-slate-200/60"
-          title="Вернуться в профиль"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-
-        <div className="text-center mb-6 pt-2">
-          <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-600/30">
-            <Dumbbell className="w-6 h-6" />
-          </div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">GymConnect Trainer</h1>
-          <p className="text-xs text-slate-500 mt-1">Вход в партнерскую CRM-панель</p>
+        {/* Кнопка Назад в профиль атлета */}
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handleBackAction}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white rounded-2xl border border-slate-200/80 text-xs font-bold text-slate-700 active:scale-95 shadow-sm transition-all"
+          >
+            <ArrowLeft className="w-4 h-4 text-slate-500" />
+            <span>Назад в профиль</span>
+          </button>
+          
+          <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+            GymConnect Partner
+          </span>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-3">
+        {/* Заголовок */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 text-center space-y-2">
+          <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-blue-500/25">
+            <KeyRound className="w-7 h-7" />
+          </div>
+          <h1 className="text-lg font-black text-slate-900 tracking-tight">
+            Вход в Trainer CRM
+          </h1>
+          <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
+            Экосистема для сертифицированных тренеров: учет учеников, расписание и финансовая аналитика
+          </p>
+        </div>
+
+        {/* Форма входа */}
+        <form onSubmit={handleLogin} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-4">
+          
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Telegram Username</label>
+            <label className="text-xs font-bold text-slate-700 block mb-1.5">
+              Ваш Telegram Username
+            </label>
             <div className="relative flex items-center">
-              <span className="absolute left-3.5 text-slate-400 font-mono text-sm">@</span>
-              <input 
+              <span className="absolute left-3.5 text-slate-400 font-mono text-sm font-bold">@</span>
+              <input
                 type="text"
                 required
                 value={username}
-                onChange={(e) => setUsername(e.target.value.replace('@', ''))}
-                placeholder="username"
-                className="w-full pl-8 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
+                onChange={e => setUsername(e.target.value.replace(/[@\s]/g, ''))}
+                placeholder="coach_almaty"
+                className="w-full pl-8 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-mono font-medium text-slate-900 focus:outline-none focus:border-blue-600"
               />
             </div>
+            <p className="text-[10px] text-slate-400 mt-1">
+              Укажите ник Telegram, под которым вы подавали заявку
+            </p>
           </div>
 
-          <div className="text-right pt-0.5">
-            <a 
-              href="https://t.me/asanali_kk" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-[11px] text-blue-600 hover:underline flex items-center justify-end gap-1"
-            >
-              <Send className="w-3 h-3" />
-              <span>Нужна помощь или оплата? Напишите основателю</span>
-            </a>
-          </div>
+          {errorMsg && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs font-semibold text-rose-700">
+              {errorMsg}
+            </div>
+          )}
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 mt-2"
+            disabled={isLoading}
+            className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 active:scale-98 transition-all disabled:opacity-50"
           >
-            <span>{loading ? 'Проверка...' : 'Войти в кабинет'}</span>
-            <ArrowRight className="w-4 h-4" />
+            <UserCheck className="w-4 h-4" />
+            <span>{isLoading ? 'Проверка аккаунта...' : 'Войти в панель тренера'}</span>
           </button>
+
         </form>
 
-        <div className="mt-5 pt-5 border-t border-slate-100 text-center">
-          <p className="text-xs text-slate-500 mb-2">Еще не подавали заявку?</p>
+        {/* Переход к подаче заявки */}
+        <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 text-center space-y-2">
+          <p className="text-xs text-slate-600">Еще не являетесь партнером?</p>
           <button
             type="button"
             onClick={onSwitchToRegister}
-            className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-blue-600 rounded-xl text-xs font-semibold transition-all border border-slate-200 flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-xs font-bold text-blue-600 active:scale-98 transition-all"
           >
-            <UserPlus className="w-4 h-4" />
-            <span>Зарегистрироваться как тренер</span>
+            Подать заявку тренера
           </button>
         </div>
+
       </div>
     </div>
   );
