@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar, Clock, Eye, UserCheck, UserX, Dumbbell } from 'lucide-react';
-import { supabase } from '../../../../supabaseClient';
+import { supabase } from '../../../supabaseClient';
 
 export default function TodayScheduleWidget({ students, onSelectStudent }) {
   const [expandedStudentId, setExpandedStudentId] = useState(null);
