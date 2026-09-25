@@ -11,11 +11,6 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister, onBac
   const handleBackAction = () => {
     if (onBack) {
       onBack();
-    } else {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('trainer');
-      url.searchParams.set('tab', 'profile');
-      window.location.href = url.pathname + url.search;
     }
   };
 
