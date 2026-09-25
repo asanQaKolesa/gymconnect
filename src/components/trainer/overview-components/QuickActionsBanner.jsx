@@ -1,6 +1,5 @@
 import React from 'react';
 import { Sparkles, BellRing, UserPlus } from 'lucide-react';
-import { supabase } from '../../../../supabaseClient';
 
 export default function QuickActionsBanner({ students, onOpenAddModal }) {
   const handleRemindLowBalance = () => {
