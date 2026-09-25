@@ -50,11 +50,8 @@ export default function App() {
     return localStorage.getItem('gymconnect_profile_filled') === 'true';
   });
 
-  // Выбранный язык: для незарегистрированных пользователей ВСЕГДА null,
-  // чтобы они гарантированно выбирали язык ПЕРЕД анкетой регистрации
+  // Выбранный язык
   const [language, setLanguage] = useState(() => {
-    const isFilled = localStorage.getItem('gymconnect_profile_filled') === 'true';
-    if (!isFilled) return null;
     return localStorage.getItem('gymconnect_language') || null;
   });
 
@@ -81,7 +78,7 @@ export default function App() {
     verifyTrainer();
   }, [trainerUsername]);
 
-  // Синхронизация профиля атлета с базой данных Supabase
+  // Синхронизация профиля атлета с Supabase
   useEffect(() => {
     async function syncAthleteProfile() {
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -99,20 +96,12 @@ export default function App() {
           setIsRegistered(true);
           localStorage.setItem('gymconnect_profile_filled', 'true');
           localStorage.setItem('gymconnect_user_profile', JSON.stringify(data));
-        } else {
-          // Если в Supabase профиля нет — очищаем локальную память, сбрасываем язык и открываем онбординг
+        } else if (error) {
+          console.warn('Сетевая ошибка синхронизации Supabase:', error.message);
+        } else if (!data && !localStorage.getItem('gymconnect_profile_filled')) {
+          // Только если профиля нет ни в базе, ни в локальном хранилище
           setUserProfile(null);
           setIsRegistered(false);
-          setLanguage(null);
-          localStorage.removeItem('gymconnect_profile_filled');
-          localStorage.removeItem('gymconnect_user_profile');
-          localStorage.removeItem('gymconnect_language');
-        }
-      } else {
-        if (!localStorage.getItem('gymconnect_profile_filled')) {
-          setIsRegistered(false);
-          setUserProfile(null);
-          setLanguage(null);
         }
       }
     }
@@ -181,10 +170,10 @@ export default function App() {
     );
   }
 
-  // Состояние сплэш-заставки
+  // Заставка (Splash)
   const [isLoading, setIsLoading] = useState(true);
 
-  // Активная вкладка
+  // Активная вкладка: для зарегистрированных пользователей открывается сразу Home или переданный tab
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('tab')) return params.get('tab');
@@ -233,27 +222,27 @@ export default function App() {
     }
   };
 
-  // ЭКРАН 1: Загрузочная анимация залов
+  // ЭКРАН 1: Загрузочная анимация залов (10 секунд)
   if (isLoading) {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
-  // ЭКРАН 2: Выбор языка (всегда первым делом для новых пользователей)
-  if (!language) {
+  // ЭКРАН 2: Выбор языка (только для новых пользователей)
+  if (!language && !isRegistered) {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
 
-  // ЭКРАН 3: Анкета первичной регистрации (на выбранном языке)
+  // ЭКРАН 3: Анкета первичной регистрации (если еще не зарегистрирован)
   if (!isRegistered) {
     return (
       <RegisterProfilePage 
-        currentLang={language} 
+        currentLang={language || 'ru'} 
         onComplete={handleRegistrationComplete} 
       />
     );
   }
 
-  // ЭКРАН 4: Основное приложение (для зарегистрированных пользователей)
+  // ЭКРАН 4: Основное приложение (для зарегистрированного атлета открывается сразу)
   return (
     <div className={`min-h-screen bg-slate-100 flex justify-center ${appleTheme.styles.fontFamily}`}>
       <div className="w-full max-w-md min-h-screen bg-[#F2F2F7] relative pb-28 shadow-2xl flex flex-col justify-between">
