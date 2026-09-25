@@ -10,7 +10,14 @@ import ProfileDangerZone from './ProfileDangerZone';
 import EditProfilePage from './EditProfilePage';
 import LegalDocsPage from './LegalDocsPage';
 
-export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccount, onOpenTrainer }) {
+export default function ProfileTab({ 
+  user: initialUser, 
+  onLogout, 
+  onDeleteAccount, 
+  onOpenTrainer,
+  currentLang = 'ru',
+  onLanguageChange
+}) {
   const [user, setUser] = useState(initialUser || {});
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
@@ -53,26 +60,28 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
         {/* 1. Шапка: Личный кабинет */}
         <ProfileHeader />
 
-        {/* 2. Карточка атлета (Аватар, Статус, Соцсети, GymBro, скрытые параметры) */}
+        {/* 2. Карточка атлета */}
         <ProfileCard 
           user={user} 
           onOpenEdit={() => setIsEditOpen(true)} 
         />
 
-        {/* 3. Основное меню (Абонемент, PRO без Kaspi, Статистика посещений, Мои тренировки, Поделиться) */}
+        {/* 3. Основное меню (со сменой языка, абонементом, PRO, статистикой и тренировками) */}
         <ProfileMenu 
           user={user} 
+          currentLang={currentLang}
+          onLanguageChange={onLanguageChange}
         />
 
-        {/* 4. Сотрудничество и партнерство (Тренеры CRM, Залы, Магазины, Специалисты) */}
+        {/* 4. Сотрудничество (B2B программа: Trainer CRM, залы, магазины, специалисты) */}
         <ProfilePartnership 
           onOpenTrainer={onOpenTrainer} 
         />
 
-        {/* 5. Служба поддержки и контакты в соцсетях */}
+        {/* 5. Служба поддержки и контакты */}
         <ProfileSupport />
 
-        {/* 6. Юридическая документация (Монохромная плашка на 7 актов) */}
+        {/* 6. Юридическая документация */}
         <ProfileDocs 
           onOpenDocs={() => setIsDocsOpen(true)} 
         />
