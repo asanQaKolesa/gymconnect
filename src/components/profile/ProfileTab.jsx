@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Send, 
+  Instagram, 
   Edit3, 
   ChevronDown, 
   ChevronUp, 
@@ -11,13 +12,15 @@ import {
   Tag, 
   CreditCard, 
   Briefcase, 
+  Building2, 
   HelpCircle, 
+  FileText, 
+  ShieldCheck, 
+  BookOpen, 
   LogOut, 
   Trash2, 
   Check, 
-  Flame, 
   MapPin, 
-  Clock, 
   Calendar 
 } from 'lucide-react';
 
@@ -41,25 +44,37 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
   };
 
   const handleOpenTelegram = () => {
-    const username = user?.telegram_username || user?.username;
-    if (username) {
-      const clean = username.replace('@', '');
-      window.open(`https://t.me/${clean}`, '_blank');
-    }
+    const username = user?.telegram_username || user?.username || 'assanali';
+    const clean = username.replace('@', '');
+    window.open(`https://t.me/${clean}`, '_blank');
+  };
+
+  const handleOpenInstagram = () => {
+    const insta = user?.instagram || 'gymconnect.kz';
+    const clean = insta.replace('@', '').replace('https://instagram.com/', '');
+    window.open(`https://instagram.com/${clean}`, '_blank');
+  };
+
+  const handleOpenGymPartnership = () => {
+    window.open('https://t.me/gymconnect_support?text=' + encodeURIComponent('Здравствуйте! Интересует сотрудничество и подключение фитнес-зала к GymConnect.'), '_blank');
+  };
+
+  const handleOpenDocument = (title) => {
+    alert(`Открытие документа: "${title}". Данный раздел содержит официальные положения сервиса.`);
   };
 
   return (
-    <div className="min-h-screen bg-[#F2F2F7] pb-24 pt-2 px-4 select-none">
+    <div className="min-h-screen bg-[#F2F2F7] pb-24 pt-3 px-4 select-none">
       <div className="max-w-md mx-auto space-y-3.5">
         
-        {/* Шапка: Личный кабинет */}
-        <div className="px-1 pt-1">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Личный кабинет</h1>
+        {/* Плашка шапки: Личный кабинет */}
+        <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100/80">
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Личный кабинет</h1>
           <p className="text-xs text-slate-500 mt-0.5">Управление подпиской, профилем и целями</p>
         </div>
 
         {/* Карточка профиля атлета */}
-        <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100/80 transition-all space-y-3">
+        <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100/80 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               {/* Аватар */}
@@ -84,9 +99,8 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
                   <span>PRO Атлет</span>
                 </div>
                 
-                <h2 className="text-base font-bold text-slate-900 truncate flex items-center gap-1">
-                  <span>{user?.first_name || 'Assanali'} {user?.last_name || 'Kussainov'}</span>
-                  <span className="text-slate-400 font-normal">, {calculateAge(user?.birth_date)}</span>
+                <h2 className="text-base font-bold text-slate-900 truncate">
+                  {user?.first_name || 'Assanali'} {user?.last_name || 'Kussainov'} , {calculateAge(user?.birth_date)}
                 </h2>
 
                 {/* Селектор статуса */}
@@ -126,31 +140,38 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
               </div>
             </div>
 
-            {/* Быстрые кнопки Telegram и Редактирование */}
+            {/* Быстрые кнопки: Telegram, Instagram, Редактировать */}
             <div className="flex items-center gap-1.5 flex-shrink-0 self-start">
               <button 
                 onClick={handleOpenTelegram}
-                className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center hover:bg-blue-100 active:scale-95 transition-all shadow-xs"
+                className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 border border-blue-100/80 flex items-center justify-center hover:bg-blue-100 active:scale-95 transition-all shadow-xs"
                 title="Telegram профиль"
               >
                 <Send className="w-4 h-4 ml-0.5" />
               </button>
               <button 
+                onClick={handleOpenInstagram}
+                className="w-9 h-9 rounded-full bg-rose-50 text-rose-600 border border-rose-100/80 flex items-center justify-center hover:bg-rose-100 active:scale-95 transition-all shadow-xs"
+                title="Instagram профиль"
+              >
+                <Instagram className="w-4 h-4" />
+              </button>
+              <button 
                 onClick={onEdit}
                 className="w-9 h-9 rounded-full bg-slate-50 text-slate-600 border border-slate-200/80 flex items-center justify-center hover:bg-slate-100 active:scale-95 transition-all shadow-xs"
-                title="Редактировать профиль"
+                title="Редактировать анкету"
               >
                 <Edit3 className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Био / Цитата */}
-          <div className="p-2.5 bg-slate-50/80 border border-slate-100 rounded-2xl text-xs text-slate-600 italic">
-            "{user?.bio || 'Gymrat'}"
+          {/* Био */}
+          <div className="p-3 bg-slate-50/80 border border-slate-100 rounded-2xl text-xs text-slate-600">
+            {user?.bio || 'Gymrat'}
           </div>
 
-          {/* Интерактивная шторка деталей */}
+          {/* Интерактивная шторка деталей абонемента и целей */}
           <div className="border border-slate-200/70 rounded-2xl overflow-hidden bg-slate-50/50">
             <button 
               onClick={() => setIsDetailsOpen(!isDetailsOpen)}
@@ -193,12 +214,12 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
 
         {/* Секция: Основное меню */}
         <div className="space-y-1.5">
-          <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">Основное меню</p>
+          <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">ОСНОВНОЕ МЕНЮ</p>
           <div className="bg-white rounded-3xl overflow-hidden border border-slate-100/80 shadow-sm divide-y divide-slate-100">
             <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/70 transition-colors text-left group">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <BarChart2 className="w-4 h-4" />
+                  <BarChart2 className="w-4.5 h-4.5" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Моя статистика</h4>
@@ -211,7 +232,7 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
             <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/70 transition-colors text-left group">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <Award className="w-4 h-4" />
+                  <Award className="w-4.5 h-4.5" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Подписка GymConnect</h4>
@@ -224,7 +245,7 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
             <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/70 transition-colors text-left group">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
-                  <Target className="w-4 h-4" />
+                  <Target className="w-4.5 h-4.5" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Персональная программа</h4>
@@ -237,7 +258,7 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
             <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/70 transition-colors text-left group">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <Tag className="w-4 h-4" />
+                  <Tag className="w-4.5 h-4.5" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Ввести промокод</h4>
@@ -250,7 +271,7 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
             <button className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/70 transition-colors text-left group">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <CreditCard className="w-4 h-4" />
+                  <CreditCard className="w-4.5 h-4.5" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">История платежей</h4>
@@ -262,17 +283,18 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
           </div>
         </div>
 
-        {/* Секция: Партнерам и сотрудничество */}
+        {/* Секция: Партнёрам и сотрудничество */}
         <div className="space-y-1.5">
-          <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">Партнерам и сотрудничество</p>
+          <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">ПАРТНЁРАМ И СОТРУДНИЧЕСТВО</p>
           <div className="bg-white rounded-3xl overflow-hidden border border-slate-100/80 shadow-sm divide-y divide-slate-100">
+            {/* Кнопка 1: Кабинет тренера */}
             <button 
               onClick={() => { window.location.href = '?trainer=true'; }}
               className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/70 transition-colors text-left group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center">
-                  <Briefcase className="w-4 h-4" />
+                  <Briefcase className="w-4.5 h-4.5" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Кабинет фитнес-тренера</h4>
@@ -281,24 +303,93 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
             </button>
+
+            {/* Кнопка 2: Сотрудничество для фитнес-залов */}
+            <button 
+              onClick={handleOpenGymPartnership}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/70 transition-colors text-left group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Building2 className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">Сотрудничество для фитнес-залов</h4>
+                  <p className="text-[10px] text-slate-400">Интеграция клубов Алматы и партнерская программа</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+            </button>
           </div>
         </div>
 
-        {/* Секция: Информационная помощь и поддержка */}
+        {/* Секция: Информационная помощь и документация */}
         <div className="space-y-1.5">
-          <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">Информационная помощь</p>
+          <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">ИНФОРМАЦИОННАЯ ПОМОЩЬ</p>
           <div className="bg-white rounded-3xl overflow-hidden border border-slate-100/80 shadow-sm divide-y divide-slate-100">
+            {/* Поддержка */}
             <button 
               onClick={() => window.open('https://t.me/gymconnect_support', '_blank')}
               className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/70 transition-colors text-left group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center">
-                  <HelpCircle className="w-4 h-4" />
+                  <HelpCircle className="w-4.5 h-4.5" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-800">Поддержка пользователей</h4>
-                  <p className="text-[10px] text-slate-400">Ответим на вопросы в Telegram</p>
+                  <p className="text-[10px] text-slate-400">Чат службы заботы в Telegram</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+            </button>
+
+            {/* Документация */}
+            <button 
+              onClick={() => handleOpenDocument('Документация сервиса GymConnect')}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/70 transition-colors text-left group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <BookOpen className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">Документация и база знаний</h4>
+                  <p className="text-[10px] text-slate-400">Руководство пользователя и инструкции</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+            </button>
+
+            {/* Публичная оферта */}
+            <button 
+              onClick={() => handleOpenDocument('Публичная оферта и договор оказания услуг')}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/70 transition-colors text-left group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center">
+                  <FileText className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">Публичная оферта (договор)</h4>
+                  <p className="text-[10px] text-slate-400">Условия подписки и правила сервиса</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+            </button>
+
+            {/* Политика конфиденциальности */}
+            <button 
+              onClick={() => handleOpenDocument('Политика конфиденциальности и защиты данных')}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50/70 transition-colors text-left group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <ShieldCheck className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">Политика конфиденциальности</h4>
+                  <p className="text-[10px] text-slate-400">Обработка персональных данных</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
@@ -307,7 +398,8 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
         </div>
 
         {/* Секция: Зона опасности (Danger Zone) */}
-        <div className="space-y-1.5 pt-1">
+        <div className="space-y-1.5 pt-0.5">
+          <p className="px-2 text-[11px] font-bold text-rose-400 tracking-wider uppercase">ЗОНА ОПАСНОСТИ</p>
           <div className="bg-white rounded-3xl overflow-hidden border border-rose-100/80 shadow-sm divide-y divide-rose-50">
             <button 
               onClick={onLogout}
@@ -315,11 +407,11 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center">
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-4.5 h-4.5" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-rose-600">Выйти из аккаунта</h4>
-                  <p className="text-[10px] text-slate-400">Завершить сессию на устройстве</p>
+                  <p className="text-[10px] text-slate-400">Завершить сессию на этом устройстве</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-rose-400 transition-colors" />
@@ -331,7 +423,7 @@ export default function ProfileTab({ user, onEdit, onLogout, onDeleteAccount }) 
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center">
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4.5 h-4.5" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-rose-700">Удалить профиль</h4>
