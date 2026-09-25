@@ -1,9 +1,8 @@
-// src/components/trainer/TrainerLogin.jsx
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { Dumbbell, ArrowRight, UserPlus, Send, ArrowLeft } from 'lucide-react';
 
-export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
+export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister, onBack }) {
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -36,15 +35,39 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
   };
 
   const handleBackToProfile = () => {
-    // Полностью сбрасываем роут тренера и перенаправляем на вкладку профиля атлета
-    window.location.href = window.location.origin + window.location.pathname + '?tab=profile';
+    // 1. Если передан родительский обработчик выхода из Trainer-модуля
+    if (typeof onBack === 'function') {
+      onBack();
+      return;
+    }
+
+    // 2. Устанавливаем флаг пропуска анимации загрузки
+    sessionStorage.setItem('skip_splash', 'true');
+
+    // 3. Убираем ?trainer=true из URL без перезагрузки страницы браузера
+    const url = new URL(window.location.href);
+    url.searchParams.delete('trainer');
+    url.searchParams.set('tab', 'profile');
+    window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : ''));
+
+    // 4. Оповещаем React о смене маршрута и активной вкладки
+    window.dispatchEvent(new Event('popstate'));
+    window.dispatchEvent(new CustomEvent('navigate_tab', { detail: 'profile' }));
+
+    // 5. Мягкий fallback для компонентов, привязанных к searchParams
+    setTimeout(() => {
+      const isStillTrainer = new URLSearchParams(window.location.search).get('trainer');
+      if (isStillTrainer === 'true') {
+        window.location.replace(window.location.origin + window.location.pathname + '?tab=profile');
+      }
+    }, 50);
   };
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-xl border border-slate-200 relative">
         
-        {/* Кнопка возврата в личный профиль */}
+        {/* Кнопка возврата в личный профиль без анимации SplashLoader */}
         <button
           type="button"
           onClick={handleBackToProfile}
