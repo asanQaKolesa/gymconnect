@@ -1,3 +1,4 @@
+// src/components/profile/EditProfilePage.jsx
 import React, { useState, useMemo, useRef } from 'react';
 import { 
   ArrowLeft, 
@@ -24,10 +25,8 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
   const [isGymDropdownOpen, setIsGymDropdownOpen] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Данные из Telegram Mini App
   const tgUser = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : null;
 
-  // Ограничение возраста от 18 до 80 лет
   const today = new Date();
   const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate()).toISOString().split('T')[0];
   const minDate = new Date(today.getFullYear() - 80, today.getMonth(), today.getDate()).toISOString().split('T')[0];
@@ -38,13 +37,14 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
     return defaultDate.toISOString().split('T')[0];
   }, [user?.birth_date]);
 
-  // Основной стейт анкеты
+  // Основной стейт редактирования анкеты
   const [formData, setFormData] = useState({
     photo_url: user?.photo_url || user?.avatar_url || tgUser?.photo_url || '',
     first_name: user?.first_name || tgUser?.first_name || '',
     last_name: user?.last_name || tgUser?.last_name || '',
     gender: user?.gender || 'male',
     bio: user?.bio || '',
+    status: user?.status || 'Хочу в зал 🔥',
 
     telegram_username: user?.telegram_username || user?.username || tgUser?.username || '',
     whatsapp: user?.whatsapp || user?.phone || '',
@@ -160,8 +160,8 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.first_name.trim() || !formData.last_name.trim()) {
-      alert('Пожалуйста, укажите имя и фамилию.');
+    if (!formData.first_name.trim()) {
+      alert('Пожалуйста, укажите имя.');
       return;
     }
 
@@ -172,11 +172,6 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
 
     if (!formData.gym.trim()) {
       alert('Пожалуйста, выберите ваш фитнес-клуб.');
-      return;
-    }
-
-    if (calculatedAge !== null && (calculatedAge < 18 || calculatedAge > 80)) {
-      alert('Возраст атлета должен быть в диапазоне от 18 до 80 лет.');
       return;
     }
 
@@ -195,9 +190,10 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
         photo_url: formData.photo_url,
         avatar_url: formData.photo_url,
         first_name: formData.first_name.trim(),
-        last_name: formData.last_name.trim(),
+        last_name: formData.last_name ? formData.last_name.trim() : '',
         gender: formData.gender,
-        bio: formData.bio.trim(),
+        bio: formData.bio ? formData.bio.trim() : '',
+        status: formData.status,
         telegram_username: cleanTelegram,
         username: cleanTelegram,
         whatsapp: formData.whatsapp,
@@ -264,7 +260,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
     <div className="fixed inset-0 z-50 bg-[#F2F2F7] overflow-y-auto pb-24 pt-3 px-3 select-none">
       <div className="max-w-md mx-auto space-y-3.5">
         
-        {/* Верхняя панель (App Bar) */}
+        {/* Верхняя панель */}
         <div className="bg-white rounded-2xl py-3 px-4 shadow-sm border border-slate-100 flex items-center justify-between sticky top-0 z-40">
           <button
             type="button"
@@ -276,7 +272,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
           </button>
           
           <div className="text-center">
-            <h2 className="text-xs font-bold text-slate-900">Анкета атлета</h2>
+            <h2 className="text-xs font-bold text-slate-900">Редактирование анкеты</h2>
             <p className="text-[10px] text-slate-400">GymConnect Almaty</p>
           </div>
 
@@ -324,10 +320,10 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
             />
 
             <p className="text-xs font-bold text-slate-800 mt-2.5">
-              {formData.first_name ? `${formData.first_name} ${formData.last_name}` : 'Фотография профиля'}
+              {formData.first_name ? `${formData.first_name} ${formData.last_name || ''}` : 'Фотография профиля'}
             </p>
             <p className="text-[10px] text-slate-400 mt-0.5">
-              Подтягивается из Telegram или загружается с устройства
+              Нажмите для замены фотографии
             </p>
           </div>
 
@@ -338,7 +334,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
                 1. Личные данные
               </span>
               <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
-                Обязательно
+                Имя обязательно
               </span>
             </div>
 
@@ -352,24 +348,41 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
                   required
                   value={formData.first_name}
                   onChange={e => setFormData({ ...formData, first_name: e.target.value })}
-                  placeholder="Асанәли"
+                  placeholder="Ваше имя"
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
 
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                  Фамилия <span className="text-rose-500">*</span>
+                  Фамилия <span className="text-slate-400 font-normal text-[10px]">(не обязательно)</span>
                 </label>
                 <input
                   type="text"
-                  required
                   value={formData.last_name}
                   onChange={e => setFormData({ ...formData, last_name: e.target.value })}
-                  placeholder="Құсайынов"
+                  placeholder="Ваша фамилия"
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                Статус атлета
+              </label>
+              <select
+                value={formData.status}
+                onChange={e => setFormData({ ...formData, status: e.target.value })}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+              >
+                <option value="В зале 🏋️‍♂️">В зале 🏋️‍♂️</option>
+                <option value="Иду в зал 🚶‍♂️">Иду в зал 🚶‍♂️</option>
+                <option value="Хочу в зал 🔥">Хочу в зал 🔥</option>
+                <option value="Вышел из зала 🥤">Вышел из зала 🥤</option>
+                <option value="Отдыхаю дома 🏠">Отдыхаю дома 🏠</option>
+                <option value="Болею 🤒">Болею 🤒</option>
+              </select>
             </div>
 
             <div>
@@ -410,7 +423,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
                 rows={2}
                 value={formData.bio}
                 onChange={e => setFormData({ ...formData, bio: e.target.value })}
-                placeholder="Фрилансер, тренируюсь 3 года. Люблю базу, жим 100 кг, правильное питание."
+                placeholder="Расскажите о себе и тренировках"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 resize-none"
               />
             </div>
@@ -447,7 +460,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
             <div className="grid grid-cols-2 gap-2.5">
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                  WhatsApp телефон <span className="text-slate-400 font-normal text-[10px]">(не обязательно)</span>
+                  WhatsApp <span className="text-slate-400 font-normal text-[10px]">(не обязательно)</span>
                 </label>
                 <div className="relative flex items-center">
                   <span className="absolute left-2.5 text-slate-500 font-mono text-xs font-semibold">+7</span>
@@ -480,14 +493,14 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
             </div>
           </div>
 
-          {/* 3. Формат тренировок и тренер */}
+          {/* 3. Формат тренировок */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 3. Формат тренировок
               </span>
-              <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
-                Trainer CRM
+              <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-semibold">
+                Не обязательно
               </span>
             </div>
 
@@ -507,14 +520,13 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
               </select>
             </div>
 
-            {/* Поле добавления тренера через Telegram */}
             <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-100 space-y-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
                 <UserCheck className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>Привязка к тренеру (Trainer CRM)</span>
               </div>
               <p className="text-[10px] text-slate-600 leading-tight">
-                Укажите Telegram вашего тренера. Вы автоматически появитесь в его расписании и списке учеников Trainer CRM.
+                Укажите Telegram вашего тренера для связи с его CRM.
               </p>
               <div className="relative flex items-center">
                 <span className="absolute left-3 text-slate-400 font-mono text-xs font-bold">@</span>
@@ -528,7 +540,6 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
               </div>
             </div>
 
-            {/* Чекбокс согласия на рекомендации тренеров (ПО УМОЛЧАНИЮ СНЯТ) */}
             <div 
               onClick={() => setFormData({ ...formData, allow_trainer_recommendations: !formData.allow_trainer_recommendations })}
               className="flex items-center gap-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer active:scale-98 transition-all"
@@ -550,14 +561,16 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 4. Локация и фитнес-клуб
               </span>
-              <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold">
-                База 230+ залов
+              <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
+                Обязательно
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Город</label>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Город <span className="text-rose-500">*</span>
+                </label>
                 <select
                   value={formData.city}
                   onChange={e => setFormData({ ...formData, city: e.target.value })}
@@ -572,7 +585,9 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Район Алматы</label>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Район Алматы <span className="text-rose-500">*</span>
+                </label>
                 <select
                   value={formData.district}
                   onChange={e => setFormData({ ...formData, district: e.target.value })}
@@ -664,23 +679,28 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
             </div>
           </div>
 
-          {/* 5. Параметры тела и Дата рождения */}
+          {/* 5. Параметры тела */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3 overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 5. Параметры тела
               </span>
-              {calculatedAge && (
-                <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
-                  {calculatedAge} лет
-                </span>
-              )}
+              <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
+                Обязательно
+              </span>
             </div>
 
             <div className="w-full">
-              <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                Дата рождения <span className="text-rose-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-semibold text-slate-600">
+                  Дата рождения <span className="text-rose-500">*</span>
+                </label>
+                {calculatedAge && (
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                    {calculatedAge} лет
+                  </span>
+                )}
+              </div>
               
               <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 focus-within:border-blue-600 focus-within:bg-white transition-all">
                 <input
@@ -693,17 +713,16 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
                   className="w-full min-w-0 max-w-full box-border px-3 py-2.5 bg-transparent text-xs font-medium text-slate-900 outline-none"
                 />
               </div>
-
-              <p className="text-[10px] text-slate-400 mt-1">
-                Доступ открыт только совершеннолетним атлетам согласно правилам сервиса.
-              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Рост (см)</label>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Рост (см) <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="number"
+                  required
                   min="130"
                   max="230"
                   value={formData.height}
@@ -713,9 +732,12 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Вес (кг)</label>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Вес (кг) <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="number"
+                  required
                   min="35"
                   max="200"
                   value={formData.weight}
@@ -727,7 +749,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
 
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                Уровень подготовки в зале
+                Уровень подготовки в зале <span className="text-slate-400 font-normal text-[10px]">(не обязательно)</span>
               </label>
               <select
                 value={formData.experience_level}
@@ -744,11 +766,14 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
             </div>
           </div>
 
-          {/* 6. Цель и график тренировок */}
+          {/* 6. Цель и график */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 6. Цель и график тренировок
+              </span>
+              <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-semibold">
+                Не обязательно
               </span>
             </div>
 
@@ -810,7 +835,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
             </div>
           </div>
 
-          {/* 7. Настройки GymBro Matching */}
+          {/* 7. GymBro Matching */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <div className="flex items-center gap-1.5">
@@ -826,12 +851,11 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
               </span>
             </div>
 
-            {/* Главный тумблер GymBro */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-slate-900">Показывать анкету в GymBro</p>
+                <p className="text-xs font-bold text-slate-900">Участвовать в поиске GymBro</p>
                 <p className="text-[10px] text-slate-500 leading-tight mt-0.5">
-                  Другие атлеты смогут находить вас для совместных тренировок
+                  Включите, чтобы находить напарников для совместных тренировок
                 </p>
               </div>
               <button
@@ -849,19 +873,16 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
 
             {formData.gymbro_search && (
               <div className="space-y-3 pt-1">
-                
-                {/* 1. Плашка авто-синхронизации графика */}
                 <div className="p-3 bg-blue-50/80 rounded-2xl border border-blue-100 flex items-start gap-2 text-[11px] text-blue-950 font-medium">
                   <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                   <div className="leading-snug">
                     <p className="font-bold text-blue-900">График синхронизирован с анкетой:</p>
                     <p className="text-[10px] text-blue-800 mt-0.5">
-                      Дни <b>({formData.workout_days.join(', ') || 'не выбраны'})</b> и время <b>({formData.workout_time_slot.split(' ')[0]})</b> берутся из ваших основных целей выше.
+                      Дни <b>({formData.workout_days.join(', ') || 'не выбраны'})</b> и время <b>({formData.workout_time_slot.split(' ')[0]})</b> берутся из раздела целей выше.
                     </p>
                   </div>
                 </div>
 
-                {/* 2. Плашка о поиске новых знакомств */}
                 <div className="p-3 bg-indigo-50/80 rounded-2xl border border-indigo-100 flex items-start gap-2 text-[11px] text-indigo-950">
                   <Globe2 className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                   <div className="leading-snug">
@@ -874,7 +895,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                    Кого вы ищете в качестве напарника?
+                    Кого вы ищете в качестве напарника? <span className="text-rose-500">*</span>
                   </label>
                   <div className="grid grid-cols-3 gap-1.5">
                     {[
@@ -900,7 +921,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                    Охват поиска напарников
+                    Охват поиска напарников <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={formData.gymbro_radius}
@@ -915,7 +936,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                    Цель совместных тренировок
+                    Цель совместных тренировок <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={formData.gymbro_goal}
@@ -933,7 +954,7 @@ export default function EditProfilePage({ user, onBack, onSaveSuccess }) {
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                    Ваш тренировочный психотип
+                    Ваш тренировочный психотип <span className="text-rose-500">*</span>
                   </label>
                   <div className="grid grid-cols-3 gap-1.5">
                     {[
