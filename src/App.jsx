@@ -18,6 +18,16 @@ import { Home, Users, MessageSquare, Utensils, User } from 'lucide-react';
 import { translations } from './locales/translations';
 
 export default function App() {
+  // Возможность экстренного сброса сессии через URL (?reset=true)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('reset') === 'true') {
+      localStorage.clear();
+      window.history.replaceState({}, document.title, window.location.pathname);
+      window.location.reload();
+    }
+  }, []);
+
   // 1. ТРЕНЕРСКИЙ РОУТ (?trainer=true)
   const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
   const [trainerUsername, setTrainerUsername] = useState(() => {
@@ -33,6 +43,11 @@ export default function App() {
     } catch {
       return null;
     }
+  });
+
+  // Флаг завершенности регистрации
+  const [isRegistered, setIsRegistered] = useState(() => {
+    return localStorage.getItem('gymconnect_profile_filled') === 'true';
   });
 
   // Проверка тренера в БД
@@ -56,9 +71,9 @@ export default function App() {
     verifyTrainer();
   }, [trainerUsername]);
 
-  // Загрузка существующего профиля атлета из Supabase при старте
+  // Синхронизация профиля атлета с базой данных Supabase
   useEffect(() => {
-    async function fetchAthleteProfile() {
+    async function syncAthleteProfile() {
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
       const savedTelegramId = tgUser?.id ? String(tgUser.id) : localStorage.getItem('gymconnect_telegram_id');
 
@@ -70,14 +85,27 @@ export default function App() {
           .maybeSingle();
 
         if (data && !error) {
+          // Пользователь найден в базе — обновляем локальные данные
           setUserProfile(data);
           setIsRegistered(true);
           localStorage.setItem('gymconnect_profile_filled', 'true');
           localStorage.setItem('gymconnect_user_profile', JSON.stringify(data));
+        } else {
+          // ПОЛЬЗОВАТЕЛЬ УДАЛЕН ИЗ БАЗЫ: очищаем локальную память и сбрасываем на первичную регистрацию!
+          setUserProfile(null);
+          setIsRegistered(false);
+          localStorage.removeItem('gymconnect_profile_filled');
+          localStorage.removeItem('gymconnect_user_profile');
+        }
+      } else {
+        // Если идентификатора нет — регистрация не пройдена
+        if (!localStorage.getItem('gymconnect_profile_filled')) {
+          setIsRegistered(false);
+          setUserProfile(null);
         }
       }
     }
-    fetchAthleteProfile();
+    syncAthleteProfile();
   }, []);
 
   if (isTrainerRoute) {
@@ -142,22 +170,17 @@ export default function App() {
     );
   }
 
-  // Состояние загрузочного сплэш-скрина
+  // Состояние сплэш-экрана загрузки
   const [isLoading, setIsLoading] = useState(true);
 
-  // Выбранный язык (если сохранен в памяти — повторно не запрашивается)
+  // Выбранный язык (если выбран ранее — не спрашиваем)
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('gymconnect_language') || null;
   });
 
   const t = translations[language] || translations.kk;
 
-  // Флаг завершенности регистрации
-  const [isRegistered, setIsRegistered] = useState(() => {
-    return localStorage.getItem('gymconnect_profile_filled') === 'true';
-  });
-
-  // Активная вкладка нижнего таб-бара
+  // Активная вкладка
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('tab')) return params.get('tab');
@@ -173,7 +196,7 @@ export default function App() {
     localStorage.setItem('gymconnect_language', lang);
   };
 
-  // Успешная первичная регистрация
+  // Завершение первичной регистрации
   const handleRegistrationComplete = (newProfile) => {
     setIsRegistered(true);
     setUserProfile(newProfile);
@@ -184,26 +207,27 @@ export default function App() {
   // Выход из профиля
   const handleLogout = () => {
     if (window.confirm('Вы действительно хотите выйти из своего профиля?')) {
-      localStorage.removeItem('gymconnect_profile_filled');
-      localStorage.removeItem('gymconnect_user_profile');
+      localStorage.clear();
       setIsRegistered(false);
       setUserProfile(null);
       window.location.reload();
     }
   };
 
-  // Удаление аккаунта
+  // Полное удаление аккаунта
   const handleDeleteAccount = async () => {
     if (window.confirm('Вы уверены, что хотите безвозвратно удалить свой профиль?')) {
       if (userProfile?.id) {
         await supabase.from('profiles').delete().eq('id', userProfile.id);
       }
       localStorage.clear();
+      setIsRegistered(false);
+      setUserProfile(null);
       window.location.reload();
     }
   };
 
-  // ЭКРАН 1: Загрузочная анимация залов Алматы
+  // ЭКРАН 1: Загрузочная анимация
   if (isLoading) {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
@@ -213,7 +237,7 @@ export default function App() {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
 
-  // ЭКРАН 3: Первичная регистрация (только для новых пользователей)
+  // ЭКРАН 3: Анкета первичной регистрации (если в Supabase профиля нет)
   if (!isRegistered) {
     return (
       <RegisterProfilePage 
@@ -223,84 +247,4 @@ export default function App() {
     );
   }
 
-  // ЭКРАН 4: Основное приложение (для зарегистрированных пользователей)
-  return (
-    <div className={`min-h-screen bg-slate-100 flex justify-center ${appleTheme.styles.fontFamily}`}>
-      <div className="w-full max-w-md min-h-screen bg-[#F2F2F7] relative pb-28 shadow-2xl flex flex-col justify-between">
-        
-        {/* Контент активного экрана */}
-        <div className="w-full flex-1 pb-20">
-          {activeTab === 'home' && <HomeTab userProfile={userProfile} />}
-          {activeTab === 'gymbro' && <GymBroTab />}
-          {activeTab === 'reviews' && <ReviewsTab />}
-          {activeTab === 'nutrition' && <NutritionTab />}
-          {activeTab === 'profile' && (
-            <ProfileTab 
-              user={userProfile}
-              onLogout={handleLogout}
-              onDeleteAccount={handleDeleteAccount}
-            />
-          )}
-        </div>
-
-        {/* Нижний Dock Bar (Таб-бар) */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-100 shadow-lg">
-          <div className="w-full max-w-md mx-auto px-4 py-2 flex justify-around items-center">
-            
-            <button
-              onClick={() => setActiveTab('home')}
-              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
-                activeTab === 'home' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <Home className="w-5 h-5 mb-1 stroke-[1.75]" />
-              <span className="text-[10px]">{t.nav.home}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('gymbro')}
-              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
-                activeTab === 'gymbro' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <Users className="w-5 h-5 mb-1 stroke-[1.75]" />
-              <span className="text-[10px]">{t.nav.gymbro}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('reviews')}
-              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
-                activeTab === 'reviews' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <MessageSquare className="w-5 h-5 mb-1 stroke-[1.75]" />
-              <span className="text-[10px]">{t.nav.reviews}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('nutrition')}
-              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
-                activeTab === 'nutrition' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <Utensils className="w-5 h-5 mb-1 stroke-[1.75]" />
-              <span className="text-[10px]">{t.nav.nutrition}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`flex flex-col items-center justify-center w-14 py-1 transition-all ${
-                activeTab === 'profile' ? 'text-blue-600 font-semibold scale-105' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <User className="w-5 h-5 mb-1 stroke-[1.75]" />
-              <span className="text-[10px]">{t.nav.profile}</span>
-            </button>
-
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
-}
+  // ЭКРАН 4: Основное приложение (для зарегистриров
