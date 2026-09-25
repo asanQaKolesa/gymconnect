@@ -1,9 +1,10 @@
 // src/components/onboarding/LanguageSelector.jsx
 import React, { useState } from 'react';
-import { Check, Globe } from 'lucide-react';
+import { Check, Globe, ArrowRight, Sparkles } from 'lucide-react';
+import './LanguageSelector.css';
 
 export default function LanguageSelector({ currentLang = 'kk', onSelectLanguage }) {
-  const [selected, setSelected] = useState(currentLang);
+  const [selected, setSelected] = useState(currentLang || 'kk');
 
   const handleContinue = (e) => {
     e.preventDefault();
@@ -13,81 +14,80 @@ export default function LanguageSelector({ currentLang = 'kk', onSelectLanguage 
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 animate-in fade-in duration-300">
-      <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col justify-between">
+    <div className="language-overlay">
+      <div className="language-card">
         
-        <div>
-          {/* Иконка и заголовок */}
-          <div className="text-center mb-6">
-            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3 text-blue-600 shadow-sm">
-              <Globe className="w-6 h-6" />
+        {/* Иконка глобуса в стиле Apple */}
+        <div className="lang-icon-wrap">
+          <Globe className="w-6 h-6 text-blue-600 stroke-[2.2]" />
+        </div>
+
+        {/* Двуязычные заголовки */}
+        <h1 className="lang-title">Тілді таңдаңыз</h1>
+        <h2 className="lang-title-ru">Выберите язык</h2>
+        <p className="lang-subtitle">
+          GymConnect экожүйесінің негізгі тілін белгілеңіз • Выберите язык приложения
+        </p>
+
+        {/* Список опций (с флагом Казахстана 🇰🇿) */}
+        <div className="lang-options-list">
+          
+          {/* Қазақша */}
+          <div 
+            onClick={() => setSelected('kk')}
+            className={`lang-option-btn ${selected === 'kk' ? 'active' : ''}`}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl select-none">🇰🇿</span>
+              <div className="lang-info">
+                <span className="lang-name">Қазақша</span>
+                <span className="lang-desc">Қазақ тілінде жалғастыру</span>
+              </div>
             </div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight mb-1">
-              Тілді таңдаңыз / Выберите язык
-            </h1>
-            <p className="text-xs text-slate-500">
-              Қолданба тілін таңдап, жалғастырыңыз
-            </p>
+
+            <div className="lang-radio">
+              {selected === 'kk' && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+            </div>
           </div>
 
-          {/* Карточки выбора языка (только с флагом Казахстана) */}
-          <div className="space-y-3 mb-6">
-            
-            {/* Казахский */}
-            <div 
-              onClick={() => setSelected('kk')}
-              className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${
-                selected === 'kk' 
-                  ? 'border-blue-600 bg-blue-50/50 shadow-sm' 
-                  : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🇰🇿</span>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Қазақша</h3>
-                  <p className="text-[11px] text-slate-500">Қазақ тілінде жалғастыру</p>
-                </div>
-              </div>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center border ${
-                selected === 'kk' ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'
-              }`}>
-                {selected === 'kk' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+          {/* Русский */}
+          <div 
+            onClick={() => setSelected('ru')}
+            className={`lang-option-btn ${selected === 'ru' ? 'active' : ''}`}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl select-none">🇰🇿</span>
+              <div className="lang-info">
+                <span className="lang-name">Русский</span>
+                <span className="lang-desc">Продолжить на русском языке</span>
               </div>
             </div>
 
-            {/* Русский (без чужого флага) */}
-            <div 
-              onClick={() => setSelected('ru')}
-              className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${
-                selected === 'ru' 
-                  ? 'border-blue-600 bg-blue-50/50 shadow-sm' 
-                  : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🇰🇿</span>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Русский</h3>
-                  <p className="text-[11px] text-slate-500">Продолжить на русском языке</p>
-                </div>
-              </div>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center border ${
-                selected === 'ru' ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'
-              }`}>
-                {selected === 'ru' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-              </div>
+            <div className="lang-radio">
+              {selected === 'ru' && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
             </div>
-
           </div>
+
+        </div>
+
+        {/* Информационная плашка локализации */}
+        <div className="lang-hint-banner">
+          <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+          <span>
+            {selected === 'kk' 
+              ? 'Алматы залдары мен GymBro серіктестері қазақ тілінде көрсетіледі.' 
+              : 'Залы Алматы и база GymBro будут отображаться на русском языке.'}
+          </span>
         </div>
 
         {/* Кнопка продолжения */}
         <button
+          type="button"
           onClick={handleContinue}
-          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-semibold shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2"
+          className="lang-continue-btn active:scale-98"
         >
-          <span>{selected === 'kk' ? 'Жалғастыру' : 'Продолжить'}</span>
+          <span>{selected === 'kk' ? 'Жалғастыру және бастау' : 'Продолжить и начать'}</span>
+          <ArrowRight className="w-4 h-4" />
         </button>
 
       </div>
