@@ -20,16 +20,25 @@ const SplashLoader = ({ onFinish }) => {
     const [progress, setProgress] = useState(0);
     const hasFinishedRef = useRef(false);
 
-    // 8 ключевых преимуществ платформы GymConnect
+    // Печатный текст для бренда и слоганов
+    const [typedBrand, setTypedBrand] = useState('');
+    const [typedSloganKk, setTypedSloganKk] = useState('');
+    const [typedSloganRu, setTypedSloganRu] = useState('');
+
+    const targetBrand = "GymConnect";
+    const targetSloganKk = "Бұдан былай жалғыз жаттықпайсың";
+    const targetSloganRu = "Больше не тренируйся один";
+
+    // 8 преимуществ с лаконичными текстами, идеально помещающимися в одну строку
     const features = [
         { icon: <Users className="w-4 h-4 text-blue-600" />, kk: "Өз залыңнан GymBro тап", ru: "Найди напарника в своем зале" },
         { icon: <MapPin className="w-4 h-4 text-sky-600" />, kk: "Алматының 230+ залы бірыңғай базада", ru: "230+ фитнес-клубов на одной карте" },
-        { icon: <Utensils className="w-4 h-4 text-emerald-600" />, kk: "КБЖУ есептеу және тамақтану рационы", ru: "Умный расчет КБЖУ и рацион питания" },
+        { icon: <Utensils className="w-4 h-4 text-emerald-600" />, kk: "КБЖУ есептеу және тамақтану жоспары", ru: "Умный расчет КБЖУ и рацион питания" },
         { icon: <Dumbbell className="w-4 h-4 text-orange-600" />, kk: "Кәсіби жаттықтырушылар базасы", ru: "Подбор квалифицированных тренеров" },
-        { icon: <MessageSquare className="w-4 h-4 text-indigo-600" />, kk: "Клубтар жайлы шынайы спортшылар пікірі", ru: "Честные отзывы атлетов о фитнес-залах" },
-        { icon: <Ticket className="w-4 h-4 text-teal-600" />, kk: "Кез келген залға абонемент сатып алу", ru: "Покупка абонемента в любой фитнес-зал" },
+        { icon: <MessageSquare className="w-4 h-4 text-indigo-600" />, kk: "Залдар жайлы шынайы пікірлер", ru: "Честные отзывы атлетов о клубах" },
+        { icon: <Ticket className="w-4 h-4 text-teal-600" />, kk: "Кез келген залға абонемент алу", ru: "Покупка абонемента в любой зал" },
         { icon: <Shield className="w-4 h-4 text-violet-600" />, kk: "Тек тексерілген фитнес орталықтар", ru: "Только проверенные фитнес-центры" },
-        { icon: <Flame className="w-4 h-4 text-rose-600" />, kk: "Күн сайын мотивация мен тәртіп", ru: "Дисциплина и мотивация каждый день" }
+        { icon: <Flame className="w-4 h-4 text-rose-600" />, kk: "Күн сайын тәртіп пен нәтиже", ru: "Дисциплина и мотивация каждый день" }
     ];
 
     const handleSkip = () => {
@@ -41,13 +50,50 @@ const SplashLoader = ({ onFinish }) => {
         }, 300);
     };
 
+    // 1. Анимация печатного текста (Typewriter)
     useEffect(() => {
-        // Каждая из 8 фич показывается ровно 1.25 секунды (1250ms * 8 = 10 000ms = 10 секунд)
+        let bIdx = 0;
+        let sKkIdx = 0;
+        let sRuIdx = 0;
+
+        // Печать "GymConnect"
+        const brandTimer = setInterval(() => {
+            bIdx++;
+            setTypedBrand(targetBrand.slice(0, bIdx));
+            if (bIdx >= targetBrand.length) {
+                clearInterval(brandTimer);
+
+                // После названия печатаем казахский слоган
+                const kkTimer = setInterval(() => {
+                    sKkIdx++;
+                    setTypedSloganKk(targetSloganKk.slice(0, sKkIdx));
+                    if (sKkIdx >= targetSloganKk.length) {
+                        clearInterval(kkTimer);
+
+                        // После казахского печатаем русский слоган
+                        const ruTimer = setInterval(() => {
+                            sRuIdx++;
+                            setTypedSloganRu(targetSloganRu.slice(0, sRuIdx));
+                            if (sRuIdx >= targetSloganRu.length) {
+                                clearInterval(ruTimer);
+                            }
+                        }, 30);
+                    }
+                }, 30);
+            }
+        }, 65);
+
+        return () => {
+            clearInterval(brandTimer);
+        };
+    }, []);
+
+    // 2. Таймеры прогресса и смены фич на 10 секунд
+    useEffect(() => {
         const featureInterval = setInterval(() => {
             setFeatureIndex((prev) => (prev < features.length - 1 ? prev + 1 : 0));
         }, 1250);
 
-        // Прогресс заполняется ровно за 10 секунд (по 1% каждые 100ms)
         const progressInterval = setInterval(() => {
             setProgress((prev) => {
                 if (prev >= 100) {
@@ -58,7 +104,6 @@ const SplashLoader = ({ onFinish }) => {
             });
         }, 100);
 
-        // Финальный таймер завершения ровно через 10 секунд
         const exitTimer = setTimeout(() => {
             if (!hasFinishedRef.current) {
                 hasFinishedRef.current = true;
@@ -79,13 +124,13 @@ const SplashLoader = ({ onFinish }) => {
     return (
         <div className={`splash-overlay ${!isVisible ? 'splash-fade-out' : ''}`}>
             
-            {/* Интерактивная живая карта залов Алматы (полностью открыта для обзора) */}
+            {/* Живая интерактивная карта фитнес-клубов */}
             <AlmatyMapBackground />
 
-            {/* Нижний контейнер: кнопка пропуска + белая карточка Apple Glass */}
+            {/* Нижний стек карточки */}
             <div className="splash-bottom-stack">
                 
-                {/* Кнопка «Пропустить» перенесена непосредственно над белой плашкой */}
+                {/* Кнопка пропуска над карточкой (не перекрывает карту) */}
                 <div className="splash-skip-row">
                     <button
                         type="button"
@@ -97,25 +142,38 @@ const SplashLoader = ({ onFinish }) => {
                     </button>
                 </div>
 
-                {/* Контрастная Apple Glass карточка */}
+                {/* Белая плашка с жестко зафиксированной высотой (не прыгает) */}
                 <div className="splash-card-contrast">
                     
-                    {/* Симметричный монолитный бейдж по центру */}
+                    {/* Верхний бейдж только на казахском языке */}
                     <div className="splash-badge-pill">
                         <span className="badge-pill-dot"></span>
                         <span className="badge-pill-text">230+ зал • Алматы фитнес қауымдастығы</span>
                     </div>
 
-                    {/* Название бренда */}
-                    <h1 className="splash-brand">GymConnect</h1>
+                    {/* Печатное название GymConnect с курсором */}
+                    <h1 className="splash-brand">
+                        <span>{typedBrand}</span>
+                        {typedBrand.length < targetBrand.length && <span className="typewriter-cursor">|</span>}
+                    </h1>
 
-                    {/* Слоган */}
+                    {/* Печатные слоганы */}
                     <div className="slogans-container">
-                        <p className="slogan-kk">Бұдан былай жалғыз жаттықпайсың</p>
-                        <p className="slogan-ru">Больше не тренируйся один</p>
+                        <p className="slogan-kk">
+                            {typedSloganKk}
+                            {typedBrand.length >= targetBrand.length && typedSloganKk.length < targetSloganKk.length && (
+                                <span className="typewriter-cursor">|</span>
+                            )}
+                        </p>
+                        <p className="slogan-ru">
+                            {typedSloganRu}
+                            {typedSloganKk.length >= targetSloganKk.length && typedSloganRu.length < targetSloganRu.length && (
+                                <span className="typewriter-cursor">|</span>
+                            )}
+                        </p>
                     </div>
 
-                    {/* Динамическая карточка преимуществ */}
+                    {/* Фиксированный контейнер фич с защитой от переноса строк */}
                     <div className="feature-box">
                         <div className="feature-icon-wrap">
                             {features[featureIndex].icon}
@@ -126,7 +184,7 @@ const SplashLoader = ({ onFinish }) => {
                         </div>
                     </div>
 
-                    {/* Прогресс-бар (распределен на 10 секунд) */}
+                    {/* Прогресс-бар на 10 секунд */}
                     <div className="splash-progress-wrapper">
                         <div className="splash-progress-info">
                             <div className="progress-text-col">
