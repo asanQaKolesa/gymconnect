@@ -10,7 +10,9 @@ import {
   Camera, 
   UserCheck, 
   ArrowRight,
-  Flame
+  Flame,
+  Calendar,
+  ChevronDown
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
@@ -23,7 +25,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
   const [isGymDropdownOpen, setIsGymDropdownOpen] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Автоматические данные пользователя из Telegram Mini App
+  // Данные пользователя из Telegram Mini App
   const tgUser = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : null;
 
   // Ограничение возраста от 18 до 80 лет
@@ -32,7 +34,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
   const minDate = new Date(today.getFullYear() - 80, today.getMonth(), today.getDate()).toISOString().split('T')[0];
   const defaultBirthDate = new Date(today.getFullYear() - 24, today.getMonth(), today.getDate()).toISOString().split('T')[0];
 
-  // Основной стейт первичной анкеты
+  // Стейт анкеты регистрации
   const [formData, setFormData] = useState({
     photo_url: tgUser?.photo_url || '',
     first_name: tgUser?.first_name || '',
@@ -44,23 +46,29 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
     whatsapp: '',
     instagram: '',
 
+    // Формат тренировок и тренер
     training_format: 'alone',
     trainer_telegram: '',
+    allow_trainer_recommendations: true,
 
+    // Локация
     city: 'Алматы',
     district: 'Бостандыкский',
     gym: '',
     custom_gym: '',
 
+    // Параметры тела
     birth_date: defaultBirthDate,
     height: '178',
     weight: '75',
     experience_level: 'regular',
 
+    // Цель и график
     goal: 'Набор массы',
     workout_days: ['Пн', 'Ср', 'Пт'],
     workout_time_slot: 'Вечер (16:00 - 21:00)',
 
+    // GymBro
     gymbro_search: false,
     gymbro_radius: 'club',
     gymbro_target_gender: 'any',
@@ -96,24 +104,6 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
     'Жетысуский',
     'Наурызбайский',
     'Алатауский'
-  ];
-
-  const experienceOptions = [
-    { id: 'first_time', title: 'Первый раз в зале', desc: 'Осматриваюсь и изучаю тренажеры' },
-    { id: 'scared_beginner', title: 'Пару раз заходил, было страшно', desc: 'Делаю первые уверенные шаги' },
-    { id: 'beginner', title: 'Новичок', desc: 'Освоил базу, стаж до 6 месяцев' },
-    { id: 'regular', title: 'Уверенный любитель', desc: 'Регулярно жму и тяну, стаж 1–2 года' },
-    { id: 'advanced', title: 'Опытный атлет', desc: 'Знаю каждую мышцу, стаж 2–5 лет' },
-    { id: 'pro_monster', title: 'Профи / Монстр базы', desc: 'Выступающий атлет или машина зала' }
-  ];
-
-  const gymbroGoals = [
-    { id: 'strength', title: 'Страховка на тяжелой базе', desc: 'Жим, присед, тяга до отказа без страха' },
-    { id: 'discipline', title: 'Взаимная дисциплина', desc: 'Не сливаться с тренировок в 7 утра' },
-    { id: 'pump_burn', title: 'Хардкорный пампинг и сушка', desc: 'Высокий темп, дропсеты и огонь в мышцах' },
-    { id: 'cardio_cross', title: 'Кардио и функционал', desc: 'Сжигать калории и бегать кроссы вместе' },
-    { id: 'vibe_coffee', title: 'Спорт-вайб и кофе после зала', desc: 'Тренировки в удовольствие и дружба' },
-    { id: 'technique_learning', title: 'Обмен опытом и техникой', desc: 'Помогать друг другу расти и ставить углы' }
   ];
 
   const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -157,7 +147,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert('Размер файла не должен превышать 5 МБ');
+        alert(currentLang === 'kk' ? 'Файл көлемі 5 МБ аспауы тиіс' : 'Размер файла не должен превышать 5 МБ');
         return;
       }
       const reader = new FileReader();
@@ -220,6 +210,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         training_format: formData.training_format,
         trainer_telegram: cleanTrainerTelegram,
         trainer_username: cleanTrainerTelegram,
+        allow_trainer_recommendations: formData.allow_trainer_recommendations,
         city: formData.city,
         district: formData.district,
         gym: selectedGym,
@@ -242,7 +233,6 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         updated_at: new Date().toISOString()
       };
 
-      // Сохраняем в Supabase
       const { data, error } = await supabase
         .from('profiles')
         .upsert([newProfilePayload], { onConflict: 'telegram_id' })
@@ -250,10 +240,9 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         .single();
 
       if (error) {
-        console.warn('Supabase upsert warning, fallback to local:', error.message);
+        console.warn('Supabase upsert warning:', error.message);
       }
 
-      // Фиксируем регистрацию в localStorage для мгновенного входа в будущем
       localStorage.setItem('gymconnect_profile_filled', 'true');
       localStorage.setItem('gymconnect_telegram_id', tgId);
       localStorage.setItem('gymconnect_user_profile', JSON.stringify(data || newProfilePayload));
@@ -477,7 +466,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 3. Формат тренировок и тренер */}
+          {/* 3. Формат тренировок и тренер (Выпадающий список) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -488,49 +477,57 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               </span>
             </div>
 
-            <div className="space-y-1.5">
-              {[
-                { id: 'alone', label: 'Тренируюсь сам' },
-                { id: 'coach_gym', label: 'Тренируюсь с тренером в зале' },
-                { id: 'coach_online', label: 'Тренируюсь с тренером онлайн' },
-                { id: 'looking_for_coach', label: 'Ищу персонального тренера' }
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, training_format: opt.id })}
-                  className={`w-full p-2.5 text-left rounded-xl border text-xs font-semibold transition-all flex items-center justify-between ${
-                    formData.training_format === opt.id
-                      ? 'bg-blue-50/80 border-blue-500 text-blue-900'
-                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>{opt.label}</span>
-                  {formData.training_format === opt.id && (
-                    <Check className="w-4 h-4 text-blue-600 shrink-0 ml-2" />
-                  )}
-                </button>
-              ))}
+            <div>
+              <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                Как вы тренируетесь?
+              </label>
+              <select
+                value={formData.training_format}
+                onChange={e => setFormData({ ...formData, training_format: e.target.value })}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+              >
+                <option value="alone">Тренируюсь самостоятельно</option>
+                <option value="coach_gym">Тренируюсь с тренером в зале</option>
+                <option value="coach_online">Тренируюсь с тренером онлайн</option>
+                <option value="looking_for_coach">Ищу персонального тренера</option>
+              </select>
             </div>
 
-            {(formData.training_format === 'coach_gym' || formData.training_format === 'coach_online') && (
-              <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-100 space-y-2 mt-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
-                  <UserCheck className="w-4 h-4 text-blue-600" />
-                  <span>Укажите Telegram вашего тренера</span>
-                </div>
-                <div className="relative flex items-center">
-                  <span className="absolute left-3 text-slate-400 font-mono text-xs font-bold">@</span>
-                  <input
-                    type="text"
-                    value={formData.trainer_telegram}
-                    onChange={handleTrainerTelegramChange}
-                    placeholder="coach_telegram"
-                    className="w-full pl-7 pr-3 py-2 bg-white border border-blue-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
-                  />
-                </div>
+            {/* Блок привязки Telegram тренера */}
+            <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-100 space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
+                <UserCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>Привязка тренера (Trainer CRM)</span>
               </div>
-            )}
+              <p className="text-[10px] text-slate-600 leading-tight">
+                Укажите Telegram вашего тренера. Вы автоматически появитесь в его расписании и списке учеников Trainer CRM.
+              </p>
+              <div className="relative flex items-center">
+                <span className="absolute left-3 text-slate-400 font-mono text-xs font-bold">@</span>
+                <input
+                  type="text"
+                  value={formData.trainer_telegram}
+                  onChange={handleTrainerTelegramChange}
+                  placeholder="coach_telegram"
+                  className="w-full pl-7 pr-3 py-2 bg-white border border-blue-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+            </div>
+
+            {/* Чекбокс согласия на рекомендации тренеров */}
+            <div 
+              onClick={() => setFormData({ ...formData, allow_trainer_recommendations: !formData.allow_trainer_recommendations })}
+              className="flex items-center gap-2.5 p-2 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer active:scale-98 transition-all"
+            >
+              <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 border transition-colors ${
+                formData.allow_trainer_recommendations ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+              }`}>
+                {formData.allow_trainer_recommendations && <Check className="w-3 h-3 stroke-[3]" />}
+              </div>
+              <p className="text-[11px] text-slate-700 leading-tight select-none">
+                Рекомендовать мне проверенных тренеров GymConnect в моем клубе
+              </p>
+            </div>
           </div>
 
           {/* 4. Локация и клуб */}
@@ -650,8 +647,8 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 5. Параметры тела */}
-          <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
+          {/* 5. Параметры тела и Дата рождения (Исправлено съезжание) */}
+          <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3 overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 5. Параметры тела
@@ -663,21 +660,26 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               )}
             </div>
 
-            <div>
+            {/* Аккуратный контейнер даты без выхода за границы */}
+            <div className="w-full">
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Дата рождения <span className="text-rose-500">*</span>
               </label>
-              <input
-                type="date"
-                required
-                min={minDate}
-                max={maxDate}
-                value={formData.birth_date}
-                onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
-                className="w-full max-w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
-              />
+              
+              <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 focus-within:border-blue-600 focus-within:bg-white transition-all">
+                <input
+                  type="date"
+                  required
+                  min={minDate}
+                  max={maxDate}
+                  value={formData.birth_date}
+                  onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
+                  className="w-full min-w-0 max-w-full box-border px-3 py-2.5 bg-transparent text-xs font-medium text-slate-900 outline-none"
+                />
+              </div>
+
               <p className="text-[10px] text-slate-400 mt-1">
-                Доступ открыт только совершеннолетним атлетам согласно правилам сервиса.
+                Доступ открыт только совершеннолетним атлетам (18–80 лет).
               </p>
             </div>
 
@@ -707,36 +709,27 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               </div>
             </div>
 
+            {/* Выпадающий список уровня подготовки */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
+              <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Уровень подготовки в зале
               </label>
-              <div className="space-y-1.5">
-                {experienceOptions.map(exp => (
-                  <button
-                    key={exp.id}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, experience_level: exp.id })}
-                    className={`w-full p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
-                      formData.experience_level === exp.id
-                        ? 'bg-blue-50/80 border-blue-500 text-blue-900'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div>
-                      <p className="text-xs font-bold">{exp.title}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{exp.desc}</p>
-                    </div>
-                    {formData.experience_level === exp.id && (
-                      <Check className="w-4 h-4 text-blue-600 shrink-0 ml-2" />
-                    )}
-                  </button>
-                ))}
-              </div>
+              <select
+                value={formData.experience_level}
+                onChange={e => setFormData({ ...formData, experience_level: e.target.value })}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+              >
+                <option value="first_time">Первый раз в зале (осваиваю тренажеры)</option>
+                <option value="scared_beginner">Пару раз заходил, было страшно (начинающий)</option>
+                <option value="beginner">Новичок (базовые движения, стаж до 6 мес)</option>
+                <option value="regular">Уверенный любитель (регулярно жму, 1–2 года)</option>
+                <option value="advanced">Опытный атлет (знаю базу и мышцы, 2–5 лет)</option>
+                <option value="pro_monster">Профи / Монстр базы (выступающий атлет)</option>
+              </select>
             </div>
           </div>
 
-          {/* 6. Цель и график */}
+          {/* 6. Цель и график тренировок */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -802,7 +795,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 7. GymBro Matching */}
+          {/* 7. Поиск напарника GymBro */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <div className="flex items-center gap-1.5">
@@ -881,32 +874,23 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                   </select>
                 </div>
 
+                {/* Выпадающий список целей совместных тренировок GymBro */}
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                     Цель совместных тренировок
                   </label>
-                  <div className="space-y-1.5">
-                    {gymbroGoals.map(goal => (
-                      <button
-                        key={goal.id}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, gymbro_goal: goal.id })}
-                        className={`w-full p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
-                          formData.gymbro_goal === goal.id
-                            ? 'bg-blue-50/80 border-blue-500 text-blue-900'
-                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        <div>
-                          <p className="text-xs font-bold">{goal.title}</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">{goal.desc}</p>
-                        </div>
-                        {formData.gymbro_goal === goal.id && (
-                          <Check className="w-4 h-4 text-blue-600 shrink-0 ml-2" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                  <select
+                    value={formData.gymbro_goal}
+                    onChange={e => setFormData({ ...formData, gymbro_goal: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                  >
+                    <option value="strength">Страховка на тяжелой базе (жим, присед, тяга)</option>
+                    <option value="discipline">Взаимная дисциплина (не сливаться в 7 утра)</option>
+                    <option value="pump_burn">Хардкорный пампинг и сушка (высокий темп, дропсеты)</option>
+                    <option value="cardio_cross">Кардио и функционал (сжигать калории вместе)</option>
+                    <option value="vibe_coffee">Спорт-вайб и кофе после зала (тренировки в удовольствие)</option>
+                    <option value="technique_learning">Обмен опытом и техникой (расти вместе)</option>
+                  </select>
                 </div>
 
                 <div>
