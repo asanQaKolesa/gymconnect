@@ -14,15 +14,16 @@ import {
   Briefcase, 
   Building2, 
   HelpCircle, 
-  FileText, 
+  BookOpen, 
   LogOut, 
   Trash2, 
   Check, 
   MapPin, 
-  Calendar,
-  X,
-  Save,
-  ShieldCheck
+  Calendar, 
+  X, 
+  Save, 
+  ArrowLeft,
+  FileText
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
@@ -48,9 +49,9 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
     workout_days: []
   });
 
-  // Модалка списка документов и отдельного документа
-  const [isDocsListOpen, setIsDocsListOpen] = useState(false);
-  const [activeDoc, setActiveDoc] = useState(null);
+  // Модалка документации
+  const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState(null);
 
   const almatyGyms = [
     'Invictus Go (Almaty)',
@@ -65,53 +66,53 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
 
   const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-  // Реестр 7 документов из базы сайта
+  // Реестр всех 7 документов сервиса
   const legalDocs = [
-    {
-      id: 'privacy',
-      title: 'Политика обработки и защиты персональных данных',
-      slug: '/privacy-ru',
-      content: 'Настоящая Политика определяет порядок обработки и защиты персональных данных пользователей сервиса GymConnect в соответствии с Законом Республики Казахстан "О персональных данных и их защите". Мы гарантируем конфиденциальность, безопасность передачи и нераспространение информации третьим лицам.'
-    },
     {
       id: 'offer',
       title: 'Публичный договор-оферта',
       slug: '/offer-ru',
-      content: 'Официальное предложение (публичная оферта) платформы GymConnect для физических лиц на оказание информационных услуг, предоставление доступа к CRM-системе тренеров, подбору тренировочных программ и сервису поиска напарников.'
+      content: 'Официальное предложение (публичная оферта) сервиса GymConnect для физических лиц на оказание информационных услуг, предоставление доступа к CRM-системе тренеров, каталогу тренировочных программ и сервису поиска напарников.'
+    },
+    {
+      id: 'privacy',
+      title: 'Политика обработки и защиты персональных данных',
+      slug: '/privacy-ru',
+      content: 'Настоящая Политика определяет порядок обработки и защиты персональных данных пользователей сервиса GymConnect в соответствии с Законом Республики Казахстан "О персональных данных и их защите". Мы гарантируем конфиденциальность и безопасность передачи информации.'
     },
     {
       id: 'consent',
       title: 'Согласие на сбор и обработку персональных данных',
       slug: '/consent-ru',
-      content: 'Регистрируясь в приложении, субъект персональных данных дает безусловное согласие ТОО "GymConnect" на сбор, накопление, хранение, уточнение и использование данных (ФИО, контакты, параметры тела) исключительно в целях функционирования сервиса.'
+      content: 'Регистрируясь в приложении, пользователь дает безусловное согласие ТОО "GymConnect" на сбор, систематизацию, хранение и использование контактных данных и физических параметров исключительно в целях функционирования сервиса.'
     },
     {
       id: 'payment',
       title: 'Регламент оплаты и возврата (Kaspi Pay Terms)',
       slug: '/payment-terms-ru',
-      content: 'Все платежи за PRO-подписки и пакеты тренировок осуществляются в тенге (KZT) через защищенный шлюз Kaspi Pay / Kaspi QR. Возврат денежных средств регламентируется Законом РК "О защите прав потребителей". Неиспользованный период подписки подлежит перерасчету по запросу в поддержку.'
+      content: 'Оплата подписок PRO и индивидуальных занятий с тренерами осуществляется через шлюз Kaspi Pay в тенге (KZT). Возврат средств и перерасчет абонементов регламентируются нормами действующего законодательства Республики Казахстан.'
     },
     {
       id: 'rules',
       title: 'Правила сообщества и безопасности GymConnect',
       slug: '/rules-ru',
-      content: 'Нормы этичного поведения в фитнес-клубах и внутреннем чате GymBro. Запрещены спам, агрессия, навязывание запрещенных добавок и коммерческая реклама без согласования с администрацией.'
+      content: 'Регламент корректного и уважительного взаимодействия в фитнес-клубах Алматы и социальном модуле GymBro. Запрещены спам, агрессивное поведение и реклама несертифицированных биодобавок.'
     },
     {
       id: 'disclaimer',
       title: 'Медицинский отказ от ответственности (Medical Disclaimer)',
       slug: '/disclaimer-ru',
-      content: 'Материалы приложения, калькулятор КБЖУ и программы тренировок носят исключительно информационно-рекомендательный характер и не заменяют консультацию квалифицированного врача. Перед началом интенсивных физических нагрузок обязательно проконсультируйтесь со специалистом.'
+      content: 'Материалы приложения, тренировочные программы и калькулятор питания КБЖУ носят ознакомительный характер. Перед началом высокоинтенсивных тренировок пользователю рекомендуется пройти базовое медицинское обследование.'
     },
     {
       id: 'marketing',
-      title: 'Согласие на получение рекламных и информационных рассылок',
+      title: 'Согласие на получение рассылок и уведомлений',
       slug: '/marketing-consent-ru',
-      content: 'Пользователь соглашается получать сервисные пуш-уведомления через Telegram-бота о статусах тренировок, акциях клубов Алматы и обновлениях приложения. От рассылки можно отказаться в любой момент.'
+      content: 'Пользователь подтверждает согласие на получение сервисных уведомлений через бота Telegram о статусах подписки, расписании тренировок и бонусах фитнес-клубов.'
     }
   ];
 
-  // Гарантированное подтягивание аватара из Telegram WebApp API
+  // Автоматическое получение аватара из Telegram WebApp API
   const getAvatarUrl = () => {
     if (user?.photo_url) return user.photo_url;
     if (user?.avatar_url) return user.avatar_url;
@@ -221,7 +222,7 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
       setUser(prev => ({ ...prev, ...updatedData }));
       setIsEditModalOpen(false);
     } catch (err) {
-      console.error('Ошибка сохранения:', err);
+      console.error('Ошибка сохранения профиля:', err);
       setUser(prev => ({ ...prev, ...editForm }));
       setIsEditModalOpen(false);
     } finally {
@@ -275,7 +276,7 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
                   {user?.first_name || 'Assanali'} {user?.last_name || 'Kussainov'} , {calculateAge(user?.birth_date)}
                 </h2>
 
-                {/* Селектор статуса в зале */}
+                {/* Селектор статуса */}
                 <div className="relative mt-1">
                   <button 
                     onClick={() => setIsStatusOpen(!isStatusOpen)}
@@ -312,7 +313,7 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
               </div>
             </div>
 
-            {/* Аккуратные круглые кнопки в стиле iOS */}
+            {/* Круглые кнопки действий */}
             <div className="flex items-center gap-1.5 flex-shrink-0 self-start">
               <button 
                 onClick={handleOpenTelegram}
@@ -338,7 +339,7 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
             </div>
           </div>
 
-          {/* Плашка Bio */}
+          {/* Плашка био */}
           <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs text-slate-600">
             {user?.bio || 'Gymrat'}
           </div>
@@ -384,7 +385,7 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
           </div>
         </div>
 
-        {/* Секция: Основное меню (Легкие иконки Apple HIG без квадратных коробок) */}
+        {/* Секция: Основное меню */}
         <div className="space-y-1.5">
           <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">ОСНОВНОЕ МЕНЮ</p>
           <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-xs divide-y divide-slate-100">
@@ -479,10 +480,11 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
           </div>
         </div>
 
-        {/* Секция: Информационная помощь (Компактно и аккуратно) */}
+        {/* Секция: Информационная помощь (Ровно 2 лаконичные кнопки) */}
         <div className="space-y-1.5">
           <p className="px-2 text-[11px] font-bold text-slate-400 tracking-wider uppercase">ИНФОРМАЦИОННАЯ ПОМОЩЬ</p>
           <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-xs divide-y divide-slate-100">
+            {/* 1. Поддержка */}
             <button 
               onClick={() => window.open('https://t.me/gymconnect_support', '_blank')}
               className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group"
@@ -497,22 +499,22 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
             </button>
 
-            {/* Аккуратная единая кнопка для всех 7 документов */}
+            {/* 2. Документация */}
             <button 
-              onClick={() => setIsDocsListOpen(true)}
+              onClick={() => {
+                setSelectedDoc(null);
+                setIsDocsModalOpen(true);
+              }}
               className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors text-left group"
             >
               <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-slate-600 flex-shrink-0" />
+                <BookOpen className="w-5 h-5 text-slate-600 flex-shrink-0" />
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-900">Официальные документы и оферта</h4>
-                  <p className="text-[10px] text-slate-400">Политика, регламент Kaspi Pay и правила</p>
+                  <h4 className="text-xs font-semibold text-slate-900">Документация</h4>
+                  <p className="text-[10px] text-slate-400">Официальные правила, оферта и соглашения</p>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">7 актов</span>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
-              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
             </button>
           </div>
         </div>
@@ -553,87 +555,86 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
 
       </div>
 
-      {/* ШТОРКА СПИСКА ВСЕХ 7 ДОКУМЕНТОВ */}
-      {isDocsListOpen && (
+      {/* ОТДЕЛЬНЫЙ ЭКРАН-ШТОРКА ВСЕЙ ДОКУМЕНТАЦИИ */}
+      {isDocsModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
           <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-base text-slate-900">Правовые документы</h3>
-                <p className="text-xs text-slate-400">Официальные положения платформы GymConnect</p>
-              </div>
-              <button 
-                onClick={() => setIsDocsListOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-3 overflow-y-auto divide-y divide-slate-100">
-              {legalDocs.map((doc) => (
-                <button
-                  key={doc.id}
-                  onClick={() => {
-                    setActiveDoc(doc);
-                    setIsDocsListOpen(false);
-                  }}
-                  className="w-full p-3 flex items-center justify-between hover:bg-slate-50 rounded-2xl transition-colors text-left group"
-                >
-                  <div className="flex items-center gap-3 pr-2">
-                    <ShieldCheck className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                    <div>
-                      <h4 className="text-xs font-medium text-slate-800 leading-snug">{doc.title}</h4>
-                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">{doc.slug}</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 flex-shrink-0" />
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* МОДАЛКА ПРОСМОТРА КОНКРЕТНОГО ДОКУМЕНТА */}
-      {activeDoc && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs p-0 sm:p-4">
-          <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-sm text-slate-900 leading-snug">{activeDoc.title}</h3>
-                <p className="text-[10px] text-slate-400 font-mono mt-0.5">{activeDoc.slug}</p>
-              </div>
-              <button 
-                onClick={() => setActiveDoc(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
             
-            <div className="p-5 overflow-y-auto space-y-3 text-xs leading-relaxed text-slate-600">
-              <p className="font-semibold text-slate-800">Редакция от 2026 года • Алматы, Казахстан</p>
-              <p>{activeDoc.content}</p>
+            {/* Заголовок шторки */}
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              {selectedDoc ? (
+                <button 
+                  onClick={() => setSelectedDoc(null)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Назад к списку</span>
+                </button>
+              ) : (
+                <div>
+                  <h3 className="font-bold text-base text-slate-900">Документация</h3>
+                  <p className="text-xs text-slate-400">Правовые акты и соглашения GymConnect</p>
+                </div>
+              )}
+              
+              <button 
+                onClick={() => {
+                  setIsDocsModalOpen(false);
+                  setSelectedDoc(null);
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-3xl flex gap-2">
-              <button
-                onClick={() => {
-                  setActiveDoc(null);
-                  setIsDocsListOpen(true);
-                }}
-                className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs hover:bg-slate-200 transition-colors"
-              >
-                Все документы
-              </button>
-              <button
-                onClick={() => setActiveDoc(null)}
-                className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition-colors"
-              >
-                Закрыть
-              </button>
+            {/* Содержимое: либо список всех 7 документов, либо просмотр выбранного */}
+            <div className="p-4 overflow-y-auto">
+              {selectedDoc ? (
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 leading-snug">{selectedDoc.title}</h4>
+                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">{selectedDoc.slug}</p>
+                  </div>
+                  <div className="pt-2 text-xs leading-relaxed text-slate-600 space-y-2">
+                    <p className="font-semibold text-slate-800">Редакция от 2026 года • Алматы, Казахстан</p>
+                    <p>{selectedDoc.content}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {legalDocs.map((doc) => (
+                    <button
+                      key={doc.id}
+                      onClick={() => setSelectedDoc(doc)}
+                      className="w-full py-3.5 px-2 flex items-center justify-between hover:bg-slate-50 rounded-2xl transition-colors text-left group"
+                    >
+                      <div className="flex items-center gap-3 pr-2">
+                        <FileText className="w-4.5 h-4.5 text-slate-400 flex-shrink-0" />
+                        <div>
+                          <h4 className="text-xs font-semibold text-slate-800 leading-snug">{doc.title}</h4>
+                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">{doc.slug}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* Подвал шторки */}
+            {selectedDoc && (
+              <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-3xl">
+                <button
+                  onClick={() => setSelectedDoc(null)}
+                  className="w-full py-2.5 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition-colors"
+                >
+                  Вернуться ко всем документам
+                </button>
+              </div>
+            )}
+
           </div>
         </div>
       )}
