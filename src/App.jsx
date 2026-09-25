@@ -28,11 +28,15 @@ export default function App() {
     }
   }, []);
 
-  // 1. ТРЕНЕРСКИЙ РОУТ (?trainer=true)
-  const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
+  // 1. РЕАКТИВНЫЙ ТРЕНЕРСКИЙ РОУТ (?trainer=true)
+  const [isTrainerMode, setIsTrainerMode] = useState(() => {
+    return new URLSearchParams(window.location.search).get('trainer') === 'true';
+  });
+  
   const [trainerUsername, setTrainerUsername] = useState(() => {
     return localStorage.getItem('gymconnect_trainer_username') || '';
   });
+  
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
 
   // Стейт профиля атлета
@@ -57,7 +61,25 @@ export default function App() {
 
   const t = translations[language] || translations.kk;
 
-  // Проверка тренера в БД
+  // Активная вкладка: по умолчанию 'home' или 'profile'
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab')) return params.get('tab');
+    return 'home';
+  });
+
+  // Функция гарантированного возврата из тренерского раздела в Профиль атлета
+  const handleTrainerBackToProfile = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('trainer');
+    url.searchParams.set('tab', 'profile');
+    window.history.replaceState({}, document.title, url.pathname + url.search);
+    setIsTrainerMode(false);
+    setIsTrainerRegistering(false);
+    setActiveTab('profile');
+  };
+
+  // Проверка тренера в БД Supabase
   useEffect(() => {
     async function verifyTrainer() {
       if (trainerUsername) {
@@ -99,7 +121,6 @@ export default function App() {
         } else if (error) {
           console.warn('Сетевая ошибка синхронизации Supabase:', error.message);
         } else if (!data && !localStorage.getItem('gymconnect_profile_filled')) {
-          // Только если профиля нет ни в базе, ни в локальном хранилище
           setUserProfile(null);
           setIsRegistered(false);
         }
@@ -108,11 +129,14 @@ export default function App() {
     syncAthleteProfile();
   }, []);
 
-  if (isTrainerRoute) {
+  // ОБРАБОТКА ТРЕНЕРСКОГО РЕЖИМА С РАБОТАЮЩЕЙ КНОПКОЙ НАЗАД
+  if (isTrainerMode) {
     if (!trainerUsername) {
       if (isTrainerRegistering) {
         return (
           <TrainerOnboarding 
+            onBack={() => setIsTrainerRegistering(false)}
+            onExitToProfile={handleTrainerBackToProfile}
             onComplete={(username) => {
               localStorage.setItem('gymconnect_trainer_registered', 'true');
               localStorage.setItem('gymconnect_trainer_username', username);
@@ -124,6 +148,7 @@ export default function App() {
       } else {
         return (
           <TrainerLogin 
+            onBack={handleTrainerBackToProfile}
             onLoginSuccess={(username) => {
               localStorage.setItem('gymconnect_trainer_registered', 'true');
               localStorage.setItem('gymconnect_trainer_username', username);
@@ -137,11 +162,13 @@ export default function App() {
       return (
         <TrainerCRM 
           trainerUsername={trainerUsername}
+          onBack={handleTrainerBackToProfile}
           onLogout={() => {
             localStorage.removeItem('gymconnect_trainer_registered');
             localStorage.removeItem('gymconnect_trainer_username');
             setTrainerUsername('');
             setIsTrainerRegistering(false);
+            handleTrainerBackToProfile();
           }}
         />
       );
@@ -173,13 +200,6 @@ export default function App() {
   // Заставка (Splash)
   const [isLoading, setIsLoading] = useState(true);
 
-  // Активная вкладка: для зарегистрированных пользователей открывается сразу Home или переданный tab
-  const [activeTab, setActiveTab] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('tab')) return params.get('tab');
-    return 'home';
-  });
-
   const handleSplashFinish = () => {
     setIsLoading(false);
   };
@@ -194,7 +214,7 @@ export default function App() {
     setIsRegistered(true);
     setUserProfile(newProfile);
     localStorage.setItem('gymconnect_profile_filled', 'true');
-    setActiveTab('home');
+    setActiveTab('profile'); // Сразу открываем личный профиль атлета
   };
 
   // Выход из профиля
@@ -242,7 +262,7 @@ export default function App() {
     );
   }
 
-  // ЭКРАН 4: Основное приложение (для зарегистрированного атлета открывается сразу)
+  // ЭКРАН 4: Основное приложение (сразу на вкладку активного раздела)
   return (
     <div className={`min-h-screen bg-slate-100 flex justify-center ${appleTheme.styles.fontFamily}`}>
       <div className="w-full max-w-md min-h-screen bg-[#F2F2F7] relative pb-28 shadow-2xl flex flex-col justify-between">
