@@ -20,9 +20,12 @@ export default function App() {
   // 1. СТРОГАЯ И ГЛАВНАЯ ПРОВЕРКА ТРЕНЕРСКОГО РОУТА (?trainer=true)
   const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
   const [trainerUsername, setTrainerUsername] = useState(() => {
-    return localStorage.getItem('gymconnect_trainer_username') || '';
+    return localStorage.getItem('gymconnect_trainer_username'] || '';
   });
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
+
+  // Состояние для профиля атлета из базы Supabase
+  const [userProfile, setUserProfile] = useState(null);
 
   // Проверка существования тренера в таблице 'trainer_profiles' при старте
   useEffect(() => {
@@ -36,7 +39,6 @@ export default function App() {
           .maybeSingle();
 
         if (error || !data) {
-          // Если тренера удалили из базы, сбрасываем сессию на клиенте
           localStorage.removeItem('gymconnect_trainer_registered');
           localStorage.removeItem('gymconnect_trainer_username');
           setTrainerUsername('');
@@ -46,13 +48,36 @@ export default function App() {
     verifyTrainer();
   }, [trainerUsername]);
 
+  // Загрузка данных атлета из Supabase (например, по Telegram WebApp или сохраненному ID)
+  useEffect(() => {
+    async function fetchAthleteProfile() {
+      // Проверяем Telegram WebApp user id, если доступно
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      const savedTelegramId = tgUser?.id || localStorage.getItem('gymconnect_telegram_id');
+
+      if (savedTelegramId) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('telegram_id', savedTelegramId)
+          .maybeSingle();
+
+        if (data && !error) {
+          setUserProfile(data);
+          setIsRegistered(true);
+          localStorage.setItem('gymconnect_profile_filled', 'true');
+        }
+      }
+    }
+    fetchAthleteProfile();
+  }, []);
+
   if (isTrainerRoute) {
     if (!trainerUsername) {
       if (isTrainerRegistering) {
         return (
           <TrainerOnboarding 
             onComplete={(username) => {
-              // Мгновенная фиксация ключей и обновление стейта для перехода в CRM
               localStorage.setItem('gymconnect_trainer_registered', 'true');
               localStorage.setItem('gymconnect_trainer_username', username);
               setTrainerUsername(username);
@@ -139,8 +164,9 @@ export default function App() {
   };
 
   // Функция успешного завершения онбординга (вызывается из ProfileTab)
-  const handleProfileComplete = () => {
+  const handleProfileComplete = (profileData) => {
     setIsRegistered(true);
+    setUserProfile(profileData);
     localStorage.setItem('gymconnect_profile_filled', 'true');
     setActiveTab('home');
   };
@@ -164,12 +190,13 @@ export default function App() {
         
         {/* Рендер активной вкладки */}
         <div className="w-full flex-1 pb-24">
-          {activeTab === 'home' && <HomeTab />}
+          {activeTab === 'home' && <HomeTab userProfile={userProfile} />}
           {activeTab === 'gymbro' && <GymBroTab />}
           {activeTab === 'reviews' && <ReviewsTab />}
           {activeTab === 'nutrition' && <NutritionTab />}
           {activeTab === 'profile' && (
             <ProfileTab 
+              userProfile={userProfile}
               onComplete={handleProfileComplete} 
               isRegistration={!isRegistered} 
               currentLang={language} 
