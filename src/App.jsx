@@ -35,12 +35,15 @@ export default function App() {
     }
   }, []);
 
-  // 1. ТРЕНЕРСКИЙ РОУТ (?trainer=true)
-  const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
-  const [isTrainerMode, setIsTrainerMode] = useState(isTrainerRoute);
+  // 1. ТРЕНЕРСКИЙ РОУТ
+  const [isTrainerMode, setIsTrainerMode] = useState(() => {
+    return new URLSearchParams(window.location.search).get('trainer') === 'true';
+  });
+  
   const [trainerUsername, setTrainerUsername] = useState(() => {
     return localStorage.getItem('gymconnect_trainer_username') || '';
   });
+  
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
 
   // Стейт профиля атлета
@@ -77,12 +80,20 @@ export default function App() {
     return 'profile';
   });
 
-  // Гарантированный возврат в профиль атлета
+  // МГНОВЕННЫЙ ВОЗВРАТ В ПРОФИЛЬ БЕЗ ПЕРЕЗАГРУЗКИ СТРАНИЦЫ И БЕЗ ЗАСТАВКИ
   const handleTrainerBackToProfile = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.delete('trainer');
-    url.searchParams.set('tab', 'profile');
-    window.location.href = url.pathname + url.search;
+    setIsTrainerMode(false);
+    setIsTrainerRegistering(false);
+    setActiveTab('profile');
+    setIsLoading(false); // Заставка не включится
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('trainer');
+      url.searchParams.set('tab', 'profile');
+      window.history.replaceState({}, document.title, url.pathname + url.search);
+    } catch (e) {
+      console.warn(e);
+    }
   };
 
   // Проверка тренера в БД Supabase
@@ -291,7 +302,7 @@ export default function App() {
     );
   }
 
-  // Конфигурация вкладок для нижнего таб-бара
+  // Вкладки нижнего бара
   const navigationTabs = [
     { id: 'home', label: t.nav.home, icon: Home },
     { id: 'gymbro', label: t.nav.gymbro, icon: Users },
@@ -316,11 +327,12 @@ export default function App() {
               user={userProfile}
               onLogout={handleLogout}
               onDeleteAccount={handleDeleteAccount}
+              onOpenTrainer={() => setIsTrainerMode(true)}
             />
           )}
         </div>
 
-        {/* ================= ОБНОВЛЕННЫЙ APPLE GLOWING DOCK BAR ================= */}
+        {/* Apple Floating Glass Dock Bar */}
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 backdrop-blur-2xl border-t border-slate-200/60 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] select-none">
           <div className="w-full max-w-md mx-auto px-2.5 py-1.5 flex justify-between items-center">
             
@@ -344,7 +356,6 @@ export default function App() {
                     <span className="absolute inset-x-1 inset-y-0.5 bg-blue-500/10 border border-blue-500/25 rounded-2xl shadow-[0_0_16px_rgba(37,99,235,0.25)] animate-in fade-in zoom-in-95 duration-200" />
                   )}
 
-                  {/* Иконка с динамическим размером и мягким отблеском */}
                   <div className="relative z-10 flex flex-col items-center">
                     <Icon 
                       className={`w-[21px] h-[21px] transition-all duration-300 ${
@@ -354,13 +365,11 @@ export default function App() {
                       }`} 
                     />
 
-                    {/* Светящаяся точка-индикатор под активной иконкой */}
                     {isActive && (
                       <span className="w-1.5 h-1.5 bg-blue-600 rounded-full shadow-[0_0_8px_#2563eb] mt-0.5 animate-in fade-in zoom-in duration-200" />
                     )}
                   </div>
 
-                  {/* Текстовая подпись таба */}
                   <span 
                     className={`relative z-10 text-[9.5px] tracking-tight mt-0.5 transition-all duration-300 ${
                       isActive 
