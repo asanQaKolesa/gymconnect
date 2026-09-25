@@ -1,6 +1,6 @@
 // src/components/trainer/TrainerOnboarding.jsx
 import React, { useState } from 'react';
-import { ArrowLeft, Send, Check, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Dumbbell, Send, Check } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { ALMATY_GYMS } from '../../data/almatyGyms';
 
@@ -16,16 +16,11 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     bio: ''
   });
 
-  const handleBack = () => {
-    if (onBack) {
-      onBack();
-    } else if (onExitToProfile) {
+  const handleBackAction = () => {
+    if (typeof onExitToProfile === 'function') {
       onExitToProfile();
-    } else {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('trainer');
-      url.searchParams.set('tab', 'profile');
-      window.location.href = url.pathname + url.search;
+    } else if (typeof onBack === 'function') {
+      onBack();
     }
   };
 
@@ -65,7 +60,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
       if (onComplete) {
         onComplete(cleanU);
       } else {
-        handleBack();
+        handleBackAction();
       }
     } catch (err) {
       console.error('Ошибка отправки заявки тренера:', err);
@@ -79,15 +74,15 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col justify-between p-4 overflow-y-auto select-none">
       <div className="max-w-md mx-auto w-full space-y-4 pt-2 pb-12">
         
-        {/* Кнопка Назад */}
+        {/* Кнопка Назад в профиль */}
         <div className="flex items-center justify-between">
           <button
             type="button"
-            onClick={handleBack}
+            onClick={handleBackAction}
             className="flex items-center gap-1.5 px-3 py-2 bg-white rounded-2xl border border-slate-200/80 text-xs font-bold text-slate-700 active:scale-95 shadow-sm transition-all"
           >
             <ArrowLeft className="w-4 h-4 text-slate-500" />
-            <span>Назад</span>
+            <span>Назад в профиль</span>
           </button>
           
           <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
@@ -97,6 +92,9 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
 
         {/* Заголовок */}
         <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 text-center space-y-1">
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-sm">
+            <Dumbbell className="w-6 h-6 stroke-[2]" />
+          </div>
           <h1 className="text-lg font-black text-slate-900 tracking-tight">
             Анкета тренера GymConnect
           </h1>
@@ -194,12 +192,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">О себе и достижениях</label>
+            <label className="text-xs font-bold text-slate-700 block mb-1">О себе и квалификации</label>
             <textarea
               rows={3}
               value={formData.bio}
               onChange={e => setFormData({ ...formData, bio: e.target.value })}
-              placeholder="Мастер спорта, дипломированный тренер, подготовил 30+ клиентов..."
+              placeholder="Спортивные звания, сертификаты, опыт ведения атлетов..."
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium resize-none focus:outline-none focus:border-blue-600"
             />
           </div>
