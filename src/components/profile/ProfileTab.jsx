@@ -528,9 +528,9 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
     );
   }
 
-  // Финальный гармоничный порядок: Шапка Личный кабинет в самом верху, затем карточка профиля без дублей
+  // Основной экран профиля без лишних отступов и с правильным порядком
   return (
-    <div className="p-4 max-w-md mx-auto flex flex-col pb-24 space-y-4 animate-in fade-in duration-200">
+    <div className="p-4 pt-2 max-w-md mx-auto flex flex-col pb-24 space-y-3 animate-in fade-in duration-200">
       <ProfileHeader />
       <ProfileCard userProfile={userProfile} onEditClick={() => setIsEditing(true)} />
       <ProfileMenu />
