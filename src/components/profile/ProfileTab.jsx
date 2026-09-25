@@ -1,3 +1,4 @@
+// src/components/profile/ProfileTab.jsx
 import React, { useState, useEffect } from 'react';
 import ProfileHeader from './ProfileHeader';
 import ProfileCard from './ProfileCard';
@@ -23,7 +24,7 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
     setIsEditOpen(false);
   };
 
-  // 1. Полноэкранный режим редактирования анкеты со всеми полями
+  // Полноэкранный режим редактирования анкеты
   if (isEditOpen) {
     return (
       <EditProfilePage 
@@ -34,7 +35,7 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
     );
   }
 
-  // 2. Полноэкранный режим юридической информации (7 актов)
+  // Полноэкранный режим юридической документации (7 актов)
   if (isDocsOpen) {
     return (
       <LegalDocsPage 
@@ -43,28 +44,23 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
     );
   }
 
-  // 3. Основной вид экрана личного профиля
+  // Основной экран личного кабинета
   return (
     <div className="min-h-screen bg-[#F2F2F7] pb-24 pt-2.5 px-4 select-none">
       <div className="max-w-md mx-auto space-y-3">
-        {/* Шапка */}
         <ProfileHeader />
 
-        {/* Карточка атлета */}
         <ProfileCard 
           user={user} 
           onOpenEdit={() => setIsEditOpen(true)} 
         />
 
-        {/* Меню и партнерство */}
         <ProfileMenu />
 
-        {/* Документация и поддержка */}
         <ProfileDocs 
           onOpenDocs={() => setIsDocsOpen(true)} 
         />
 
-        {/* Зона опасности */}
         <ProfileDangerZone 
           onLogout={onLogout} 
           onDeleteAccount={onDeleteAccount} 
