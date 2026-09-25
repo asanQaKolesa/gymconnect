@@ -1,213 +1,206 @@
-import React, { useState } from 'react';
+// src/components/profile/ProfileCard.jsx
+import React from 'react';
 import { 
-  Award, 
-  ChevronDown, 
-  ChevronUp, 
-  Send, 
-  Instagram, 
   Edit3, 
   MapPin, 
   Calendar, 
-  Check, 
-  Users 
+  Users, 
+  UserCheck, 
+  Flame, 
+  Award, 
+  Clock, 
+  Dumbbell 
 } from 'lucide-react';
 
 export default function ProfileCard({ user, onOpenEdit }) {
-  const [gymStatus, setGymStatus] = useState('in_gym');
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-
-  const statuses = [
-    { id: 'in_gym', label: 'В зале (Invictus Go)', color: 'bg-emerald-500' },
-    { id: 'resting', label: 'Отдыхаю', color: 'bg-amber-500' },
-    { id: 'seeking', label: 'Ищу напарника', color: 'bg-blue-500' },
-  ];
-
-  const currentStatus = statuses.find(s => s.id === gymStatus) || statuses[0];
-
-  const calculateAge = (birthDate) => {
-    if (!birthDate) return user?.age || 27;
-    const diff = Date.now() - new Date(birthDate).getTime();
-    return Math.abs(new Date(diff).getUTCFullYear() - 1970);
+  // Расшифровка креативных уровней подготовки
+  const experienceLabels = {
+    first_time: 'Первый раз в зале',
+    scared_beginner: 'Пару раз заходил, было страшно',
+    beginner: 'Новичок (до 6 мес)',
+    regular: 'Уверенный любитель (1–2 года)',
+    advanced: 'Опытный атлет (2–5 лет)',
+    pro_monster: 'Профи / Монстр базы'
   };
 
-  const getAvatarUrl = () => {
-    if (user?.photo_url) return user.photo_url;
-    if (user?.avatar_url) return user.avatar_url;
-    if (typeof window !== 'undefined' && window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url) {
-      return window.Telegram.WebApp.initDataUnsafe.user.photo_url;
-    }
-    return null;
+  // Расшифровка формата тренировок
+  const trainingFormatLabels = {
+    alone: 'Тренируется самостоятельно',
+    coach_gym: 'С персональным тренером в зале',
+    coach_online: 'С тренером онлайн',
+    looking_for_coach: 'В поиске персонального тренера'
   };
 
-  const handleOpenTelegram = () => {
-    const username = user?.telegram_username || user?.username || 'assanali';
-    window.open(`https://t.me/${username.replace('@', '')}`, '_blank');
-  };
-
-  const handleOpenInstagram = () => {
-    const insta = user?.instagram || 'gymconnect.kz';
-    const clean = insta.replace('@', '').replace('https://instagram.com/', '');
-    window.open(`https://instagram.com/${clean}`, '_blank');
-  };
-
-  const avatar = getAvatarUrl();
+  const experienceText = experienceLabels[user?.experience_level] || user?.experience_level || 'Любитель';
+  const formatText = trainingFormatLabels[user?.training_format] || 'Тренируюсь сам';
+  const workoutDays = Array.isArray(user?.workout_days) ? user.workout_days : [];
 
   return (
-    <div className="bg-white rounded-3xl p-4 shadow-xs border border-slate-100 space-y-3">
+    <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-4">
       
-      {/* Верх: Аватар и данные атлета */}
-      <div className="flex items-start gap-3">
-        <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200/60 shadow-xs">
-          {avatar ? (
-            <img 
-              src={avatar} 
-              alt="Аватар" 
-              className="w-full h-full object-cover" 
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300';
-              }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center font-semibold text-slate-400 text-lg bg-slate-50">
-              {user?.first_name?.[0] || 'A'}
+      {/* Шапка карточки: Аватар, Имя, Telegram, Кнопка редактирования */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center shadow-sm">
+              {user?.photo_url || user?.avatar_url ? (
+                <img 
+                  src={user.photo_url || user.avatar_url} 
+                  alt="Аватар" 
+                  className="w-full h-full object-cover" 
+                />
+              ) : (
+                <Users className="w-8 h-8 text-slate-400" />
+              )}
             </div>
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-700 text-[10px] font-semibold tracking-wide mb-1">
-            <Award className="w-3 h-3 text-emerald-600" />
-            <span>PRO Атлет</span>
-          </div>
-          
-          <h2 className="text-sm font-semibold text-slate-900 leading-snug">
-            {user?.first_name || 'Assanali'} {user?.last_name || 'Kussainov'}, {calculateAge(user?.birth_date)} лет
-          </h2>
-
-          {/* Селектор статуса */}
-          <div className="relative mt-1">
-            <button 
-              type="button"
-              onClick={() => setIsStatusOpen(!isStatusOpen)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200/80 rounded-full text-xs text-slate-700 hover:bg-slate-100 transition-colors"
-            >
-              <span className={`w-2 h-2 rounded-full ${currentStatus.color}`} />
-              <span className="text-[11px] font-normal">{currentStatus.label}</span>
-              <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
-            </button>
-
-            {isStatusOpen && (
-              <div className="absolute top-full left-0 mt-1.5 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 p-1.5 z-30 space-y-0.5">
-                {statuses.map(st => (
-                  <button
-                    type="button"
-                    key={st.id}
-                    onClick={() => {
-                      setGymStatus(st.id);
-                      setIsStatusOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors ${
-                      gymStatus === st.id ? 'bg-slate-100 text-slate-900 font-semibold' : 'text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${st.color}`} />
-                      <span>{st.label}</span>
-                    </div>
-                    {gymStatus === st.id && <Check className="w-3.5 h-3.5 text-slate-800" />}
-                  </button>
-                ))}
-              </div>
+            {user?.is_pro && (
+              <span className="absolute -bottom-1 -right-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm">
+                PRO
+              </span>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* Монохромные кнопки действий */}
-      <div className="flex items-center gap-2 pt-0.5">
-        <button 
-          type="button"
-          onClick={handleOpenTelegram}
-          className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/70 flex items-center justify-center gap-1.5 text-xs font-medium active:scale-95 transition-all shadow-xs"
-        >
-          <Send className="w-3.5 h-3.5 text-slate-500" />
-          <span>Telegram</span>
-        </button>
-        <button 
-          type="button"
-          onClick={handleOpenInstagram}
-          className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/70 flex items-center justify-center gap-1.5 text-xs font-medium active:scale-95 transition-all shadow-xs"
-        >
-          <Instagram className="w-3.5 h-3.5 text-slate-500" />
-          <span>Instagram</span>
-        </button>
-        <button 
-          type="button"
-          onClick={onOpenEdit}
-          className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/70 flex items-center justify-center gap-1.5 text-xs font-medium active:scale-95 transition-all shadow-xs"
-          title="Редактировать анкету"
-        >
-          <Edit3 className="w-3.5 h-3.5 text-slate-500" />
-          <span>Анкета</span>
-        </button>
-      </div>
-
-      {/* Био */}
-      <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs text-slate-600 font-normal">
-        {user?.bio || 'Gymrat'}
-      </div>
-
-      {/* Развернутая интерактивная шторка всех целей и деталей */}
-      <div className="border border-slate-200/70 rounded-2xl overflow-hidden bg-slate-50/50">
-        <button 
-          type="button"
-          onClick={() => setIsDetailsOpen(!isDetailsOpen)}
-          className="w-full px-3.5 py-2.5 flex items-center justify-between text-xs font-medium text-slate-700 hover:bg-slate-100/70 transition-colors"
-        >
-          <span>Детали абонемента и целей</span>
-          {isDetailsOpen ? (
-            <ChevronUp className="w-4 h-4 text-slate-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          )}
-        </button>
-
-        {isDetailsOpen && (
-          <div className="px-3.5 pb-3 pt-1 text-xs space-y-2 border-t border-slate-200/60 bg-white">
-            <div className="grid grid-cols-2 gap-2 pt-2 text-slate-600">
-              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                <p className="text-[10px] text-slate-400">Текущий вес / Рост</p>
-                <p className="font-medium text-slate-800 mt-0.5">{user?.weight || 78} кг / {user?.height || 182} см</p>
-              </div>
-              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                <p className="text-[10px] text-slate-400">Главная цель</p>
-                <p className="font-medium text-slate-800 mt-0.5">{user?.goal || 'Набор массы'}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-600">
-              <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-              <span className="truncate">Клуб: <span className="font-medium text-slate-800">{user?.gym || 'Invictus Go (Almaty)'}</span></span>
-            </div>
-
-            <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-600">
-              <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-              <span>Дни: <span className="font-medium text-slate-800">{Array.isArray(user?.workout_days) ? user.workout_days.join(', ') : 'Пн, Ср, Пт'}</span></span>
-            </div>
-
-            <div className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-600">
-              <div className="flex items-center gap-2">
-                <Users className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                <span>Поиск напарника GymBro:</span>
-              </div>
-              <span className={`font-medium ${user?.gymbro_search !== false ? 'text-emerald-600' : 'text-slate-400'}`}>
-                {user?.gymbro_search !== false ? 'Активен' : 'Отключен'}
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 leading-tight">
+              {user?.first_name || 'Атлет'} {user?.last_name || ''}
+            </h3>
+            {user?.telegram_username && (
+              <p className="text-[11px] font-mono text-blue-600 font-semibold mt-0.5">
+                @{user.telegram_username}
+              </p>
+            )}
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                {user?.age ? `${user.age} лет` : '25 лет'}
+              </span>
+              <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                {user?.gender === 'female' ? 'Женский' : 'Мужской'}
               </span>
             </div>
           </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onOpenEdit}
+          className="p-2.5 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded-2xl border border-slate-200/80 active:scale-95 transition-all shadow-sm flex items-center justify-center"
+          title="Редактировать анкету"
+        >
+          <Edit3 className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Описание о себе (Био) */}
+      {user?.bio && (
+        <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100 text-xs text-slate-600 leading-relaxed italic">
+          "{user.bio}"
+        </div>
+      )}
+
+      {/* Физические параметры (Рост, Вес, Цель) */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-[#F8F9FB] p-2.5 rounded-2xl text-center border border-slate-100">
+          <p className="text-[10px] font-semibold text-slate-400">Рост</p>
+          <p className="text-xs font-black text-slate-800 font-mono mt-0.5">
+            {user?.height ? `${user.height} см` : '—'}
+          </p>
+        </div>
+
+        <div className="bg-[#F8F9FB] p-2.5 rounded-2xl text-center border border-slate-100">
+          <p className="text-[10px] font-semibold text-slate-400">Вес</p>
+          <p className="text-xs font-black text-slate-800 font-mono mt-0.5">
+            {user?.weight ? `${user.weight} кг` : '—'}
+          </p>
+        </div>
+
+        <div className="bg-[#F8F9FB] p-2.5 rounded-2xl text-center border border-slate-100">
+          <p className="text-[10px] font-semibold text-slate-400">Цель</p>
+          <p className="text-[11px] font-bold text-blue-600 truncate mt-0.5">
+            {user?.goal || 'Тонус'}
+          </p>
+        </div>
+      </div>
+
+      {/* Основной фитнес-клуб и район */}
+      <div className="bg-blue-50/50 p-3 rounded-2xl border border-blue-100 space-y-1">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+          <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+          <span className="truncate">{user?.gym || 'Зал не выбран'}</span>
+        </div>
+        <div className="flex items-center justify-between text-[10px] text-slate-500 pl-5">
+          <span>{user?.district ? `${user.district} район` : 'Алматы'}</span>
+          <span className="font-semibold text-blue-700">{user?.city || 'Алматы'}</span>
+        </div>
+      </div>
+
+      {/* Формат тренировок и Привязанный тренер */}
+      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-[11px] font-semibold text-slate-500">Формат тренировок:</span>
+          <span className="font-bold text-slate-800 text-[11px]">{formatText}</span>
+        </div>
+
+        {user?.trainer_telegram && (
+          <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60">
+            <div className="flex items-center gap-1 text-[11px] font-semibold text-blue-900">
+              <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+              <span>Личный тренер:</span>
+            </div>
+            <a 
+              href={`https://t.me/${user.trainer_telegram.replace('@', '')}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-bold font-mono text-blue-600 hover:underline"
+            >
+              @{user.trainer_telegram.replace('@', '')}
+            </a>
+          </div>
         )}
+
+        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60">
+          <span className="text-[11px] font-semibold text-slate-500">Уровень подготовки:</span>
+          <span className="font-bold text-slate-800 text-[11px] text-right truncate max-w-[200px]">
+            {experienceText}
+          </span>
+        </div>
+      </div>
+
+      {/* График тренировок и время */}
+      <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
+        <div className="flex items-center gap-1.5">
+          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+          <div className="flex gap-1">
+            {workoutDays.length > 0 ? (
+              workoutDays.map(d => (
+                <span key={d} className="px-1.5 py-0.5 bg-blue-600 text-white font-bold rounded-lg text-[10px]">
+                  {d}
+                </span>
+              ))
+            ) : (
+              <span className="text-slate-400 text-[11px]">Дни не выбраны</span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 text-[10px] text-slate-500 font-medium">
+          <Clock className="w-3 h-3 text-slate-400" />
+          <span className="truncate max-w-[120px]">{user?.workout_time_slot ? user.workout_time_slot.split(' ')[0] : 'Вечер'}</span>
+        </div>
+      </div>
+
+      {/* Статус GymBro Matching */}
+      <div className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-2xl border border-slate-100">
+        <div className="flex items-center gap-2">
+          <Users className={`w-4 h-4 ${user?.gymbro_search ? 'text-emerald-600' : 'text-slate-400'}`} />
+          <span className="text-xs font-semibold text-slate-700">Поиск напарника GymBro</span>
+        </div>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+          user?.gymbro_search 
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+            : 'bg-slate-200 text-slate-500'
+        }`}>
+          {user?.gymbro_search ? 'Активен' : 'Отключен'}
+        </span>
       </div>
 
     </div>
