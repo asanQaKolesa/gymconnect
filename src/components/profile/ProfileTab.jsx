@@ -1,7 +1,7 @@
 // src/components/profile/ProfileTab.jsx
 import React, { useState } from 'react';
 import { translations } from '../../locales/translations';
-import { User, CheckCircle2, ChevronDown, ChevronUp, Camera, Calendar, Scale, Ruler, Search, X, MessageCircle, Edit3, Award } from 'lucide-react';
+import { User, CheckCircle2, ChevronDown, ChevronUp, Camera, X, Edit3, Award } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
 import ProfileHeader from './ProfileHeader';
@@ -523,49 +523,42 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
     );
   }
 
-  // Единый чистый экран профиля (без дублирования)
+  // Единый гармоничный экран профиля в светлой стилистике Apple
   return (
     <div className="p-4 max-w-md mx-auto flex flex-col pb-24 space-y-4 animate-in fade-in duration-200">
       
-      {/* 1. Блок «Личный кабинет / PRO Атлет» в самом верху */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-3xl p-5 shadow-lg flex items-center justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full flex items-center gap-1">
-              <Award className="w-3 h-3" /> PRO Атлет
-            </span>
-          </div>
-          <h2 className="text-sm font-medium text-slate-300">Личный кабинет</h2>
-          <p className="text-[11px] text-slate-400">Управление подпиской, профилем и целями</p>
-        </div>
-        <button 
-          onClick={() => setIsEditing(true)}
-          className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-2xl flex items-center justify-center text-white transition-all border border-white/10 shadow-inner shrink-0"
-          title="Редактировать профиль"
-        >
-          <Edit3 className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* 2. Карточка атлета с реальными данными из базы и кнопкой-шторкой */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-3">
-        <div className="flex items-center gap-3.5">
-          <div className="w-16 h-16 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center shrink-0 shadow-inner">
-            {userProfile?.avatar_url || formData.avatar ? (
-              <img src={userProfile?.avatar_url || formData.avatar} alt="Avatar" className="w-full h-full object-cover" />
-            ) : (
-              <User className="w-8 h-8 text-slate-400" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-slate-900 text-base truncate">
-              {userProfile ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}` : `${formData.firstName} ${formData.lastName}`}, {userProfile?.age || formData.age || '26'}
-            </h2>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <p className="text-xs text-slate-500 truncate">В зале ({userProfile?.gym || formData.gym || 'Invictus Go'})</p>
+      {/* Единственная чистая карточка профиля со статусом PRO Атлет и кнопкой редактирования */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-3 relative">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="w-16 h-16 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center shrink-0 shadow-inner">
+              {userProfile?.avatar_url || formData.avatar ? (
+                <img src={userProfile?.avatar_url || formData.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-8 h-8 text-slate-400" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full mb-1">
+                <Award className="w-3 h-3" /> PRO Атлет
+              </span>
+              <h2 className="font-bold text-slate-900 text-base truncate">
+                {userProfile ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}` : `${formData.firstName} ${formData.lastName}`}, {userProfile?.age || formData.age || '26'}
+              </h2>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <p className="text-xs text-slate-500 truncate">В зале ({userProfile?.gym || formData.gym || 'Invictus Go'})</p>
+              </div>
             </div>
           </div>
+
+          <button 
+            onClick={() => setIsEditing(true)}
+            className="w-9 h-9 bg-slate-50 hover:bg-slate-100 rounded-2xl flex items-center justify-center text-slate-600 transition-all border border-slate-200 shadow-inner shrink-0"
+            title="Редактировать профиль"
+          >
+            <Edit3 className="w-4 h-4" />
+          </button>
         </div>
 
         <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-100">
