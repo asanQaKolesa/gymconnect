@@ -8,7 +8,7 @@ import ProfileDangerZone from './ProfileDangerZone';
 import EditProfilePage from './EditProfilePage';
 import LegalDocsPage from './LegalDocsPage';
 
-export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccount }) {
+export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccount, onOpenTrainer }) {
   const [user, setUser] = useState(initialUser || {});
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
@@ -55,9 +55,13 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
           onOpenEdit={() => setIsEditOpen(true)} 
         />
 
-        <ProfileMenu />
+        {/* Восстановленное полное меню со всеми функциями */}
+        <ProfileMenu 
+          user={user} 
+          onOpenTrainer={onOpenTrainer} 
+        />
 
-        {/* Документация теперь гарантированно открывается */}
+        {/* Юридическая документация с монохромной иконкой */}
         <ProfileDocs 
           onOpenDocs={() => setIsDocsOpen(true)} 
         />
