@@ -1,3 +1,4 @@
+// src/components/onboarding/RegisterProfilePage.jsx
 import React, { useState, useMemo, useRef } from 'react';
 import { 
   Sparkles, 
@@ -45,29 +46,24 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
     whatsapp: '',
     instagram: '',
 
-    // Формат тренировок и тренер (галочка снята по умолчанию)
     training_format: 'alone',
     trainer_telegram: '',
     allow_trainer_recommendations: false,
 
-    // Локация
     city: 'Алматы',
     district: 'Бостандыкский',
     gym: '',
     custom_gym: '',
 
-    // Параметры тела
     birth_date: defaultBirthDate,
     height: '178',
     weight: '75',
     experience_level: 'regular',
 
-    // Цель и график
     goal: 'Набор массы',
     workout_days: ['Пн', 'Ср', 'Пт'],
     workout_time_slot: 'Вечер (16:00 - 21:00)',
 
-    // GymBro (отключен по умолчанию)
     gymbro_search: false,
     gymbro_radius: 'club',
     gymbro_target_gender: 'any',
@@ -191,7 +187,12 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         ? formData.custom_gym.trim()
         : formData.gym;
 
-      const tgId = tgUser?.id ? String(tgUser.id) : (localStorage.getItem('gymconnect_telegram_id') || `web_${Date.now()}`);
+      // Получаем или генерируем устойчивый ID
+      let tgId = tgUser?.id ? String(tgUser.id) : localStorage.getItem('gymconnect_telegram_id');
+      if (!tgId) {
+        tgId = `user_${Date.now()}`;
+        localStorage.setItem('gymconnect_telegram_id', tgId);
+      }
 
       const newProfilePayload = {
         telegram_id: tgId,
@@ -228,10 +229,10 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         gymbro_goal: formData.gymbro_goal,
         personality_type: formData.personality_type,
         is_pro: false,
-        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
 
+      // Сохраняем в Supabase с обработкой конфликта
       const { data, error } = await supabase
         .from('profiles')
         .upsert([newProfilePayload], { onConflict: 'telegram_id' })
@@ -239,9 +240,12 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         .single();
 
       if (error) {
-        console.warn('Supabase upsert warning:', error.message);
+        console.error('Ошибка записи в Supabase:', error);
+        alert('Ошибка сохранения в базу данных: ' + error.message);
+        return;
       }
 
+      // Успешно сохранено: фиксируем статус регистрации
       localStorage.setItem('gymconnect_profile_filled', 'true');
       localStorage.setItem('gymconnect_telegram_id', tgId);
       localStorage.setItem('gymconnect_user_profile', JSON.stringify(data || newProfilePayload));
@@ -250,7 +254,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         onComplete(data || newProfilePayload);
       }
     } catch (err) {
-      console.error('Ошибка регистрации:', err);
+      console.error('Критическая ошибка регистрации:', err);
       alert('Ошибка при сохранении: ' + err.message);
     } finally {
       setIsSaving(false);
@@ -486,17 +490,16 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
               >
                 <option value="alone">Тренируюсь самостоятельно</option>
-                <option value="coach_gym">Тренируюсь с тренером в зале</option>
+                <option value="coach_gym">Тренируюсь с персональным тренером в зале</option>
                 <option value="coach_online">Тренируюсь с тренером онлайн</option>
-                <option value="looking_for_coach">Ищу персонального тренера</option>
+                <option value="looking_for_coach">Ищу персонального тренера в Алматы</option>
               </select>
             </div>
 
-            {/* Блок привязки Telegram тренера */}
             <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-100 space-y-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
                 <UserCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                <span>Привязка тренера (Trainer CRM)</span>
+                <span>Привязка к тренеру (Trainer CRM)</span>
               </div>
               <p className="text-[10px] text-slate-600 leading-tight">
                 Укажите Telegram вашего тренера. Вы автоматически появитесь в его расписании и списке учеников Trainer CRM.
@@ -513,7 +516,6 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               </div>
             </div>
 
-            {/* Чекбокс согласия на рекомендации тренеров (ПО УМОЛЧАНИЮ СНЯТ) */}
             <div 
               onClick={() => setFormData({ ...formData, allow_trainer_recommendations: !formData.allow_trainer_recommendations })}
               className="flex items-center gap-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer active:scale-98 transition-all"
@@ -792,13 +794,13 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 7. Поиск напарника GymBro */}
+          {/* 7. Настройки GymBro Matching */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <div className="flex items-center gap-1.5">
                 <Users className="w-4 h-4 text-blue-600" />
                 <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">
-                  7. Поиск напарника GymBro
+                  7. Настройки GymBro Matching
                 </span>
               </div>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
@@ -808,7 +810,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               </span>
             </div>
 
-            {/* Главный переключатель GymBro (отключен по умолчанию) */}
+            {/* Главный тумблер GymBro */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-slate-900">Участвовать в поиске GymBro</p>
@@ -832,31 +834,31 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             {formData.gymbro_search && (
               <div className="space-y-3 pt-1">
                 
-                {/* 1. Плашка автоматической синхронизации графика */}
+                {/* 1. Плашка авто-синхронизации графика */}
                 <div className="p-3 bg-blue-50/80 rounded-2xl border border-blue-100 flex items-start gap-2 text-[11px] text-blue-950 font-medium">
                   <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                   <div className="leading-snug">
                     <p className="font-bold text-blue-900">График синхронизирован с анкетой:</p>
                     <p className="text-[10px] text-blue-800 mt-0.5">
-                      Дни <b>({formData.workout_days.join(', ') || 'не выбраны'})</b> и время <b>({formData.workout_time_slot.split(' ')[0]})</b> берутся из раздела целей выше — повторно заполнять не нужно.
+                      Дни <b>({formData.workout_days.join(', ') || 'не выбраны'})</b> и время <b>({formData.workout_time_slot.split(' ')[0]})</b> берутся из ваших основных целей выше.
                     </p>
                   </div>
                 </div>
 
-                {/* 2. Плашка о поиске новых знакомств и расширении круга общения */}
+                {/* 2. Плашка о поиске новых знакомств */}
                 <div className="p-3 bg-indigo-50/80 rounded-2xl border border-indigo-100 flex items-start gap-2 text-[11px] text-indigo-950">
                   <Globe2 className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                   <div className="leading-snug">
                     <p className="font-bold text-indigo-900">Не только по залу, но и новые знакомства:</p>
                     <p className="text-[10px] text-indigo-800 mt-0.5">
-                      Ищите единомышленников по району или всему Алматы: находите напарников по целям, расширяйте спортивный нетворкинг и общайтесь вне тренировок.
+                      Ищите единомышленников по району или всему Алматы: находите напарников по интересам, расширяйте спортивный нетворкинг и общайтесь вне тренировок.
                     </p>
                   </div>
                 </div>
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                    Кого ищете в качестве напарника?
+                    Кого вы ищете в качестве напарника?
                   </label>
                   <div className="grid grid-cols-3 gap-1.5">
                     {[
@@ -915,7 +917,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                    Тренировочный психотип
+                    Ваш тренировочный психотип
                   </label>
                   <div className="grid grid-cols-3 gap-1.5">
                     {[
