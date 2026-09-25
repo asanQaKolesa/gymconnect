@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ProfileHeader from './ProfileHeader';
-import AthleteCard from './AthleteCard';
+import ProfileCard from './ProfileCard';
 import ProfileMenu from './ProfileMenu';
 import ProfileDocs from './ProfileDocs';
 import ProfileDangerZone from './ProfileDangerZone';
@@ -51,7 +51,7 @@ export default function ProfileTab({ user: initialUser, onLogout, onDeleteAccoun
         <ProfileHeader />
 
         {/* Карточка атлета */}
-        <AthleteCard 
+        <ProfileCard 
           user={user} 
           onOpenEdit={() => setIsEditOpen(true)} 
         />
