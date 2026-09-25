@@ -13,10 +13,18 @@ import {
 export default function ProfilePartnership({ onOpenTrainer }) {
   const [partnerModal, setPartnerModal] = useState(null); // 'gyms' | 'shops' | 'specialists'
 
+  const handleOpenTrainerPortal = () => {
+    if (typeof onOpenTrainer === 'function') {
+      onOpenTrainer();
+    } else {
+      window.location.href = window.location.pathname + '?trainer=true';
+    }
+  };
+
   return (
     <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-2.5 select-none">
       
-      {/* Заголовок строго в один ряд без съезжания */}
+      {/* Заголовок строго в одну строку */}
       <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-100 whitespace-nowrap">
         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
           Сотрудничество
@@ -28,10 +36,10 @@ export default function ProfilePartnership({ onOpenTrainer }) {
 
       <div className="space-y-1.5 pt-1">
         
-        {/* 1. Для тренеров (Trainer CRM) */}
+        {/* 1. Для тренеров (Trainer CRM) — гарантированный переход */}
         <button
           type="button"
-          onClick={onOpenTrainer}
+          onClick={handleOpenTrainerPortal}
           className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all"
         >
           <div className="flex items-center gap-2.5 text-left">
