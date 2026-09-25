@@ -638,9 +638,9 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
     );
   }
 
-  // Основной экран профиля (убран верхний отступ pt-4 / pt-2, теперь вплотную к шапке)
+  // Основной экран профиля: компактный отступ сверху (pt-3) и одинаковые интервалы между всеми блоками (space-y-3)
   return (
-    <div className="p-3 pt-0 max-w-md mx-auto flex flex-col pb-24 space-y-2.5 animate-in fade-in duration-200">
+    <div className="p-3 pt-3 max-w-md mx-auto flex flex-col pb-24 space-y-3 animate-in fade-in duration-200">
       <ProfileHeader />
       <ProfileCard userProfile={userProfile} onEditClick={() => setIsEditing(true)} />
       <ProfileMenu />
