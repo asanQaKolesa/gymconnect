@@ -20,7 +20,7 @@ export default function App() {
   // 1. СТРОГАЯ И ГЛАВНАЯ ПРОВЕРКА ТРЕНЕРСКОГО РОУТА (?trainer=true)
   const isTrainerRoute = new URLSearchParams(window.location.search).get('trainer') === 'true';
   const [trainerUsername, setTrainerUsername] = useState(() => {
-    return localStorage.getItem('gymconnect_trainer_username'] || '';
+    return localStorage.getItem('gymconnect_trainer_username') || '';
   });
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
 
@@ -51,7 +51,6 @@ export default function App() {
   // Загрузка данных атлета из Supabase (например, по Telegram WebApp или сохраненному ID)
   useEffect(() => {
     async function fetchAthleteProfile() {
-      // Проверяем Telegram WebApp user id, если доступно
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
       const savedTelegramId = tgUser?.id || localStorage.getItem('gymconnect_telegram_id');
 
