@@ -8,17 +8,27 @@ import {
   Share2, 
   ChevronRight, 
   X, 
-  Calendar,
-  Check
+  Globe
 } from 'lucide-react';
 
-export default function ProfileMenu({ user }) {
+export default function ProfileMenu({ user, currentLang = 'ru', onLanguageChange }) {
   const [activeModal, setActiveModal] = useState(null); // 'pass' | 'pro' | 'stats' | 'workouts'
 
   const handleShareApp = () => {
     const text = encodeURIComponent('Присоединяйся к GymConnect — комьюнити атлетов и залов Алматы!');
     const url = encodeURIComponent('https://t.me/gymconnect_almaty_bot');
     window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
+  };
+
+  // Мгновенное переключение языка приложения
+  const handleToggleLanguage = () => {
+    const nextLang = currentLang === 'kk' ? 'ru' : 'kk';
+    if (onLanguageChange) {
+      onLanguageChange(nextLang);
+    } else {
+      localStorage.setItem('gymconnect_language', nextLang);
+      window.location.reload();
+    }
   };
 
   return (
@@ -58,7 +68,7 @@ export default function ProfileMenu({ user }) {
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
         </button>
 
-        {/* 2. PRO-подписка (БЕЗ ПЛАШКИ KASPI) */}
+        {/* 2. PRO-подписка (без плашки Kaspi) */}
         <button
           type="button"
           onClick={() => setActiveModal('pro')}
@@ -80,7 +90,7 @@ export default function ProfileMenu({ user }) {
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
         </button>
 
-        {/* 3. Статистика посещений (переименовано) */}
+        {/* 3. Статистика посещений */}
         <button
           type="button"
           onClick={() => setActiveModal('stats')}
@@ -102,7 +112,7 @@ export default function ProfileMenu({ user }) {
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
         </button>
 
-        {/* 4. Мои тренировки (НОВЫЙ РАЗДЕЛ) */}
+        {/* 4. Мои тренировки */}
         <button
           type="button"
           onClick={() => setActiveModal('workouts')}
@@ -124,7 +134,31 @@ export default function ProfileMenu({ user }) {
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
         </button>
 
-        {/* 5. Пригласить напарника в GymBro */}
+        {/* 5. Смена языка приложения (НОВЫЙ ПУНКТ) */}
+        <button
+          type="button"
+          onClick={handleToggleLanguage}
+          className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all"
+        >
+          <div className="flex items-center gap-2.5 text-left">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center shrink-0 shadow-sm text-slate-700">
+              <Globe className="w-4 h-4 stroke-[2]" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900 leading-tight">
+                Тіл / Язык приложения
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                {currentLang === 'kk' ? 'Қазіргі тіл: Қазақша 🇰🇿' : 'Текущий язык: Русский 🇰🇿'}
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] font-bold text-slate-700 bg-white px-2 py-0.5 rounded-xl border border-slate-200 shrink-0">
+            {currentLang === 'kk' ? 'ҚАЗ' : 'РУС'}
+          </span>
+        </button>
+
+        {/* 6. Пригласить напарника в GymBro */}
         <button
           type="button"
           onClick={handleShareApp}
