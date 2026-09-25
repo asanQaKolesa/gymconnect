@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import HomeTab from './components/home/HomeTab';
@@ -49,6 +50,16 @@ export default function App() {
     return localStorage.getItem('gymconnect_profile_filled') === 'true';
   });
 
+  // Выбранный язык: для незарегистрированных пользователей ВСЕГДА null,
+  // чтобы они гарантированно выбирали язык ПЕРЕД анкетой регистрации
+  const [language, setLanguage] = useState(() => {
+    const isFilled = localStorage.getItem('gymconnect_profile_filled') === 'true';
+    if (!isFilled) return null;
+    return localStorage.getItem('gymconnect_language') || null;
+  });
+
+  const t = translations[language] || translations.kk;
+
   // Проверка тренера в БД
   useEffect(() => {
     async function verifyTrainer() {
@@ -89,16 +100,19 @@ export default function App() {
           localStorage.setItem('gymconnect_profile_filled', 'true');
           localStorage.setItem('gymconnect_user_profile', JSON.stringify(data));
         } else {
-          // Если в Supabase профиля нет — очищаем локальную память и открываем регистрацию
+          // Если в Supabase профиля нет — очищаем локальную память, сбрасываем язык и открываем онбординг
           setUserProfile(null);
           setIsRegistered(false);
+          setLanguage(null);
           localStorage.removeItem('gymconnect_profile_filled');
           localStorage.removeItem('gymconnect_user_profile');
+          localStorage.removeItem('gymconnect_language');
         }
       } else {
         if (!localStorage.getItem('gymconnect_profile_filled')) {
           setIsRegistered(false);
           setUserProfile(null);
+          setLanguage(null);
         }
       }
     }
@@ -167,15 +181,8 @@ export default function App() {
     );
   }
 
-  // Состояние заставки
+  // Состояние сплэш-заставки
   const [isLoading, setIsLoading] = useState(true);
-
-  // Выбранный язык
-  const [language, setLanguage] = useState(() => {
-    return localStorage.getItem('gymconnect_language') || null;
-  });
-
-  const t = translations[language] || translations.kk;
 
   // Активная вкладка
   const [activeTab, setActiveTab] = useState(() => {
@@ -207,6 +214,7 @@ export default function App() {
       localStorage.clear();
       setIsRegistered(false);
       setUserProfile(null);
+      setLanguage(null);
       window.location.reload();
     }
   };
@@ -220,21 +228,22 @@ export default function App() {
       localStorage.clear();
       setIsRegistered(false);
       setUserProfile(null);
+      setLanguage(null);
       window.location.reload();
     }
   };
 
-  // ЭКРАН 1: Загрузочная анимация
+  // ЭКРАН 1: Загрузочная анимация залов
   if (isLoading) {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
-  // ЭКРАН 2: Выбор языка (только один раз при первом входе)
+  // ЭКРАН 2: Выбор языка (всегда первым делом для новых пользователей)
   if (!language) {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
 
-  // ЭКРАН 3: Анкета первичной регистрации
+  // ЭКРАН 3: Анкета первичной регистрации (на выбранном языке)
   if (!isRegistered) {
     return (
       <RegisterProfilePage 
