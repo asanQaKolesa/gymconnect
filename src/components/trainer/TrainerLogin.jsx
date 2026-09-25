@@ -36,8 +36,8 @@ export default function TrainerLogin({ onLoginSuccess, onSwitchToRegister }) {
   };
 
   const handleBackToProfile = () => {
-    // Возвращаем пользователя в приложение сразу на вкладку профиля
-    window.location.href = window.location.pathname + '?tab=profile';
+    // Полностью сбрасываем роут тренера и перенаправляем на вкладку профиля атлета
+    window.location.href = window.location.origin + window.location.pathname + '?tab=profile';
   };
 
   return (
