@@ -1,11 +1,10 @@
 // src/components/profile/ProfileTab.jsx
 import React, { useState } from 'react';
 import { translations } from '../../locales/translations';
-import { User, Dumbbell, AtSign, CheckCircle2, ChevronDown, ChevronUp, Camera, Calendar, Scale, Ruler, Search, X, Clock, CreditCard, Phone, MessageCircle, Edit3, Award } from 'lucide-react';
+import { User, CheckCircle2, ChevronDown, ChevronUp, Camera, Calendar, Scale, Ruler, Search, X, MessageCircle, Edit3, Award } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
 import ProfileHeader from './ProfileHeader';
-import ProfileCard from './ProfileCard';
 import ProfileMenu from './ProfileMenu';
 import ProfileDocs from './ProfileDocs';
 import ProfileDangerZone from './ProfileDangerZone';
@@ -256,10 +255,7 @@ const DAYS_OF_WEEK = [
 export default function ProfileTab({ userProfile, onComplete, isRegistration, currentLang = 'kk' }) {
   const t = translations[currentLang] || translations.kk;
 
-  // Состояние для управления раскрытием детальной информации (шторка / аккордеон)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-
-  // Состояние переключения в режим редактирования анкеты
   const [isEditing, setIsEditing] = useState(false);
 
   const [formData, setFormData] = useState(() => {
@@ -434,7 +430,6 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
     if (onComplete) onComplete(profilePayload);
   };
 
-  // Если идет первичная регистрация ИЛИ режим редактирования
   if (isRegistration || isEditing) {
     return (
       <div className="w-full min-h-screen p-4 pb-36 flex flex-col items-center justify-start animate-in fade-in duration-200">
@@ -443,17 +438,12 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
           <div className="flex justify-between items-center mb-6">
             <div>
               <span className="inline-block bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1 rounded-full mb-1">
-                {isEditing ? 'Редактирование' : (currentLang === 'kk' ? 'Қош келдіңіз!' : 'Добро пожаловать!')}
+                {isEditing ? 'Редактирование' : 'Добро пожаловать!'}
               </span>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                {currentLang === 'kk' ? 'Анкетаңызды өңдеу' : 'Ваша анкета профиля'}
-              </h1>
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight">Ваша анкета профиля</h1>
             </div>
             {isEditing && (
-              <button 
-                onClick={() => setIsEditing(false)}
-                className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600 transition-colors"
-              >
+              <button onClick={() => setIsEditing(false)} className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-600">
                 <X className="w-4 h-4" />
               </button>
             )}
@@ -462,11 +452,7 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex flex-col items-center mb-4">
               <div className="relative w-20 h-20 bg-slate-100 rounded-full border-2 border-slate-200 overflow-hidden flex items-center justify-center shadow-inner">
-                {formData.avatar ? (
-                  <img src={formData.avatar} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="w-8 h-8 text-slate-400" />
-                )}
+                {formData.avatar ? <img src={formData.avatar} alt="Avatar" className="w-full h-full object-cover" /> : <User className="w-8 h-8 text-slate-400" />}
                 <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
                   <Camera className="w-6 h-6 text-white" />
                   <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
@@ -478,23 +464,11 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Имя *</label>
-                <input 
-                  type="text"
-                  required
-                  value={formData.firstName}
-                  onChange={(e) => handleChange('firstName', e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600"
-                />
+                <input type="text" required value={formData.firstName} onChange={(e) => handleChange('firstName', e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Фамилия *</label>
-                <input 
-                  type="text"
-                  required
-                  value={formData.lastName}
-                  onChange={(e) => handleChange('lastName', e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600"
-                />
+                <input type="text" required value={formData.lastName} onChange={(e) => handleChange('lastName', e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600" />
               </div>
             </div>
 
@@ -502,36 +476,18 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
               <label className="block text-xs font-medium text-slate-700 mb-1">Telegram Username *</label>
               <div className="relative flex items-center">
                 <span className="absolute left-3.5 text-slate-400 font-mono text-sm">@</span>
-                <input 
-                  type="text"
-                  required
-                  value={formData.username}
-                  onChange={handleUsernameChange}
-                  className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
-                />
+                <input type="text" required value={formData.username} onChange={handleUsernameChange} className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 font-mono" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Возраст *</label>
-                <input 
-                  type="number"
-                  min="18"
-                  max="80"
-                  required
-                  value={formData.age}
-                  onChange={(e) => handleChange('age', e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600"
-                />
+                <input type="number" min="18" max="80" required value={formData.age} onChange={(e) => handleChange('age', e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Пол *</label>
-                <select
-                  value={formData.gender}
-                  onChange={(e) => handleChange('gender', e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer"
-                >
+                <select value={formData.gender} onChange={(e) => handleChange('gender', e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer">
                   <option value="male">Мужской</option>
                   <option value="female">Женский</option>
                 </select>
@@ -540,30 +496,11 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
 
             <div className="relative">
               <label className="block text-xs font-medium text-slate-700 mb-1">Фитнес-зал *</label>
-              <input 
-                type="text"
-                required
-                value={gymSearchQuery}
-                onFocus={() => setIsGymDropdownOpen(true)}
-                onChange={(e) => {
-                  setGymSearchQuery(e.target.value);
-                  handleChange('gym', e.target.value);
-                  setIsGymDropdownOpen(true);
-                }}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600"
-              />
+              <input type="text" required value={gymSearchQuery} onFocus={() => setIsGymDropdownOpen(true)} onChange={(e) => { setGymSearchQuery(e.target.value); handleChange('gym', e.target.value); setIsGymDropdownOpen(true); }} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600" />
               {isGymDropdownOpen && filteredGyms.length > 0 && (
                 <div className="absolute z-50 left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg">
                   {filteredGyms.map((gymName, index) => (
-                    <div
-                      key={index}
-                      onClick={() => {
-                        setGymSearchQuery(gymName);
-                        handleChange('gym', gymName);
-                        setIsGymDropdownOpen(false);
-                      }}
-                      className="px-3 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer border-b border-slate-50"
-                    >
+                    <div key={index} onClick={() => { setGymSearchQuery(gymName); handleChange('gym', gymName); setIsGymDropdownOpen(false); }} className="px-3 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer border-b border-slate-50">
                       {gymName}
                     </div>
                   ))}
@@ -573,19 +510,10 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
 
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">О себе / Био</label>
-              <textarea 
-                rows={2}
-                value={formData.bio}
-                onChange={(e) => handleChange('bio', e.target.value)}
-                placeholder="Пару слов о ваших тренировках..."
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 resize-none"
-              />
+              <textarea rows={2} value={formData.bio} onChange={(e) => handleChange('bio', e.target.value)} placeholder="Пару слов о ваших тренировках..." className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-600 resize-none" />
             </div>
 
-            <button
-              type="submit"
-              className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2"
-            >
+            <button type="submit" className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2">
               <CheckCircle2 className="w-4 h-4" />
               <span>{isEditing ? 'Сохранить изменения' : 'Сохранить анкету и войти'}</span>
             </button>
@@ -595,11 +523,11 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
     );
   }
 
-  // Основной экран профиля атлета (аккуратный дизайн без дублирования)
+  // Единый чистый экран профиля (без дублирования)
   return (
     <div className="p-4 max-w-md mx-auto flex flex-col pb-24 space-y-4 animate-in fade-in duration-200">
       
-      {/* 1. ПЕРВЫЙ БЛОК: «Личный кабинет / PRO Атлет» (на самом верху) */}
+      {/* 1. Блок «Личный кабинет / PRO Атлет» в самом верху */}
       <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-3xl p-5 shadow-lg flex items-center justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -612,14 +540,14 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
         </div>
         <button 
           onClick={() => setIsEditing(true)}
-          className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-2xl flex items-center justify-center text-white transition-all border border-white/10 shadow-inner"
+          className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-2xl flex items-center justify-center text-white transition-all border border-white/10 shadow-inner shrink-0"
           title="Редактировать профиль"
         >
           <Edit3 className="w-4 h-4" />
         </button>
       </div>
 
-      {/* 2. ВТОРОЙ БЛОК: Карточка атлета (Имя, статус в зале, био) */}
+      {/* 2. Карточка атлета с реальными данными из базы и кнопкой-шторкой */}
       <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-3">
         <div className="flex items-center gap-3.5">
           <div className="w-16 h-16 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center shrink-0 shadow-inner">
@@ -644,7 +572,7 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
           {userProfile?.bio || formData.bio || 'Digital marketing freelancer. Качаю спину и ноги, слежу за питанием.'}
         </p>
 
-        {/* Раскрывающаяся шторка с подробными данными (остаток занятий, цель, город) */}
+        {/* Раскрывающаяся шторка с деталями абонемента и целей */}
         <div className="pt-1">
           <button 
             onClick={() => setIsDetailsOpen(!isDetailsOpen)}
@@ -680,7 +608,6 @@ export default function ProfileTab({ userProfile, onComplete, isRegistration, cu
       </div>
 
       <ProfileHeader />
-      <ProfileCard />
       <ProfileMenu />
       <ProfileDocs />
       <ProfileDangerZone />
