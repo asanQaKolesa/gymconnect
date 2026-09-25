@@ -18,9 +18,10 @@ const SplashLoader = ({ onFinish }) => {
     const [isVisible, setIsVisible] = useState(true);
     const [featureIndex, setFeatureIndex] = useState(0);
     const [progress, setProgress] = useState(0);
+    const [badgeLang, setBadgeLang] = useState('kk'); // Переключение языка верхнего бейджа
     const hasFinishedRef = useRef(false);
 
-    // Печатный текст для бренда и слоганов
+    // Печатный текст бренда и слоганов
     const [typedBrand, setTypedBrand] = useState('');
     const [typedSloganKk, setTypedSloganKk] = useState('');
     const [typedSloganRu, setTypedSloganRu] = useState('');
@@ -29,7 +30,7 @@ const SplashLoader = ({ onFinish }) => {
     const targetSloganKk = "Бұдан былай жалғыз жаттықпайсың";
     const targetSloganRu = "Больше не тренируйся один";
 
-    // 8 преимуществ с лаконичными текстами, идеально помещающимися в одну строку
+    // 8 преимуществ с лаконичным текстом строго в 1 строку
     const features = [
         { icon: <Users className="w-4 h-4 text-blue-600" />, kk: "Өз залыңнан GymBro тап", ru: "Найди напарника в своем зале" },
         { icon: <MapPin className="w-4 h-4 text-sky-600" />, kk: "Алматының 230+ залы бірыңғай базада", ru: "230+ фитнес-клубов на одной карте" },
@@ -56,21 +57,18 @@ const SplashLoader = ({ onFinish }) => {
         let sKkIdx = 0;
         let sRuIdx = 0;
 
-        // Печать "GymConnect"
         const brandTimer = setInterval(() => {
             bIdx++;
             setTypedBrand(targetBrand.slice(0, bIdx));
             if (bIdx >= targetBrand.length) {
                 clearInterval(brandTimer);
 
-                // После названия печатаем казахский слоган
                 const kkTimer = setInterval(() => {
                     sKkIdx++;
                     setTypedSloganKk(targetSloganKk.slice(0, sKkIdx));
                     if (sKkIdx >= targetSloganKk.length) {
                         clearInterval(kkTimer);
 
-                        // После казахского печатаем русский слоган
                         const ruTimer = setInterval(() => {
                             sRuIdx++;
                             setTypedSloganRu(targetSloganRu.slice(0, sRuIdx));
@@ -88,7 +86,16 @@ const SplashLoader = ({ onFinish }) => {
         };
     }, []);
 
-    // 2. Таймеры прогресса и смены фич на 10 секунд
+    // 2. Плавная смена языка верхнего бейджа (каждые 2.5 сек)
+    useEffect(() => {
+        const badgeTimer = setInterval(() => {
+            setBadgeLang(prev => (prev === 'kk' ? 'ru' : 'kk'));
+        }, 2500);
+
+        return () => clearInterval(badgeTimer);
+    }, []);
+
+    // 3. Таймеры смены фич и прогресса (10 секунд)
     useEffect(() => {
         const featureInterval = setInterval(() => {
             setFeatureIndex((prev) => (prev < features.length - 1 ? prev + 1 : 0));
@@ -130,7 +137,7 @@ const SplashLoader = ({ onFinish }) => {
             {/* Нижний стек карточки */}
             <div className="splash-bottom-stack">
                 
-                {/* Кнопка пропуска над карточкой (не перекрывает карту) */}
+                {/* Кнопка пропуска над карточкой */}
                 <div className="splash-skip-row">
                     <button
                         type="button"
@@ -142,13 +149,17 @@ const SplashLoader = ({ onFinish }) => {
                     </button>
                 </div>
 
-                {/* Белая плашка с жестко зафиксированной высотой (не прыгает) */}
+                {/* Белая плашка с жестко зафиксированной высотой */}
                 <div className="splash-card-contrast">
                     
-                    {/* Верхний бейдж только на казахском языке */}
+                    {/* Верхний бейдж: плавно чередует казахский и русский */}
                     <div className="splash-badge-pill">
                         <span className="badge-pill-dot"></span>
-                        <span className="badge-pill-text">230+ зал • Алматы фитнес қауымдастығы</span>
+                        <span className="badge-pill-text animate-fade-text" key={badgeLang}>
+                            {badgeLang === 'kk' 
+                                ? "230+ зал • Алматы фитнес қауымдастығы" 
+                                : "230+ залов • Фитнес-сообщество Алматы"}
+                        </span>
                     </div>
 
                     {/* Печатное название GymConnect с курсором */}
@@ -173,7 +184,7 @@ const SplashLoader = ({ onFinish }) => {
                         </p>
                     </div>
 
-                    {/* Фиксированный контейнер фич с защитой от переноса строк */}
+                    {/* Фиксированный контейнер фич */}
                     <div className="feature-box">
                         <div className="feature-icon-wrap">
                             {features[featureIndex].icon}
