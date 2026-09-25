@@ -20,7 +20,6 @@ export default function ProfileMenu({ user, currentLang = 'ru', onLanguageChange
     window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
   };
 
-  // Мгновенное переключение языка приложения
   const handleToggleLanguage = () => {
     const nextLang = currentLang === 'kk' ? 'ru' : 'kk';
     if (onLanguageChange) {
@@ -134,7 +133,7 @@ export default function ProfileMenu({ user, currentLang = 'ru', onLanguageChange
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
         </button>
 
-        {/* 5. Смена языка приложения (НОВЫЙ ПУНКТ) */}
+        {/* 5. Смена языка приложения */}
         <button
           type="button"
           onClick={handleToggleLanguage}
@@ -182,7 +181,7 @@ export default function ProfileMenu({ user, currentLang = 'ru', onLanguageChange
 
       </div>
 
-      {/* ================= МОДАЛКА: МОЙ АБОНЕМЕНТ ================= */}
+      {/* Модалка: Мой абонемент */}
       {activeModal === 'pass' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
@@ -232,7 +231,7 @@ export default function ProfileMenu({ user, currentLang = 'ru', onLanguageChange
         </div>
       )}
 
-      {/* ================= МОДАЛКА: PRO-ПОДПИСКА ================= */}
+      {/* Модалка: PRO-подписка */}
       {activeModal === 'pro' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
@@ -280,7 +279,7 @@ export default function ProfileMenu({ user, currentLang = 'ru', onLanguageChange
         </div>
       )}
 
-      {/* ================= МОДАЛКА: СТАТИСТИКА ПОСЕЩЕНИЙ ================= */}
+      {/* Модалка: Статистика посещений */}
       {activeModal === 'stats' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
@@ -333,7 +332,7 @@ export default function ProfileMenu({ user, currentLang = 'ru', onLanguageChange
         </div>
       )}
 
-      {/* ================= МОДАЛКА: МОИ ТРЕНИРОВКИ ================= */}
+      {/* Модалка: Мои тренировки */}
       {activeModal === 'workouts' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
