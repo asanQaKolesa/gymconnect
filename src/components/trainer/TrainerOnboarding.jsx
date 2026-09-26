@@ -21,7 +21,7 @@ import {
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
 
-// Безопасное извлечение массива залов из базы данных
+// Безопасное извлечение массива залов
 const GYMS_ARRAY = Array.isArray(GymsData.ALMATY_GYMS) 
   ? GymsData.ALMATY_GYMS 
   : (Array.isArray(GymsData.almatyGyms) ? GymsData.almatyGyms : (Array.isArray(GymsData.default) ? GymsData.default : []));
@@ -33,7 +33,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
   const [activeLegalModal, setActiveLegalModal] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Стейты живого поиска для основного и второго зала
+  // Стейты живого поиска залов
   const [gymSearchQuery, setGymSearchQuery] = useState('');
   const [isGymDropdownOpen, setIsGymDropdownOpen] = useState(false);
 
@@ -69,7 +69,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     'Личный онлайн-коучинг с ежедневным контролем 24/7'
   ];
 
-  // Документы партнерской оферты
+  // Партнерские документы
   const trainerLegalDocs = [
     {
       id: 'trainer_offer',
@@ -111,10 +111,11 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     }
   ];
 
-  // Основной стейт анкеты
+  // Основной стейт анкеты (Имя и Фамилия разделены)
   const [formData, setFormData] = useState({
     photo_url: tgUser?.photo_url || '',
-    full_name: tgUser ? `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() : '',
+    first_name: tgUser?.first_name || '',
+    last_name: tgUser?.last_name || '',
     username: tgUser?.username ? tgUser.username.replace('@', '') : '',
     phone: '',
     instagram: '',
@@ -124,7 +125,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     gym: defaultGym,
     secondary_gym: '',
 
-    // Опыт и специализации
+    // Опыт и направления
     experience_years: 3,
     specializations: ['Набор массы и гипертрофия', 'Снижение веса и сушка'],
     work_format: 'hybrid',
@@ -175,13 +176,11 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     legal_accepted: false
   });
 
-  // Фильтрация основного зала по поисковому запросу
   const filteredPrimaryGyms = useMemo(() => {
     if (!gymSearchQuery.trim()) return GYMS_ARRAY.slice(0, 35);
     return GYMS_ARRAY.filter(g => typeof g === 'string' && g.toLowerCase().includes(gymSearchQuery.toLowerCase()));
   }, [gymSearchQuery]);
 
-  // Фильтрация второго зала по поисковому запросу
   const filteredSecondaryGyms = useMemo(() => {
     if (!secondaryGymSearchQuery.trim()) return GYMS_ARRAY.slice(0, 35);
     return GYMS_ARRAY.filter(g => typeof g === 'string' && g.toLowerCase().includes(secondaryGymSearchQuery.toLowerCase()));
@@ -255,8 +254,8 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.full_name.trim()) {
-      alert('Пожалуйста, укажите ФИО тренера');
+    if (!formData.first_name.trim()) {
+      alert('Пожалуйста, укажите имя тренера');
       return;
     }
 
@@ -286,6 +285,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
       const cleanUsername = formData.username.trim().replace(/^@+/, '');
       const cleanInstagram = formData.instagram.trim().replace(/^@+/, '');
       const fullPhone = `7${formData.phone.replace(/\D/g, '')}`;
+      const fullNameCombined = `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim();
 
       const hasVerificationData = Boolean(
         (formData.certificates_link && formData.certificates_link.trim()) ||
@@ -293,8 +293,11 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
         (formData.education_phone && formData.education_phone.trim())
       );
 
+      // Полный совместимый payload: отправляем и first_name/last_name, и full_name
       const payload = {
-        full_name: formData.full_name.trim(),
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name ? formData.last_name.trim() : '',
+        full_name: fullNameCombined,
         username: cleanUsername,
         phone: fullPhone,
         photo_url: formData.photo_url || null,
@@ -387,7 +390,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
 
         <form onSubmit={handleSubmit} className="space-y-3 pb-8">
 
-          {/* 1. ПРОФИЛЬ ТРЕНЕРА + О СЕБЕ */}
+          {/* 1. ПРОФИЛЬ ТРЕНЕРА + ИМЯ И ФАМИЛИЯ РАЗДЕЛЬНО */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -418,18 +421,34 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               />
             </div>
 
-            <div>
-              <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                ФИО тренера <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.full_name}
-                onChange={e => setFormData({ ...formData, full_name: e.target.value })}
-                placeholder="Данияр Сериков"
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
-              />
+            {/* Имя и Фамилия раздельно в две колонки */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Имя тренера <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.first_name}
+                  onChange={e => setFormData({ ...formData, first_name: e.target.value })}
+                  placeholder="Данияр"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Фамилия <span className="text-slate-400 font-normal text-[10px]">(не обязательно)</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.last_name}
+                  onChange={e => setFormData({ ...formData, last_name: e.target.value })}
+                  placeholder="Сериков"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
@@ -450,6 +469,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 </div>
               </div>
 
+              {/* Поле WhatsApp со встроенным фиксированным +7 */}
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                   WhatsApp <span className="text-rose-500">*</span>
@@ -487,6 +507,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
+            {/* О себе */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 О себе, спортивных званиях и методиках
@@ -501,7 +522,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 2. ЗАЛЫ ДЛЯ ТРЕНИРОВОК (ЖИВОЙ ПОИСК С ВЫПАДАЮЩИМ СПИСКОМ) */}
+          {/* 2. ЗАЛЫ ДЛЯ ТРЕНИРОВОК (ЖИВОЙ ПОИСК) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
             <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-100 whitespace-nowrap">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
@@ -512,7 +533,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            {/* Выбор основного фитнес-клуба с живым поиском */}
+            {/* Выбор основного зала */}
             <div className="relative">
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Основной фитнес-клуб <span className="text-rose-500">*</span>
@@ -574,7 +595,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Выбор второго зала с живым поиском */}
+            {/* Выбор второго зала */}
             <div className="relative">
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Второй зал для тренировок <span className="text-slate-400 font-normal">(не обязательно)</span>
@@ -1139,6 +1160,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               })}
             </div>
 
+            {/* Продвижение продуктов (галочка снята по умолчанию) */}
             <div 
               onClick={() => setFormData({ ...formData, promote_online_products: !formData.promote_online_products })}
               className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between cursor-pointer active:scale-98"
