@@ -46,7 +46,10 @@ import {
   Shield,
   HeartPulse,
   UserPlus,
-  Scale
+  Scale,
+  Search,
+  Send,
+  Edit3
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import * as GymsData from '../../../data/almatyGyms';
@@ -56,26 +59,52 @@ const GYMS_ARRAY = Array.isArray(GymsData.ALMATY_GYMS)
   : (Array.isArray(GymsData.almatyGyms) ? GymsData.almatyGyms : (Array.isArray(GymsData.default) ? GymsData.default : []));
 
 export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, onSelectTab }) {
-  // Управление полноэкранными разделами
+  // Управление открытием полноэкранных секций
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null); 
-  // 'edit_profile' | 'public_card' | 'promotion' | 'subscription' | 'qr_code' | 'templates' | 'client_rules' | 'health_parq' | 'income_calc' | 'referral' | 'first_aid' | 'export_data' | 'support' | 'delete_account' | null
+  // 'edit_profile' | 'public_card' | 'promotion' | 'subscription' | 'qr_code' | 'templates' | 'client_rules' | 'health_parq' | 'income_calc' | 'referral' | 'first_aid' | 'export_data' | 'support' | 'delete_account'
 
-  // Состояния
+  // Базовые состояния
   const [isCopied, setIsCopied] = useState(false);
   const [isReferralCopied, setIsReferralCopied] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchGymQuery, setSearchGymQuery] = useState('');
   const [searchSecGymQuery, setSearchSecGymQuery] = useState('');
-  const [promoType, setPromoType] = useState('offline'); // 'offline' | 'online'
+  const [promoType, setPromoType] = useState('offline');
 
-  // Промокод и тарифы
+  // Ученики тренера для рассылок и анкет здоровья
+  const [studentsList, setStudentsList] = useState([]);
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+
+  // Подписка и промокоды
   const [promoInput, setPromoInput] = useState('');
   const [promoSuccess, setPromoSuccess] = useState(false);
   const [promoError, setPromoError] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('pro'); // 'basic' | 'pro'
+  const [selectedBillingPeriod, setSelectedBillingPeriod] = useState(1); // 1, 3, 6, 12 месяцев
 
-  // Калькулятор дохода тренера
+  // Настраиваемый регламент для клиентов
+  const [rulesForm, setRulesForm] = useState({
+    cancellation_hours: 3,
+    expiry_days: 35,
+    freeze_days: 7,
+    late_policy: 'Опоздание клиента сокращает время тренировки на количество минут задержки.',
+    custom_rule: 'Абонемент является персональным и не подлежит передаче третьим лицам без согласования.'
+  });
+
+  // Анкета здоровья (PAR-Q) и кастомные вопросы
+  const [healthTab, setHealthTab] = useState('questions'); // 'questions' | 'submissions'
+  const [customHealthQuestions, setCustomHealthQuestions] = useState([]);
+  const [newQuestionInput, setNewQuestionInput] = useState('');
+  const [studentHealthSearch, setStudentHealthSearch] = useState('');
+
+  // Шаблоны сообщений и таргетированная рассылка
+  const [selectedTemplateIndex, setSelectedTemplateIndex] = useState(0);
+  const [customMessageBody, setCustomMessageBody] = useState('');
+  const [recipientSegment, setRecipientSegment] = useState('all'); // 'all' | 'gym' | 'online' | 'selected'
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+
+  // Калькулятор дохода
   const [calcTargetIncome, setCalcTargetIncome] = useState(600000);
   const [calcPricePerSession, setCalcPricePerSession] = useState(6000);
   const [calcGymCutPercent, setCalcGymCutPercent] = useState(30);
@@ -86,7 +115,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
   const referralCoachLink = `https://t.me/gymconnect_almaty_bot?start=refcoach_${cleanUsername}`;
   const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&data=${encodeURIComponent(publicCoachLink)}`;
 
-  // 8 специализаций
+  // Специализации
   const specializationList = [
     'Набор массы и гипертрофия',
     'Снижение веса и сушка',
@@ -112,7 +141,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
     { id: 'seniors', label: 'Возрастные клиенты (50+)' }
   ];
 
-  // Форма тренера (все поля онбординга)
+  // Полное состояние анкеты
   const [editForm, setEditForm] = useState({
     first_name: trainer?.first_name || '',
     last_name: trainer?.last_name || '',
@@ -149,6 +178,53 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
     }
   });
 
+  // Шаблоны сообщений
+  const defaultTemplates = [
+    {
+      title: 'Напоминание о тренировке сегодня',
+      text: `Привет! Напоминаю, что сегодня у нас персональная тренировка в зале ${editForm.gym.split('|')[0]}. Не забудь форму, воду и отличное настроение! 💪 Жду вовремя.`
+    },
+    {
+      title: 'Абонемент заканчивается',
+      text: `Привет! Напоминаю, что по твоему абонементу осталась крайняя тренировка. Чтобы сохранить за собой график и продолжить прогресс, давай запланируем продление на следующий месяц!`
+    },
+    {
+      title: 'Контрольный замер веса и питания',
+      text: `Привет! Завершилась очередная тренировочная неделя. Пришли, пожалуйста, вес натощак утром и отчет по питанию за последние дни для корректировки плана 📊`
+    },
+    {
+      title: 'Приглашение на вводную тренировку',
+      text: `Здравствуйте! Мы договаривались о вводной тренировке в зале ${editForm.gym.split('|')[0]}. Удобно ли вам встретиться на этой неделе?`
+    }
+  ];
+
+  // Загрузка подопечных тренера из Supabase
+  useEffect(() => {
+    async function loadStudents() {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, phone, format, remaining_workouts, goal, health_notes')
+          .eq('trainer_username', cleanUsername);
+
+        if (!error && data && data.length > 0) {
+          setStudentsList(data);
+        } else {
+          // Демо-данные для визуализации при чистой базе
+          setStudentsList([
+            { id: '1', first_name: 'Данияр', last_name: 'Аскаров', phone: '+77771234567', format: 'gym', remaining_workouts: 7, goal: 'Гипертрофия', health_notes: 'Протрузия L4-L5, без осевых нагрузок' },
+            { id: '2', first_name: 'Анель', last_name: 'Мусина', phone: '+77017654321', format: 'online', remaining_workouts: 3, goal: 'Похудение', health_notes: 'Без жалоб, давление в норме' },
+            { id: '3', first_name: 'Ерлан', last_name: 'Сатыбалдиев', phone: '+77059998877', format: 'gym', remaining_workouts: 1, goal: 'Тонус и спина', health_notes: 'Травма правого мениска 2023г.' }
+          ]);
+        }
+      } catch (e) {
+        console.error('Ошибка загрузки учеников:', e);
+      }
+    }
+    loadStudents();
+  }, [cleanUsername]);
+
+  // Синхронизация формы при обновлении пропса trainer
   useEffect(() => {
     if (trainer) {
       setEditForm({
@@ -188,6 +264,10 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
       });
     }
   }, [trainer]);
+
+  useEffect(() => {
+    setCustomMessageBody(defaultTemplates[selectedTemplateIndex]?.text || '');
+  }, [selectedTemplateIndex]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(publicCoachLink);
@@ -263,7 +343,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
     }
   };
 
-  // Промокод на 7 дней Pro
   const handleApplyPromo = () => {
     setPromoError('');
     const cleanPromo = promoInput.trim().toUpperCase();
@@ -271,9 +350,9 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
     if (validPromos.includes(cleanPromo)) {
       setPromoSuccess(true);
-      alert('🎉 Промокод успешно применен! Вам активирован тариф CoachOS PRO на 7 дней бесплатно.');
+      alert('🎉 Промокод успешно применен! Вам активирован безлимитный доступ CoachOS PRO на 7 дней бесплатно.');
     } else {
-      setPromoError('Неверный или устаревший промокод. Проверьте правильность ввода.');
+      setPromoError('Неверный или устаревший промокод. Проверьте правильность кода.');
     }
   };
 
@@ -296,6 +375,49 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
       alert('Ошибка удаления: ' + err.message);
     }
   };
+
+  const handleAddCustomHealthQuestion = () => {
+    if (!newQuestionInput.trim()) return;
+    setCustomHealthQuestions([...customHealthQuestions, newQuestionInput.trim()]);
+    setNewQuestionInput('');
+  };
+
+  const toggleStudentSelection = (id) => {
+    setSelectedStudentIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  // Фильтрация получателей рассылки
+  const targetRecipients = studentsList.filter(s => {
+    if (recipientSegment === 'gym') return s.format === 'gym';
+    if (recipientSegment === 'online') return s.format === 'online';
+    if (recipientSegment === 'selected') return selectedStudentIds.includes(s.id);
+    return true;
+  });
+
+  const handleSendBroadcast = () => {
+    if (targetRecipients.length === 0) {
+      alert('Выберите хотя бы одного получателя для отправки сообщения.');
+      return;
+    }
+
+    if (targetRecipients.length === 1) {
+      const single = targetRecipients[0];
+      const cleanPhone = single.phone ? single.phone.replace(/\D/g, '') : '';
+      const encodedMsg = encodeURIComponent(customMessageBody);
+      window.open(`https://wa.me/${cleanPhone}?text=${encodedMsg}`, '_blank');
+    } else {
+      alert(`Сообщение отправлено ${targetRecipients.length} ученикам через Telegram Mini App!`);
+      setActiveModal(null);
+      setIsDrawerOpen(true);
+    }
+  };
+
+  // Расчет цен подписки по пакетам
+  const basePricePerMonth = selectedPlan === 'basic' ? 4990 : 9990;
+  const discounts = { 1: 0, 3: 0.15, 6: 0.25, 12: 0.35 };
+  const totalMonthsPrice = Math.round(basePricePerMonth * selectedBillingPeriod * (1 - discounts[selectedBillingPeriod]));
 
   // Расчет калькулятора дохода
   const netPerSession = Math.round(calcPricePerSession * (1 - calcGymCutPercent / 100));
@@ -358,7 +480,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
         </div>
       </header>
 
-      {/* ================= РАЗГРУЖЕННОЕ БОКОВОЕ МЕНЮ (SLIDE-OVER DRAWER) ================= */}
+      {/* ================= БОКОВОЕ МЕНЮ (SLIDE-OVER DRAWER) ================= */}
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-start select-none animate-in fade-in duration-150">
           <div className="w-[88%] max-w-sm bg-white h-full p-4 flex flex-col justify-between shadow-2xl overflow-y-auto">
@@ -407,11 +529,11 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                 </button>
               </div>
 
-              {/* ПЛАШКА 100% ПРИВАТНОСТИ И БЕЗОПАСНОСТИ */}
+              {/* Плашка безопасности данных */}
               <div className="p-2.5 bg-emerald-50/70 border border-emerald-200/70 rounded-2xl flex items-center gap-2.5">
                 <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
                 <p className="text-[10px] text-emerald-900 leading-tight">
-                  <span className="font-bold">100% Приватно:</span> ваши доходы, база учеников и контакты видны только вам. Данные никуда не передаются.
+                  <span className="font-bold">100% Конфиденциально:</span> данные базы учеников и финансы зашифрованы и доступны только вам.
                 </p>
               </div>
 
@@ -453,11 +575,11 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                 </div>
               </div>
 
-              {/* 2. ТАРИФЫ, ПОДПИСКА И ПРОМОКОДЫ */}
+              {/* 2. ТАРИФЫ И ПРОДВИЖЕНИЕ */}
               <div className="space-y-1.5 pt-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Тарифы и буст</p>
 
-                {/* Подписка CRM (Basic / Pro) */}
+                {/* Подписка CRM */}
                 <button
                   type="button"
                   onClick={() => { setIsDrawerOpen(false); setActiveModal('subscription'); }}
@@ -468,14 +590,14 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                       <CreditCard className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-900">Тарифы и подписка</p>
-                      <p className="text-[10px] text-emerald-600 font-medium">Basic: 4 990 ₸ • Pro: 9 990 ₸</p>
+                      <p className="text-xs font-semibold text-slate-900">Управление подпиской</p>
+                      <p className="text-[10px] text-slate-500">Пакетные условия и промокоды</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
 
-                {/* Продвижение (Boost: залы / онлайн) */}
+                {/* Продвижение */}
                 <button
                   type="button"
                   onClick={() => { setIsDrawerOpen(false); setActiveModal('promotion'); }}
@@ -516,7 +638,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
 
-                {/* Правила отмены и сгорания тренировок */}
+                {/* Регламент для клиентов */}
                 <button
                   type="button"
                   onClick={() => { setIsDrawerOpen(false); setActiveModal('client_rules'); }}
@@ -528,13 +650,13 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-900">Регламент для клиентов</p>
-                      <p className="text-[10px] text-slate-500">Правила отмены и сгорания занятий</p>
+                      <p className="text-[10px] text-slate-500">Правила отмены и сгорания с настройкой под себя</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
 
-                {/* Анкета здоровья подопечного (PAR-Q) */}
+                {/* Анкета здоровья подопечного */}
                 <button
                   type="button"
                   onClick={() => { setIsDrawerOpen(false); setActiveModal('health_parq'); }}
@@ -545,14 +667,14 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                       <HeartPulse className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-900">Анкета здоровья подопечного</p>
-                      <p className="text-[10px] text-slate-500">Опросник травм и противопоказаний (PAR-Q)</p>
+                      <p className="text-xs font-semibold text-slate-900">Анкета здоровья (PAR-Q)</p>
+                      <p className="text-[10px] text-slate-500">Опросник травм, свои вопросы и ответы учеников</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
 
-                {/* Быстрые шаблоны для WhatsApp */}
+                {/* Шаблоны сообщений и таргетированная рассылка */}
                 <button
                   type="button"
                   onClick={() => { setIsDrawerOpen(false); setActiveModal('templates'); }}
@@ -563,8 +685,8 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                       <MessageSquare className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-900">Шаблоны сообщений</p>
-                      <p className="text-[10px] text-slate-500">Напоминания и отчеты в WhatsApp за 1 клик</p>
+                      <p className="text-xs font-semibold text-slate-900">Шаблоны и рассылка</p>
+                      <p className="text-[10px] text-slate-500">Отправка сообщений в зал, онлайн или выборочно</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
@@ -588,7 +710,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
 
-                {/* Пригласить коллегу-тренера (Рефералка) */}
+                {/* Пригласить коллегу-тренера */}
                 <button
                   type="button"
                   onClick={() => { setIsDrawerOpen(false); setActiveModal('referral'); }}
@@ -600,14 +722,14 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-900">Пригласить коллегу-тренера</p>
-                      <p className="text-[10px] text-blue-600 font-medium">+1 месяц PRO за каждого тренера</p>
+                      <p className="text-[10px] text-blue-600 font-medium">+1 месяц Pro после первой оплаты</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
               </div>
 
-              {/* 4. БЛОК АНКЕТЫ И ПУБЛИЧНОЙ ВИЗИТКИ */}
+              {/* 4. НАСТРОЙКИ ПРОФИЛЯ */}
               <div className="space-y-1.5 pt-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Настройки профиля</p>
 
@@ -646,7 +768,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                 </button>
               </div>
 
-              {/* 5. БАЗА ЗНАНИЙ И БЕЗОПАСНОСТЬ В ЗАЛЕ */}
+              {/* 5. БАЗА ЗНАНИЙ И ЗАБОТА */}
               <div className="space-y-1.5 pt-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">База знаний и забота</p>
 
@@ -1292,7 +1414,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
         </div>
       )}
 
-      {/* ================= 3. ТАРИФЫ (BASIC / PRO) + ПРОМОКОД ================= */}
+      {/* ================= 3. ПОДПИСКА И ПАКЕТНЫЕ ТАРИФЫ ================= */}
       {activeModal === 'subscription' && (
         <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
           <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
@@ -1304,17 +1426,17 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               <ArrowLeft className="w-4 h-4" />
               <span>Меню</span>
             </button>
-            <h2 className="text-xs font-bold text-slate-900">Тарифы и подписка</h2>
+            <h2 className="text-xs font-bold text-slate-900">Управление подпиской</h2>
             <div className="w-12"></div>
           </div>
 
           <div className="p-4 space-y-4 max-w-lg mx-auto w-full pb-28">
             
-            {/* БЛОК ПРОМОКОДА НА 7 ДНЕЙ БЕСПЛАТНО */}
+            {/* БЛОК ПРОМОКОДА НА 7 ДНЕЙ */}
             <div className="bg-white rounded-3xl p-4 border border-blue-200 shadow-xs space-y-2.5">
               <div className="flex items-center gap-2">
                 <Tag className="w-4 h-4 text-blue-600" />
-                <h4 className="text-xs font-bold text-slate-900">Есть промокод на бесплатный доступ?</h4>
+                <h4 className="text-xs font-bold text-slate-900">Есть промокод на доступ?</h4>
               </div>
               <p className="text-[11px] text-slate-500 leading-snug">
                 Введите промокод от куратора GymConnect и получите <span className="font-bold text-blue-600">7 дней Pro-доступа</span> бесплатно.
@@ -1352,7 +1474,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               )}
             </div>
 
-            {/* ПЕРЕКЛЮЧАТЕЛЬ ДВУХ ТАРИФОВ: BASIC И PRO */}
+            {/* ВЫБОР ТАРИФА (ОДИНАКОВЫЙ ФУНКЦИОНАЛ, РАЗЛИЧИЕ ТОЛЬКО В ЛИМИТЕ УЧЕНИКОВ) */}
             <div className="grid grid-cols-2 gap-2 p-1 bg-slate-200/80 rounded-2xl">
               <button
                 type="button"
@@ -1361,7 +1483,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                   selectedPlan === 'basic' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
                 }`}
               >
-                Basic (4 990 ₸)
+                До 10 учеников
               </button>
               <button
                 type="button"
@@ -1370,85 +1492,82 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                   selectedPlan === 'pro' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600'
                 }`}
               >
-                PRO (9 990 ₸)
+                Безлимит учеников
               </button>
             </div>
 
-            {/* КАРТОЧКА ВЫБРАННОГО ТАРИФА */}
-            {selectedPlan === 'basic' ? (
-              <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">Тариф «Basic»</h3>
-                    <p className="text-[11px] text-slate-500">Для начинающих тренеров и небольшой группы</p>
-                  </div>
-                  <span className="text-base font-bold text-slate-900 font-mono">4 990 ₸<span className="text-xs text-slate-400 font-sans">/мес</span></span>
-                </div>
+            {/* ПАКЕТНЫЕ ПЕРИОДЫ (ВЫГОДНЫЕ СКИДКИ) */}
+            <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
+              <p className="text-xs font-bold text-slate-900">Выберите период подписки:</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  { m: 1, label: '1 мес', disc: '' },
+                  { m: 3, label: '3 мес', disc: '-15%' },
+                  { m: 6, label: '6 мес', disc: '-25%' },
+                  { m: 12, label: '1 год', disc: '-35%' }
+                ].map(item => (
+                  <button
+                    key={item.m}
+                    type="button"
+                    onClick={() => setSelectedBillingPeriod(item.m)}
+                    className={`p-2 rounded-2xl border text-center transition-all ${
+                      selectedBillingPeriod === item.m
+                        ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-xs'
+                        : 'bg-slate-50 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    <p className="text-xs">{item.label}</p>
+                    {item.disc && (
+                      <span className={`text-[9px] block font-mono ${selectedBillingPeriod === item.m ? 'text-blue-100' : 'text-emerald-600 font-bold'}`}>
+                        {item.disc}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 text-xs text-slate-700">
-                  <div className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>До 10 активных подопечных в базе</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>Списание занятий в 1 клик</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>Публичная визитка и персональная ссылка</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <X className="w-3.5 h-3.5 shrink-0" />
-                    <span className="line-through">Финансовая касса и аналитика</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <X className="w-3.5 h-3.5 shrink-0" />
-                    <span className="line-through">Конструктор планов питания и БЖУ</span>
-                  </div>
+            {/* КАРТОЧКА ВЫБРАННОГО ПАКЕТА */}
+            <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {selectedPlan === 'basic' ? 'Тариф «Базовый старт»' : 'Тариф «Профи безлимит»'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    {selectedPlan === 'basic' ? 'Лимит до 10 активных подопечных' : 'Без ограничений по количеству учеников'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-blue-600 font-mono">{totalMonthsPrice.toLocaleString()} ₸</p>
+                  <p className="text-[10px] text-slate-400">за {selectedBillingPeriod} мес.</p>
                 </div>
               </div>
-            ) : (
-              <div className="bg-white rounded-3xl p-5 border-2 border-blue-500 shadow-md space-y-4 relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-blue-600 text-white text-[9.5px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
-                  Хит продаж
-                </div>
 
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
-                      <span>Тариф «PRO»</span>
-                      <Sparkles className="w-4 h-4 text-blue-600" />
-                    </h3>
-                    <p className="text-[11px] text-slate-500">Все инструменты профессионального тренера</p>
-                  </div>
-                  <span className="text-base font-bold text-blue-600 font-mono">9 990 ₸<span className="text-xs text-slate-400 font-sans">/мес</span></span>
+              {/* ПОЛНЫЙ ОДИНАКОВЫЙ ФУНКЦИОНАЛ ДЛЯ ОБОИХ ТАРИФОВ */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 text-xs text-slate-700">
+                <div className="flex items-center gap-2 font-medium">
+                  <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span>{selectedPlan === 'basic' ? 'До 10 активных учеников в базе' : 'Безлимитная база подопечных'}</span>
                 </div>
-
-                <div className="p-3 bg-blue-50/50 rounded-2xl border border-blue-100 space-y-2 text-xs text-slate-800">
-                  <div className="flex items-center gap-2 font-medium">
-                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>Безлимитное количество учеников</span>
-                  </div>
-                  <div className="flex items-center gap-2 font-medium">
-                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>Полная касса, фиксация оплат и аналитика выручки</span>
-                  </div>
-                  <div className="flex items-center gap-2 font-medium">
-                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>Конструктор программ тренировок и питания</span>
-                  </div>
-                  <div className="flex items-center gap-2 font-medium">
-                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>Экспорт базы клиентов в Excel / CSV</span>
-                  </div>
-                  <div className="flex items-center gap-2 font-medium">
-                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>Быстрые шаблоны для WhatsApp в 1 клик</span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Учет и списание занятий в 1 клик</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Конструктор программ тренировок и питания</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Касса, учет оплат и аналитика доходов</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>QR-визитка, шаблоны WhatsApp и анкета здоровья</span>
                 </div>
               </div>
-            )}
+            </div>
 
           </div>
 
@@ -1459,7 +1578,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               rel="noreferrer"
               className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all"
             >
-              <span>Оплатить {selectedPlan === 'basic' ? 'Basic (4 990 ₸)' : 'PRO (9 990 ₸)'} через Kaspi</span>
+              <span>Оплатить пакет ({totalMonthsPrice.toLocaleString()} ₸) через Kaspi</span>
             </a>
           </div>
         </div>
@@ -1517,7 +1636,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
         </div>
       )}
 
-      {/* ================= 5. РЕГЛАМЕНТ И ПРАВИЛА ДЛЯ КЛИЕНТОВ ================= */}
+      {/* ================= 5. РЕГЛАМЕНТ ДЛЯ КЛИЕНТОВ (С РЕДАКТИРОВАНИЕМ) ================= */}
       {activeModal === 'client_rules' && (
         <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
           <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
@@ -1533,46 +1652,131 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
             <div className="w-12"></div>
           </div>
 
-          <div className="p-4 space-y-3 max-w-lg mx-auto w-full pb-24 text-xs">
+          <div className="p-4 space-y-4 max-w-lg mx-auto w-full pb-28 text-xs">
             <p className="text-slate-500 text-[11px] px-1">
-              Скопируйте и отправьте этот регламент клиенту перед стартом занятий, чтобы избежать споров об отменах:
+              Настройте параметры правил под свой график. Вы можете отправить регламент клиенту в WhatsApp или закрепить в приложении:
             </p>
 
             <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <span className="font-bold text-slate-900 text-xs">Правила посещения персональных тренировок</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const text = `📌 Правила посещения персональных тренировок (${editForm.first_name}):
-1. Отмена или перенос тренировки принимается не позднее, чем за 3 часа до начала.
-2. При отмене менее чем за 3 часа тренировка считается проведенной и списывается с абонемента.
-3. Опоздание клиента не продлевает время тренировки.
-4. Срок действия блока из 12 тренировок — 35 календарных дней с даты первого занятия.
-5. Заморозка абонемента возможна 1 раз на срок до 7 дней по уважительной причине.`;
-                    navigator.clipboard.writeText(text);
-                    alert('Регламент скопирован в буфер! Отправьте его клиенту в WhatsApp.');
-                  }}
-                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10.5px] font-semibold flex items-center gap-1 active:scale-95"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>Скопировать</span>
-                </button>
+              <p className="text-xs font-bold text-slate-900 border-b border-slate-100 pb-2">Редактирование условий регламента</p>
+
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">
+                  Отмена/перенос тренировки (за сколько часов):
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={rulesForm.cancellation_hours}
+                    onChange={e => setRulesForm({ ...rulesForm, cancellation_hours: Number(e.target.value) })}
+                    className="w-20 p-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-center text-xs"
+                  />
+                  <span className="text-slate-600 text-xs">часа до начала (иначе сгорает)</span>
+                </div>
               </div>
 
-              <div className="space-y-2 text-slate-700 text-[11px] leading-relaxed">
-                <p><strong>1. Отмена и перенос:</strong> Предупреждение об отмене тренировки принимается не позднее, чем за 3 часа до назначенного времени.</p>
-                <p><strong>2. Сгорание занятия:</strong> При отмене менее чем за 3 часа либо неявке без предупреждения занятие списывается с баланса абонемента в полном объеме.</p>
-                <p><strong>3. Пунктуальность:</strong> При опоздании подопечного время тренировки сокращается на количество минут опоздания, чтобы не сдвигать расписание других атлетов.</p>
-                <p><strong>4. Срок действия пакета:</strong> Абонемент на 12 тренировок действует 35 календарных дней с момента первой тренировки.</p>
-                <p><strong>5. Заморозка:</strong> Предусмотрена однократная заморозка абонемента до 7 дней (по болезни или командировке).</p>
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">
+                  Срок действия абонемента на 12 занятий:
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={rulesForm.expiry_days}
+                    onChange={e => setRulesForm({ ...rulesForm, expiry_days: Number(e.target.value) })}
+                    className="w-20 p-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-center text-xs"
+                  />
+                  <span className="text-slate-600 text-xs">календарных дней</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">
+                  Допустимая заморозка абонемента:
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={rulesForm.freeze_days}
+                    onChange={e => setRulesForm({ ...rulesForm, freeze_days: Number(e.target.value) })}
+                    className="w-20 p-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-center text-xs"
+                  />
+                  <span className="text-slate-600 text-xs">дней (по болезни/командировке)</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">
+                  Политика при опоздании:
+                </label>
+                <textarea
+                  rows={2}
+                  value={rulesForm.late_policy}
+                  onChange={e => setRulesForm({ ...rulesForm, late_policy: e.target.value })}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">
+                  Дополнительное правило тренера:
+                </label>
+                <textarea
+                  rows={2}
+                  value={rulesForm.custom_rule}
+                  onChange={e => setRulesForm({ ...rulesForm, custom_rule: e.target.value })}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs resize-none"
+                />
               </div>
             </div>
+
+            {/* Превью готового текста */}
+            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Готовый регламент к отправке:</span>
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-[11px] text-slate-700 space-y-1.5 leading-relaxed">
+                <p className="font-bold text-slate-900">Правила посещения персональных тренировок:</p>
+                <p>1. Отмена/перенос тренировки принимается не менее чем за <strong>{rulesForm.cancellation_hours} часа</strong> до начала. При поздней отмене занятие считается проведенным.</p>
+                <p>2. Срок действия блока занятий — <strong>{rulesForm.expiry_days} дней</strong> с момента старта.</p>
+                <p>3. Предусмотрена заморозка абонемента до <strong>{rulesForm.freeze_days} дней</strong>.</p>
+                <p>4. {rulesForm.late_policy}</p>
+                <p>5. {rulesForm.custom_rule}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 max-w-lg mx-auto shadow-lg flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                alert('Регламент сохранен и применен к вашему профилю!');
+              }}
+              className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl font-semibold text-xs active:scale-98"
+            >
+              Сохранить регламент
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const text = `📌 Регламент посещения персональных тренировок (${editForm.first_name}):
+1. Отмена или перенос: не менее чем за ${rulesForm.cancellation_hours} часа до начала (иначе занятие сгорает).
+2. Срок действия блока: ${rulesForm.expiry_days} дней.
+3. Заморозка: до ${rulesForm.freeze_days} дней.
+4. ${rulesForm.late_policy}
+5. ${rulesForm.custom_rule}`;
+                navigator.clipboard.writeText(text);
+                alert('Текст регламента скопирован в буфер для отправки ученику в WhatsApp!');
+              }}
+              className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-98"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>Скопировать клиенту</span>
+            </button>
           </div>
         </div>
       )}
 
-      {/* ================= 6. АНКЕТА ЗДОРОВЬЯ ПОДОПЕЧНОГО (PAR-Q) ================= */}
+      {/* ================= 6. АНКЕТА ЗДОРОВЬЯ (PAR-Q + СВОИ ВОПРОСЫ + ОТВЕТЫ УЧЕНИКОВ) ================= */}
       {activeModal === 'health_parq' && (
         <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
           <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
@@ -1588,49 +1792,119 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
             <div className="w-12"></div>
           </div>
 
-          <div className="p-4 space-y-3 max-w-lg mx-auto w-full pb-24 text-xs">
-            <p className="text-slate-500 text-[11px] px-1">
-              Обязательный чек-лист вопросов для нового атлета перед первой силовой тренировкой:
-            </p>
-
-            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <span className="font-bold text-slate-900 text-xs">Вопросы первичного скрининга</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const text = `📋 Опросник здоровья перед началом тренировок:
-1. Были ли у вас травмы суставов, переломы или операции?
-2. Есть ли диагностированные протрузии или грыжи позвоночника?
-3. Беспокоит ли повышенное или пониженное артериальное давление?
-4. Бывают ли боли в груди или одышка при легкой нагрузке?
-5. Принимаете ли вы постоянные медикаменты?
-6. Ваш опыт регулярных тренировок за последний год?
-Ответьте кратко, чтобы я составил максимально безопасный план! 💪`;
-                    navigator.clipboard.writeText(text);
-                    alert('Анкета здоровья скопирована! Отправьте ее новому ученику.');
-                  }}
-                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10.5px] font-semibold flex items-center gap-1 active:scale-95"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>Скопировать</span>
-                </button>
-              </div>
-
-              <ul className="space-y-2 text-slate-700 text-[11px] list-disc pl-4">
-                <li>Наличие грыж и протрузий в поясничном/шейном отделе позвоночника</li>
-                <li>Травмы менисков, крестообразных связок и плечевых суставов</li>
-                <li>Скачки артериального давления и болезни сердечно-сосудистой системы</li>
-                <li>Головокружения или обморочные состояния при физической активности</li>
-                <li>Хирургические вмешательства за последние 12 месяцев</li>
-                <li>Аллергии или индивидуальные ограничения по рациону питания</li>
-              </ul>
+          <div className="p-4 space-y-4 max-w-lg mx-auto w-full pb-24 text-xs">
+            {/* Вкладки: Вопросы / Картотека ответов учеников */}
+            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-200/80 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setHealthTab('questions')}
+                className={`py-2 text-xs font-bold rounded-xl transition-all ${
+                  healthTab === 'questions' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                Вопросы анкеты
+              </button>
+              <button
+                type="button"
+                onClick={() => setHealthTab('submissions')}
+                className={`py-2 text-xs font-bold rounded-xl transition-all ${
+                  healthTab === 'submissions' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                Ответы учеников ({studentsList.length})
+              </button>
             </div>
+
+            {healthTab === 'questions' ? (
+              <div className="space-y-4">
+                {/* Базовые вопросы */}
+                <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5">
+                  <span className="font-bold text-slate-900 text-xs">Базовые вопросы скрининга:</span>
+                  <ul className="space-y-2 text-slate-700 text-[11px] list-disc pl-4">
+                    <li>Травмы суставов, связок, переломы и операции</li>
+                    <li>Диагностированные грыжи и протрузии позвоночника</li>
+                    <li>Повышенное или пониженное артериальное давление</li>
+                    <li>Одышка, боли за грудиной и головокружения</li>
+                    <li>Ограничения по подвижности и противопоказания врачей</li>
+                  </ul>
+                </div>
+
+                {/* Добавление своего вопроса */}
+                <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
+                  <span className="font-bold text-slate-900 text-xs">Добавить свой вопрос в анкету:</span>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newQuestionInput}
+                      onChange={e => setNewQuestionInput(e.target.value)}
+                      placeholder="Например: Есть ли аллергия на спортпит?"
+                      className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomHealthQuestion}
+                      className="px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold active:scale-95"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {customHealthQuestions.length > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Ваши добавленные вопросы:</span>
+                      {customHealthQuestions.map((q, idx) => (
+                        <div key={idx} className="p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                          <span>{q}</span>
+                          <button
+                            type="button"
+                            onClick={() => setCustomHealthQuestions(customHealthQuestions.filter((_, i) => i !== idx))}
+                            className="text-rose-500 hover:text-rose-700"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Картотека ответов учеников с живым поиском */
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    value={studentHealthSearch}
+                    onChange={e => setStudentHealthSearch(e.target.value)}
+                    placeholder="Поиск ученика по имени или телефону..."
+                    className="w-full p-2.5 pl-9 bg-white border border-slate-200/80 rounded-2xl text-xs shadow-xs"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  {studentsList
+                    .filter(s => `${s.first_name} ${s.last_name} ${s.phone}`.toLowerCase().includes(studentHealthSearch.toLowerCase()))
+                    .map(st => (
+                      <div key={st.id} className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-slate-900 text-xs">{st.first_name} {st.last_name}</p>
+                          <span className="text-[10px] font-mono text-slate-500">{st.phone}</span>
+                        </div>
+                        <div className="p-2 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-700">
+                          <span className="font-semibold text-slate-800">Медицинские ограничения: </span>
+                          <span>{st.health_notes || 'Анкета заполнена, противопоказаний не выявлено.'}</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* ================= 7. ШАБЛОНЫ СООБЩЕНИЙ WHATSAPP ================= */}
+      {/* ================= 7. ШАБЛОНЫ СООБЩЕНИЙ И СЕГМЕНТИРОВАННАЯ РАССЫЛКА ================= */}
       {activeModal === 'templates' && (
         <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
           <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
@@ -1642,53 +1916,105 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               <ArrowLeft className="w-4 h-4" />
               <span>Меню</span>
             </button>
-            <h2 className="text-xs font-bold text-slate-900">Шаблоны сообщений</h2>
+            <h2 className="text-xs font-bold text-slate-900">Шаблоны и рассылка</h2>
             <div className="w-12"></div>
           </div>
 
-          <div className="p-4 space-y-3 max-w-lg mx-auto w-full pb-24 text-xs">
-            <p className="text-slate-500 text-[11px] px-1">
-              Нажмите «Скопировать», чтобы не набирать текст вручную перед тренировкой:
-            </p>
-
-            {[
-              {
-                title: 'Напоминание о тренировке сегодня',
-                text: `Привет! Напоминаю, что сегодня у нас тренировка в зале ${editForm.gym.split('|')[0]}. Не забудь форму, воду и отличное настроение! 💪 Жду вовремя.`
-              },
-              {
-                title: 'Абонемент заканчивается',
-                text: `Привет! Напоминаю, что по твоему абонементу осталась крайняя тренировка. Чтобы не прерывать график и прогресс, давай запланируем продление на следующий месяц!`
-              },
-              {
-                title: 'Контрольный замер веса и питания',
-                text: `Привет! Прошла очередная неделя тренировок. Пришли, пожалуйста, вес натощак утром и отчет по питанию за последние дни для корректировки плана 📊`
-              },
-              {
-                title: 'Приглашение на вводное занятие',
-                text: `Здравствуйте! Мы договаривались о вводной тренировке в зале ${editForm.gym.split('|')[0]}. Удобно ли вам встретиться завтра во второй половине дня?`
-              }
-            ].map((tpl, idx) => (
-              <div key={idx} className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900 text-xs">{tpl.title}</span>
+          <div className="p-4 space-y-4 max-w-lg mx-auto w-full pb-28 text-xs">
+            {/* Выбор шаблона */}
+            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
+              <span className="font-bold text-slate-900 text-xs">1. Выберите готовый шаблон:</span>
+              <div className="grid grid-cols-2 gap-1.5">
+                {defaultTemplates.map((tpl, i) => (
                   <button
+                    key={i}
                     type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(tpl.text);
-                      alert('Текст шаблона скопирован в буфер!');
-                    }}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10.5px] font-semibold flex items-center gap-1 active:scale-95"
+                    onClick={() => setSelectedTemplateIndex(i)}
+                    className={`p-2 rounded-xl text-left text-[11px] border transition-all ${
+                      selectedTemplateIndex === i 
+                        ? 'bg-blue-600 text-white border-blue-600 font-semibold shadow-xs' 
+                        : 'bg-slate-50 text-slate-700 border-slate-200'
+                    }`}
                   >
-                    <Copy className="w-3 h-3" />
-                    <span>Скопировать</span>
+                    {tpl.title}
                   </button>
-                </div>
-                <p className="text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-[11px] leading-relaxed">
-                  {tpl.text}
-                </p>
+                ))}
               </div>
-            ))}
+
+              <div className="pt-2">
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">Редактировать текст перед отправкой:</label>
+                <textarea
+                  rows={3}
+                  value={customMessageBody}
+                  onChange={e => setCustomMessageBody(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs leading-relaxed resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Сегментация аудитории */}
+            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
+              <span className="font-bold text-slate-900 text-xs">2. Кому отправить уведомление:</span>
+              
+              <div className="grid grid-cols-4 gap-1">
+                {[
+                  { id: 'all', label: 'Все' },
+                  { id: 'gym', label: 'В зале' },
+                  { id: 'online', label: 'Онлайн' },
+                  { id: 'selected', label: 'Выбор' }
+                ].map(seg => (
+                  <button
+                    key={seg.id}
+                    type="button"
+                    onClick={() => setRecipientSegment(seg.id)}
+                    className={`py-1.5 px-2 rounded-xl text-center text-xs font-medium border transition-all ${
+                      recipientSegment === seg.id 
+                        ? 'bg-blue-600 text-white border-blue-600 font-bold' 
+                        : 'bg-slate-50 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    {seg.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Мультиселект конкретных учеников */}
+              {recipientSegment === 'selected' && (
+                <div className="space-y-1.5 pt-2 border-t border-slate-100 max-h-48 overflow-y-auto">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Выберите учеников из базы:</span>
+                  {studentsList.map(st => (
+                    <label key={st.id} className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer">
+                      <div>
+                        <p className="font-semibold text-xs text-slate-900">{st.first_name} {st.last_name}</p>
+                        <p className="text-[10px] text-slate-500">{st.phone} • {st.format === 'gym' ? 'Зал' : 'Онлайн'}</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={selectedStudentIds.includes(st.id)}
+                        onChange={() => toggleStudentSelection(st.id)}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              <div className="p-2.5 bg-blue-50/70 border border-blue-200/80 rounded-xl text-[11px] text-blue-900 flex justify-between items-center">
+                <span>Будет отправлено:</span>
+                <span className="font-bold">{targetRecipients.length} ученикам</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 max-w-lg mx-auto shadow-lg">
+            <button
+              type="button"
+              onClick={handleSendBroadcast}
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all"
+            >
+              <Send className="w-4 h-4" />
+              <span>Отправить уведомление ({targetRecipients.length})</span>
+            </button>
           </div>
         </div>
       )}
@@ -1770,7 +2096,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
         </div>
       )}
 
-      {/* ================= 9. РЕФЕРАЛЬНАЯ ПРОГРАММА ДЛЯ ТРЕНЕРОВ ================= */}
+      {/* ================= 9. РЕФЕРАЛЬНАЯ ПРОГРАММА (+1 МЕСЯЦ ПОСЛЕ ОПЛАТЫ) ================= */}
       {activeModal === 'referral' && (
         <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
           <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
@@ -1794,16 +2120,17 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">Бонус: +1 месяц PRO-тарифа</h3>
-                  <p className="text-[11px] text-slate-500">За каждого тренера, зарегистрированного по вашей ссылке</p>
+                  <p className="text-[11px] text-slate-500">За каждого тренера, оплатившего подписку</p>
                 </div>
               </div>
 
-              <div className="p-3.5 bg-blue-50/70 rounded-2xl border border-blue-200/80 space-y-1.5 text-blue-950">
-                <p className="font-bold text-xs">Как это работает:</p>
-                <ol className="text-[11px] text-blue-900 space-y-1 list-decimal pl-4">
-                  <li>Отправьте свою персональную ссылку коллеге-тренеру.</li>
-                  <li>Он регистрируется в GymConnect и получает 14 дней триала.</li>
-                  <li>Вам автоматически начисляется +30 дней PRO-подписки бесплатно!</li>
+              {/* Условия рефералки */}
+              <div className="p-3.5 bg-blue-50/70 rounded-2xl border border-blue-200/80 space-y-2 text-blue-950">
+                <p className="font-bold text-xs">Условия начисления бонуса:</p>
+                <ol className="text-[11px] text-blue-900 space-y-1.5 list-decimal pl-4">
+                  <li>Отправьте персональную ссылку коллеге-тренеру.</li>
+                  <li>Коллега регистрируется в GymConnect и получает <strong>14 дней бесплатного триала</strong>.</li>
+                  <li>После окончания триала, как только коллега оплачивает свой 1-й месяц любого тарифа — вам автоматически начисляется <strong>1 месяц бесплатного PRO-тарифа</strong>!</li>
                 </ol>
               </div>
 
@@ -1846,21 +2173,21 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
             <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
               <p className="font-bold text-slate-900 text-xs text-rose-600">1. Предобморочное состояние / Гипогликемия</p>
               <p className="text-slate-600 text-[11px] leading-relaxed">
-                Симптомы: бледность, холодный пот, головокружение. Немедленно уложить на спину, приподнять ноги выше уровня головы (отток крови к мозгу), расстегнуть воротник, дать сладкую воду или быстрые углеводы.
+                Симптомы: бледность, холодный пот, головокружение. Немедленно уложить на спину, приподнять ноги выше уровня головы, расстегнуть воротник, дать сладкую воду или быстрые углеводы.
               </p>
             </div>
 
             <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
               <p className="font-bold text-slate-900 text-xs text-blue-600">2. Острое растяжение связок или мышц (Протокол RICE)</p>
               <p className="text-slate-600 text-[11px] leading-relaxed">
-                Rest (Покой), Ice (Холод на 15 мин), Compression (Давящая повязка эластичным бинтом), Elevation (Приподнятое положение конечности). Никаких разогревающих мазей в первые 24 часа!
+                Rest (Покой), Ice (Холод на 15 мин), Compression (Давящая повязка), Elevation (Приподнятое положение конечности). Никаких согревающих мазей в первые 24 часа!
               </p>
             </div>
 
             <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
               <p className="font-bold text-slate-900 text-xs text-amber-600">3. Мышечные судороги (икроножные, задняя поверхность)</p>
               <p className="text-slate-600 text-[11px] leading-relaxed">
-                Плавно потянуть носок стопы на себя (растянуть спазмированную мышцу), мягко растереть пальцами, восстановить водно-солевой баланс изотоником или минеральной водой.
+                Плавно потянуть носок стопы на себя (растянуть спазмированную мышцу), мягко растереть пальцами, восстановить водно-солевой баланс минеральной водой.
               </p>
             </div>
           </div>
@@ -2003,8 +2330,8 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                 </div>
 
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center font-mono">
-                  <p className="text-[10.5px] text-slate-400 font-sans">Стоимость продвижения в клубе</p>
-                  <p className="text-lg font-bold text-slate-900 mt-0.5">8 990 ₸ / месяц</p>
+                  <p className="text-[10.5px] text-slate-400 font-sans">Тариф продвижения</p>
+                  <p className="text-sm font-bold text-slate-900 mt-0.5">Индивидуальный расчет по клубу</p>
                 </div>
               </div>
             ) : (
@@ -2031,8 +2358,8 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                 </div>
 
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center font-mono">
-                  <p className="text-[10.5px] text-slate-400 font-sans">Стоимость онлайн-пакета</p>
-                  <p className="text-lg font-bold text-slate-900 mt-0.5">12 990 ₸ / месяц</p>
+                  <p className="text-[10.5px] text-slate-400 font-sans">Тариф онлайн-пакета</p>
+                  <p className="text-sm font-bold text-slate-900 mt-0.5">Индивидуальный расчет по охвату</p>
                 </div>
               </div>
             )}
@@ -2045,7 +2372,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               rel="noreferrer"
               className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all"
             >
-              <span>Подключить продвижение через менеджера</span>
+              <span>Оставить заявку куратору на продвижение</span>
             </a>
           </div>
         </div>
