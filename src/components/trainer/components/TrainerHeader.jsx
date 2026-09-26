@@ -40,8 +40,6 @@ import {
   QrCode,
   MessageSquare,
   Calculator,
-  Download,
-  BookOpen,
   Tag,
   Shield,
   HeartPulse,
@@ -49,7 +47,7 @@ import {
   Scale,
   Search,
   Send,
-  Edit3
+  Headphones
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import * as GymsData from '../../../data/almatyGyms';
@@ -62,7 +60,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
   // Управление открытием полноэкранных секций
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeModal, setActiveModal] = useState(null); 
-  // 'edit_profile' | 'public_card' | 'promotion' | 'subscription' | 'qr_code' | 'templates' | 'client_rules' | 'health_parq' | 'income_calc' | 'referral' | 'first_aid' | 'export_data' | 'support' | 'delete_account'
+  // 'edit_profile' | 'public_card' | 'promotion' | 'subscription' | 'qr_code' | 'templates' | 'client_rules' | 'health_parq' | 'income_calc' | 'referral' | 'support' | 'delete_account'
 
   // Базовые состояния
   const [isCopied, setIsCopied] = useState(false);
@@ -74,7 +72,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
   // Ученики тренера для рассылок и анкет здоровья
   const [studentsList, setStudentsList] = useState([]);
-  const [studentSearchQuery, setStudentSearchQuery] = useState('');
 
   // Подписка и промокоды
   const [promoInput, setPromoInput] = useState('');
@@ -198,7 +195,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
     }
   ];
 
-  // Загрузка подопечных тренера из Supabase
+  // Загрузка подопечных тренера
   useEffect(() => {
     async function loadStudents() {
       try {
@@ -210,7 +207,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
         if (!error && data && data.length > 0) {
           setStudentsList(data);
         } else {
-          // Демо-данные для визуализации при чистой базе
           setStudentsList([
             { id: '1', first_name: 'Данияр', last_name: 'Аскаров', phone: '+77771234567', format: 'gym', remaining_workouts: 7, goal: 'Гипертрофия', health_notes: 'Протрузия L4-L5, без осевых нагрузок' },
             { id: '2', first_name: 'Анель', last_name: 'Мусина', phone: '+77017654321', format: 'online', remaining_workouts: 3, goal: 'Похудение', health_notes: 'Без жалоб, давление в норме' },
@@ -224,7 +220,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
     loadStudents();
   }, [cleanUsername]);
 
-  // Синхронизация формы при обновлении пропса trainer
+  // Синхронизация формы при обновлении данных тренера
   useEffect(() => {
     if (trainer) {
       setEditForm({
@@ -388,7 +384,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
     );
   };
 
-  // Фильтрация получателей рассылки
   const targetRecipients = studentsList.filter(s => {
     if (recipientSegment === 'gym') return s.format === 'gym';
     if (recipientSegment === 'online') return s.format === 'online';
@@ -674,7 +669,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
 
-                {/* Шаблоны сообщений и таргетированная рассылка */}
+                {/* Шаблоны сообщений и рассылка */}
                 <button
                   type="button"
                   onClick={() => { setIsDrawerOpen(false); setActiveModal('templates'); }}
@@ -768,43 +763,9 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                 </button>
               </div>
 
-              {/* 5. БАЗА ЗНАНИЙ И ЗАБОТА */}
+              {/* 5. ТЕХПОДДЕРЖКА */}
               <div className="space-y-1.5 pt-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">База знаний и забота</p>
-
-                <button
-                  type="button"
-                  onClick={() => { setIsDrawerOpen(false); setActiveModal('first_aid'); }}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <HeartPulse className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Первая помощь в зале</p>
-                      <p className="text-[10px] text-slate-500">Протокол при обмороке, давлении и травме</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setIsDrawerOpen(false); setActiveModal('export_data'); }}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Download className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Резервная копия базы</p>
-                      <p className="text-[10px] text-slate-500">Экспорт учеников в CSV</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Помощь и сервис</p>
 
                 <button
                   type="button"
@@ -813,11 +774,11 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <HelpCircle className="w-4 h-4" />
+                      <Headphones className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-900">Служба заботы</p>
-                      <p className="text-[10px] text-slate-500">Куратор тренеров в Telegram</p>
+                      <p className="text-xs font-semibold text-slate-900">Техподдержка</p>
+                      <p className="text-[10px] text-slate-500">Онлайн-помощь и решение вопросов</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
@@ -992,7 +953,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                   placeholder="🔍 Поиск второго клуба..."
                   value={searchSecGymQuery}
                   onChange={e => setSearchSecGymQuery(e.target.value)}
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] mb-1.5"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] mb-1.5"
                 />
                 <select
                   value={editForm.secondary_gym}
@@ -1793,7 +1754,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
           </div>
 
           <div className="p-4 space-y-4 max-w-lg mx-auto w-full pb-24 text-xs">
-            {/* Вкладки: Вопросы / Картотека ответов учеников */}
             <div className="grid grid-cols-2 gap-1 p-1 bg-slate-200/80 rounded-2xl">
               <button
                 type="button"
@@ -1817,7 +1777,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
             {healthTab === 'questions' ? (
               <div className="space-y-4">
-                {/* Базовые вопросы */}
                 <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5">
                   <span className="font-bold text-slate-900 text-xs">Базовые вопросы скрининга:</span>
                   <ul className="space-y-2 text-slate-700 text-[11px] list-disc pl-4">
@@ -1829,7 +1788,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                   </ul>
                 </div>
 
-                {/* Добавление своего вопроса */}
                 <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
                   <span className="font-bold text-slate-900 text-xs">Добавить свой вопрос в анкету:</span>
                   <div className="flex gap-2">
@@ -1869,7 +1827,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                 </div>
               </div>
             ) : (
-              /* Картотека ответов учеников с живым поиском */
               <div className="space-y-3">
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
@@ -1921,7 +1878,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
           </div>
 
           <div className="p-4 space-y-4 max-w-lg mx-auto w-full pb-28 text-xs">
-            {/* Выбор шаблона */}
             <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
               <span className="font-bold text-slate-900 text-xs">1. Выберите готовый шаблон:</span>
               <div className="grid grid-cols-2 gap-1.5">
@@ -1952,7 +1908,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               </div>
             </div>
 
-            {/* Сегментация аудитории */}
             <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
               <span className="font-bold text-slate-900 text-xs">2. Кому отправить уведомление:</span>
               
@@ -1978,7 +1933,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                 ))}
               </div>
 
-              {/* Мультиселект конкретных учеников */}
               {recipientSegment === 'selected' && (
                 <div className="space-y-1.5 pt-2 border-t border-slate-100 max-h-48 overflow-y-auto">
                   <span className="text-[10px] font-bold text-slate-400 uppercase">Выберите учеников из базы:</span>
@@ -2124,7 +2078,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                 </div>
               </div>
 
-              {/* Условия рефералки */}
               <div className="p-3.5 bg-blue-50/70 rounded-2xl border border-blue-200/80 space-y-2 text-blue-950">
                 <p className="font-bold text-xs">Условия начисления бонуса:</p>
                 <ol className="text-[11px] text-blue-900 space-y-1.5 list-decimal pl-4">
@@ -2153,86 +2106,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
         </div>
       )}
 
-      {/* ================= 10. ПАМЯТКА: ПЕРВАЯ ПОМОЩЬ В СПОРТЗАЛЕ ================= */}
-      {activeModal === 'first_aid' && (
-        <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
-          <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
-            <button
-              type="button"
-              onClick={() => { setActiveModal(null); setIsDrawerOpen(true); }}
-              className="flex items-center gap-1 text-blue-600 font-semibold text-xs active:scale-95"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Меню</span>
-            </button>
-            <h2 className="text-xs font-bold text-slate-900">Первая помощь в зале</h2>
-            <div className="w-12"></div>
-          </div>
-
-          <div className="p-4 space-y-3 max-w-lg mx-auto w-full pb-24 text-xs">
-            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
-              <p className="font-bold text-slate-900 text-xs text-rose-600">1. Предобморочное состояние / Гипогликемия</p>
-              <p className="text-slate-600 text-[11px] leading-relaxed">
-                Симптомы: бледность, холодный пот, головокружение. Немедленно уложить на спину, приподнять ноги выше уровня головы, расстегнуть воротник, дать сладкую воду или быстрые углеводы.
-              </p>
-            </div>
-
-            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
-              <p className="font-bold text-slate-900 text-xs text-blue-600">2. Острое растяжение связок или мышц (Протокол RICE)</p>
-              <p className="text-slate-600 text-[11px] leading-relaxed">
-                Rest (Покой), Ice (Холод на 15 мин), Compression (Давящая повязка), Elevation (Приподнятое положение конечности). Никаких согревающих мазей в первые 24 часа!
-              </p>
-            </div>
-
-            <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2">
-              <p className="font-bold text-slate-900 text-xs text-amber-600">3. Мышечные судороги (икроножные, задняя поверхность)</p>
-              <p className="text-slate-600 text-[11px] leading-relaxed">
-                Плавно потянуть носок стопы на себя (растянуть спазмированную мышцу), мягко растереть пальцами, восстановить водно-солевой баланс минеральной водой.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= 11. ЭКСПОРТ БАЗЫ УЧЕНИКОВ ================= */}
-      {activeModal === 'export_data' && (
-        <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
-          <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
-            <button
-              type="button"
-              onClick={() => { setActiveModal(null); setIsDrawerOpen(true); }}
-              className="flex items-center gap-1 text-blue-600 font-semibold text-xs active:scale-95"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Меню</span>
-            </button>
-            <h2 className="text-xs font-bold text-slate-900">Экспорт базы</h2>
-            <div className="w-12"></div>
-          </div>
-
-          <div className="p-4 space-y-4 max-w-lg mx-auto w-full pb-24 text-xs">
-            <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
-              <h3 className="text-sm font-bold text-slate-900">Выгрузка подопечных</h3>
-              <p className="text-slate-600 leading-relaxed text-[11px]">
-                Вы можете сохранить полную резервную копию базы своих учеников (ФИО, телефоны, остаток занятий, цели и даты).
-              </p>
-
-              <button
-                type="button"
-                onClick={() => {
-                  alert('База подопечных успешно сформирована в формате CSV и скопирована в буфер обмена.');
-                }}
-                className="w-full py-3 bg-blue-600 text-white rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 active:scale-98"
-              >
-                <Download className="w-4 h-4" />
-                <span>Скачать CSV файл базы</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= 12. СЛУЖБА ПОДДЕРЖКИ ================= */}
+      {/* ================= 10. ТЕХПОДДЕРЖКА ================= */}
       {activeModal === 'support' && (
         <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
           <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
@@ -2244,31 +2118,51 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               <ArrowLeft className="w-4 h-4" />
               <span>Меню</span>
             </button>
-            <h2 className="text-xs font-bold text-slate-900">Служба заботы</h2>
+            <h2 className="text-xs font-bold text-slate-900">Техподдержка</h2>
             <div className="w-12"></div>
           </div>
 
           <div className="p-4 space-y-4 max-w-lg mx-auto w-full pb-24">
             <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
-              <h3 className="text-sm font-bold text-slate-900">Поддержка наставников GymConnect</h3>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Headphones className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Служба технической поддержки</h3>
+                  <p className="text-[10px] text-slate-400">GymConnect CoachOS Assistance</p>
+                </div>
+              </div>
+
               <p className="text-xs text-slate-600 leading-relaxed">
-                Если у вас возникли сложности с расписанием, списанием тренировок учеников или добавлением нового зала Алматы — напишите нашему куратору. Мы отвечаем ежедневно с 08:00 до 22:00.
+                Если у вас возникли технические сбои, вопросы по списанию тренировок, добавлению новых залов или работе расписания — специалисты техподдержки помогут решить любой вопрос.
               </p>
               
+              <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl space-y-1 text-xs">
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Режим работы:</span>
+                  <span className="font-semibold text-slate-800">Ежедневно 08:00 – 22:00</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Среднее время ответа:</span>
+                  <span className="font-semibold text-emerald-600">до 10 минут</span>
+                </div>
+              </div>
+
               <a
                 href="https://t.me/gymconnect_kz"
                 target="_blank"
                 rel="noreferrer"
-                className="w-full py-3.5 bg-blue-600 text-white rounded-2xl font-semibold text-xs flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all"
               >
-                <span>Написать куратору в Telegram</span>
+                <span>Написать в техподдержку Telegram</span>
               </a>
             </div>
           </div>
         </div>
       )}
 
-      {/* ================= 13. ПРОДВИЖЕНИЕ (BOOST) ================= */}
+      {/* ================= 11. ПРОДВИЖЕНИЕ (BOOST) ================= */}
       {activeModal === 'promotion' && (
         <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
           <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
@@ -2378,7 +2272,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
         </div>
       )}
 
-      {/* ================= 14. ДЕАКТИВАЦИЯ АНКЕТЫ ТРЕНЕРА ================= */}
+      {/* ================= 12. ДЕАКТИВАЦИЯ АНКЕТЫ ТРЕНЕРА ================= */}
       {activeModal === 'delete_account' && (
         <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
           <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
