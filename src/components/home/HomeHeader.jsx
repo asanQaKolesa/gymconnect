@@ -1,6 +1,6 @@
 // src/components/home/HomeHeader.jsx
 import React, { useState } from 'react';
-import { ArrowRight, Bell, Sparkles, ArrowLeft, ShieldCheck, Users } from 'lucide-react';
+import { ArrowRight, Bell, ArrowLeft } from 'lucide-react';
 
 export default function HomeHeader({ onOpenSub }) {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -33,46 +33,39 @@ export default function HomeHeader({ onOpenSub }) {
     <>
       <div className="mb-3.5 select-none space-y-2">
         
-        {/* Премиальная карточка Apple Wallet Pass */}
+        {/* Верхний ряд: кнопка PRO и колокольчик строго одной высоты (h-11) */}
         <div className="flex items-center gap-2">
-          <div 
+          <button 
+            type="button"
             onClick={onOpenSub}
-            className="flex-1 p-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-3xl shadow-sm flex items-center justify-between cursor-pointer transition-all active:scale-99 border border-slate-800"
+            className="flex-1 h-11 px-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-semibold shadow-xs flex items-center justify-between transition-all active:scale-98 border border-slate-800"
           >
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold tracking-tight">GymConnect PRO Pass</span>
-                <span className="text-[9px] font-mono uppercase bg-white/20 px-1.5 py-0.2 rounded text-slate-200">
-                  All-Access
-                </span>
-              </div>
-              <p className="text-[10.5px] text-slate-300">
-                Безлимитный GymBro, скидки на абонементы и спортпит
-              </p>
+            <div className="flex items-center gap-1.5 truncate">
+              <span className="truncate">Оформить GymConnect PRO</span>
+              <span className="text-[9px] font-mono uppercase bg-white/20 px-1.5 py-0.5 rounded text-slate-200 shrink-0">
+                Pass
+              </span>
             </div>
+            <ArrowRight className="w-4 h-4 text-white stroke-[2] shrink-0 ml-1.5" />
+          </button>
 
-            <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center shrink-0 ml-2">
-              <ArrowRight className="w-4 h-4 text-white stroke-[2]" />
-            </div>
-          </div>
-
-          {/* Монохромный колокольчик центра уведомлений */}
+          {/* Колокольчик уведомлений точно такой же высоты h-11 */}
           <button 
             type="button"
             onClick={() => setIsNotifOpen(true)}
-            className="w-12 h-12 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-3xl flex items-center justify-center text-slate-700 shadow-xs transition-colors relative shrink-0 active:scale-95"
+            className="w-11 h-11 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-center text-slate-700 shadow-xs transition-colors relative shrink-0 active:scale-95"
             title="Центр уведомлений"
           >
             <Bell className="w-4 h-4 stroke-[1.8]" />
-            <span className="absolute top-3 right-3 w-2 h-2 bg-blue-600 rounded-full animate-ping" />
-            <span className="absolute top-3 right-3 w-2 h-2 bg-blue-600 rounded-full" />
+            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-blue-600 rounded-full animate-ping" />
+            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-blue-600 rounded-full" />
           </button>
         </div>
 
-        {/* Социальное доказательство с аватарами атлетов */}
+        {/* Социальное подтверждение «30+ атлетов уже с нами» */}
         <div className="flex items-center justify-between px-3.5 py-2 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
           <div className="flex items-center gap-2.5">
-            {/* Стек аватаров */}
+            {/* Стек мини-аватаров */}
             <div className="flex -space-x-1.5 overflow-hidden">
               <img className="inline-block h-5 w-5 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="" />
               <img className="inline-block h-5 w-5 rounded-full ring-2 ring-white object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" alt="" />
@@ -80,7 +73,7 @@ export default function HomeHeader({ onOpenSub }) {
             </div>
 
             <p className="text-[11px] text-slate-600">
-              <strong>30+ атлетов</strong> на тренировках в залах Алматы
+              <strong>30+ атлетов</strong> уже с нами в залах Алматы
             </p>
           </div>
 
@@ -92,7 +85,7 @@ export default function HomeHeader({ onOpenSub }) {
 
       </div>
 
-      {/* ПОЛНОЭКРАННЫЙ ЦЕНТР УВЕДОМЛЕНИЙ */}
+      {/* Полноэкранный центр уведомлений */}
       {isNotifOpen && (
         <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
           
