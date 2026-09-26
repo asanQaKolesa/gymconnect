@@ -8,6 +8,7 @@ import {
   Plus, 
   BellRing, 
   CheckCircle2, 
+  XCircle, 
   X, 
   ChevronRight, 
   Phone, 
@@ -15,17 +16,30 @@ import {
   Send,
   MessageCircle,
   Dumbbell,
-  Check
+  Check,
+  Eye,
+  BarChart3,
+  Flame,
+  ArrowUpRight,
+  ShieldCheck
 } from 'lucide-react';
 
-export default function OverviewTab({ trainer, onAddStudentClick }) {
-  // Фильтр формата
+export default function OverviewTab({ 
+  trainer, 
+  students = [], 
+  activeCount = 14, 
+  pausedCount = 2, 
+  leftCount = 1, 
+  totalEarnings = 420000, 
+  onAddStudentClick 
+}) {
   const [filterFormat, setFilterFormat] = useState('all'); // 'all' | 'gym' | 'online'
 
   // Модальные окна
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [reminderType, setReminderType] = useState('today'); // 'today' | 'payment' | 'absence'
   const [isLocalAddModalOpen, setIsLocalAddModalOpen] = useState(false);
+  const [selectedStudentForWorkout, setSelectedStudentForWorkout] = useState(null);
 
   // Форма добавления нового ученика
   const [newStudentForm, setNewStudentForm] = useState({
@@ -37,12 +51,76 @@ export default function OverviewTab({ trainer, onAddStudentClick }) {
     firstSessionDate: '2026-09-26'
   });
 
-  // Расписание на сегодняшний день (Суббота)
+  // Расписание на сегодняшний день (Суббота) с детальными программами
   const [todaySchedule, setTodaySchedule] = useState([
-    { id: '1', time: '10:00', name: 'Данияр Аскаров', gym: 'Invictus Go', format: 'gym', status: 'completed', remaining: 6 },
-    { id: '2', time: '12:00', name: 'Анель Мусина', gym: 'Онлайн ведение', format: 'online', status: 'pending', remaining: 3 },
-    { id: '3', time: '15:30', name: 'Ерлан Сатыбалдиев', gym: 'Invictus Go', format: 'gym', status: 'pending', remaining: 1 },
-    { id: '4', time: '18:00', name: 'Мадина Омарова', gym: 'Invictus Go', format: 'gym', status: 'pending', remaining: 8 }
+    { 
+      id: '1', 
+      time: '10:00', 
+      name: 'Данияр Аскаров', 
+      phone: '+77771234567',
+      gym: 'Invictus Go (Mega Park)', 
+      format: 'gym', 
+      status: 'completed', 
+      remaining: 6,
+      focus: 'Спина и бицепс (тяговый день)',
+      exercises: [
+        { name: 'Тяга верхнего блока широким хватом', sets: '4 × 10', weight: '65 кг' },
+        { name: 'Тяга Т-грифа с упором в грудь', sets: '4 × 10', weight: '45 кг' },
+        { name: 'Горизонтальная тяга в кроссовере', sets: '3 × 12', weight: '55 кг' },
+        { name: 'Подъем гантелей с супинацией', sets: '3 × 12', weight: '14 кг' }
+      ]
+    },
+    { 
+      id: '2', 
+      time: '12:00', 
+      name: 'Анель Мусина', 
+      phone: '+77017654321',
+      gym: 'Онлайн ведение (Zoom)', 
+      format: 'online', 
+      status: 'pending', 
+      remaining: 3,
+      focus: 'Ягодицы и кора (акцент на форму)',
+      exercises: [
+        { name: 'Ягодичный мост со штангой', sets: '4 × 12', weight: '50 кг' },
+        { name: 'Болгарские выпады с гантелями', sets: '3 × 12', weight: '8 кг' },
+        { name: 'Румынская тяга на одной ноге', sets: '3 × 15', weight: '10 кг' },
+        { name: 'Планка на предплечьях', sets: '3 × 45 сек', weight: 'Свой вес' }
+      ]
+    },
+    { 
+      id: '3', 
+      time: '15:30', 
+      name: 'Ерлан Сатыбалдиев', 
+      phone: '+77059998877',
+      gym: 'Invictus Go (Mega Park)', 
+      format: 'gym', 
+      status: 'pending', 
+      remaining: 1,
+      focus: 'Грудь и трицепс (жим + гипертрофия)',
+      exercises: [
+        { name: 'Жим штанги лежа на горизонтальной', sets: '4 × 8', weight: '85 кг' },
+        { name: 'Жим гантелей на наклонной скамье', sets: '4 × 10', weight: '26 кг' },
+        { name: 'Отжимания на брусьях с весом', sets: '3 × 10', weight: '+10 кг' },
+        { name: 'Разгибание на трицепс с канатом', sets: '3 × 12', weight: '25 кг' }
+      ]
+    },
+    { 
+      id: '4', 
+      time: '18:00', 
+      name: 'Мадина Омарова', 
+      phone: '+77473332211',
+      gym: 'Invictus Go (Mega Park)', 
+      format: 'gym', 
+      status: 'pending', 
+      remaining: 8,
+      focus: 'Full Body функционал и выносливость',
+      exercises: [
+        { name: 'Приседания с кубковым хватом', sets: '4 × 15', weight: '16 кг' },
+        { name: 'Тяга гантелей в планке (Renegade Row)', sets: '3 × 12', weight: '6 кг' },
+        { name: 'Махи гирей двумя руками', sets: '4 × 20', weight: '16 кг' },
+        { name: 'Интервальный гребной тренажер', sets: '5 раундов', weight: 'Макс. темп' }
+      ]
+    }
   ]);
 
   // Демо-список подопечных для напоминаний
@@ -55,14 +133,41 @@ export default function OverviewTab({ trainer, onAddStudentClick }) {
     { id: '6', name: 'Камила Жумабаева', phone: '+77784443322', format: 'online', remaining: 0, status: 'finished' }
   ]);
 
-  // Списание тренировки по расписанию
-  const handleCompleteSession = (id) => {
+  // Недельный график загрузки смен тренера (Пн - Вс)
+  const weeklyLoadStats = [
+    { day: 'Пн', count: 6, percent: 85, isToday: false },
+    { day: 'Вт', count: 4, percent: 55, isToday: false },
+    { day: 'Ср', count: 7, percent: 100, isToday: false },
+    { day: 'Чт', count: 5, percent: 70, isToday: false },
+    { day: 'Пт', count: 6, percent: 85, isToday: false },
+    { day: 'Сб', count: 4, percent: 60, isToday: true },
+    { day: 'Вс', count: 1, percent: 15, isToday: false }
+  ];
+
+  // Установка статуса «Проведено» (списание занятия)
+  const handleMarkCompleted = (id) => {
     setTodaySchedule(prev => prev.map(item => {
       if (item.id === id) {
+        const wasCompleted = item.status === 'completed';
         return {
           ...item,
-          status: item.status === 'completed' ? 'pending' : 'completed',
-          remaining: item.status === 'completed' ? item.remaining + 1 : Math.max(0, item.remaining - 1)
+          status: 'completed',
+          remaining: wasCompleted ? item.remaining : Math.max(0, item.remaining - 1)
+        };
+      }
+      return item;
+    }));
+  };
+
+  // Установка статуса «Не проведено» (без списания / отмена)
+  const handleMarkCanceled = (id) => {
+    setTodaySchedule(prev => prev.map(item => {
+      if (item.id === id) {
+        const wasCompleted = item.status === 'completed';
+        return {
+          ...item,
+          status: 'canceled',
+          remaining: wasCompleted ? item.remaining + 1 : item.remaining
         };
       }
       return item;
@@ -96,29 +201,30 @@ export default function OverviewTab({ trainer, onAddStudentClick }) {
     alert('Ученик успешно добавлен в вашу базу!');
   };
 
-  // Отправка напоминания в WhatsApp
   const handleSendReminder = (phone, text) => {
     const cleanPhone = phone.replace(/\D/g, '');
     const encoded = encodeURIComponent(text);
     window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
   };
 
-  // Фильтрация расписания по формату
+  // Фильтрация сегодняшнего расписания
   const filteredSchedule = todaySchedule.filter(item => {
     if (filterFormat === 'gym') return item.format === 'gym';
     if (filterFormat === 'online') return item.format === 'online';
     return true;
   });
 
+  const completedTodayCount = todaySchedule.filter(s => s.status === 'completed').length;
+
   return (
-    <div className="space-y-4 pb-20 select-none">
+    <div className="space-y-3.5 pb-10 select-none">
       
       {/* 1. ФИЛЬТР ФОРМАТА (ВСЕ / В ЗАЛЕ / ОНЛАЙН) */}
-      <div className="flex items-center justify-between gap-2 p-1 bg-slate-200/70 rounded-2xl">
+      <div className="flex items-center justify-between gap-1.5 p-1 bg-slate-200/70 rounded-2xl">
         <button
           type="button"
           onClick={() => setFilterFormat('all')}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-xl transition-all ${
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all ${
             filterFormat === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
           }`}
         >
@@ -127,16 +233,16 @@ export default function OverviewTab({ trainer, onAddStudentClick }) {
         <button
           type="button"
           onClick={() => setFilterFormat('gym')}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-xl transition-all ${
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all ${
             filterFormat === 'gym' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
           }`}
         >
-          В зале
+          В зале (оффлайн)
         </button>
         <button
           type="button"
           onClick={() => setFilterFormat('online')}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-xl transition-all ${
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all ${
             filterFormat === 'online' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
           }`}
         >
@@ -144,7 +250,7 @@ export default function OverviewTab({ trainer, onAddStudentClick }) {
         </button>
       </div>
 
-      {/* 2. КНОПКИ ДЕЙСТВИЙ: ДОБАВИТЬ УЧЕНИКА И НАПОМНИТЬ */}
+      {/* 2. КНОПКИ БЫСТРЫХ ДЕЙСТВИЙ */}
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
@@ -165,7 +271,7 @@ export default function OverviewTab({ trainer, onAddStudentClick }) {
         </button>
       </div>
 
-      {/* 3. ОСНОВНЫЕ KPI КАРТОЧКИ С ТОНКОЙ И ЧИСТОЙ ТИПОГРАФИКОЙ */}
+      {/* 3. ОСНОВНЫЕ KPI КАРТОЧКИ С ТОНКИМИ ШРИФТАМИ */}
       <div className="space-y-2.5">
         
         {/* КАРТОЧКА: ВЫРУЧКА ЗА МЕСЯЦ */}
@@ -173,34 +279,37 @@ export default function OverviewTab({ trainer, onAddStudentClick }) {
           <div>
             <span className="text-[11px] font-medium text-slate-400">Выручка за сентябрь</span>
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-xl font-semibold text-slate-900 font-mono tracking-tight">420 000 ₸</span>
-              <span className="text-[10px] font-medium text-emerald-600">+14% к авг</span>
+              <span className="text-xl font-semibold text-slate-900 font-mono tracking-tight">
+                {totalEarnings.toLocaleString()} ₸
+              </span>
+              <span className="text-[10.5px] font-semibold text-emerald-600 flex items-center">
+                <ArrowUpRight className="w-3 h-3" /> +14%
+              </span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <TrendingUp className="w-4 h-4" />
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+            <TrendingUp className="w-5 h-5" />
           </div>
         </div>
 
         {/* СЕТКА: АКТИВНАЯ БАЗА И СРЕДНЯЯ ЯВКА */}
         <div className="grid grid-cols-2 gap-2.5">
           
-          {/* АКТИВНАЯ БАЗА С РАЗДЕЛЕНИЕМ ПАУЗА / ЗАВЕРШИЛИ */}
+          {/* АКТИВНАЯ БАЗА */}
           <div className="bg-white p-3.5 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5 flex flex-col justify-between">
             <div>
               <span className="text-[11px] font-medium text-slate-400">Активная база</span>
-              <p className="text-lg font-semibold text-slate-900 font-mono mt-0.5">14 атлетов</p>
+              <p className="text-lg font-semibold text-slate-900 font-mono mt-0.5">{activeCount} атлетов</p>
             </div>
 
-            {/* Аккуратные плашки снизу */}
             <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px]">
-              <div className="flex justify-between items-center text-amber-700 bg-amber-50/70 px-2 py-0.5 rounded-lg">
+              <div className="flex justify-between items-center text-amber-800 bg-amber-50/80 px-2 py-0.5 rounded-lg border border-amber-200/60 font-medium">
                 <span>На паузе:</span>
-                <span className="font-mono font-semibold">2</span>
+                <span className="font-mono font-bold">{pausedCount}</span>
               </div>
-              <div className="flex justify-between items-center text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg">
+              <div className="flex justify-between items-center text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg font-medium">
                 <span>Завершили:</span>
-                <span className="font-mono font-semibold">1</span>
+                <span className="font-mono font-bold">{leftCount}</span>
               </div>
             </div>
           </div>
@@ -212,90 +321,275 @@ export default function OverviewTab({ trainer, onAddStudentClick }) {
               <p className="text-lg font-semibold text-blue-600 font-mono mt-0.5">92%</p>
             </div>
 
-            {/* Детализация посещаемости */}
             <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px]">
-              <div className="flex justify-between items-center text-emerald-700 bg-emerald-50/70 px-2 py-0.5 rounded-lg">
+              <div className="flex justify-between items-center text-emerald-800 bg-emerald-50/80 px-2 py-0.5 rounded-lg border border-emerald-200/60 font-medium">
                 <span>По графику:</span>
-                <span className="font-mono font-semibold">46 зан.</span>
+                <span className="font-mono font-bold">46 зан.</span>
               </div>
-              <div className="flex justify-between items-center text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg">
+              <div className="flex justify-between items-center text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg font-medium">
                 <span>Переносы:</span>
-                <span className="font-mono font-semibold">4</span>
+                <span className="font-mono font-bold">4 зан.</span>
               </div>
             </div>
           </div>
 
         </div>
+
+        {/* ДОПОЛНИТЕЛЬНАЯ ПРОФЕССИОНАЛЬНАЯ АНАЛИТИКА: RETENTION И СРЕДНИЙ ЧЕК */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-medium leading-none">Продление (Retention)</p>
+              <p className="text-xs font-bold text-slate-900 font-mono mt-1">87.5% в срок</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <BarChart3 className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-medium leading-none">Средний чек блока</p>
+              <p className="text-xs font-bold text-slate-900 font-mono mt-1">70 000 ₸</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ГРАФИК ЗАГРУЗКИ ПО ДНЯМ НЕДЕЛИ */}
+        <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-900">Недельная загрузка залов</span>
+            <span className="text-[10.5px] font-mono text-slate-400">33 тренировки / нед</span>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1.5 items-end h-20 pt-2">
+            {weeklyLoadStats.map(item => (
+              <div key={item.day} className="flex flex-col items-center gap-1.5 h-full justify-end">
+                <span className="text-[9.5px] font-mono font-bold text-slate-600">{item.count}</span>
+                <div className="w-full bg-slate-100 rounded-lg h-12 flex items-end p-0.5">
+                  <div 
+                    className={`w-full rounded-md transition-all ${
+                      item.isToday 
+                        ? 'bg-blue-600 shadow-xs' 
+                        : 'bg-slate-300'
+                    }`}
+                    style={{ height: `${item.percent}%` }}
+                  ></div>
+                </div>
+                <span className={`text-[10px] font-bold ${item.isToday ? 'text-blue-600' : 'text-slate-400'}`}>
+                  {item.day}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* 4. РАСПИСАНИЕ НА СЕГОДНЯ (СУББОТА) */}
+      {/* 4. РАСПИСАНИЕ НА СЕГОДНЯ (СУББОТА) — АДАПТИВНОЕ, БЕЗ СЪЕЗЖАНИЙ */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-blue-600" />
             <div>
-              <h3 className="text-xs font-semibold text-slate-900">Суббота, расписание на сегодня</h3>
+              <h3 className="text-xs font-bold text-slate-900">Суббота, расписание на сегодня</h3>
               <p className="text-[10px] text-slate-400">
-                Запланировано: {filteredSchedule.length} тренировок
+                Проведено: {completedTodayCount} из {todaySchedule.length} занятий
               </p>
             </div>
           </div>
-          <span className="text-[10px] font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg">
+          <span className="text-[10px] font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
             26 сентября
           </span>
         </div>
 
-        {/* Список занятий по таймлайну */}
-        <div className="space-y-2">
+        {/* СПИСОК КАРТОЧЕК РАСПИСАНИЯ — НА ВСЮ ШИРИНУ, НИЧЕГО НЕ ВЫЛЕЗАЕТ */}
+        <div className="space-y-3">
           {filteredSchedule.length === 0 ? (
             <p className="text-xs text-slate-400 text-center py-4">На сегодня тренировок в этом формате нет</p>
           ) : (
             filteredSchedule.map((item) => {
-              const isDone = item.status === 'completed';
+              const isCompleted = item.status === 'completed';
+              const isCanceled = item.status === 'canceled';
+
               return (
                 <div
                   key={item.id}
-                  className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                    isDone 
-                      ? 'bg-slate-50/70 border-slate-200/60 opacity-80' 
-                      : 'bg-white border-slate-200/90'
+                  className={`w-full p-3.5 rounded-2xl border transition-all space-y-2.5 ${
+                    isCompleted 
+                      ? 'bg-emerald-50/40 border-emerald-200/80' 
+                      : isCanceled
+                        ? 'bg-rose-50/40 border-rose-200/70'
+                        : 'bg-slate-50/60 border-slate-200/90'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="text-center w-11 shrink-0 font-mono">
-                      <span className="text-xs font-semibold text-slate-800 block">{item.time}</span>
-                      <span className="text-[9px] text-slate-400">{item.format === 'gym' ? 'Зал' : 'Онлайн'}</span>
+                  {/* Верхний ряд: Время, Формат и статус */}
+                  <div className="flex items-center justify-between gap-2 border-b border-slate-200/50 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded-lg border border-slate-200/80">
+                        {item.time}
+                      </span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${
+                        item.format === 'gym' 
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200/60' 
+                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                      }`}>
+                        {item.format === 'gym' ? 'В зале' : 'Онлайн'}
+                      </span>
                     </div>
 
-                    <div className="space-y-0.5 overflow-hidden">
-                      <p className={`text-xs font-medium truncate ${isDone ? 'line-through text-slate-500' : 'text-slate-900'}`}>
-                        {item.name}
-                      </p>
-                      <p className="text-[10px] text-slate-400 truncate">
-                        {item.gym} • остаток: <span className="font-mono font-semibold text-blue-600">{item.remaining} зан.</span>
-                      </p>
+                    <div className="flex items-center gap-1">
+                      {isCompleted && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Проведено
+                        </span>
+                      )}
+                      {isCanceled && (
+                        <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <XCircle className="w-3 h-3" /> Не проведено
+                        </span>
+                      )}
+                      {!isCompleted && !isCanceled && (
+                        <span className="text-[10px] font-medium text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                          Ожидается
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Кнопка списания тренировки */}
-                  <button
-                    type="button"
-                    onClick={() => handleCompleteSession(item.id)}
-                    className={`px-3 py-1.5 rounded-xl text-[10.5px] font-semibold flex items-center gap-1 transition-all active:scale-95 shrink-0 ${
-                      isDone
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
-                    }`}
-                  >
-                    {isDone ? <Check className="w-3 h-3 text-emerald-600" /> : null}
-                    <span>{isDone ? 'Проведено' : 'Списать -1'}</span>
-                  </button>
+                  {/* Средний ряд: Имя, Локация и остаток */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <h4 className="text-xs font-bold text-slate-900 leading-tight">
+                        {item.name}
+                      </h4>
+                      <p className="text-[10.5px] text-slate-500">
+                        {item.gym}
+                      </p>
+                      <p className="text-[10px] text-blue-600 font-medium">
+                        Фокус: {item.focus}
+                      </p>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] text-slate-400 block">Остаток</span>
+                      <span className="text-xs font-bold font-mono text-slate-800 bg-white px-2 py-0.5 rounded-lg border border-slate-200 inline-block mt-0.5">
+                        {item.remaining} зан.
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Нижний ряд: Кнопки «Программа дня», «Проведено» и «Не проведено» */}
+                  <div className="flex items-center gap-1.5 pt-1">
+                    
+                    {/* Кнопка открытия программы дня */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStudentForWorkout(item)}
+                      className="flex-1 py-2 px-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs"
+                      title="Посмотреть программу на сегодня"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-blue-600" />
+                      <span>План дня</span>
+                    </button>
+
+                    {/* Кнопка Проведено */}
+                    <button
+                      type="button"
+                      onClick={() => handleMarkCompleted(item.id)}
+                      className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs ${
+                        isCompleted 
+                          ? 'bg-emerald-600 text-white font-bold' 
+                          : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80'
+                      }`}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Проведено</span>
+                    </button>
+
+                    {/* Кнопка Не проведено */}
+                    <button
+                      type="button"
+                      onClick={() => handleMarkCanceled(item.id)}
+                      className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs ${
+                        isCanceled 
+                          ? 'bg-rose-600 text-white font-bold' 
+                          : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80'
+                      }`}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Не проведено</span>
+                    </button>
+
+                  </div>
                 </div>
               );
             })
           )}
         </div>
       </div>
+
+      {/* ================= МОДАЛКА: ПРОСМОТР ПРОГРАММЫ НА ЭТОТ ДЕНЬ ================= */}
+      {selectedStudentForWorkout && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col justify-between overflow-y-auto">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                  <Dumbbell className="w-4 h-4 stroke-[2.2]" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">{selectedStudentForWorkout.name}</h3>
+                  <p className="text-[10.5px] text-slate-400">Тренировочный план на сегодня ({selectedStudentForWorkout.time})</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedStudentForWorkout(null)}
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Содержимое программы дня */}
+            <div className="space-y-3 text-xs">
+              <div className="p-3 bg-blue-50/70 border border-blue-200/70 rounded-2xl">
+                <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider block">Целевой фокус сессии:</span>
+                <p className="text-xs font-bold text-blue-950 mt-0.5">{selectedStudentForWorkout.focus}</p>
+                <p className="text-[10.5px] text-blue-900/80 mt-1">Клуб: {selectedStudentForWorkout.gym}</p>
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">Упражнения и рабочие веса:</span>
+                
+                {selectedStudentForWorkout.exercises.map((ex, idx) => (
+                  <div key={idx} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-slate-900 text-xs">{idx + 1}. {ex.name}</p>
+                      <p className="text-[10.5px] text-slate-500 mt-0.5">{ex.sets}</p>
+                    </div>
+                    <span className="text-xs font-bold font-mono text-blue-600 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
+                      {ex.weight}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectedStudentForWorkout(null)}
+              className="w-full py-3 bg-slate-900 text-white rounded-2xl text-xs font-semibold active:scale-98 transition-all"
+            >
+              Закрыть программу
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ================= МОДАЛКА: БЫСТРЫЕ НАПОМИНАНИЯ (3 СЦЕНАРИЯ) ================= */}
       {isReminderModalOpen && (
@@ -360,7 +654,7 @@ export default function OverviewTab({ trainer, onAddStudentClick }) {
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleSendReminder('+77771234567', `Привет, ${st.name}! Напоминаю о сегодняшней тренировке в ${st.time}. Жду вовремя! 💪`)}
+                        onClick={() => handleSendReminder(st.phone, `Привет, ${st.name}! Напоминаю о сегодняшней тренировке в ${st.time}. Жду вовремя! 💪`)}
                         className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95"
                       >
                         <MessageCircle className="w-3 h-3" />
@@ -397,7 +691,7 @@ export default function OverviewTab({ trainer, onAddStudentClick }) {
                 <>
                   <p className="text-[10px] text-rose-500 px-1">Предупреждение об отмене или форс-мажоре:</p>
                   <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-2xl space-y-2">
-                    <p className="text-[11px] text-rose-900">
+                    <p className="text-[11px] text-rose-900 leading-relaxed">
                       Отправить всем ученикам на сегодня: «Уважаемые атлеты, по техническим причинам меня сегодня не будет в зале. Все занятия переносятся без сгорания».
                     </p>
                     <button
