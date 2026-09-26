@@ -15,7 +15,8 @@ import {
   HelpCircle, 
   X, 
   ChevronRight, 
-  ShieldCheck 
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
@@ -117,7 +118,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     work_format: 'hybrid',
     target_audience: 'all',
 
-    // Длительность и бесплатные бонусы
+    // Длительность и бонусы
     workout_duration: 60,
     has_free_trial: false,
     free_trial_duration: '45',
@@ -132,7 +133,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
       online: true
     },
 
-    // Прайс-лист с количеством занятий
+    // Прайс-лист со сгруппированными абонементами
     pricing: {
       personal_single: 8000,
       personal_count: 12,
@@ -150,11 +151,11 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
       online_month: 35000
     },
 
-    // Онлайн-продукты (галочка снята по умолчанию)
+    // Онлайн-продукты
     online_products: ['Индивидуальный план питания и расчет КБЖУ'],
     promote_online_products: false,
 
-    // Верификация (галочки сняты по умолчанию)
+    // Верификация
     certificates_link: '',
     gym_phone: '',
     education_phone: '',
@@ -339,9 +340,9 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
           </span>
         </div>
 
-        {/* Обновленный заголовок: синяя иконка сохранена, текст заменен по вашему описанию */}
+        {/* Заголовок */}
         <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 text-center space-y-1.5">
-          <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-1.5 shadow-sm">
+          <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-1 shadow-sm">
             <Dumbbell className="w-5 h-5 stroke-[2]" />
           </div>
           <h1 className="text-base font-black text-slate-900 tracking-tight">
@@ -362,17 +363,17 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            {/* Фото */}
+            {/* Фото (текст под фото убран) */}
             <div className="flex flex-col items-center text-center">
               <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                 <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-100 flex items-center justify-center">
                   {formData.photo_url ? (
                     <img src={formData.photo_url} alt="Аватар тренера" className="w-full h-full object-cover" />
                   ) : (
-                    <Users className="w-8 h-8 text-slate-400" />
+                    <Users className="w-8 h-8 text-slate-400 stroke-[1.6]" />
                   )}
                 </div>
-                <div className="absolute -bottom-1 -right-1 p-1.5 bg-slate-800 text-white rounded-full shadow-md">
+                <div className="absolute -bottom-1 -right-1 p-1.5 bg-blue-600 text-white rounded-full shadow-md">
                   <Camera className="w-3.5 h-3.5" />
                 </div>
               </div>
@@ -383,7 +384,6 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 accept="image/*"
                 className="hidden"
               />
-              <p className="text-[10px] text-slate-400 mt-1.5 font-normal">Синхронизировано с Telegram • нажмите для замены</p>
             </div>
 
             <div>
@@ -396,7 +396,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 value={formData.full_name}
                 onChange={e => setFormData({ ...formData, full_name: e.target.value })}
                 placeholder="Данияр Сериков"
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
               />
             </div>
 
@@ -413,7 +413,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     value={formData.username}
                     onChange={e => setFormData({ ...formData, username: e.target.value.replace(/[@\s]/g, '') })}
                     placeholder="coach_nick"
-                    className="w-full pl-6 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-900 focus:outline-none focus:border-slate-800"
+                    className="w-full pl-6 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-900 focus:outline-none focus:border-blue-600"
                   />
                 </div>
               </div>
@@ -434,7 +434,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                       setFormData({ ...formData, phone: val });
                     }}
                     placeholder="701 123 45 67"
-                    className="w-full pl-8 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-slate-800"
+                    className="w-full pl-8 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
                   />
                 </div>
               </div>
@@ -451,12 +451,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                   value={formData.instagram}
                   onChange={e => setFormData({ ...formData, instagram: e.target.value.replace(/[@\s]/g, '') })}
                   placeholder="coach_fit"
-                  className="w-full pl-6 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-slate-800"
+                  className="w-full pl-6 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
             </div>
 
-            {/* О себе с живым описанием */}
+            {/* О себе */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 О себе, спортивных званиях и методиках
@@ -466,12 +466,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 value={formData.bio}
                 onChange={e => setFormData({ ...formData, bio: e.target.value })}
                 placeholder="Мастер спорта РК, специализируюсь на силовом тренинге и рекомпозиции. Ставлю идеальную биомеханику базы, довожу до результата без срывов и жестких голодовок..."
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-normal text-slate-900 focus:outline-none focus:border-slate-800 resize-none leading-relaxed"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-normal text-slate-900 focus:outline-none focus:border-blue-600 resize-none leading-relaxed"
               />
             </div>
           </div>
 
-          {/* 2. ЗАЛЫ ДЛЯ ТРЕНИРОВОК (МОНОХРОМНЫЙ БЕЙДЖ В ОДНУ СТРОКУ) */}
+          {/* 2. ЗАЛЫ ДЛЯ ТРЕНИРОВОК */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-100 whitespace-nowrap">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
@@ -489,7 +489,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               <select
                 value={formData.gym}
                 onChange={e => setFormData({ ...formData, gym: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800 truncate"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 truncate"
               >
                 {ALMATY_GYMS.slice(0, 80).map((g, idx) => (
                   <option key={idx} value={g}>{g}</option>
@@ -504,7 +504,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               <select
                 value={formData.secondary_gym}
                 onChange={e => setFormData({ ...formData, secondary_gym: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800 truncate"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 truncate"
               >
                 <option value="">Не указан (тренирую в одном зале)</option>
                 {ALMATY_GYMS.slice(0, 80).map((g, idx) => (
@@ -514,7 +514,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 3. СТАЖ И СПЕЦИАЛИЗАЦИЯ (МОНОХРОМНЫЙ СТИЛЬ) */}
+          {/* 3. СТАЖ И СПЕЦИАЛИЗАЦИЯ (АКТИВНЫЙ ЦВЕТ — СИНИЙ) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -522,7 +522,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            {/* Монохромный степпер опыта */}
+            {/* Степпер опыта */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-slate-900">Опыт работы тренером</p>
@@ -550,7 +550,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Специализации (активные выделяются монохромным темным фоном slate-900) */}
+            {/* Специализации (активный цвет — синий) */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
                 Специализации (выберите ваши профильные направления)
@@ -565,7 +565,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                       onClick={() => toggleSpecialization(spec)}
                       className={`p-2.5 rounded-xl border text-left text-xs font-medium transition-all flex items-center justify-between ${
                         isSelected 
-                          ? 'bg-slate-900 text-white border-slate-900 shadow-sm' 
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/25' 
                           : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
@@ -577,7 +577,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Формат ведения: монохромный активный статус */}
+            {/* Формат ведения: 2 строки (активный цвет — синий) */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Формат ведения клиентов
@@ -594,12 +594,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     onClick={() => setFormData({ ...formData, work_format: fmt.id })}
                     className={`py-2 px-1 rounded-xl border transition-all text-center flex flex-col items-center justify-center ${
                       formData.work_format === fmt.id
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/25'
                         : 'bg-slate-50 text-slate-700 border-slate-200'
                     }`}
                   >
                     <span className="text-xs font-bold leading-tight">{fmt.title}</span>
-                    <span className={`text-[10px] leading-tight ${formData.work_format === fmt.id ? 'text-slate-300' : 'text-slate-400'}`}>
+                    <span className={`text-[10px] leading-tight ${formData.work_format === fmt.id ? 'text-blue-100' : 'text-slate-400'}`}>
                       {fmt.sub}
                     </span>
                   </button>
@@ -615,7 +615,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               <select
                 value={formData.target_audience}
                 onChange={e => setFormData({ ...formData, target_audience: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
               >
                 <option value="all">Со всеми (и мужчины, и женщины)</option>
                 <option value="women">Только девушки и женщины</option>
@@ -624,7 +624,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 4. УСЛОВИЯ И БОНУСЫ (МОНОХРОМНЫЕ ИКОНКИ И КНОПКИ) */}
+          {/* 4. УСЛОВИЯ И БОНУСЫ (КРАСИВО ВЫРОВНЕННЫЙ ТЕКСТ) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -632,9 +632,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            {/* Пояснение в нейтральных серых тонах */}
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-700 leading-relaxed font-normal">
-              Мы публикуем вас в каталоге проверенных тренеров. Вы не обязаны проводить бесплатные тренировки, но атлеты охотнее выбирают наставников, готовых провести первичное знакомство.
+            {/* Красиво выровненный блок с понятным описанием */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-700 leading-relaxed font-normal space-y-1">
+              <p className="font-semibold text-slate-900">Размещение в каталоге наставников:</p>
+              <p>
+                Мы публикуем вашу анкету в едином каталоге тренеров Алматы. Проведение бесплатного вводного занятия не обязательно, но позволяет вам наглядно презентовать свой подход и быстрее конвертировать новых атлетов в постоянных клиентов.
+              </p>
             </div>
 
             <div>
@@ -649,7 +652,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     onClick={() => setFormData({ ...formData, workout_duration: mins })}
                     className={`py-2 rounded-xl text-xs font-bold border transition-all ${
                       formData.workout_duration === mins
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/25'
                         : 'bg-slate-50 text-slate-700 border-slate-200'
                     }`}
                   >
@@ -659,21 +662,21 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Бесплатная тренировка (монохромная иконка и темный чекбокс) */}
+            {/* Бесплатная тренировка (синий акцент галочки) */}
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
               <div 
                 onClick={() => setFormData({ ...formData, has_free_trial: !formData.has_free_trial })}
                 className="flex items-center justify-between cursor-pointer active:scale-98"
               >
                 <div className="flex items-center gap-2">
-                  <Gift className="w-4 h-4 text-slate-700" />
+                  <Gift className="w-4 h-4 text-blue-600" />
                   <div>
                     <p className="text-xs font-bold text-slate-900">Бесплатная пробная тренировка</p>
                     <p className="text-[10px] text-slate-500">Знакомство с атлетом в зале или онлайн</p>
                   </div>
                 </div>
-                <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${
-                  formData.has_free_trial ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+                  formData.has_free_trial ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white border-slate-300'
                 }`}>
                   {formData.has_free_trial && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
@@ -709,31 +712,31 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               )}
             </div>
 
-            {/* Бесплатная консультация (монохромная иконка) */}
+            {/* Бесплатная консультация */}
             <div 
               onClick={() => setFormData({ ...formData, has_free_consultation: !formData.has_free_consultation })}
               className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between cursor-pointer active:scale-98"
             >
               <div className="flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-slate-700" />
+                <HelpCircle className="w-4 h-4 text-blue-600" />
                 <div>
                   <p className="text-xs font-bold text-slate-900">Бесплатная разовая консультация</p>
                   <p className="text-[10px] text-slate-500">Разбор текущего питания, замеры и цели</p>
                 </div>
               </div>
-              <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${
-                formData.has_free_consultation ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
+              <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+                formData.has_free_consultation ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white border-slate-300'
               }`}>
                 {formData.has_free_consultation && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
             </div>
           </div>
 
-          {/* 5. УСЛУГИ, СТОИМОСТЬ И КОЛИЧЕСТВО ТРЕНИРОВОК */}
+          {/* 5. УСЛУГИ И ПРАЙС-ЛИСТ (ЛОГИЧНО СГРУППИРОВАННЫЕ ПЛАШКИ) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                5. Услуги и прайс-лист (₸)
+                5. Услуги и стоимость (₸)
               </span>
               <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-medium border border-slate-200">
                 По желанию
@@ -741,27 +744,31 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
 
             <p className="text-[11px] text-slate-500 leading-snug">
-              Отметьте ваши форматы и укажите цену и количество занятий в абонементе:
+              Отметьте актуальные форматы тренировок и укажите цены разовых занятий и абонементов:
             </p>
 
-            {/* Персональные 1 на 1 */}
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+            {/* 1. Персональные тренировки */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
               <div 
                 onClick={() => toggleServiceOffered('personal')}
                 className="flex items-center justify-between cursor-pointer"
               >
-                <span className="text-xs font-bold text-slate-900">1. Персональные тренировки (1 на 1)</span>
-                <div className={`w-4 h-4 rounded-md flex items-center justify-center border ${
-                  formData.services_offered.personal ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
+                <div>
+                  <p className="text-xs font-bold text-slate-900">1. Персональные тренировки (1 на 1)</p>
+                  <p className="text-[10px] text-slate-500">Индивидуальное ведение в тренажерном зале</p>
+                </div>
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+                  formData.services_offered.personal ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
                 }`}>
-                  {formData.services_offered.personal && <Check className="w-3 h-3 stroke-[3]" />}
+                  {formData.services_offered.personal && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
               </div>
 
               {formData.services_offered.personal && (
-                <div className="grid grid-cols-3 gap-2 pt-1">
+                <div className="space-y-2 pt-1 border-t border-slate-200/70">
+                  {/* Разовая тренировка */}
                   <div>
-                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Разовое (₸)</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Стоимость разового занятия (₸)</label>
                     <input
                       type="number"
                       value={formData.pricing.personal_single}
@@ -769,46 +776,56 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                       className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
                     />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Кол-во зан.</label>
-                    <input
-                      type="number"
-                      value={formData.pricing.personal_count}
-                      onChange={e => handlePriceChange('personal_count', e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Абонемент (₸)</label>
-                    <input
-                      type="number"
-                      value={formData.pricing.personal_block}
-                      onChange={e => handlePriceChange('personal_block', e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
-                    />
+
+                  {/* Сгруппированная плашка абонемента: кол-во занятий + общая стоимость */}
+                  <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1.5">
+                    <p className="text-[10px] font-bold text-slate-600">Пакетный абонемент</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">Кол-во занятий</label>
+                        <input
+                          type="number"
+                          value={formData.pricing.personal_count}
+                          onChange={e => handlePriceChange('personal_count', e.target.value)}
+                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">Цена пакета (₸)</label>
+                        <input
+                          type="number"
+                          value={formData.pricing.personal_block}
+                          onChange={e => handlePriceChange('personal_block', e.target.value)}
+                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 text-center"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Сплит тренировки */}
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+            {/* 2. Сплит-тренировки */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
               <div 
                 onClick={() => toggleServiceOffered('split')}
                 className="flex items-center justify-between cursor-pointer"
               >
-                <span className="text-xs font-bold text-slate-900">2. Сплит-тренировки (пара, 2 друга)</span>
-                <div className={`w-4 h-4 rounded-md flex items-center justify-center border ${
-                  formData.services_offered.split ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
+                <div>
+                  <p className="text-xs font-bold text-slate-900">2. Сплит-тренировки (для двоих)</p>
+                  <p className="text-[10px] text-slate-500">Занятия для пар, мужа и жены или двух друзей</p>
+                </div>
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+                  formData.services_offered.split ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
                 }`}>
-                  {formData.services_offered.split && <Check className="w-3 h-3 stroke-[3]" />}
+                  {formData.services_offered.split && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
               </div>
 
               {formData.services_offered.split && (
-                <div className="grid grid-cols-3 gap-2 pt-1">
+                <div className="space-y-2 pt-1 border-t border-slate-200/70">
                   <div>
-                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Разовое за 2 (₸)</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Разовая тренировка за двоих (₸)</label>
                     <input
                       type="number"
                       value={formData.pricing.split_single}
@@ -816,46 +833,55 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                       className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
                     />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Кол-во зан.</label>
-                    <input
-                      type="number"
-                      value={formData.pricing.split_count}
-                      onChange={e => handlePriceChange('split_count', e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Абонемент за 2 (₸)</label>
-                    <input
-                      type="number"
-                      value={formData.pricing.split_block}
-                      onChange={e => handlePriceChange('split_block', e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
-                    />
+
+                  <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1.5">
+                    <p className="text-[10px] font-bold text-slate-600">Абонемент за двоих</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">Кол-во занятий</label>
+                        <input
+                          type="number"
+                          value={formData.pricing.split_count}
+                          onChange={e => handlePriceChange('split_count', e.target.value)}
+                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">Цена пакета (₸)</label>
+                        <input
+                          type="number"
+                          value={formData.pricing.split_block}
+                          onChange={e => handlePriceChange('split_block', e.target.value)}
+                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 text-center"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Мини-группы */}
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+            {/* 3. Мини-группы */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
               <div 
                 onClick={() => toggleServiceOffered('group')}
                 className="flex items-center justify-between cursor-pointer"
               >
-                <span className="text-xs font-bold text-slate-900">3. Мини-группы (до 3–5 человек)</span>
-                <div className={`w-4 h-4 rounded-md flex items-center justify-center border ${
-                  formData.services_offered.group ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
+                <div>
+                  <p className="text-xs font-bold text-slate-900">3. Мини-группы (до 3–5 человек)</p>
+                  <p className="text-[10px] text-slate-500">Групповой формат с индивидуальным вниманием</p>
+                </div>
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+                  formData.services_offered.group ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
                 }`}>
-                  {formData.services_offered.group && <Check className="w-3 h-3 stroke-[3]" />}
+                  {formData.services_offered.group && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
               </div>
 
               {formData.services_offered.group && (
-                <div className="grid grid-cols-3 gap-2 pt-1">
+                <div className="space-y-2 pt-1 border-t border-slate-200/70">
                   <div>
-                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">С чел. / зан. (₸)</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Разовое занятие с 1 человека (₸)</label>
                     <input
                       type="number"
                       value={formData.pricing.group_single}
@@ -863,46 +889,55 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                       className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
                     />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Кол-во зан.</label>
-                    <input
-                      type="number"
-                      value={formData.pricing.group_count}
-                      onChange={e => handlePriceChange('group_count', e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Абонемент (₸)</label>
-                    <input
-                      type="number"
-                      value={formData.pricing.group_block}
-                      onChange={e => handlePriceChange('group_block', e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
-                    />
+
+                  <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1.5">
+                    <p className="text-[10px] font-bold text-slate-600">Абонемент в мини-группе</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">Кол-во занятий</label>
+                        <input
+                          type="number"
+                          value={formData.pricing.group_count}
+                          onChange={e => handlePriceChange('group_count', e.target.value)}
+                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 text-center"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">Цена абонемента (₸)</label>
+                        <input
+                          type="number"
+                          value={formData.pricing.group_block}
+                          onChange={e => handlePriceChange('group_block', e.target.value)}
+                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 text-center"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Онлайн ведение */}
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+            {/* 4. Онлайн ведение */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
               <div 
                 onClick={() => toggleServiceOffered('online')}
                 className="flex items-center justify-between cursor-pointer"
               >
-                <span className="text-xs font-bold text-slate-900">4. Онлайн-ведение и сопровождение</span>
-                <div className={`w-4 h-4 rounded-md flex items-center justify-center border ${
-                  formData.services_offered.online ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
+                <div>
+                  <p className="text-xs font-bold text-slate-900">4. Онлайн-ведение и сопровождение</p>
+                  <p className="text-[10px] text-slate-500">Дистанционный план питания, контроль техники и чат</p>
+                </div>
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+                  formData.services_offered.online ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
                 }`}>
-                  {formData.services_offered.online && <Check className="w-3 h-3 stroke-[3]" />}
+                  {formData.services_offered.online && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
               </div>
 
               {formData.services_offered.online && (
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/70">
                   <div>
-                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Видео-разборов / мес</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Видео-разборов в мес.</label>
                     <input
                       type="number"
                       value={formData.pricing.online_sessions}
@@ -912,7 +947,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Стоимость в мес. (₸)</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Стоимость в месяц (₸)</label>
                     <input
                       type="number"
                       value={formData.pricing.online_month}
@@ -925,7 +960,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 6. ОНЛАЙН-ПРОДУКТЫ ТРЕНЕРА (МОНОХРОМНЫЙ ВЫБОР) */}
+          {/* 6. ОНЛАЙН-ПРОДУКТЫ ТРЕНЕРА */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -948,12 +983,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     key={product}
                     onClick={() => toggleOnlineProduct(product)}
                     className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer text-xs transition-all ${
-                      isSelected ? 'bg-slate-900 text-white border-slate-900 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      isSelected ? 'bg-blue-50/70 border-blue-400 text-blue-900 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-700'
                     }`}
                   >
                     <span>{product}</span>
-                    <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 ml-2 ${
-                      isSelected ? 'bg-white text-slate-900 border-white' : 'bg-white border-slate-300'
+                    <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 ml-2 transition-colors ${
+                      isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
                     }`}>
                       {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                     </div>
@@ -962,24 +997,24 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               })}
             </div>
 
-            {/* Продвижение продуктов: монохромный чекбокс */}
+            {/* Продвижение продуктов (галочка снята по умолчанию) */}
             <div 
               onClick={() => setFormData({ ...formData, promote_online_products: !formData.promote_online_products })}
               className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between cursor-pointer active:scale-98"
             >
               <div className="flex items-center gap-2">
-                <Dumbbell className="w-4 h-4 text-slate-700" />
+                <Sparkles className="w-4 h-4 text-blue-600" />
                 <span className="text-xs font-bold text-slate-900">Продвигать мои продукты через GymConnect</span>
               </div>
-              <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${
-                formData.promote_online_products ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
+              <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+                formData.promote_online_products ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
               }`}>
                 {formData.promote_online_products && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
             </div>
           </div>
 
-          {/* 7. ВЕРИФИКАЦИЯ (ПО ЖЕЛАНИЮ) */}
+          {/* 7. ВЕРИФИКАЦИЯ (КРАСИВО СКОМПОНОВАННЫЙ БЛОК) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -990,8 +1025,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 leading-relaxed font-normal">
-              Вы можете не указывать дипломы и телефоны — тогда профиль получит статус <b>«Не верифицирован»</b>. При предоставлении открытой ссылки на сертификаты и контактов зала ваш профиль получит статус <b>«Верифицирован ✔️»</b> и приоритет в каталоге.
+            {/* Выровненный информационный блок без разрыва слов */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-700 leading-relaxed font-normal space-y-1">
+              <p className="font-semibold text-slate-900">Статус подтвержденного тренера:</p>
+              <p>
+                Заполнение данного раздела не является обязательным. Без ссылок на документы ваш профиль получит базовый статус <b>«Не верифицирован»</b>. При предоставлении дипломов и контактов заведений вы получаете отметку <b>«Верифицирован ✔️»</b> и приоритет в каталоге.
+              </p>
             </div>
 
             <div>
@@ -1005,10 +1044,10 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                   value={formData.certificates_link}
                   onChange={e => setFormData({ ...formData, certificates_link: e.target.value })}
                   placeholder="https://drive.google.com/drive/folders/..."
-                  className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-slate-800"
+                  className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">Откройте доступ «Все, у кого есть ссылка» для проверки</p>
+              <p className="text-[10px] text-slate-400 mt-1">Откройте доступ «Все, у кого есть ссылка» для модерации</p>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
@@ -1039,35 +1078,40 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Согласие на проверку */}
+            {/* Аккуратная карточка согласия на верификацию */}
             <div 
               onClick={() => setFormData({ ...formData, verification_consent: !formData.verification_consent })}
-              className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-start gap-2.5 cursor-pointer active:scale-98"
+              className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-start gap-2.5 cursor-pointer active:scale-98 transition-all"
             >
-              <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border mt-0.5 ${
-                formData.verification_consent ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
+              <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 border mt-0.5 transition-colors ${
+                formData.verification_consent ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white border-slate-300'
               }`}>
-                {formData.verification_consent && <Check className="w-3 h-3 stroke-[3]" />}
+                {formData.verification_consent && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
-              <p className="text-[10px] text-slate-700 leading-snug">
-                Даю согласие администрации GymConnect на проверку квалификации, сертификатов и статуса резидента в указанном зале и академии.
-              </p>
+              <div className="text-left leading-snug">
+                <p className="text-xs font-semibold text-slate-900">
+                  Согласие на подтверждение квалификации
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Даю согласие администрации GymConnect на проверку предоставленных сертификатов и уточнение статуса резидента в фитнес-клубе.
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* 8. ПАРТНЕРСКИЕ ДОКУМЕНТЫ */}
+          {/* 8. ПАРТНЕРСКИЕ ДОКУМЕНТЫ (СИНЯЯ ГАЛОЧКА СОГЛАСИЯ) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 8. Партнерские документы
               </span>
-              <span className="text-[10px] text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-full font-bold border border-slate-200">
+              <span className="text-[10px] text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full font-bold border border-blue-200">
                 Обязательно
               </span>
             </div>
 
             <p className="text-[11px] text-slate-500 leading-snug">
-              Ознакомьтесь с условиями партнерской оферты тренера перед отправкой:
+              Ознакомьтесь с условиями партнерской оферты тренера перед отправкой анкеты:
             </p>
 
             <div className="space-y-1.5">
@@ -1086,28 +1130,33 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               ))}
             </div>
 
-            {/* Юридический чекбокс согласия */}
+            {/* Аккуратная юридическая карточка согласия */}
             <div 
               onClick={() => setFormData({ ...formData, legal_accepted: !formData.legal_accepted })}
-              className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-start gap-2.5 cursor-pointer active:scale-98"
+              className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-start gap-2.5 cursor-pointer active:scale-98 transition-all"
             >
-              <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border mt-0.5 ${
-                formData.legal_accepted ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
+              <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 border mt-0.5 transition-colors ${
+                formData.legal_accepted ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white border-slate-300'
               }`}>
                 {formData.legal_accepted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
-              <p className="text-[10.5px] text-slate-800 leading-snug">
-                Я подтверждаю достоверность данных, ознакомился с документами и <b>даю согласие на использование моих фото, материалов и анкеты</b> в каталоге и социальных сетях GymConnect.
-              </p>
+              <div className="text-left leading-snug">
+                <p className="text-xs font-bold text-blue-950">
+                  Принимаю условия партнерских документов
+                </p>
+                <p className="text-[10px] text-blue-900 mt-0.5">
+                  Подтверждаю достоверность данных и <b>даю согласие на размещение анкеты, фото и материалов</b> в каталоге и социальных сетях GymConnect.
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Финальная кнопка */}
+          {/* Финальная кнопка (Синий акцент) */}
           <div className="pt-1">
             <button
               type="submit"
               disabled={isSubmitting || !formData.legal_accepted}
-              className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-xl shadow-slate-900/25 active:scale-98 transition-all disabled:opacity-50"
+              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-xl shadow-blue-600/30 active:scale-98 transition-all disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
               <span>{isSubmitting ? 'Отправка заявки...' : 'Завершить регистрацию в CoachOS'}</span>
@@ -1118,7 +1167,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
 
       </div>
 
-      {/* Модальное окно чтения документов тренера */}
+      {/* Модальное окно чтения документов */}
       {activeLegalModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-3.5 shadow-2xl max-h-[85vh] flex flex-col justify-between">
@@ -1140,7 +1189,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             <button
               type="button"
               onClick={() => setActiveLegalModal(null)}
-              className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold active:scale-98"
+              className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold active:scale-98"
             >
               Понятно, закрыть
             </button>
