@@ -9,16 +9,13 @@ import {
   Minus, 
   Camera, 
   Users, 
-  Clock, 
   Gift, 
   Link as LinkIcon, 
   FileText, 
   Sparkles, 
   HelpCircle, 
-  CheckCircle2, 
   X, 
-  ChevronRight, 
-  ShieldCheck 
+  ChevronRight 
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
@@ -30,10 +27,10 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
   const [activeLegalModal, setActiveLegalModal] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Автоматические данные из Telegram Mini App
+  // Данные из Telegram Mini App
   const tgUser = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : null;
 
-  // 8 специализаций (отображаются без обрезания текста)
+  // 8 специализаций тренера
   const specializationList = [
     'Набор массы и гипертрофия',
     'Снижение веса и сушка',
@@ -45,7 +42,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     'ОФП для начинающих'
   ];
 
-  // 10 онлайн-продуктов тренера
+  // 10 онлайн-продуктов
   const onlineProductsList = [
     'Индивидуальный план питания и расчет КБЖУ',
     'Готовая программа тренировок для дома (без инвентаря)',
@@ -59,7 +56,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     'Личный онлайн-коучинг с ежедневным контролем 24/7'
   ];
 
-  // Документы партнерского регламента тренера
+  // Партнерские документы
   const trainerLegalDocs = [
     {
       id: 'trainer_offer',
@@ -101,12 +98,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     }
   ];
 
-  // Основной стейт анкеты тренера
+  // Основной стейт анкеты
   const [formData, setFormData] = useState({
     photo_url: tgUser?.photo_url || '',
     full_name: tgUser ? `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() : '',
     username: tgUser?.username ? tgUser.username.replace('@', '') : '',
-    phone: '',
+    phone: '', // 10 цифр после +7
     instagram: '',
     bio: '',
 
@@ -114,20 +111,20 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     gym: ALMATY_GYMS[2] || 'Invictus Go | Улица Тимирязева, 42',
     secondary_gym: '',
 
-    // Опыт и направления
+    // Опыт и специализации
     experience_years: 3,
     specializations: ['Набор массы и гипертрофия', 'Снижение веса и сушка'],
-    work_format: 'hybrid', // 'offline' | 'online' | 'hybrid'
-    target_audience: 'all', // 'all' | 'women' | 'men'
+    work_format: 'hybrid',
+    target_audience: 'all',
 
-    // Длительность и бесплатные бонусы
+    // Длительность и бонусы
     workout_duration: 60,
-    has_free_trial: true,
+    has_free_trial: false,
     free_trial_duration: '45',
-    free_trial_format: 'both', // 'gym' | 'online' | 'both'
-    has_free_consultation: true,
+    free_trial_format: 'both',
+    has_free_consultation: false,
 
-    // Включение услуг
+    // Выбранные услуги
     services_offered: {
       personal: true,
       split: false,
@@ -135,26 +132,33 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
       online: true
     },
 
-    // Прайс-лист
+    // Прайс-лист с количеством занятий
     pricing: {
       personal_single: 8000,
+      personal_count: 12,
       personal_block: 70000,
+
       split_single: 12000,
+      split_count: 12,
       split_block: 100000,
+
       group_single: 5000,
+      group_count: 12,
       group_block: 45000,
+
+      online_sessions: 8,
       online_month: 35000
     },
 
-    // Онлайн-продукты
+    // Онлайн-продукты (галочка снята по умолчанию)
     online_products: ['Индивидуальный план питания и расчет КБЖУ'],
-    promote_online_products: true,
+    promote_online_products: false,
 
-    // Верификация
+    // Верификация (галочки сняты по умолчанию)
     certificates_link: '',
     gym_phone: '',
     education_phone: '',
-    verification_consent: true,
+    verification_consent: false,
     legal_accepted: false
   });
 
@@ -236,8 +240,8 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
       return;
     }
 
-    if (!formData.phone.trim()) {
-      alert('Пожалуйста, укажите контактный номер WhatsApp');
+    if (!formData.phone.trim() || formData.phone.length < 10) {
+      alert('Пожалуйста, введите 10 цифр номера WhatsApp');
       return;
     }
 
@@ -247,7 +251,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     }
 
     if (!formData.legal_accepted) {
-      alert('Для завершения регистрации необходимо подтвердить согласие с партнерскими документами GymConnect.');
+      alert('Для завершения регистрации подтвердите согласие с партнерскими документами GymConnect.');
       return;
     }
 
@@ -256,15 +260,14 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     try {
       const cleanUsername = formData.username.trim().replace(/^@+/, '');
       const cleanInstagram = formData.instagram.trim().replace(/^@+/, '');
-      const cleanPhone = formData.phone.replace(/\D/g, '');
+      const fullPhone = `7${formData.phone.replace(/\D/g, '')}`;
 
-      // Если указаны ссылки и контакты — статус verified, иначе unverified (пока проверяется)
       const hasVerificationData = Boolean(formData.certificates_link.trim() || formData.gym_phone.trim() || formData.education_phone.trim());
 
       const payload = {
         full_name: formData.full_name.trim(),
         username: cleanUsername,
-        phone: cleanPhone,
+        phone: fullPhone,
         photo_url: formData.photo_url,
         avatar_url: formData.photo_url,
         instagram: cleanInstagram,
@@ -320,7 +323,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col justify-between p-3.5 overflow-y-auto select-none">
       <div className="max-w-md mx-auto w-full space-y-3.5 pt-1 pb-16">
         
-        {/* 1. ОТДЕЛЬНАЯ НЕЗАВИСИМАЯ КНОПКА ВОЗВРАТА */}
+        {/* Кнопка Назад */}
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -336,7 +339,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
           </span>
         </div>
 
-        {/* 2. ЕДИНЫЙ ЛАКОНИЧНЫЙ ЗАГОЛОВОК (БЕЗ ДУБЛИРОВАНИЯ) */}
+        {/* Заголовок */}
         <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 text-center space-y-1">
           <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-1.5 shadow-sm">
             <Dumbbell className="w-5 h-5 stroke-[2]" />
@@ -351,7 +354,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
 
         <form onSubmit={handleSubmit} className="space-y-3 pb-8">
 
-          {/* 3. ПРОФИЛЬ ТРЕНЕРА + О СЕБЕ СРАЗУ ЗДЕСЬ */}
+          {/* 1. ПРОФИЛЬ ТРЕНЕРА + О СЕБЕ */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -359,7 +362,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            {/* Фото с кнопкой замены */}
+            {/* Фото */}
             <div className="flex flex-col items-center text-center">
               <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                 <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-blue-500 shadow-md bg-slate-100 flex items-center justify-center">
@@ -415,18 +418,25 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 </div>
               </div>
 
+              {/* Поле WhatsApp со встроенным фиксированным +7 */}
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                  WhatsApp (+7) <span className="text-rose-500">*</span>
+                  WhatsApp <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                  placeholder="7011234567"
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
-                />
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 text-slate-500 font-mono text-xs font-semibold select-none">+7</span>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setFormData({ ...formData, phone: val });
+                    }}
+                    placeholder="701 123 45 67"
+                    className="w-full pl-8 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
               </div>
             </div>
 
@@ -446,22 +456,22 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Блок «О себе» поднят сюда */}
+            {/* О себе с креативным плейсхолдером */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                О себе, спортивных званиях и методике
+                О себе, спортивных званиях и методиках
               </label>
               <textarea
                 rows={3}
                 value={formData.bio}
                 onChange={e => setFormData({ ...formData, bio: e.target.value })}
-                placeholder="КМС по пауэрлифтингу, диплом академии фитнеса. Веду клиентов с фокусом на здоровье суставов и чистую технику..."
+                placeholder="Мастер спорта РК, специализируюсь на силовом тренинге и рекомпозиции. Ставлю идеальную биомеханику базы, довожу до результата без срывов и жестких голодовок..."
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-normal text-slate-900 focus:outline-none focus:border-blue-600 resize-none leading-relaxed"
               />
             </div>
           </div>
 
-          {/* 4. ЗАЛЫ ДЛЯ ТРЕНИРОВОК (БЕЙДЖ В ОДНУ СТРОКУ) */}
+          {/* 2. ЗАЛЫ ДЛЯ ТРЕНИРОВОК (В ОДНУ СТРОКУ БЕЗ СЪЕЗЖАНИЯ) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-100 whitespace-nowrap">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
@@ -504,7 +514,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 5. СТАЖ И СПЕЦИАЛИЗАЦИЯ (БЕЗ ТРОЕТОЧИЯ, ПОЛНЫЙ ТЕКСТ) */}
+          {/* 3. СТАЖ И СПЕЦИАЛИЗАЦИЯ */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -512,7 +522,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            {/* Apple Степпер опыта */}
+            {/* Степпер опыта */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-slate-900">Опыт работы тренером</p>
@@ -540,7 +550,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Специализации без троеточия (полная видимость) */}
+            {/* Специализации (без обрезания текста) */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
                 Специализации (выберите ваши профильные направления)
@@ -567,7 +577,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Формат ведения: заголовок сверху, пояснение снизу в 2 строки */}
+            {/* Формат ведения: 2 строки */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Формат ведения клиентов
@@ -597,7 +607,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* С кем вы работаете (3 варианта) */}
+            {/* Аудитория (3 варианта) */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 С кем вы работаете
@@ -614,7 +624,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 6. УСЛОВИЯ И БОНУСЫ (ПРОБНЫЕ ТРЕНИРОВКИ) */}
+          {/* 4. УСЛОВИЯ И БОНУСЫ (ПРОБНЫЕ ТРЕНИРОВКИ) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -622,12 +632,10 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            {/* Разъясняющий текст */}
             <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-2xl text-[11px] text-blue-900 leading-relaxed">
               Мы публикуем вас в каталоге проверенных тренеров. Вы не обязаны проводить бесплатные тренировки, но атлеты охотнее выбирают наставников, готовых провести первичное знакомство.
             </div>
 
-            {/* Длительность обычной тренировки */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Длительность стандартной тренировки
@@ -650,7 +658,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Тумблер: Бесплатная пробная тренировка */}
+            {/* Бесплатная тренировка (галочка снята по умолчанию) */}
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
               <div 
                 onClick={() => setFormData({ ...formData, has_free_trial: !formData.has_free_trial })}
@@ -700,7 +708,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               )}
             </div>
 
-            {/* Тумблер: Бесплатная консультация */}
+            {/* Бесплатная консультация (галочка снята по умолчанию) */}
             <div 
               onClick={() => setFormData({ ...formData, has_free_consultation: !formData.has_free_consultation })}
               className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between cursor-pointer active:scale-98"
@@ -720,7 +728,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 7. УСЛУГИ И ПРАЙС-ЛИСТ (ПО ВЫБОРУ С ЦЕНОЙ) */}
+          {/* 5. УСЛУГИ, СТОИМОСТЬ И КОЛИЧЕСТВО ТРЕНИРОВОК В АБОНЕМЕНТЕ */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -732,7 +740,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
 
             <p className="text-[11px] text-slate-500 leading-snug">
-              Отметьте галочками только те форматы, которые вы фактически проводите, и укажите стоимость:
+              Отметьте ваши форматы и укажите цену и количество занятий в абонементе:
             </p>
 
             {/* Персональные 1 на 1 */}
@@ -750,9 +758,9 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
 
               {formData.services_offered.personal && (
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-3 gap-2 pt-1">
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-0.5">Разовое занятие (₸)</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Разовое (₸)</label>
                     <input
                       type="number"
                       value={formData.pricing.personal_single}
@@ -761,7 +769,16 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-0.5">Абонемент 10-12 зан. (₸)</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Кол-во зан.</label>
+                    <input
+                      type="number"
+                      value={formData.pricing.personal_count}
+                      onChange={e => handlePriceChange('personal_count', e.target.value)}
+                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Абонемент (₸)</label>
                     <input
                       type="number"
                       value={formData.pricing.personal_block}
@@ -788,9 +805,9 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
 
               {formData.services_offered.split && (
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-3 gap-2 pt-1">
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-0.5">Разовое за двоих (₸)</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Разовое за 2 (₸)</label>
                     <input
                       type="number"
                       value={formData.pricing.split_single}
@@ -799,7 +816,16 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-0.5">Абонемент за двоих (₸)</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Кол-во зан.</label>
+                    <input
+                      type="number"
+                      value={formData.pricing.split_count}
+                      onChange={e => handlePriceChange('split_count', e.target.value)}
+                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Абонемент за 2 (₸)</label>
                     <input
                       type="number"
                       value={formData.pricing.split_block}
@@ -826,9 +852,9 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
 
               {formData.services_offered.group && (
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-3 gap-2 pt-1">
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-0.5">С человека / занятие (₸)</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">С чел. / зан. (₸)</label>
                     <input
                       type="number"
                       value={formData.pricing.group_single}
@@ -837,7 +863,16 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-500 block mb-0.5">Абонемент группы (₸)</label>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Кол-во зан.</label>
+                    <input
+                      type="number"
+                      value={formData.pricing.group_count}
+                      onChange={e => handlePriceChange('group_count', e.target.value)}
+                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Абонемент (₸)</label>
                     <input
                       type="number"
                       value={formData.pricing.group_block}
@@ -855,7 +890,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 onClick={() => toggleServiceOffered('online')}
                 className="flex items-center justify-between cursor-pointer"
               >
-                <span className="text-xs font-bold text-slate-900">4. Онлайн-ведение (месяц)</span>
+                <span className="text-xs font-bold text-slate-900">4. Онлайн-ведение и сопровождение</span>
                 <div className={`w-4 h-4 rounded-md flex items-center justify-center border ${
                   formData.services_offered.online ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
                 }`}>
@@ -864,20 +899,32 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
 
               {formData.services_offered.online && (
-                <div className="pt-1">
-                  <label className="text-[10px] text-slate-500 block mb-0.5">Стоимость ведения за 1 месяц (₸)</label>
-                  <input
-                    type="number"
-                    value={formData.pricing.online_month}
-                    onChange={e => handlePriceChange('online_month', e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
-                  />
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Видео-разборов / мес</label>
+                    <input
+                      type="number"
+                      value={formData.pricing.online_sessions}
+                      onChange={e => handlePriceChange('online_sessions', e.target.value)}
+                      placeholder="8 созвонов"
+                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Стоимость в мес. (₸)</label>
+                    <input
+                      type="number"
+                      value={formData.pricing.online_month}
+                      onChange={e => handlePriceChange('online_month', e.target.value)}
+                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 text-center"
+                    />
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* 8. ОНЛАЙН-ПРОДУКТЫ ТРЕНЕРА (ДО 10 ПРОДУКТОВ) */}
+          {/* 6. ОНЛАЙН-ПРОДУКТЫ ТРЕНЕРА */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -914,13 +961,14 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               })}
             </div>
 
+            {/* Галочка продвижения снята по умолчанию */}
             <div 
               onClick={() => setFormData({ ...formData, promote_online_products: !formData.promote_online_products })}
-              className="p-3 bg-blue-50/60 border border-blue-200/80 rounded-2xl flex items-center justify-between cursor-pointer active:scale-98"
+              className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between cursor-pointer active:scale-98"
             >
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-600" />
-                <span className="text-xs font-bold text-blue-950">Продвигать мои продукты через GymConnect</span>
+                <span className="text-xs font-bold text-slate-900">Продвигать мои продукты через GymConnect</span>
               </div>
               <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${
                 formData.promote_online_products ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
@@ -930,7 +978,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 9. ВЕРИФИКАЦИЯ (НЕОБЯЗАТЕЛЬНО: ВЕРИФИЦИРОВАН / НЕ ВЕРИФИЦИРОВАН) */}
+          {/* 7. ВЕРИФИКАЦИЯ (ПО ЖЕЛАНИЮ) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -945,7 +993,6 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               Вы можете не указывать дипломы и телефоны — тогда профиль получит статус <b>«Не верифицирован»</b>. При предоставлении открытой ссылки на сертификаты и контактов зала ваш профиль получит статус <b>«Верифицирован ✔️»</b> и приоритет в каталоге.
             </div>
 
-            {/* Google Drive ссылка */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Ссылка на Google Диск / облако с сертификатами
@@ -991,6 +1038,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
+            {/* Согласие на проверку (галочка снята по умолчанию) */}
             <div 
               onClick={() => setFormData({ ...formData, verification_consent: !formData.verification_consent })}
               className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-start gap-2.5 cursor-pointer active:scale-98"
@@ -1006,7 +1054,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 10. ДОКУМЕНТЫ ДЛЯ ОЗНАКОМЛЕНИЯ ПАРТНЕРА И СОГЛАСИЕ */}
+          {/* 8. ПАРТНЕРСКИЕ ДОКУМЕНТЫ */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -1037,7 +1085,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               ))}
             </div>
 
-            {/* Главный юридический чекбокс согласия */}
+            {/* Юридический чекбокс согласия (галочка снята по умолчанию) */}
             <div 
               onClick={() => setFormData({ ...formData, legal_accepted: !formData.legal_accepted })}
               className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-start gap-2.5 cursor-pointer active:scale-98"
@@ -1069,7 +1117,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
 
       </div>
 
-      {/* Модальное окно чтения документов тренера */}
+      {/* Модальное окно чтения документов */}
       {activeLegalModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-3.5 shadow-2xl max-h-[85vh] flex flex-col justify-between">
