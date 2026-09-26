@@ -1,24 +1,41 @@
 // src/components/trainer/tabs/OverviewTab.jsx
 import React, { useState } from 'react';
-import { Calendar, ChevronRight, CheckCircle2, Dumbbell, Clock, UserCheck, UserX, Eye, UserPlus, Send, Sparkles, BellRing } from 'lucide-react';
+import { 
+  Calendar, 
+  Clock, 
+  UserCheck, 
+  UserX, 
+  Eye, 
+  UserPlus, 
+  Sparkles, 
+  BellRing, 
+  Dumbbell 
+} from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 
-export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBalanceCount, totalEarnings, students, onSelectStudent, onOpenAddModal }) {
-  
+export default function OverviewTab({ 
+  activeCount = 0, 
+  pausedCount = 0, 
+  leftCount = 0, 
+  lowBalanceCount = 0, 
+  totalEarnings = 0, 
+  students = [], 
+  onSelectStudent = () => {}, 
+  onOpenAddModal = () => {} 
+}) {
   const [expandedStudentId, setExpandedStudentId] = useState(null);
 
-  // Определяем день недели и текущую дату
   const daysMap = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
   const todayName = daysMap[new Date().getDay()];
-  const formattedDate = "Пятница, 25 сентября";
 
-  // Ученики с тренировкой сегодня
-  const todayStudents = students.filter(s => {
-    const days = s.workout_days || ['Понедельник', 'Среда', 'Пятница'];
+  // Безопасная фильтрация с защитой от undefined
+  const safeStudents = Array.isArray(students) ? students : [];
+
+  const todayStudents = safeStudents.filter(s => {
+    const days = Array.isArray(s.workout_days) ? s.workout_days : ['Понедельник', 'Среда', 'Пятница'];
     return (s.status === 'active' || !s.status) && days.includes(todayName);
   });
 
-  // Надежное распределение по тайм-слотам с защитой от пустых значений
   const morningStudents = todayStudents.filter(s => {
     const slot = (s.workout_time_slot || '').toLowerCase();
     return slot.includes('утро');
@@ -34,26 +51,23 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
     return slot.includes('вечер') || (!slot.includes('утро') && !slot.includes('обед') && !slot.includes('день'));
   });
 
-  // Быстрое действие: Напомнить об оплате тем, у кого мало занятий (≤ 2)
   const handleRemindLowBalance = () => {
-    const lowStudents = students.filter(s => (s.status === 'active' || !s.status) && (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2);
+    const lowStudents = safeStudents.filter(s => (s.status === 'active' || !s.status) && (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2);
     if (lowStudents.length === 0) {
       alert('У всех активных учеников достаточно оплаченных занятий!');
       return;
     }
     
-    // Находим первого ученика с номером телефона для отправки в WhatsApp
     const target = lowStudents.find(s => s.phone);
     if (target) {
       const cleanPhone = target.phone.replace(/\D/g, '');
-      const message = encodeURIComponent(`Привет, ${target.first_name}! У тебя осталось мало оплаченных занятий (${target.left_trainings} зан.). Напомни, когда сможешь закинуть оплату за следующий абонемент? 💪`);
+      const message = encodeURIComponent(`Привет, ${target.first_name}! У тебя осталось мало оплаченных занятий (${target.left_trainings || 2} зан.). Напомни, когда сможешь закинуть оплату за следующий блок? 💪`);
       window.open(`https://wa.me/7${cleanPhone}?text=${message}`, '_blank');
     } else {
-      alert(`Найдено учеников с низким балансом: ${lowStudents.length}, но ни у одного из них не указан номер телефона в профиле.`);
+      alert(`Найдено учеников с низким балансом: ${lowStudents.length}`);
     }
   };
 
-  // Кнопка «Был» — списываем занятие
   const handleAttendanceYes = async (e, student) => {
     e.stopPropagation();
     const currentLeft = student.left_trainings !== undefined ? student.left_trainings : 12;
@@ -70,24 +84,9 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
     if (error) {
       alert('Ошибка списания: ' + error.message);
     } else {
-      alert(`Занятие засчитано! У ${student.first_name} осталось ${currentLeft - 1} зан.`);
+      alert(`Занятие списано! У ${student.first_name} осталось ${currentLeft - 1} зан.`);
       window.location.reload();
     }
-  };
-
-  // Кнопка «Не был» — фиксируем пропуск
-  const handleAttendanceNo = async (e, student) => {
-    e.stopPropagation();
-    alert(`Пропуск зафиксирован. Занятие для ${student.first_name} отмечено как прогул.`);
-  };
-
-  const formatPackageType = (pkg) => {
-    if (!pkg) return 'Индивидуальный';
-    const p = pkg.toLowerCase();
-    if (p.includes('individual') || p.includes('индивидуальный')) return 'Индивидуальный';
-    if (p.includes('group') || p.includes('группа')) return 'Мини-группа';
-    if (p.includes('split') || p.includes('сплит')) return 'Сплит (вдвоем)';
-    return pkg;
   };
 
   const renderStudentCard = (student) => {
@@ -95,15 +94,15 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
     const leftTr = student.left_trainings !== undefined ? student.left_trainings : 12;
 
     return (
-      <div key={student.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 transition-all space-y-2">
+      <div key={student.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3 transition-all space-y-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-xs shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-xs shadow-sm">
               {student.first_name?.[0] || 'U'}
             </div>
             <div>
               <h4 className="font-bold text-slate-900 text-xs cursor-pointer hover:text-blue-600" onClick={() => onSelectStudent(student)}>
-                {student.first_name} {student.last_name}
+                {student.first_name} {student.last_name || ''}
               </h4>
               <p className="text-[10px] text-slate-500">
                 Зал: {student.gym || 'Не указан'} • <span className="text-blue-600 font-semibold">Остаток: {leftTr} зан.</span>
@@ -111,53 +110,32 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          <div className="flex items-center gap-1.5 justify-end">
             <button
               onClick={() => setExpandedStudentId(isExpanded ? null : student.id)}
-              className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[11px] font-semibold transition-all flex items-center gap-1 border border-blue-200"
-              title="Посмотреть программу"
+              className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded-xl text-[10px] font-semibold transition-all border border-slate-200"
             >
-              <Eye className="w-3.5 h-3.5" />
-              <span>{isExpanded ? 'Скрыть план' : 'План тренировки'}</span>
+              {isExpanded ? 'Скрыть' : 'План'}
             </button>
 
             <button
               onClick={(e) => handleAttendanceYes(e, student)}
-              className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-semibold transition-all flex items-center gap-1 shadow-sm"
-              title="Отметить посещение (списать занятие)"
+              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold shadow-sm"
             >
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Был</span>
-            </button>
-
-            <button
-              onClick={(e) => handleAttendanceNo(e, student)}
-              className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[11px] font-semibold transition-all flex items-center gap-1 border border-rose-200"
-              title="Зафиксировать пропуск"
-            >
-              <UserX className="w-3.5 h-3.5" />
-              <span>Не был</span>
+              Был
             </button>
           </div>
         </div>
 
         {isExpanded && (
-          <div className="mt-2 p-3 bg-white border border-blue-100 rounded-xl space-y-2 animate-in fade-in duration-200 text-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-              <span className="font-bold text-slate-800 flex items-center gap-1">
-                <Dumbbell className="w-3.5 h-3.5 text-blue-600" /> Тариф: {formatPackageType(student.package_type)}
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">Слот: {student.workout_time_slot || 'Вечер'}</span>
+          <div className="p-2.5 bg-white border border-slate-200 rounded-xl space-y-1 text-xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-1">
+              <span className="font-bold text-slate-800 text-[11px]">Фокус программы</span>
+              <span className="text-[10px] text-slate-400 font-mono">{student.workout_time_slot || 'Вечер'}</span>
             </div>
-            
-            <div className="text-slate-600 space-y-1">
-              <p><b>Сегодняшний фокус программы:</b> Базовая гипертрофия (Спина / Бицепс)</p>
-              <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono text-[11px] space-y-1 text-slate-700">
-                <p>1. Тяга верхнего блока — 4 подхода по 10 раз (Вес: 50 кг)</p>
-                <p>2. Тяга штанги к поясу — 4 подхода по 10 раз (Вес: 60 кг)</p>
-                <p>3. Подъем гантелей на бицепс — 3 подхода по 12 раз (Вес: 14 кг)</p>
-              </div>
-            </div>
+            <p className="text-[11px] text-slate-600 leading-snug">
+              Базовая гипертрофия: 4 подхода тяги, 4 подхода приседаний, пресс 3 подхода.
+            </p>
           </div>
         )}
       </div>
@@ -165,111 +143,105 @@ export default function OverviewTab({ activeCount, pausedCount, leftCount, lowBa
   };
 
   return (
-    <div className="space-y-4 text-xs">
-      {/* Сетка KPI */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-          <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных</p>
-          <h3 className="text-2xl font-black text-blue-600 mt-1">{activeCount}</h3>
+    <div className="space-y-3.5 text-xs select-none">
+      
+      {/* Сетка показателей KPI */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-white border border-slate-200/80 p-3 rounded-2xl shadow-sm">
+          <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных атлетов</p>
+          <h3 className="text-xl font-black text-blue-600 mt-0.5">{activeCount}</h3>
         </div>
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-          <p className="text-[10px] text-slate-400 uppercase font-semibold">На паузе</p>
-          <h3 className="text-2xl font-black text-amber-600 mt-1">{pausedCount}</h3>
-        </div>
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-          <p className="text-[10px] text-slate-400 uppercase font-semibold">Ушли</p>
-          <h3 className="text-2xl font-black text-rose-600 mt-1">{leftCount}</h3>
-        </div>
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+        <div className="bg-white border border-slate-200/80 p-3 rounded-2xl shadow-sm">
           <p className="text-[10px] text-slate-400 uppercase font-semibold">Мало занятий (≤2)</p>
-          <h3 className={`text-2xl font-black mt-1 ${lowBalanceCount > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+          <h3 className={`text-xl font-black mt-0.5 ${lowBalanceCount > 0 ? 'text-rose-600' : 'text-slate-800'}`}>
             {lowBalanceCount}
           </h3>
         </div>
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm col-span-2 md:col-span-1">
-          <p className="text-[10px] text-slate-400 uppercase font-semibold">Доход / мес</p>
-          <h3 className="text-xl font-black text-emerald-600 mt-1">{totalEarnings.toLocaleString()} ₸</h3>
+        <div className="bg-white border border-slate-200/80 p-3 rounded-2xl shadow-sm col-span-2">
+          <p className="text-[10px] text-slate-400 uppercase font-semibold">Доход за месяц</p>
+          <h3 className="text-xl font-black text-emerald-600 mt-0.5">{totalEarnings.toLocaleString()} ₸</h3>
         </div>
       </div>
 
-      {/* Блок «Быстрые действия» с интерактивными кнопками */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-            <Sparkles className="w-5 h-5 text-white" />
+      {/* Быстрые действия */}
+      <div className="bg-white rounded-3xl p-3.5 border border-slate-200/80 shadow-sm flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="font-bold text-sm">Быстрые действия тренера</h4>
-            <p className="text-[11px] text-blue-100">Управление базой и моментальная связь с атлетами</p>
+            <p className="text-xs font-bold text-slate-900">Ученики</p>
+            <p className="text-[10px] text-slate-400">Быстрое действие</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
+
+        <div className="flex items-center gap-1.5">
           <button 
             onClick={handleRemindLowBalance}
-            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold text-xs transition-all shadow-sm flex items-center gap-1.5"
-            title="Напомнить ученикам с остатком ≤ 2 занятий"
+            className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-[11px] flex items-center gap-1 shadow-sm active:scale-95 transition-all"
           >
-            <BellRing className="w-4 h-4" />
-            <span>Напомнить об оплате</span>
+            <BellRing className="w-3.5 h-3.5" />
+            <span>Напомнить</span>
           </button>
           <button 
             onClick={onOpenAddModal}
-            className="px-3.5 py-2 bg-white text-blue-700 hover:bg-blue-50 rounded-2xl font-bold text-xs transition-all shadow-sm flex items-center gap-1.5"
+            className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-[11px] flex items-center gap-1 shadow-sm active:scale-95 transition-all"
           >
-            <UserPlus className="w-4 h-4" />
-            <span>+ Добавить ученика</span>
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>+ Ученик</span>
           </button>
         </div>
       </div>
 
-      {/* Тренировки на сегодня */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" />
-            <h3 className="font-bold text-sm text-slate-900">Тренировки на сегодня ({formattedDate})</h3>
+      {/* Сегодняшние тренировки */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-sm space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-blue-600" />
+            <h3 className="font-bold text-xs text-slate-900">Тренировки на сегодня ({todayName})</h3>
           </div>
-          <span className="bg-blue-50 text-blue-700 font-bold px-3 py-1 rounded-xl text-xs font-mono">
-            Всего: {todayStudents.length} атлетов
+          <span className="bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-lg text-[10px] font-mono">
+            {todayStudents.length} атлетов
           </span>
         </div>
 
         {todayStudents.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {morningStudents.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-amber-500" /> Утро (08:00 - 12:00)
+              <div className="space-y-1.5">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-amber-500" /> Утро
                 </h4>
                 {morningStudents.map(renderStudentCard)}
               </div>
             )}
 
             {afternoonStudents.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-blue-500" /> Обед / День (12:00 - 16:00)
+              <div className="space-y-1.5">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-blue-500" /> День
                 </h4>
                 {afternoonStudents.map(renderStudentCard)}
               </div>
             )}
 
             {eveningStudents.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-indigo-500" /> Вечер (16:00 - 21:00)
+              <div className="space-y-1.5">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-indigo-500" /> Вечер
                 </h4>
                 {eveningStudents.map(renderStudentCard)}
               </div>
             )}
           </div>
         ) : (
-          <div className="text-center py-12 text-slate-400 space-y-1">
-            <p className="font-medium text-slate-600 text-sm">На сегодня запланированных тренировок нет.</p>
-            <p className="text-[11px]">Убедитесь, что в карточках учеников во вкладке «Ученики» проставлены дни недели и тайм-слоты.</p>
+          <div className="text-center py-8 text-slate-400 space-y-1">
+            <p className="font-medium text-slate-600 text-xs">На сегодня запланированных тренировок нет</p>
+            <p className="text-[10px]">Дни тренировок задаются в карточках учеников</p>
           </div>
         )}
       </div>
+
     </div>
   );
 }
