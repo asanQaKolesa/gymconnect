@@ -1,10 +1,10 @@
-<!-- public/promo-kz.html -->
+<!-- public/promo-ru.html -->
 <!DOCTYPE html>
-<html lang="kk">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>GymConnect.kz — Motion Showcase (QAZ)</title>
+  <title>GymConnect.kz — Motion Showcase (RU)</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,6 +26,7 @@
       overflow: hidden;
     }
 
+    /* Фоновая сетка студии */
     .studio-grid {
       background-size: 32px 32px;
       background-image: 
@@ -33,6 +34,7 @@
         linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     }
 
+    /* Студийная кинетическая типографика */
     .word-mask {
       overflow: hidden;
       display: inline-block;
@@ -61,6 +63,7 @@
       animation: textReveal 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.32s;
     }
 
+    /* Анимация 3D эмодзи-сферы */
     @keyframes epicPunch {
       0% {
         transform: scale(0.65) translateY(30px);
@@ -83,6 +86,7 @@
       animation: epicPunch 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
+    /* Вспышка перехода (Flash Frame) */
     @keyframes flashFx {
       0% { opacity: 0.5; }
       100% { opacity: 0; }
@@ -91,6 +95,7 @@
       animation: flashFx 0.35s ease-out forwards;
     }
 
+    /* Анимированные звуковые полосы */
     @keyframes waveBar {
       0%, 100% { height: 4px; }
       50% { height: 16px; }
@@ -102,17 +107,20 @@
 </head>
 <body class="flex items-center justify-center min-h-screen text-white">
 
-  <!-- 9:16 тік форматындағы мобильді моушн холст -->
+  <!-- Вертикальный холст 9:16 (Motion Reels / Shorts Canvas) -->
   <div id="motion-stage" class="relative w-full max-w-[430px] h-[100dvh] max-h-[920px] bg-[#070A12] flex flex-col justify-between overflow-hidden shadow-2xl rounded-none sm:rounded-[40px] border-0 sm:border-[8px] sm:border-slate-800">
     
+    <!-- Студийный фон: анимированное свечение и сетка -->
     <div class="absolute inset-0 studio-grid pointer-events-none opacity-40"></div>
     <div id="ambient-glow" class="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/25 rounded-full blur-[110px] pointer-events-none transition-colors duration-700"></div>
     <div id="ambient-glow-2" class="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-600/20 rounded-full blur-[110px] pointer-events-none transition-colors duration-700"></div>
     
+    <!-- Белая вспышка на смене сцены -->
     <div id="flash" class="absolute inset-0 bg-white pointer-events-none z-50 opacity-0"></div>
 
-    <!-- Жоғарғы HUD жолағы -->
+    <!-- Верхний лаконичный HUD (без табов) -->
     <div class="relative z-40 p-4 pt-5 flex items-center justify-between">
+      <!-- Брендовый вотермарк -->
       <a href="https://asanqakolesa.github.io/gymconnect/" class="flex items-center gap-2 group">
         <div class="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center font-black text-xs tracking-tighter text-white shadow-lg shadow-blue-600/40">
           GC
@@ -123,30 +131,34 @@
         </div>
       </a>
 
+      <!-- Правая панель: Спектрограф, Звук и Язык -->
       <div class="flex items-center gap-2.5">
+        <!-- Спектрограф ритма -->
         <div class="flex items-center gap-0.5 h-4 px-1.5 py-0.5 bg-white/5 rounded-lg border border-white/10">
           <span class="w-0.5 bg-blue-400 rounded-full wave-1"></span>
           <span class="w-0.5 bg-blue-400 rounded-full wave-2"></span>
           <span class="w-0.5 bg-blue-400 rounded-full wave-3"></span>
         </div>
 
-        <a href="https://asanqakolesa.github.io/gymconnect/promo-ru.html" class="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl text-[11px] font-bold border border-white/15 transition-all active:scale-95 text-white flex items-center gap-1">
-          <span>🇷🇺</span>
-          <span>РУС</span>
+        <!-- Переключатель языка -->
+        <a href="https://asanqakolesa.github.io/gymconnect/promo-kz.html" class="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl text-[11px] font-bold border border-white/15 transition-all active:scale-95 text-white flex items-center gap-1">
+          <span>🇰🇿</span>
+          <span>QAZ</span>
         </a>
 
+        <!-- Кнопка звука -->
         <button id="sound-btn" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/15 active:scale-95 transition-all">
           <span id="sound-icon" class="text-sm">🔇</span>
         </button>
       </div>
     </div>
 
-    <!-- Орталық моушн-сахна -->
+    <!-- Центральная динамическая сцена (Motion Stage) -->
     <div class="relative z-30 flex-1 flex flex-col items-center justify-center px-6 text-center select-none" id="stage-content">
-      <!-- Контент JavaScript арқылы салынады -->
+      <!-- Сцена генерируется скриптом -->
     </div>
 
-    <!-- Төменгі шақыру панелі -->
+    <!-- Нижняя плашка действий -->
     <div class="relative z-40 p-5 pb-7 bg-gradient-to-t from-[#070A12] via-[#070A12]/90 to-transparent space-y-2.5">
       <a 
         href="https://t.me/gymconnect_almaty_bot" 
@@ -154,10 +166,11 @@
         rel="noreferrer" 
         class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-blue-600/30 transition-all active:scale-98 border border-white/10"
       >
-        <span>Telegram-да ашу</span>
+        <span>Открыть в Telegram</span>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
       </a>
 
+      <!-- Индикатор таймлайна (тонкая бегущая точка) -->
       <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 px-1">
         <span id="scene-counter">SCENE 01 / 06</span>
         <span class="flex items-center gap-1 text-slate-400">
@@ -170,68 +183,69 @@
   </div>
 
   <script>
-    // Қазақ тіліндегі бекітілген 6 сахна
+    // 6 утвержденных сцен
     const scenes = [
       {
-        tag: "ЭКОЖҮЙЕ",
+        tag: "ECOSYSTEM",
         emoji: "⚡️",
         line1: "GymConnect.kz",
-        line2: "сенің фитнес әлемің",
-        slogan: "Бұдан былай жалғыз жаттықпайсың.",
+        line2: "твой фитнес-мир",
+        slogan: "Больше не тренируйся один.",
         glow: "rgba(37, 99, 235, 0.4)",
         gradient: "from-blue-400 via-indigo-300 to-white"
       },
       {
-        tag: "GYMBRO МОДУЛІ",
+        tag: "GYMBRO MATCHING",
         emoji: "🤝",
-        line1: "Сенімді серік тап",
-        line2: "өз фитнес-залыңнан",
-        slogan: "Салмақты ұстап беру • Тәртіп • Бірге жаттығу.",
+        line1: "Найди напарника",
+        line2: "в своем фитнес-зале",
+        slogan: "Подстраховка на жиме • Дисциплина • Общение.",
         glow: "rgba(16, 185, 129, 0.4)",
         gradient: "from-emerald-400 via-teal-200 to-white"
       },
       {
-        tag: "ШЫНАЙЫ ПІКІРЛЕР",
+        tag: "VERIFIED REVIEWS",
         emoji: "⭐",
-        line1: "Адал бағалар",
-        line2: "залдар мен бапкерлерге",
-        slogan: "Жарнамасыз және өтіріксіз • 230+ фитнес-клуб.",
+        line1: "Честные отзывы",
+        line2: "о залах и тренерах",
+        slogan: "Достоверные оценки • Без накруток и цензуры.",
         glow: "rgba(245, 158, 11, 0.4)",
         gradient: "from-amber-400 via-orange-300 to-white"
       },
       {
         tag: "COACH OS CRM",
         emoji: "📊",
-        line1: "Бапкерге арналған CRM",
-        line2: "жұмысты жеңілдету",
-        slogan: "Шәкірттер есебі, жаттығуларды шегеру және табыс.",
+        line1: "CRM для тренеров",
+        line2: "автоматизация работы",
+        slogan: "Учет подопечных, списание тренировок и касса.",
         glow: "rgba(99, 102, 241, 0.4)",
         gradient: "from-indigo-400 via-purple-300 to-white"
       },
       {
-        tag: "ЗАЛДАР ҮШІН",
+        tag: "B2B GYM PASS",
         emoji: "🏢",
-        line1: "Абонементтер сату",
-        line2: "менеджерсіз тікелей",
-        slogan: "Карталарды Telegram арқылы 1 басуда сатып алу.",
+        line1: "Продажи залам",
+        line2: "без менеджеров",
+        slogan: "Прямая покупка клубных карт прямо в Telegram.",
         glow: "rgba(14, 165, 233, 0.4)",
         gradient: "from-sky-400 via-cyan-200 to-white"
       },
       {
-        tag: "ФИНАЛ",
+        tag: "FINALE",
         emoji: "❤️‍🔥",
         line1: "GymConnect",
-        line2: "барлық фитнесті біріктіреміз",
-        slogan: "Қаланың ең мықты спорттық қауымдастығына қосыл!",
+        line2: "объединяем весь фитнес",
+        slogan: "Присоединяйся к главному комьюнити Алматы!",
         glow: "rgba(244, 63, 94, 0.45)",
         gradient: "from-rose-400 via-red-300 to-white"
       }
     ];
 
     let currentSceneIdx = 0;
-    const sceneInterval = 2800;
+    const sceneInterval = 2800; // 2.8 секунды ритмичный темп
     let mainLoop = null;
 
+    // Web Audio Синтезатор звука
     let audioCtx = null;
     let isMuted = true;
     let beatTimer = null;
@@ -245,10 +259,12 @@
       }
     }
 
+    // Звук глубокого 808 Sub-kick на смене кадра
     function playSceneImpact() {
       if (isMuted || !audioCtx) return;
       const now = audioCtx.currentTime;
 
+      // Sub Bass
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'sine';
@@ -261,6 +277,7 @@
       osc.start(now);
       osc.stop(now + 0.18);
 
+      // White-noise swish
       const bufferSize = audioCtx.sampleRate * 0.1;
       const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -282,10 +299,11 @@
       noise.start(now);
     }
 
+    // Фоновый tech-битовый пульс
     function startMusicBeat() {
       if (!audioCtx || beatTimer) return;
       let tick = 0;
-      const ms = (60 / 126) * 1000 / 2;
+      const ms = (60 / 126) * 1000 / 2; // 126 BPM
       beatTimer = setInterval(() => {
         if (isMuted) return;
         const t = audioCtx.currentTime;
@@ -305,6 +323,7 @@
       }, ms);
     }
 
+    // Рендер моушн-сцены
     function renderMotionScene(idx) {
       const data = scenes[idx];
       const stage = document.getElementById('stage-content');
@@ -312,17 +331,20 @@
       const flash = document.getElementById('flash');
       const glow1 = document.getElementById('ambient-glow');
 
+      // Вспышка и звуковой импакт
       flash.classList.remove('flash-overlay');
       void flash.offsetWidth;
       flash.classList.add('flash-overlay');
       playSceneImpact();
 
+      // Динамическое изменение эмбиента
       glow1.style.backgroundColor = data.glow;
       counter.textContent = `SCENE 0${idx + 1} / 06`;
 
       stage.innerHTML = `
         <div class="space-y-6 w-full">
           
+          <!-- Моушн-бейдж -->
           <div class="word-mask">
             <span class="animate-reveal-1 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/10 border border-white/15 backdrop-blur-xl text-[10px] font-black tracking-widest uppercase text-white shadow-2xl">
               <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
@@ -330,6 +352,7 @@
             </span>
           </div>
 
+          <!-- 3D Эмодзи с эффектом глубины и световым кольцом -->
           <div class="relative py-4 flex items-center justify-center">
             <div class="absolute w-44 h-44 rounded-full border border-white/10 animate-ping opacity-20 pointer-events-none"></div>
             <div class="absolute w-36 h-36 rounded-full bg-gradient-to-tr from-white/10 to-transparent blur-md pointer-events-none"></div>
@@ -338,6 +361,7 @@
             </div>
           </div>
 
+          <!-- Кинетические строки текста -->
           <div class="space-y-1.5">
             <div class="word-mask block">
               <h1 class="animate-reveal-2 text-3xl sm:text-4xl font-black tracking-tight leading-none text-white">
@@ -351,6 +375,7 @@
             </div>
           </div>
 
+          <!-- Слоган снизу -->
           <div class="word-mask pt-1">
             <p class="animate-reveal-3 text-xs sm:text-sm font-medium text-slate-300 max-w-[290px] mx-auto leading-relaxed">
               ${data.slogan}
@@ -371,6 +396,7 @@
       mainLoop = setInterval(runNext, sceneInterval);
     }
 
+    // Управление звуком
     const soundBtn = document.getElementById('sound-btn');
     const soundIcon = document.getElementById('sound-icon');
     soundBtn.addEventListener('click', (e) => {
@@ -384,12 +410,14 @@
       }
     });
 
+    // Тап по экрану для ручного перехода
     document.getElementById('motion-stage').addEventListener('click', () => {
       initAudio();
       runNext();
       startAutoLoop();
     });
 
+    // Запуск первой сцены
     renderMotionScene(0);
     startAutoLoop();
   </script>
