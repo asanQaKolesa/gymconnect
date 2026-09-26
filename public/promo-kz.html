@@ -4,300 +4,444 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>GymConnect.kz — Промо-таныстырылым (QAZ)</title>
+  <title>GymConnect.kz — Motion Showcase (QAZ)</title>
   
-  <!-- Шрифт Rubik (толық қазақ кириллицасын қолдайды) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,400;0,600;0,700;0,900&display=swap" rel="stylesheet">
   
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            rubik: ['Rubik', 'sans-serif'],
-          }
-        }
-      }
-    }
-  </script>
-
   <style>
     * {
       -webkit-tap-highlight-color: transparent;
       user-select: none;
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
     body {
       font-family: 'Rubik', sans-serif;
-      background-color: #0b0f19;
-      margin: 0;
-      padding: 0;
+      background-color: #060911;
+      color: #FFFFFF;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
     }
 
-    @keyframes floatEmoji {
-      0%, 100% {
-        transform: translateY(0) scale(1) rotate(0deg);
-        filter: drop-shadow(0 15px 25px rgba(37, 99, 235, 0.25));
-      }
-      50% {
-        transform: translateY(-12px) scale(1.08) rotate(2deg);
-        filter: drop-shadow(0 25px 35px rgba(37, 99, 235, 0.4));
+    #motion-stage {
+      position: relative;
+      width: 100%;
+      max-width: 430px;
+      height: 100dvh;
+      max-height: 920px;
+      background-color: #070A12;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    }
+
+    @media (min-width: 640px) {
+      #motion-stage {
+        border-radius: 40px;
+        border: 8px solid #1E293B;
       }
     }
 
-    .animate-float {
-      animation: floatEmoji 2.2s ease-in-out infinite;
+    .studio-grid {
+      position: absolute;
+      inset: 0;
+      background-size: 32px 32px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      pointer-events: none;
+      opacity: 0.5;
     }
 
-    @keyframes kineticUp {
+    .ambient-light {
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      border-radius: 9999px;
+      filter: blur(100px);
+      pointer-events: none;
+      transition: background-color 0.8s ease;
+    }
+
+    .word-mask {
+      overflow: hidden;
+      display: inline-block;
+    }
+
+    @keyframes textReveal {
       0% {
+        transform: translateY(115%);
         opacity: 0;
-        transform: translateY(28px) scale(0.96);
-        filter: blur(4px);
+        filter: blur(6px);
       }
       100% {
+        transform: translateY(0%);
         opacity: 1;
-        transform: translateY(0) scale(1);
-        filter: blur(0);
+        filter: blur(0px);
       }
     }
 
-    .kinetic-text {
-      animation: kineticUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    .animate-reveal-1 { animation: textReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.05s; }
+    .animate-reveal-2 { animation: textReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.15s; }
+    .animate-reveal-3 { animation: textReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.25s; }
+
+    @keyframes epicPunch {
+      0% {
+        transform: scale(0.65) translateY(25px);
+        opacity: 0;
+      }
+      65% {
+        transform: scale(1.08) translateY(-4px);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
     }
 
-    .progress-track {
-      background: rgba(255, 255, 255, 0.28);
-      height: 3.5px;
-      border-radius: 999px;
-      overflow: hidden;
-      flex: 1;
+    .animate-punch {
+      animation: epicPunch 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
-    .progress-fill {
-      background: #FFFFFF;
-      height: 100%;
-      width: 0%;
-      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
-      transition: width 0.05s linear;
+
+    @keyframes flashFx {
+      0% { opacity: 0.45; }
+      100% { opacity: 0; }
     }
+    .flash-overlay {
+      animation: flashFx 0.3s ease-out forwards;
+    }
+
+    @keyframes waveBar {
+      0%, 100% { height: 4px; }
+      50% { height: 14px; }
+    }
+    .wave-1 { animation: waveBar 0.5s ease-in-out infinite 0.1s; }
+    .wave-2 { animation: waveBar 0.4s ease-in-out infinite 0.25s; }
+    .wave-3 { animation: waveBar 0.6s ease-in-out infinite 0.05s; }
   </style>
 </head>
-<body class="flex items-center justify-center min-h-screen text-slate-900">
+<body>
 
-  <!-- 9:16 тік форматындағы презентация (Stories / Reels / TikTok) -->
-  <div id="story-app" class="relative w-full max-w-[430px] h-[100dvh] max-h-[920px] bg-[#F8FAFC] flex flex-col justify-between overflow-hidden shadow-2xl rounded-none sm:rounded-[36px] border-0 sm:border-[8px] sm:border-slate-800">
+  <div id="motion-stage">
     
-    <!-- Индикаторлар және басқару жолағы -->
-    <div class="relative z-30 p-4 pt-5 space-y-3 bg-gradient-to-b from-black/40 via-black/10 to-transparent">
-      <!-- 6 бөлімге арналған прогресс-сызықтар -->
-      <div class="flex items-center gap-1.5 px-0.5" id="progress-container">
-        <div class="progress-track"><div class="progress-fill" id="fill-0"></div></div>
-        <div class="progress-track"><div class="progress-fill" id="fill-1"></div></div>
-        <div class="progress-track"><div class="progress-fill" id="fill-2"></div></div>
-        <div class="progress-track"><div class="progress-fill" id="fill-3"></div></div>
-        <div class="progress-track"><div class="progress-fill" id="fill-4"></div></div>
-        <div class="progress-track"><div class="progress-fill" id="fill-5"></div></div>
-      </div>
+    <div class="studio-grid"></div>
+    <div id="ambient-glow" class="ambient-light" style="top: -100px; left: -100px; background-color: rgba(37, 99, 235, 0.35);"></div>
+    <div class="ambient-light" style="bottom: -100px; right: -100px; background-color: rgba(99, 102, 241, 0.25);"></div>
+    <div id="flash" style="position: absolute; inset: 0; background: #ffffff; pointer-events: none; z-index: 50; opacity: 0;"></div>
 
-      <!-- Хедер: Логотип, Орыс тіліне сілтеме және Дыбыс -->
-      <div class="flex items-center justify-between text-white drop-shadow-md">
-        <a href="https://asanqakolesa.github.io/gymconnect/" class="flex items-center gap-2 active:scale-95 transition-transform">
-          <div class="w-7 h-7 rounded-xl bg-blue-600 flex items-center justify-center font-black text-xs tracking-tighter text-white shadow-lg">
-            GC
-          </div>
-          <span class="font-extrabold text-sm tracking-tight">GymConnect<span class="text-blue-400">.kz</span></span>
+    <!-- Жоғарғы бар -->
+    <div style="position: relative; z-index: 40; padding: 18px 16px 8px; display: flex; align-items: center; justify-content: space-between;">
+      <a href="https://asanqakolesa.github.io/gymconnect/" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit;">
+        <div style="width: 32px; height: 32px; border-radius: 10px; background: #2563EB; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.4);">
+          GC
+        </div>
+        <div>
+          <p style="font-weight: 800; font-size: 13px; line-height: 1;">GymConnect<span style="color: #60A5FA;">.kz</span></p>
+          <p style="font-size: 9px; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px;">Motion 4K</p>
+        </div>
+      </a>
+
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 2px; height: 18px; padding: 0 6px; background: rgba(255,255,255,0.06); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+          <span class="wave-1" style="width: 2px; background: #60A5FA; border-radius: 2px;"></span>
+          <span class="wave-2" style="width: 2px; background: #60A5FA; border-radius: 2px;"></span>
+          <span class="wave-3" style="width: 2px; background: #60A5FA; border-radius: 2px;"></span>
+        </div>
+
+        <a href="https://asanqakolesa.github.io/gymconnect/promo-ru.html" style="padding: 6px 10px; background: rgba(255,255,255,0.1); border-radius: 12px; font-size: 11px; font-weight: 700; border: 1px solid rgba(255,255,255,0.15); color: #fff; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+          <span>🇷🇺</span>
+          <span>РУС</span>
         </a>
 
-        <div class="flex items-center gap-2">
-          <!-- ОРЫС ТІЛІНДЕГІ НҰСҚАҒА ТІКЕЛЕЙ СІЛТЕМЕ -->
-          <a href="https://asanqakolesa.github.io/gymconnect/promo-ru.html" class="px-2.5 py-1 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full text-[11px] font-bold border border-white/20 transition-all active:scale-95 text-white flex items-center gap-1">
-            <span>🇷🇺</span>
-            <span>РУС</span>
-          </a>
+        <button id="sound-btn" style="width: 32px; height: 32px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;">
+          <span id="sound-icon">🔇</span>
+        </button>
+      </div>
+    </div>
 
-          <!-- Дыбыс түймесі -->
-          <button id="sound-btn" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center justify-center border border-white/20 active:scale-95 transition-all">
-            <span id="sound-icon" class="text-sm">🔇</span>
-          </button>
+    <!-- Орталық сахна (Бірінші слайд дайын күйінде тұр) -->
+    <div id="stage-content" style="position: relative; z-index: 30; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 24px; text-align: center;">
+      <div style="width: 100%;">
+        <div class="word-mask">
+          <span class="animate-reveal-1" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 9999px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #60A5FA;"></span>
+            ФИТНЕС ЭКОЖҮЙЕСІ
+          </span>
+        </div>
+
+        <div style="position: relative; padding: 18px 0; display: flex; align-items: center; justify-content: center;">
+          <div class="animate-punch" style="font-size: 88px; line-height: 1;">
+            ⚡️
+          </div>
+        </div>
+
+        <div>
+          <div class="word-mask" style="display: block;">
+            <h1 class="animate-reveal-2" style="font-size: 34px; font-weight: 900; letter-spacing: -0.5px; line-height: 1.05;">
+              GymConnect.kz
+            </h1>
+          </div>
+          <div class="word-mask" style="display: block; margin-top: 6px;">
+            <p class="animate-reveal-3" style="font-size: 24px; font-weight: 700; color: #60A5FA;">
+              сенің фитнес әлемің
+            </p>
+          </div>
+        </div>
+
+        <div class="word-mask" style="padding-top: 14px;">
+          <p class="animate-reveal-3" style="font-size: 13px; color: #94A3B8; max-width: 280px; margin: 0 auto; line-height: 1.4;">
+            Бұдан былай жалғыз жаттықпайсың.
+          </p>
         </div>
       </div>
     </div>
 
-    <!-- Тап аймақтары (артқа / алға) -->
-    <div class="absolute inset-0 z-10 flex">
-      <div id="tap-left" class="w-1/3 h-full cursor-pointer"></div>
-      <div id="tap-right" class="w-2/3 h-full cursor-pointer"></div>
-    </div>
+    <!-- Төменгі түйме -->
+    <div style="position: relative; z-index: 40; padding: 16px 20px 24px; background: linear-gradient(to top, #070A12, rgba(7,10,18,0.9), transparent);">
+      <a 
+        href="https://t.me/gymconnect_almaty_bot" 
+        target="_blank" 
+        rel="noreferrer" 
+        style="width: 100%; padding: 14px 16px; background: #2563EB; color: #fff; border-radius: 16px; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 10px 25px rgba(37,99,235,0.35);"
+      >
+        <span>Telegram-да ашу</span>
+        <span style="font-size: 16px;">↗</span>
+      </a>
 
-    <!-- Негізгі слайд контенті -->
-    <div class="relative z-20 flex-1 flex flex-col items-center justify-center px-6 text-center" id="slide-content">
-      <!-- Мазмұн JavaScript арқылы салынады -->
-    </div>
-
-    <!-- Төменгі шақыру батырмасы -->
-    <div class="relative z-30 p-5 pb-7 bg-gradient-to-t from-white via-white/90 to-transparent">
-      <div id="action-container" class="space-y-2">
-        <a href="https://t.me/gymconnect_almaty_bot" target="_blank" rel="noreferrer" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all active:scale-98">
-          <span>GymConnect-ті Telegram-да ашу</span>
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-        </a>
-        <p class="text-[10.5px] text-center text-slate-400 font-medium tracking-tight">Келесі слайд үшін оң жаққа басыңыз • Тоқтату үшін басып тұрыңыз</p>
+      <div style="display: flex; align-items: center; justify-content: space-between; font-size: 10px; color: #64748B; padding: 10px 4px 0; font-family: monospace;">
+        <span id="scene-counter">SCENE 01 / 06</span>
+        <span style="display: flex; align-items: center; gap: 5px;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #3B82F6;"></span>
+          AUTO PLAY
+        </span>
       </div>
     </div>
 
   </div>
 
   <script>
-    // Қазақ тіліндегі бекітілген 6 слайд
-    const slides = [
+    const scenes = [
       {
-        badge: "ФИТНЕС ЭКОЖҮЙЕСІ",
+        tag: "ФИТНЕС ЭКОЖҮЙЕСІ",
         emoji: "⚡️",
-        title: "GymConnect.kz",
-        subtitle: "сенің фитнес әлемің",
+        line1: "GymConnect.kz",
+        line2: "сенің фитнес әлемің",
         slogan: "Бұдан былай жалғыз жаттықпайсың.",
-        accentColor: "from-blue-600 to-indigo-600"
+        glow: "rgba(37, 99, 235, 0.4)",
+        color: "#60A5FA"
       },
       {
-        badge: "GYMBRO МОДУЛІ",
+        tag: "GYMBRO МОДУЛІ",
         emoji: "🤝",
-        title: "Сенімді серік тап",
-        subtitle: "өз фитнес-залыңнан",
-        slogan: "Бірге жаттығу, салмақты ұстап беру және тәртіп.",
-        accentColor: "from-emerald-500 to-teal-600"
+        line1: "Сенімді серік тап",
+        line2: "өз фитнес-залыңнан",
+        slogan: "Салмақты ұстап беру • Тәртіп • Бірге жаттығу.",
+        glow: "rgba(16, 185, 129, 0.4)",
+        color: "#34D399"
       },
       {
-        badge: "ШЫНАЙЫ РЕЙТИНГ",
+        tag: "ШЫНАЙЫ ПІКІРЛЕР",
         emoji: "⭐",
-        title: "Пікірлер мен бағалар",
-        subtitle: "өтіріксіз және жарнамасыз",
-        slogan: "Алматының 230+ залдары мен бапкерлері жайлы адал баға.",
-        accentColor: "from-amber-500 to-orange-600"
+        line1: "Адал бағалар",
+        line2: "залдар мен бапкерлерге",
+        slogan: "Жарнамасыз және өтіріксіз • 230+ фитнес-клуб.",
+        glow: "rgba(245, 158, 11, 0.4)",
+        color: "#FBBF24"
       },
       {
-        badge: "БАПКЕРЛЕРГЕ АРНАЛҒАН",
+        tag: "COACH OS CRM",
         emoji: "📊",
-        title: "Trainer CoachOS",
-        subtitle: "бапкерге арналған CRM-жүйе",
-        slogan: "Шәкірттер есебі, жаттығуларды шегеру және табыс 1 басуда.",
-        accentColor: "from-indigo-600 to-violet-600"
+        line1: "Бапкерге арналған CRM",
+        line2: "жұмысты жеңілдету",
+        slogan: "Шәкірттер есебі, жаттығуларды шегеру және табыс.",
+        glow: "rgba(99, 102, 241, 0.4)",
+        color: "#A5B4FC"
       },
       {
-        badge: "ЗАЛДАР ҮШІН",
+        tag: "ЗАЛДАР ҮШІН",
         emoji: "🏢",
-        title: "Абонементтерді сату",
-        subtitle: "менеджерлердің қатысуынсыз",
-        slogan: "Клиенттердің Telegram арқылы карталарды тікелей сатып алуы.",
-        accentColor: "from-blue-700 to-cyan-600"
+        line1: "Абонементтер сату",
+        line2: "менеджерсіз тікелей",
+        slogan: "Карталарды Telegram арқылы 1 басуда сатып алу.",
+        glow: "rgba(14, 165, 233, 0.4)",
+        color: "#38BDF8"
       },
       {
-        badge: "ФИНАЛ",
+        tag: "ФИНАЛ",
         emoji: "❤️‍🔥",
-        title: "GymConnect",
-        subtitle: "біз барлық фитнесті біріктіреміз",
-        slogan: "Қаланың басты спорттық қауымдастығына дәл қазір қосыл!",
-        accentColor: "from-rose-500 to-red-600"
+        line1: "GymConnect",
+        line2: "барлық фитнесті біріктіреміз",
+        slogan: "Қаланың ең мықты спорттық қауымдастығына қосыл!",
+        glow: "rgba(244, 63, 94, 0.45)",
+        color: "#FB7185"
       }
     ];
 
-    let currentSlide = 0;
-    const slideDuration = 3000;
-    let slideTimer = null;
-    let progressStartTime = 0;
-    let isPaused = false;
-    let audioContext = null;
-    let isMuted = true;
-    let beatInterval = null;
+    let currentSceneIdx = 0;
+    const sceneInterval = 2800;
+    let mainLoop = null;
 
-    const slideContent = document.getElementById('slide-content');
-    const soundBtn = document.getElementById('sound-btn');
-    const soundIcon = document.getElementById('sound-icon');
+    let audioCtx = null;
+    let isMuted = true;
+    let beatTimer = null;
 
     function initAudio() {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioContext.state === 'suspended') {
-        audioContext.resume();
-      }
-    }
-
-    function playSwishSFX() {
-      if (isMuted || !audioContext) return;
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(450, audioContext.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(120, audioContext.currentTime + 0.15);
-      gain.gain.setValueAtTime(0.18, audioContext.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
-      osc.connect(gain);
-      gain.connect(audioContext.destination);
-      osc.start();
-      osc.stop(audioContext.currentTime + 0.15);
-    }
-
-    function playClickSFX() {
-      if (isMuted || !audioContext) return;
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(800, audioContext.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(1400, audioContext.currentTime + 0.06);
-      gain.gain.setValueAtTime(0.12, audioContext.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.06);
-      osc.connect(gain);
-      gain.connect(audioContext.destination);
-      osc.start();
-      osc.stop(audioContext.currentTime + 0.06);
-    }
-
-    function startBeat() {
-      if (!audioContext || beatInterval) return;
-      let step = 0;
-      const intervalMs = (60 / 124) * 1000 / 2;
-      beatInterval = setInterval(() => {
-        if (isMuted) return;
-        const now = audioContext.currentTime;
-        if (step % 2 === 0) {
-          const kick = audioContext.createOscillator();
-          const gain = audioContext.createGain();
-          kick.frequency.setValueAtTime(130, now);
-          kick.frequency.exponentialRampToValueAtTime(38, now + 0.09);
-          gain.gain.setValueAtTime(0.28, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
-          kick.connect(gain);
-          gain.connect(audioContext.destination);
-          kick.start(now);
-          kick.stop(now + 0.09);
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        step++;
-      }, intervalMs);
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      } catch (e) {
+        console.warn('Audio not supported or blocked:', e);
+      }
     }
 
-    soundBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      initAudio();
-      isMuted = !isMuted;
-      soundIcon.textContent = isMuted ? '🔇' : '🔊';
-      if (!isMuted) {
-        startBeat();
-        playClickSFX();
+    function playSceneImpact() {
+      if (isMuted || !audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(32, now + 0.16);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.16);
+      } catch (e) {}
+    }
+
+    function startMusicBeat() {
+      if (!audioCtx || beatTimer) return;
+      let tick = 0;
+      const ms = (60 / 126) * 1000 / 2;
+      beatTimer = setInterval(() => {
+        if (isMuted || !audioCtx) return;
+        try {
+          const t = audioCtx.currentTime;
+          if (tick % 2 === 0) {
+            const hat = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            hat.type = 'highpass';
+            hat.frequency.setValueAtTime(8000, t);
+            g.gain.setValueAtTime(0.03, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+            hat.connect(g);
+            g.connect(audioCtx.destination);
+            hat.start(t);
+            hat.stop(t + 0.04);
+          }
+          tick++;
+        } catch (e) {}
+      }, ms);
+    }
+
+    function renderMotionScene(idx) {
+      const data = scenes[idx];
+      const stage = document.getElementById('stage-content');
+      const counter = document.getElementById('scene-counter');
+      const flash = document.getElementById('flash');
+      const glow1 = document.getElementById('ambient-glow');
+
+      if (flash) {
+        flash.classList.remove('flash-overlay');
+        void flash.offsetWidth;
+        flash.classList.add('flash-overlay');
       }
-    });
 
-    function renderSlide(index) {
-      const data = slides[index];
-      playSwishSFX();
+      playSceneImpact();
 
-      slideContent.innerHTML = `
-        <div class="space-y-6 w-full kinetic-text">
-          <div>
-            <span class="inline-block px-3.5 py-1 bg-white border border-slate-200/80 shadow-sm rounded-full text-[10px] font-black tracking-widest text-slate-700 uppercase">
-              ${data.badge}
-            </span>
+      if (glow1) glow1.style.backgroundColor = data.glow;
+      if (counter) counter.textContent = `SCENE 0${idx + 1} / 06`;
+
+      if (stage) {
+        stage.innerHTML = `
+          <div style="width: 100%;">
+            <div class="word-mask">
+              <span class="animate-reveal-1" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 9999px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: ${data.color};"></span>
+                ${data.tag}
+              </span>
+            </div>
+
+            <div style="position: relative; padding: 18px 0; display: flex; align-items: center; justify-content: center;">
+              <div class="animate-punch" style="font-size: 88px; line-height: 1;">
+                ${data.emoji}
+              </div>
+            </div>
+
+            <div>
+              <div class="word-mask" style="display: block;">
+                <h1 class="animate-reveal-2" style="font-size: 34px; font-weight: 900; letter-spacing: -0.5px; line-height: 1.05;">
+                  ${data.line1}
+                </h1>
+              </div>
+              <div class="word-mask" style="display: block; margin-top: 6px;">
+                <p class="animate-reveal-3" style="font-size: 24px; font-weight: 700; color: ${data.color};">
+                  ${data.line2}
+                </p>
+              </div>
+            </div>
+
+            <div class="word-mask" style="padding-top: 14px;">
+              <p class="animate-reveal-3" style="font-size: 13px; color: #94A3B8; max-width: 280px; margin: 0 auto; line-height: 1.4;">
+                ${data.slogan}
+              </p>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function runNext() {
+      currentSceneIdx = (currentSceneIdx + 1) % scenes.length;
+      renderMotionScene(currentSceneIdx);
+    }
+
+    function startAutoLoop() {
+      if (mainLoop) clearInterval(mainLoop);
+      mainLoop = setInterval(runNext, sceneInterval);
+    }
+
+    const soundBtn = document.getElementById('sound-btn');
+    const soundIcon = document.getElementById('sound-icon');
+    if (soundBtn) {
+      soundBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        initAudio();
+        isMuted = !isMuted;
+        if (soundIcon) soundIcon.textContent = isMuted ? '🔇' : '🔊';
+        if (!isMuted) {
+          startMusicBeat();
+          playSceneImpact();
+        }
+      });
+    }
+
+    const stageEl = document.getElementById('motion-stage');
+    if (stageEl) {
+      stageEl.addEventListener('click', () => {
+        initAudio();
+        runNext();
+        startAutoLoop();
+      });
+    }
+
+    startAutoLoop();
+  </script>
+</body>
+</html>
