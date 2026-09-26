@@ -1,5 +1,5 @@
 // src/components/trainer/TrainerOnboarding.jsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   ArrowLeft, 
   Dumbbell, 
@@ -14,12 +14,14 @@ import {
   FileText, 
   HelpCircle, 
   X, 
-  ChevronRight 
+  ChevronRight,
+  Search,
+  MapPin
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
 
-// Безопасное извлечение массива залов
+// Безопасное извлечение массива залов из базы данных
 const GYMS_ARRAY = Array.isArray(GymsData.ALMATY_GYMS) 
   ? GymsData.ALMATY_GYMS 
   : (Array.isArray(GymsData.almatyGyms) ? GymsData.almatyGyms : (Array.isArray(GymsData.default) ? GymsData.default : []));
@@ -30,6 +32,13 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeLegalModal, setActiveLegalModal] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Стейты живого поиска для основного и второго зала
+  const [gymSearchQuery, setGymSearchQuery] = useState('');
+  const [isGymDropdownOpen, setIsGymDropdownOpen] = useState(false);
+
+  const [secondaryGymSearchQuery, setSecondaryGymSearchQuery] = useState('');
+  const [isSecondaryGymDropdownOpen, setIsSecondaryGymDropdownOpen] = useState(false);
 
   // Данные из Telegram Mini App
   const tgUser = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : null;
@@ -60,7 +69,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     'Личный онлайн-коучинг с ежедневным контролем 24/7'
   ];
 
-  // Партнерские документы
+  // Документы партнерской оферты
   const trainerLegalDocs = [
     {
       id: 'trainer_offer',
@@ -115,7 +124,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     gym: defaultGym,
     secondary_gym: '',
 
-    // Опыт и направления
+    // Опыт и специализации
     experience_years: 3,
     specializations: ['Набор массы и гипертрофия', 'Снижение веса и сушка'],
     work_format: 'hybrid',
@@ -136,7 +145,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
       online: true
     },
 
-    // Прайс-лист
+    // Прайс-лист со сгруппированными абонементами
     pricing: {
       personal_single: 8000,
       personal_count: 12,
@@ -165,6 +174,18 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     verification_consent: false,
     legal_accepted: false
   });
+
+  // Фильтрация основного зала по поисковому запросу
+  const filteredPrimaryGyms = useMemo(() => {
+    if (!gymSearchQuery.trim()) return GYMS_ARRAY.slice(0, 35);
+    return GYMS_ARRAY.filter(g => typeof g === 'string' && g.toLowerCase().includes(gymSearchQuery.toLowerCase()));
+  }, [gymSearchQuery]);
+
+  // Фильтрация второго зала по поисковому запросу
+  const filteredSecondaryGyms = useMemo(() => {
+    if (!secondaryGymSearchQuery.trim()) return GYMS_ARRAY.slice(0, 35);
+    return GYMS_ARRAY.filter(g => typeof g === 'string' && g.toLowerCase().includes(secondaryGymSearchQuery.toLowerCase()));
+  }, [secondaryGymSearchQuery]);
 
   const handleBackAction = () => {
     if (typeof onExitToProfile === 'function') {
@@ -310,7 +331,11 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
         .from('trainer_profiles')
         .upsert([payload], { onConflict: 'username' });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Ошибка сохранения тренера:', error);
+        alert('Ошибка при сохранении: ' + error.message);
+        return;
+      }
 
       alert('Ваша анкета в CoachOS успешно отправлена! Профиль появится в каталоге после проверки администратором.');
       
@@ -320,7 +345,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
         handleBackAction();
       }
     } catch (err) {
-      console.error('Ошибка отправки анкеты тренера:', err);
+      console.error('Критическая ошибка отправки анкеты тренера:', err);
       alert('Ошибка при сохранении: ' + err.message);
     } finally {
       setIsSubmitting(false);
@@ -380,7 +405,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     <Users className="w-8 h-8 text-slate-400 stroke-[1.6]" />
                   )}
                 </div>
-                <div className="absolute -bottom-1 -right-1 p-1.5 bg-slate-800 text-white rounded-full shadow-md">
+                <div className="absolute -bottom-1 -right-1 p-1.5 bg-blue-600 text-white rounded-full shadow-md">
                   <Camera className="w-3.5 h-3.5" />
                 </div>
               </div>
@@ -403,7 +428,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 value={formData.full_name}
                 onChange={e => setFormData({ ...formData, full_name: e.target.value })}
                 placeholder="Данияр Сериков"
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
               />
             </div>
 
@@ -420,7 +445,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     value={formData.username}
                     onChange={e => setFormData({ ...formData, username: e.target.value.replace(/[@\s]/g, '') })}
                     placeholder="coach_nick"
-                    className="w-full pl-6 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-900 focus:outline-none focus:border-slate-800"
+                    className="w-full pl-6 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-900 focus:outline-none focus:border-blue-600"
                   />
                 </div>
               </div>
@@ -440,7 +465,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                       setFormData({ ...formData, phone: val });
                     }}
                     placeholder="701 123 45 67"
-                    className="w-full pl-8 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-slate-800"
+                    className="w-full pl-8 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
                   />
                 </div>
               </div>
@@ -457,7 +482,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                   value={formData.instagram}
                   onChange={e => setFormData({ ...formData, instagram: e.target.value.replace(/[@\s]/g, '') })}
                   placeholder="coach_fit"
-                  className="w-full pl-6 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-slate-800"
+                  className="w-full pl-6 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
             </div>
@@ -471,13 +496,13 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 value={formData.bio}
                 onChange={e => setFormData({ ...formData, bio: e.target.value })}
                 placeholder="Мастер спорта РК, специализируюсь на силовом тренинге и рекомпозиции. Ставлю идеальную биомеханику базы, довожу до результата без срывов и жестких голодовок..."
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-normal text-slate-900 focus:outline-none focus:border-slate-800 resize-none leading-relaxed"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-normal text-slate-900 focus:outline-none focus:border-blue-600 resize-none leading-relaxed"
               />
             </div>
           </div>
 
-          {/* 2. ЗАЛЫ ДЛЯ ТРЕНИРОВОК */}
-          <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
+          {/* 2. ЗАЛЫ ДЛЯ ТРЕНИРОВОК (ЖИВОЙ ПОИСК С ВЫПАДАЮЩИМ СПИСКОМ) */}
+          <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
             <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-100 whitespace-nowrap">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
                 2. Залы проведения тренировок
@@ -487,35 +512,149 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            <div>
+            {/* Выбор основного фитнес-клуба с живым поиском */}
+            <div className="relative">
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Основной фитнес-клуб <span className="text-rose-500">*</span>
               </label>
-              <select
-                value={formData.gym}
-                onChange={e => setFormData({ ...formData, gym: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800 truncate"
-              >
-                {(GYMS_ARRAY || []).slice(0, 80).map((g, idx) => (
-                  <option key={idx} value={g}>{g}</option>
-                ))}
-              </select>
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <div className="flex items-center gap-1.5 text-xs text-blue-700 font-semibold">
+                  <MapPin className="w-3.5 h-3.5 shrink-0 text-blue-600" />
+                  <span className="truncate">{formData.gym || 'Клуб не выбран — начните ввод ниже'}</span>
+                </div>
+
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={gymSearchQuery}
+                    onFocus={() => setIsGymDropdownOpen(true)}
+                    onChange={e => {
+                      setGymSearchQuery(e.target.value);
+                      setIsGymDropdownOpen(true);
+                    }}
+                    placeholder="Начните вводить название зала (Invictus, Adrenaline...)"
+                    className="w-full pl-8 pr-7 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                  {gymSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setGymSearchQuery('')}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {isGymDropdownOpen && (
+                  <div className="max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg divide-y divide-slate-100 z-30">
+                    {filteredPrimaryGyms.map((gymName, index) => {
+                      const isSelected = formData.gym === gymName;
+                      return (
+                        <div
+                          key={index}
+                          onClick={() => {
+                            setFormData({ ...formData, gym: gymName });
+                            setIsGymDropdownOpen(false);
+                            setGymSearchQuery('');
+                          }}
+                          className={`p-2.5 text-xs cursor-pointer flex items-center justify-between hover:bg-blue-50 transition-colors ${
+                            isSelected ? 'bg-blue-50 font-bold text-blue-700' : 'text-slate-700'
+                          }`}
+                        >
+                          <span className="line-clamp-1">{gymName}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0 ml-1" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div>
+            {/* Выбор второго зала с живым поиском */}
+            <div className="relative">
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Второй зал для тренировок <span className="text-slate-400 font-normal">(не обязательно)</span>
               </label>
-              <select
-                value={formData.secondary_gym}
-                onChange={e => setFormData({ ...formData, secondary_gym: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800 truncate"
-              >
-                <option value="">Не указан (тренирую в одном зале)</option>
-                {(GYMS_ARRAY || []).slice(0, 80).map((g, idx) => (
-                  <option key={idx} value={g}>{g}</option>
-                ))}
-              </select>
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium truncate">
+                    <MapPin className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                    <span className="truncate">{formData.secondary_gym || 'Не указан'}</span>
+                  </div>
+                  {formData.secondary_gym && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, secondary_gym: '' })}
+                      className="text-[10px] text-rose-500 hover:underline font-semibold"
+                    >
+                      Очистить
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={secondaryGymSearchQuery}
+                    onFocus={() => setIsSecondaryGymDropdownOpen(true)}
+                    onChange={e => {
+                      setSecondaryGymSearchQuery(e.target.value);
+                      setIsSecondaryGymDropdownOpen(true);
+                    }}
+                    placeholder="Поиск второго зала по названию..."
+                    className="w-full pl-8 pr-7 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                  {secondaryGymSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSecondaryGymSearchQuery('')}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {isSecondaryGymDropdownOpen && (
+                  <div className="max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg divide-y divide-slate-100 z-30">
+                    <div
+                      onClick={() => {
+                        setFormData({ ...formData, secondary_gym: '' });
+                        setIsSecondaryGymDropdownOpen(false);
+                        setSecondaryGymSearchQuery('');
+                      }}
+                      className="p-2.5 text-xs cursor-pointer text-slate-400 hover:bg-slate-50 italic"
+                    >
+                      — Не указывать второй зал
+                    </div>
+                    {filteredSecondaryGyms.map((gymName, index) => {
+                      const isSelected = formData.secondary_gym === gymName;
+                      return (
+                        <div
+                          key={index}
+                          onClick={() => {
+                            setFormData({ ...formData, secondary_gym: gymName });
+                            setIsSecondaryGymDropdownOpen(false);
+                            setSecondaryGymSearchQuery('');
+                          }}
+                          className={`p-2.5 text-xs cursor-pointer flex items-center justify-between hover:bg-blue-50 transition-colors ${
+                            isSelected ? 'bg-blue-50 font-bold text-blue-700' : 'text-slate-700'
+                          }`}
+                        >
+                          <span className="line-clamp-1">{gymName}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0 ml-1" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -612,7 +751,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Аудитория */}
+            {/* Аудитория (3 варианта) */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 С кем вы работаете
@@ -637,7 +776,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            {/* Понятное описание */}
+            {/* Выровненный блок с пояснением */}
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-700 leading-relaxed font-normal space-y-1">
               <p className="font-semibold text-slate-900">Размещение в каталоге наставников:</p>
               <p>
@@ -993,7 +1132,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 ml-2 transition-colors ${
                       isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
                     }`}>
-                      {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                     </div>
                   </div>
                 );
