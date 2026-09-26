@@ -10,14 +10,12 @@ import {
   X, 
   ChevronRight, 
   Percent, 
-  Trophy, 
-  MapPin, 
-  Activity, 
-  Check 
+  Users, 
+  Star 
 } from 'lucide-react';
 
-// Встроенная баннер-карусель анонсов и турниров
-function HomePromoCarousel({ onOpenSub }) {
+// Встроенная баннер-карусель с 3 реальными фичами
+function HomePromoCarousel({ onOpenSub, onNavigateTab }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const touchStartX = useRef(0);
 
@@ -27,30 +25,37 @@ function HomePromoCarousel({ onOpenSub }) {
       tag: 'Спецпредложение',
       tagColor: 'bg-slate-100 text-slate-800 border-slate-200',
       title: 'Скидки до -30% на абонементы в залы Алматы',
-      desc: 'Выгодные клубные карты в Invictus, FitnessBlitz и 1Fit через GymConnect Pass.',
+      desc: 'Клубные карты в Invictus, FitnessBlitz и 1Fit со специальными скидками комьюнити.',
       icon: <Percent className="w-4 h-4 text-slate-800" />,
       badge: 'Выгода',
-      bgGradient: 'from-slate-100 via-white to-blue-50/30'
+      bgGradient: 'from-slate-100 via-white to-blue-50/30',
+      action: () => onOpenSub()
     },
     {
       id: 2,
-      tag: 'Турнир GymConnect',
+      tag: 'GymBro Matching',
       tagColor: 'bg-slate-100 text-slate-800 border-slate-200',
-      title: 'Открытый кубок Алматы по жиму лежа',
-      desc: 'Регистрируйтесь в боте, соревнуйтесь с атлетами своего веса и забирайте призы.',
-      icon: <Trophy className="w-4 h-4 text-slate-800" />,
-      badge: 'Призы 500k ₸',
-      bgGradient: 'from-slate-100 via-white to-slate-50'
+      title: 'Найди напарника в своем зале Алматы',
+      desc: 'Подстраховать на жиме, попить протеин после тренировки или найти свою любовь ❤️‍🔥.',
+      icon: <Users className="w-4 h-4 text-slate-800" />,
+      badge: 'Комьюнити',
+      bgGradient: 'from-slate-100 via-white to-rose-50/20',
+      action: () => {
+        if (typeof onNavigateTab === 'function') onNavigateTab('gymbro');
+      }
     },
     {
       id: 3,
-      tag: 'Новая локация',
+      tag: 'Честный рейтинг',
       tagColor: 'bg-slate-100 text-slate-800 border-slate-200',
-      title: 'Новый Invictus Go в Бостандыкском районе',
-      desc: 'Уже добавлен на карту залов! Ищите напарников GymBro в новом клубе.',
-      icon: <MapPin className="w-4 h-4 text-slate-800" />,
-      badge: '230+ залов',
-      bgGradient: 'from-slate-100 via-white to-blue-50/20'
+      title: 'Отзывы на тренеров и фитнес-клубы',
+      desc: 'Выбирайте проверенные залы и делитесь реальным опытом тренировок в Алматы.',
+      icon: <Star className="w-4 h-4 text-slate-800" />,
+      badge: 'Рейтинг',
+      bgGradient: 'from-slate-100 via-white to-amber-50/20',
+      action: () => {
+        if (typeof onNavigateTab === 'function') onNavigateTab('reviews');
+      }
     }
   ];
 
@@ -63,6 +68,14 @@ function HomePromoCarousel({ onOpenSub }) {
 
   const currentBanner = banners[currentIndex];
 
+  const handleBannerClick = () => {
+    if (currentBanner.action) {
+      currentBanner.action();
+    } else {
+      onOpenSub();
+    }
+  };
+
   return (
     <div className="mb-3.5 select-none">
       <div
@@ -72,7 +85,7 @@ function HomePromoCarousel({ onOpenSub }) {
           if (diff > 45) setCurrentIndex((prev) => (prev + 1) % banners.length);
           if (diff < -45) setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
         }}
-        onClick={onOpenSub}
+        onClick={handleBannerClick}
         className={`w-full bg-white rounded-3xl p-4 shadow-sm border border-slate-200/80 relative overflow-hidden cursor-pointer transition-all active:scale-99 bg-gradient-to-br ${currentBanner.bgGradient}`}
       >
         <div className="flex items-center justify-between mb-2">
@@ -101,7 +114,7 @@ function HomePromoCarousel({ onOpenSub }) {
 
         <div className="flex items-center justify-between pt-3 mt-1 border-t border-slate-100">
           <div className="flex items-center gap-1.5 text-blue-600 text-[11px] font-semibold">
-            <span>Подробнее</span>
+            <span>Открыть</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </div>
 
@@ -125,49 +138,6 @@ function HomePromoCarousel({ onOpenSub }) {
   );
 }
 
-// Виджет «Пульс залов Алматы в реальном времени»
-function LiveGymTrafficWidget() {
-  const gymsStatus = [
-    { name: 'Invictus Go (Mega Park)', status: 'Умеренно', color: 'bg-emerald-500', note: 'Свободны стойки жима' },
-    { name: 'FitnessBlitz (Достык)', status: 'Час пик', color: 'bg-amber-500', note: 'Плотная зона свободных весов' },
-    { name: 'Adrenaline (Абая)', status: 'Свободно', color: 'bg-emerald-500', note: 'Идеальное время для сессии' }
-  ];
-
-  return (
-    <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/80 mb-3.5 select-none space-y-2.5">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-700">
-            <Activity className="w-3.5 h-3.5 stroke-[2]" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-slate-900 leading-tight">Пульс залов Алматы</h4>
-            <p className="text-[10px] text-slate-400">Загруженность клубов в реальном времени</p>
-          </div>
-        </div>
-        <span className="text-[10px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">
-          Live
-        </span>
-      </div>
-
-      <div className="space-y-1.5">
-        {gymsStatus.map((g, idx) => (
-          <div key={idx} className="p-2 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs">
-            <div className="overflow-hidden pr-2">
-              <p className="font-semibold text-slate-900 truncate">{g.name}</p>
-              <p className="text-[10px] text-slate-400 truncate">{g.note}</p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className={`w-2 h-2 rounded-full ${g.color}`} />
-              <span className="text-[10.5px] font-medium text-slate-700">{g.status}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function HomeTab({ userProfile, onOpenSub, onNavigateTab }) {
   const [isProModalOpen, setIsProModalOpen] = useState(false);
 
@@ -182,34 +152,32 @@ export default function HomeTab({ userProfile, onOpenSub, onNavigateTab }) {
   return (
     <div className="p-3.5 max-w-md mx-auto flex flex-col pb-8 select-none animate-in fade-in duration-200">
       
-      {/* 1. Баннер-карусель анонсов и промо-акций (поднята на самый верх) */}
-      <HomePromoCarousel 
-        onOpenSub={handleOpenSubscription} 
-      />
-
-      {/* 2. Сервисы GymConnect (подняты выше, полностью монохромные) */}
-      <ActionGrid 
-        onNavigateTab={onNavigateTab}
-      />
-
-      {/* 3. Премиальный блок подписки PRO и социальное доказательство с аватарами */}
+      {/* 1. Верхний бар: PRO-кнопка и колокольчик в один ряд + «30+ атлетов уже с нами» */}
       <HomeHeader 
         onOpenSub={handleOpenSubscription} 
       />
 
-      {/* 4. Пульс залов Алматы (интерактивная загрузка в реальном времени) */}
-      <LiveGymTrafficWidget />
+      {/* 2. Баннер-карусель анонсов (Скидки, GymBro, Отзывы) */}
+      <HomePromoCarousel 
+        onOpenSub={handleOpenSubscription}
+        onNavigateTab={onNavigateTab}
+      />
 
-      {/* 5. Обновленная минималистичная цитата дня от Gymshark */}
+      {/* 3. Монохромные сервисы GymConnect (подняты наверх) */}
+      <ActionGrid 
+        onNavigateTab={onNavigateTab}
+      />
+
+      {/* 4. Цитата дня Gymshark со знаком 🦈 */}
       <DailyQuote />
 
-      {/* 6. Активные вызовы дня (монохромные карточки) */}
+      {/* 5. Активные вызовы дня */}
       <HomeChallenges />
 
-      {/* 7. База знаний и полезные статьи */}
+      {/* 6. Полезные статьи и база знаний */}
       <HomeArticles />
 
-      {/* МОДАЛЬНОЕ ОКНО ОФОРМЛЕНИЯ ПОДПИСКИ PRO */}
+      {/* МОДАЛКА ОФОРМЛЕНИЯ ПОДПИСКИ PRO */}
       {isProModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
