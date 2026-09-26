@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import TrainerHeader from './components/TrainerHeader';
-import TrainerNav from './components/TrainerNav';
 import OverviewTab from './tabs/OverviewTab';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
@@ -18,6 +17,17 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   const [trainerData, setTrainerData] = useState(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Форма модалки добавления студента
+  const [addStudentForm, setAddStudentForm] = useState({
+    first_name: '',
+    last_name: '',
+    username: '',
+    phone: '',
+    monthly_price: 70000,
+    total_trainings: 12,
+    gym: ''
+  });
 
   // Загрузка данных тренера и его учеников
   const refreshTrainerData = async () => {
@@ -35,7 +45,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
       if (tErr) throw tErr;
       setTrainerData(tData);
 
-      // 2. Список учеников, закрепленных за этим тренером
+      // 2. Список учеников тренера
       const { data: sData } = await supabase
         .from('profiles')
         .select('*')
@@ -57,6 +67,54 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     }
   }, [trainerUsername]);
 
+  const handleAddStudentSubmit = async (e) => {
+    e.preventDefault();
+    if (!addStudentForm.first_name.trim()) {
+      alert('Укажите имя ученика');
+      return;
+    }
+
+    try {
+      const cleanU = addStudentForm.username.replace('@', '').trim();
+      const payload = {
+        first_name: addStudentForm.first_name.trim(),
+        last_name: addStudentForm.last_name.trim(),
+        username: cleanU || null,
+        phone: addStudentForm.phone.replace(/\D/g, ''),
+        monthly_price: Number(addStudentForm.monthly_price) || 0,
+        total_trainings: Number(addStudentForm.total_trainings) || 12,
+        left_trainings: Number(addStudentForm.total_trainings) || 12,
+        remaining_workouts: Number(addStudentForm.total_trainings) || 12,
+        gym: addStudentForm.gym || trainerData?.gym || 'Invictus Go',
+        trainer_username: trainerData?.username?.replace('@', '') || trainerUsername.replace('@', ''),
+        trainer_telegram: trainerData?.username?.replace('@', '') || trainerUsername.replace('@', ''),
+        status: 'active',
+        created_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('profiles')
+        .insert([payload]);
+
+      if (error) throw error;
+
+      alert('Ученик успешно зарегистрирован в базе!');
+      setIsAddStudentOpen(false);
+      setAddStudentForm({
+        first_name: '',
+        last_name: '',
+        username: '',
+        phone: '',
+        monthly_price: 70000,
+        total_trainings: 12,
+        gym: ''
+      });
+      refreshTrainerData();
+    } catch (err) {
+      alert('Ошибка добавления ученика: ' + err.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center">
@@ -69,32 +127,35 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   const activeStudentsCount = students.filter(s => s.status === 'active' || !s.status).length;
   const pausedStudentsCount = students.filter(s => s.status === 'paused').length;
   const leftStudentsCount = students.filter(s => s.status === 'left').length;
-  const lowBalanceCount = students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2).length;
+  const lowBalanceCount = students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : (s.remaining_workouts !== undefined ? s.remaining_workouts : 12)) <= 2).length;
   const totalEarnings = students.reduce((acc, s) => acc + (Number(s.monthly_price) || 0), 0);
 
   return (
     <div className="min-h-screen bg-[#F2F2F7] text-slate-900 flex justify-center">
-      <div className="w-full max-w-md min-h-screen flex flex-col justify-between relative bg-[#F2F2F7] shadow-2xl">
+      <div className="w-full max-w-md min-h-screen flex flex-col justify-between relative bg-[#F2F2F7] shadow-xl">
         
-        {/* Шапка тренера */}
-        <div className="flex-1 pb-24">
+        {/* Шапка тренера со встроенным боковым меню */}
+        <div className="flex-1 pb-10">
           <TrainerHeader 
             trainer={trainerData} 
             onLogout={onLogout} 
             onBack={onBack}
+            activeTab={activeTab}
+            onSelectTab={(tabId) => setActiveTab(tabId)}
           />
 
           <main className="p-3.5 space-y-3.5">
             {activeTab === 'overview' && (
               <OverviewTab 
+                trainer={trainerData}
+                students={students}
                 activeCount={activeStudentsCount}
                 pausedCount={pausedStudentsCount}
                 leftCount={leftStudentsCount}
                 lowBalanceCount={lowBalanceCount}
                 totalEarnings={totalEarnings}
-                students={students}
                 onSelectStudent={() => setActiveTab('students')}
-                onOpenAddModal={() => setIsAddStudentOpen(true)}
+                onAddStudentClick={() => setIsAddStudentOpen(true)}
               />
             )}
 
@@ -141,17 +202,13 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
           </main>
         </div>
 
-        {/* Навигационная панель тренера */}
-        <TrainerNav 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
-        />
-
-        {/* Модалка добавления ученика */}
+        {/* Автономная модалка добавления ученика */}
         <AddStudentModal 
           isOpen={isAddStudentOpen} 
           onClose={() => setIsAddStudentOpen(false)}
-          trainerId={trainerData?.id}
+          form={addStudentForm}
+          setForm={setAddStudentForm}
+          onSubmit={handleAddStudentSubmit}
         />
 
       </div>
