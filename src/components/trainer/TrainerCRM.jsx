@@ -16,27 +16,45 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [trainerData, setTrainerData] = useState(null);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchTrainerData() {
-      try {
-        const cleanUsername = trainerUsername?.replace('@', '') || '';
-        const { data, error } = await supabase
-          .from('trainer_profiles')
-          .select('*')
-          .or(`username.eq.@${cleanUsername},username.eq.${cleanUsername}`)
-          .maybeSingle();
+  // Загрузка данных тренера и его учеников
+  const refreshTrainerData = async () => {
+    try {
+      const cleanUsername = trainerUsername ? trainerUsername.replace('@', '').trim() : '';
+      if (!cleanUsername) return;
 
-        if (error) throw error;
-        setTrainerData(data);
-      } catch (err) {
-        console.error('Ошибка загрузки данных тренера:', err);
-      } finally {
-        setLoading(false);
-      }
+      // 1. Профиль тренера
+      const { data: tData, error: tErr } = await supabase
+        .from('trainer_profiles')
+        .select('*')
+        .or(`username.eq.@${cleanUsername},username.eq.${cleanUsername}`)
+        .maybeSingle();
+
+      if (tErr) throw tErr;
+      setTrainerData(tData);
+
+      // 2. Список учеников, закрепленных за этим тренером
+      const { data: sData } = await supabase
+        .from('profiles')
+        .select('*')
+        .or(`trainer_username.eq.${cleanUsername},trainer_username.eq.@${cleanUsername},trainer_telegram.eq.${cleanUsername},trainer_telegram.eq.@${cleanUsername}`);
+
+      setStudents(sData || []);
+    } catch (err) {
+      console.error('Ошибка загрузки данных в TrainerCRM:', err);
+    } finally {
+      setLoading(false);
     }
-    if (trainerUsername) fetchTrainerData();
+  };
+
+  useEffect(() => {
+    if (trainerUsername) {
+      refreshTrainerData();
+    } else {
+      setLoading(false);
+    }
   }, [trainerUsername]);
 
   if (loading) {
@@ -47,11 +65,18 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     );
   }
 
+  // Расчет основных показателей
+  const activeStudentsCount = students.filter(s => s.status === 'active' || !s.status).length;
+  const pausedStudentsCount = students.filter(s => s.status === 'paused').length;
+  const leftStudentsCount = students.filter(s => s.status === 'left').length;
+  const lowBalanceCount = students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2).length;
+  const totalEarnings = students.reduce((acc, s) => acc + (Number(s.monthly_price) || 0), 0);
+
   return (
     <div className="min-h-screen bg-[#F2F2F7] text-slate-900 flex justify-center">
       <div className="w-full max-w-md min-h-screen flex flex-col justify-between relative bg-[#F2F2F7] shadow-2xl">
         
-        {/* Шапка тренера с рабочей кнопкой возврата в профиль */}
+        {/* Шапка тренера */}
         <div className="flex-1 pb-24">
           <TrainerHeader 
             trainer={trainerData} 
@@ -59,55 +84,70 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
             onBack={onBack}
           />
 
-          <main className="p-4 space-y-4">
+          <main className="p-3.5 space-y-3.5">
             {activeTab === 'overview' && (
               <OverviewTab 
-                trainer={trainerData} 
-                onAddStudent={() => setIsAddStudentOpen(true)}
-                onNavigate={(tab) => setActiveTab(tab)}
+                activeCount={activeStudentsCount}
+                pausedCount={pausedStudentsCount}
+                leftCount={leftStudentsCount}
+                lowBalanceCount={lowBalanceCount}
+                totalEarnings={totalEarnings}
+                students={students}
+                onSelectStudent={() => setActiveTab('students')}
+                onOpenAddModal={() => setIsAddStudentOpen(true)}
               />
             )}
+
             {activeTab === 'students' && (
               <StudentsListTab 
-                trainerId={trainerData?.id} 
-                onAddStudent={() => setIsAddStudentOpen(true)} 
+                students={students} 
+                onSelectStudent={() => {}}
+                onOpenAddModal={() => setIsAddStudentOpen(true)}
               />
             )}
+
             {activeTab === 'workouts' && (
               <WorkoutsTab 
-                trainerId={trainerData?.id} 
+                students={students} 
               />
             )}
+
             {activeTab === 'schedule' && (
               <ScheduleTab 
-                trainerId={trainerData?.id} 
+                trainerProfile={trainerData}
+                onUpdate={refreshTrainerData}
               />
             )}
+
             {activeTab === 'finance' && (
               <FinanceTab 
-                trainerId={trainerData?.id} 
+                students={students}
+                onUpdate={refreshTrainerData}
               />
             )}
+
             {activeTab === 'notes' && (
               <NotesTab 
-                trainerId={trainerData?.id} 
+                students={students}
+                onUpdate={refreshTrainerData}
               />
             )}
+
             {activeTab === 'analytics' && (
               <AnalyticsTab 
-                trainerId={trainerData?.id} 
+                students={students} 
               />
             )}
           </main>
         </div>
 
-        {/* Навигация тренера */}
+        {/* Навигационная панель тренера */}
         <TrainerNav 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
         />
 
-        {/* Модальное окно добавления ученика */}
+        {/* Модалка добавления ученика */}
         <AddStudentModal 
           isOpen={isAddStudentOpen} 
           onClose={() => setIsAddStudentOpen(false)}
