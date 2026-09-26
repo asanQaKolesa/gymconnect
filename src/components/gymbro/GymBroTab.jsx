@@ -16,12 +16,13 @@ import {
   BookOpen, 
   MessageCircle, 
   ArrowLeft, 
-  ExternalLink,
+  Search,
+  ChevronRight,
   ShieldCheck
 } from 'lucide-react';
 
 export default function GymBroTab({ userProfile }) {
-  // Профиль атлета из пропсов или локального хранилища
+  // Профиль пользователя
   const currentProfile = userProfile || (() => {
     try {
       const saved = localStorage.getItem('gymconnect_user_profile');
@@ -34,17 +35,21 @@ export default function GymBroTab({ userProfile }) {
   const isPro = Boolean(currentProfile?.is_pro);
   const myGym = currentProfile?.gym || 'Invictus Go (Mega Park)';
 
-  // Режимы экрана: 'cards' | 'matches' | 'likes'
+  // Экраны: 'cards' | 'matches' | 'likes'
   const [activeView, setActiveView] = useState('cards');
   const [gymFilter, setGymFilter] = useState('all'); // 'all' | 'my_gym'
+  const [matchesSearch, setMatchesSearch] = useState('');
+  const [likesSearch, setLikesSearch] = useState('');
 
-  // Анимация свайпа карточки: null | 'like' | 'pass' | 'superlike'
-  const [swipeAction, setSwipeAction] = useState(null);
+  // Состояние плавной анимации улета карточки
+  const [swipeState, setSwipeState] = useState(null); // null | 'animating_like' | 'animating_pass' | 'animating_super'
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Модалка манифеста (показывается 1 раз при первом входе)
+  // Модальные окна
   const [isManifestOpen, setIsManifestOpen] = useState(false);
   const [isProPaywallOpen, setIsProPaywallOpen] = useState(false);
 
+  // Первичный показ Манифеста
   useEffect(() => {
     const hasSeenManifest = localStorage.getItem('gymconnect_manifest_seen');
     if (!hasSeenManifest) {
@@ -57,13 +62,12 @@ export default function GymBroTab({ userProfile }) {
     setIsManifestOpen(false);
   };
 
-  // База реальных кандидатов GymBro в залах Алматы
-  const [candidates, setCandidates] = useState([
+  // База реальных кандидатов в залах Алматы
+  const [candidates] = useState([
     {
       id: 1,
       name: 'Алишер',
       age: 26,
-      gender: 'male',
       type: 'Экстраверт',
       gym: 'Invictus Go (Mega Park)',
       time: 'Вечер (18:00 - 20:30)',
@@ -77,7 +81,6 @@ export default function GymBroTab({ userProfile }) {
       id: 2,
       name: 'Диана',
       age: 23,
-      gender: 'female',
       type: 'Амбиверт',
       gym: 'FitnessBlitz (Достык Плаза)',
       time: 'Утро (08:00 - 10:00)',
@@ -91,7 +94,6 @@ export default function GymBroTab({ userProfile }) {
       id: 3,
       name: 'Ерлан',
       age: 29,
-      gender: 'male',
       type: 'Интроверт',
       gym: 'Invictus Go (Mega Park)',
       time: 'Обед (13:00 - 15:00)',
@@ -105,7 +107,6 @@ export default function GymBroTab({ userProfile }) {
       id: 4,
       name: 'Камила',
       age: 25,
-      gender: 'female',
       type: 'Экстраверт',
       gym: '1Fit Pass (Разные клубы)',
       time: 'Вечер (19:00 - 21:00)',
@@ -119,7 +120,6 @@ export default function GymBroTab({ userProfile }) {
       id: 5,
       name: 'Нурсултан',
       age: 27,
-      gender: 'male',
       type: 'Амбиверт',
       gym: 'Adrenaline Fitness (Абая)',
       time: 'Вечер (18:30 - 20:30)',
@@ -134,7 +134,7 @@ export default function GymBroTab({ userProfile }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [historyIndexes, setHistoryIndexes] = useState([]);
 
-  // Взаимные мэтчи (уже подтвержденные)
+  // База взаимных мэтчей
   const [matchesList] = useState([
     {
       id: 101,
@@ -142,7 +142,8 @@ export default function GymBroTab({ userProfile }) {
       age: 26,
       gym: 'Invictus Go (Mega Park)',
       time: 'Сегодня в 18:30',
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
+      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80',
+      bio: 'Жим 120, присед 150. Ищу напарника на субботнюю тренировку.',
       telegram: 'alex_iron'
     },
     {
@@ -151,7 +152,8 @@ export default function GymBroTab({ userProfile }) {
       age: 24,
       gym: 'FitnessBlitz (Достык)',
       time: 'Вчера, 19:00',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+      bio: 'Кардио + функционал. Хожу 3 раза в неделю строго по утрам.',
       telegram: 'dilnaz_sport'
     },
     {
@@ -160,12 +162,13 @@ export default function GymBroTab({ userProfile }) {
       age: 28,
       gym: 'Invictus Go (Навои)',
       time: '3 дня назад',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
+      bio: 'Кроссфит и выносливость. Всегда готов к новым WOD-комплексам.',
       telegram: 'sanzhar_kz'
     }
   ]);
 
-  // Список входящих лайков (видны по PRO)
+  // База лайков (входящие симпатии)
   const [likesList] = useState([
     {
       id: 201,
@@ -173,7 +176,7 @@ export default function GymBroTab({ userProfile }) {
       age: 24,
       gym: 'Invictus Go (Mega Park)',
       time: '2 часа назад',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80',
+      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80',
       telegram: 'madina_fit'
     },
     {
@@ -182,7 +185,7 @@ export default function GymBroTab({ userProfile }) {
       age: 27,
       gym: 'Invictus Go (Mega Park)',
       time: 'Сегодня, 11:20',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
       telegram: 'arman_power'
     },
     {
@@ -191,7 +194,7 @@ export default function GymBroTab({ userProfile }) {
       age: 22,
       gym: 'FitnessBlitz (Самал)',
       time: 'Вчера, 21:10',
-      avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80',
+      avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80',
       telegram: 'anel_gym'
     },
     {
@@ -200,7 +203,7 @@ export default function GymBroTab({ userProfile }) {
       age: 30,
       gym: '1Fit Pass',
       time: 'Вчера, 16:45',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
       telegram: 'baur_almaty'
     },
     {
@@ -209,12 +212,12 @@ export default function GymBroTab({ userProfile }) {
       age: 25,
       gym: 'Royal Club',
       time: '2 дня назад',
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
+      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80',
       telegram: 'aigera_lift'
     }
   ]);
 
-  // Фильтрация кандидатов по клубу
+  // Фильтрация кандидатов по залу
   const filteredCandidates = candidates.filter(item => {
     if (gymFilter === 'my_gym') {
       const cleanMyGym = myGym.split('|')[0].trim().toLowerCase();
@@ -225,19 +228,22 @@ export default function GymBroTab({ userProfile }) {
 
   const currentCandidate = filteredCandidates[currentIndex % Math.max(1, filteredCandidates.length)];
 
-  // Действия по кнопкам с анимацией штампа
-  const triggerSwipe = (actionType) => {
-    setSwipeAction(actionType);
+  // Кинематографичная анимация свайпа (карточка плавно улетает, а новая плавно встает)
+  const handleTriggerAction = (type) => {
+    if (isTransitioning || !currentCandidate) return;
+    setIsTransitioning(true);
+    setSwipeState(type);
     setHistoryIndexes(prev => [...prev, currentIndex]);
 
     setTimeout(() => {
-      setSwipeAction(null);
       setCurrentIndex(prev => (prev + 1) % filteredCandidates.length);
-    }, 280);
+      setSwipeState(null);
+      setIsTransitioning(false);
+    }, 320);
   };
 
   const handleUndo = () => {
-    if (historyIndexes.length === 0) return;
+    if (historyIndexes.length === 0 || isTransitioning) return;
     const lastIndex = historyIndexes[historyIndexes.length - 1];
     setHistoryIndexes(prev => prev.slice(0, -1));
     setCurrentIndex(lastIndex);
@@ -251,12 +257,20 @@ export default function GymBroTab({ userProfile }) {
     }
   };
 
+  // Фильтрация списков мэтчей и лайков по поиску
+  const filteredMatches = matchesList.filter(m => 
+    `${m.name} ${m.gym}`.toLowerCase().includes(matchesSearch.toLowerCase())
+  );
+  const filteredLikes = likesList.filter(l => 
+    `${l.name} ${l.gym}`.toLowerCase().includes(likesSearch.toLowerCase())
+  );
+
   return (
     <div className="p-3 max-w-md mx-auto flex flex-col pb-6 select-none animate-in fade-in duration-200">
       
-      {/* 1. ВЕРХНЯЯ ШАПКА В СТИЛЕ ЛИЧНОГО ПРОФИЛЯ */}
-      <div className="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-100 mb-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
+      {/* 1. ШАПКА В СТИЛЕ ЛИЧНОГО ПРОФИЛЯ */}
+      <div className="bg-white rounded-3xl p-3.5 shadow-xs border border-slate-200/80 mb-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-2.5 overflow-hidden">
           <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm overflow-hidden shrink-0 shadow-xs">
             {currentProfile?.photo_url || currentProfile?.avatar_url ? (
               <img src={currentProfile.photo_url || currentProfile.avatar_url} alt="Аватар" className="w-full h-full object-cover" />
@@ -264,23 +278,23 @@ export default function GymBroTab({ userProfile }) {
               <span>{currentProfile?.first_name ? currentProfile.first_name[0] : 'G'}</span>
             )}
           </div>
-          <div>
+          <div className="overflow-hidden">
             <div className="flex items-center gap-1.5">
               <h1 className="text-xs font-bold text-slate-900 leading-tight">GymBro Matching</h1>
               {isPro && <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />}
             </div>
-            <p className="text-[10px] text-slate-400 mt-0.5">
+            <p className="text-[10px] text-slate-400 mt-0.5 truncate">
               {myGym.split('|')[0] || 'Алматы'} • Напарники по базе
             </p>
           </div>
         </div>
 
-        {/* Кнопка открытия Манифеста */}
+        {/* Кнопка Манифеста */}
         <button
           type="button"
           onClick={() => setIsManifestOpen(true)}
-          className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-xl text-[10.5px] font-semibold text-slate-700 transition-all active:scale-95"
-          title="Прочитать Манифест GymConnect"
+          className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-xl text-[10.5px] font-semibold text-slate-700 transition-all active:scale-95 shrink-0"
+          title="Манифест GymConnect"
         >
           <BookOpen className="w-3.5 h-3.5 text-blue-600" />
           <span>Манифест</span>
@@ -291,18 +305,12 @@ export default function GymBroTab({ userProfile }) {
       <div className="grid grid-cols-2 gap-2 mb-2.5">
         <button
           type="button"
-          onClick={() => setActiveView(activeView === 'matches' ? 'cards' : 'matches')}
-          className={`py-2 px-3 rounded-2xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-98 ${
-            activeView === 'matches'
-              ? 'bg-blue-600 text-white border-blue-600'
-              : 'bg-white text-slate-800 border-slate-200/80 hover:bg-slate-50'
-          }`}
+          onClick={() => setActiveView('matches')}
+          className="py-2.5 px-3 rounded-2xl border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-98"
         >
-          <Users className="w-3.5 h-3.5" />
+          <Users className="w-3.5 h-3.5 text-blue-600" />
           <span>Взаимные мэтчи</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-            activeView === 'matches' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'
-          }`}>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 font-mono">
             {matchesList.length}
           </span>
         </button>
@@ -310,21 +318,17 @@ export default function GymBroTab({ userProfile }) {
         <button
           type="button"
           onClick={handleOpenLikes}
-          className={`py-2 px-3 rounded-2xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-98 ${
-            activeView === 'likes'
-              ? 'bg-rose-600 text-white border-rose-600'
-              : 'bg-white text-slate-800 border-slate-200/80 hover:bg-slate-50'
-          }`}
+          className="py-2.5 px-3 rounded-2xl border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-98"
         >
           <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
           <span>Кто вас лайкнул</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 font-mono">
             {likesList.length}
           </span>
         </button>
       </div>
 
-      {/* 3. ФИЛЬТРЫ ЗАЛА: «ВСЕ ЗАЛЫ АЛМАТЫ» И «ТОЛЬКО МОЙ ЗАЛ» */}
+      {/* 3. ФИЛЬТРЫ: «ВСЕ ЗАЛЫ АЛМАТЫ» И «ТОЛЬКО МОЙ ЗАЛ» */}
       <div className="grid grid-cols-2 gap-1.5 mb-3 p-1 bg-slate-200/70 rounded-2xl">
         <button
           type="button"
@@ -353,236 +357,280 @@ export default function GymBroTab({ userProfile }) {
         </button>
       </div>
 
-      {/* 4. ОСНОВНОЙ РЕЖИМ СВАЙПА КАРТОЧЕК */}
-      {activeView === 'cards' && (
-        <>
-          {currentCandidate ? (
-            <div className="relative bg-white rounded-3xl overflow-hidden shadow-md border border-slate-200/80 flex flex-col justify-end mb-3.5 h-[410px] transition-all">
-              
-              {/* Фотография атлета на весь блок */}
-              <div className="absolute inset-0 z-0">
-                <img 
-                  src={currentCandidate.image} 
-                  alt={currentCandidate.name} 
-                  className={`w-full h-full object-cover transition-transform duration-300 ${
-                    swipeAction === 'like' ? 'translate-x-6 rotate-2' : 
-                    swipeAction === 'pass' ? '-translate-x-6 -rotate-2' : ''
-                  }`}
-                />
-                {/* Мягкий темный градиент Apple для читаемости текста */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent"></div>
+      {/* 4. КАРТОЧКА АТЛЕТА С ПЛАВНОЙ АНИМАЦИЕЙ ВЫЛЕТА */}
+      <div className="relative mb-3.5 h-[410px] overflow-hidden rounded-3xl">
+        {currentCandidate ? (
+          <div 
+            className={`w-full h-full bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-200/80 flex flex-col justify-end transition-all duration-300 ease-out ${
+              swipeState === 'like' 
+                ? 'translate-x-[120%] rotate-12 opacity-0' 
+                : swipeState === 'pass' 
+                  ? '-translate-x-[120%] -rotate-12 opacity-0' 
+                  : swipeState === 'super' 
+                    ? '-translate-y-[120%] scale-105 opacity-0' 
+                    : 'translate-x-0 translate-y-0 rotate-0 opacity-100'
+            }`}
+          >
+            {/* Фотография живого человека */}
+            <div className="absolute inset-0 z-0">
+              <img 
+                src={currentCandidate.image} 
+                alt={currentCandidate.name} 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
+            </div>
+
+            {/* Штамп-индикаторы */}
+            {swipeState === 'like' && (
+              <div className="absolute top-8 right-6 z-30 border-2 border-emerald-400 text-emerald-400 font-bold text-lg px-3.5 py-0.5 rounded-xl rotate-12 bg-black/50 backdrop-blur-xs">
+                LIKE ❤️
+              </div>
+            )}
+            {swipeState === 'pass' && (
+              <div className="absolute top-8 left-6 z-30 border-2 border-rose-400 text-rose-400 font-bold text-lg px-3.5 py-0.5 rounded-xl -rotate-12 bg-black/50 backdrop-blur-xs">
+                PASS ✕
+              </div>
+            )}
+            {swipeState === 'super' && (
+              <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30 border-2 border-purple-400 text-purple-300 font-bold text-lg px-3.5 py-0.5 rounded-xl bg-black/60 backdrop-blur-xs">
+                SUPER ⚡
+              </div>
+            )}
+
+            {/* Чипсы: Психотип, Возраст, Стаж */}
+            <div className="absolute top-3.5 left-3.5 right-3.5 z-10 flex flex-wrap gap-1.5">
+              <span className="px-2.5 py-1 bg-black/40 backdrop-blur-md text-white rounded-xl text-[10.5px] font-medium border border-white/20">
+                {currentCandidate.type}
+              </span>
+              <span className="px-2.5 py-1 bg-black/40 backdrop-blur-md text-white rounded-xl text-[10.5px] font-semibold border border-white/20 font-mono">
+                {currentCandidate.age} лет
+              </span>
+              <span className="px-2.5 py-1 bg-blue-600/80 backdrop-blur-md text-white rounded-xl text-[10.5px] font-semibold border border-blue-400/40">
+                {currentCandidate.experience}
+              </span>
+            </div>
+
+            {/* Текстовый контент профиля */}
+            <div className="relative z-10 p-4 text-white space-y-2">
+              <div>
+                <h2 className="text-xl font-bold tracking-tight leading-tight">
+                  {currentCandidate.name}
+                </h2>
+                <div className="text-[11px] text-slate-200 mt-1 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span className="truncate">{currentCandidate.gym}</span>
+                </div>
+                <div className="text-[10.5px] text-slate-300 mt-0.5 flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span>{currentCandidate.time}</span>
+                </div>
               </div>
 
-              {/* Штамп-анимация при свайпе */}
-              {swipeAction === 'like' && (
-                <div className="absolute top-8 right-6 z-30 border-4 border-emerald-400 text-emerald-400 font-black text-xl px-4 py-1 rounded-2xl rotate-12 bg-black/40 backdrop-blur-xs animate-in zoom-in-75">
-                  LIKE ❤️
+              <div className="bg-white/15 backdrop-blur-md rounded-2xl p-3 border border-white/15 space-y-1">
+                <div className="text-[9.5px] font-semibold text-blue-300 uppercase tracking-wider">
+                  Цель: {currentCandidate.goal}
                 </div>
-              )}
-              {swipeAction === 'pass' && (
-                <div className="absolute top-8 left-6 z-30 border-4 border-rose-500 text-rose-500 font-black text-xl px-4 py-1 rounded-2xl -rotate-12 bg-black/40 backdrop-blur-xs animate-in zoom-in-75">
-                  PASS ❌
-                </div>
-              )}
-              {swipeAction === 'superlike' && (
-                <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30 border-4 border-purple-400 text-purple-300 font-black text-xl px-4 py-1 rounded-2xl bg-black/60 backdrop-blur-xs animate-in zoom-in-75">
-                  SUPER GYMBRO ⚡
-                </div>
-              )}
-
-              {/* Верхние чипсы: Психотип, Возраст, Стаж */}
-              <div className="absolute top-3.5 left-3.5 right-3.5 z-10 flex flex-wrap gap-1.5">
-                <span className="px-2.5 py-1 bg-black/40 backdrop-blur-md text-white rounded-xl text-[10.5px] font-semibold border border-white/20">
-                  {currentCandidate.type}
-                </span>
-                <span className="px-2.5 py-1 bg-black/40 backdrop-blur-md text-white rounded-xl text-[10.5px] font-semibold border border-white/20 font-mono">
-                  {currentCandidate.age} лет
-                </span>
-                <span className="px-2.5 py-1 bg-blue-600/80 backdrop-blur-md text-white rounded-xl text-[10.5px] font-bold border border-blue-400/40">
-                  {currentCandidate.experience}
-                </span>
-              </div>
-
-              {/* Нижний контент карточки */}
-              <div className="relative z-10 p-4 text-white space-y-2">
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight leading-tight">
-                    {currentCandidate.name}
-                  </h2>
-                  <div className="text-[11px] text-slate-200 mt-1 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                    <span className="truncate">{currentCandidate.gym}</span>
-                  </div>
-                  <div className="text-[10.5px] text-slate-300 mt-0.5 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-amber-400 shrink-0" />
-                    <span>{currentCandidate.time}</span>
-                  </div>
-                </div>
-
-                {/* Блок био и цели */}
-                <div className="bg-white/15 backdrop-blur-md rounded-2xl p-3 border border-white/15 space-y-1">
-                  <div className="text-[9.5px] font-bold text-blue-300 uppercase tracking-wider">
-                    Цель: {currentCandidate.goal}
-                  </div>
-                  <p className="text-xs text-slate-100 leading-snug line-clamp-2 font-normal">
-                    {currentCandidate.bio}
-                  </p>
-                </div>
+                <p className="text-xs text-slate-100 leading-snug line-clamp-2">
+                  {currentCandidate.bio}
+                </p>
               </div>
             </div>
-          ) : (
-            <div className="h-[410px] bg-white rounded-3xl border border-slate-200 flex flex-col items-center justify-center p-6 text-center space-y-2 mb-3.5">
-              <Users className="w-10 h-10 text-slate-300" />
-              <p className="text-xs font-bold text-slate-700">Анкеты в этом клубе закончились</p>
-              <p className="text-[11px] text-slate-400 max-w-xs">
-                Переключите фильтр на «Все залы Алматы», чтобы увидеть больше атлетов из других районов.
-              </p>
-              <button
-                type="button"
-                onClick={() => setGymFilter('all')}
-                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-xs active:scale-95"
-              >
-                Показать все залы
-              </button>
-            </div>
-          )}
-
-          {/* 5. ЧЕТЫРЕ УПРАВЛЯЮЩИЕ КНОПКИ В СТИЛЕ APPLE HIG */}
-          <div className="bg-white rounded-3xl p-3 shadow-sm border border-slate-100 flex items-center justify-around">
-            
-            {/* Кнопка 1: Возврат (Undo) */}
-            <button 
-              type="button"
-              onClick={handleUndo}
-              disabled={historyIndexes.length === 0}
-              className="w-11 h-11 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full flex items-center justify-center text-slate-600 shadow-xs active:scale-90 transition-all disabled:opacity-40"
-              title="Вернуть предыдущую анкету"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-
-            {/* Кнопка 2: Пропустить (X) */}
-            <button 
-              type="button"
-              onClick={() => triggerSwipe('pass')}
-              className="w-13 h-13 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 rounded-full flex items-center justify-center text-rose-600 shadow-sm active:scale-90 transition-all"
-              title="Пропустить"
-            >
-              <X className="w-6 h-6 stroke-[2.5]" />
-            </button>
-
-            {/* Кнопка 3: Лайк (Heart) */}
-            <button 
-              type="button"
-              onClick={() => triggerSwipe('like')}
-              className="w-13 h-13 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 rounded-full flex items-center justify-center text-emerald-600 shadow-sm active:scale-90 transition-all"
-              title="Тренироваться вместе"
-            >
-              <Heart className="w-6 h-6 stroke-[2.5] fill-emerald-500" />
-            </button>
-
-            {/* Кнопка 4: Супер-буст (Zap) */}
-            <button 
-              type="button"
-              onClick={() => triggerSwipe('superlike')}
-              className="w-11 h-11 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-full flex items-center justify-center text-purple-600 shadow-xs active:scale-90 transition-all"
-              title="Супер-коннект GymBro"
-            >
-              <Zap className="w-4 h-4 stroke-[2] fill-purple-500" />
-            </button>
-
           </div>
-        </>
-      )}
+        ) : (
+          <div className="w-full h-full bg-white rounded-3xl border border-slate-200/80 flex flex-col items-center justify-center p-6 text-center space-y-2">
+            <Users className="w-10 h-10 text-slate-300" />
+            <p className="text-xs font-bold text-slate-700">Анкеты в этом клубе закончились</p>
+            <p className="text-[11px] text-slate-400 max-w-xs">
+              Переключите фильтр на «Все залы Алматы», чтобы увидеть больше атлетов из других районов.
+            </p>
+            <button
+              type="button"
+              onClick={() => setGymFilter('all')}
+              className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95"
+            >
+              Показать все залы
+            </button>
+          </div>
+        )}
+      </div>
 
-      {/* 6. РЕЖИМ «ВЗАИМНЫЕ МЭТЧИ» */}
+      {/* 5. ЧЕТЫРЕ КНОПКИ УПРАВЛЕНИЯ — СТРОГО ЕДИНОГО РАЗМЕРА И С ТОНКИМИ ИКОНКАМИ */}
+      <div className="bg-white rounded-3xl p-3.5 shadow-xs border border-slate-200/80 flex items-center justify-center gap-5">
+        
+        {/* Кнопка 1: Возврат (Undo) */}
+        <button 
+          type="button"
+          onClick={handleUndo}
+          disabled={historyIndexes.length === 0 || isTransitioning}
+          className="w-12 h-12 bg-slate-50 hover:bg-slate-100 border border-slate-200/90 rounded-2xl flex items-center justify-center text-slate-600 shadow-2xs active:scale-90 transition-all disabled:opacity-30"
+          title="Вернуть анкету"
+        >
+          <RotateCcw className="w-5 h-5 stroke-[1.6]" />
+        </button>
+
+        {/* Кнопка 2: Пропуск (Dislike / X) */}
+        <button 
+          type="button"
+          onClick={() => handleTriggerAction('pass')}
+          disabled={isTransitioning}
+          className="w-12 h-12 bg-rose-50/70 hover:bg-rose-100 border border-rose-200/80 rounded-2xl flex items-center justify-center text-rose-600 shadow-2xs active:scale-90 transition-all"
+          title="Пропустить"
+        >
+          <X className="w-5 h-5 stroke-[1.6]" />
+        </button>
+
+        {/* Кнопка 3: Лайк (Like / Heart) */}
+        <button 
+          type="button"
+          onClick={() => handleTriggerAction('like')}
+          disabled={isTransitioning}
+          className="w-12 h-12 bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200/80 rounded-2xl flex items-center justify-center text-emerald-600 shadow-2xs active:scale-90 transition-all"
+          title="Тренироваться вместе"
+        >
+          <Heart className="w-5 h-5 stroke-[1.6]" />
+        </button>
+
+        {/* Кнопка 4: Супер-буст (Zap) */}
+        <button 
+          type="button"
+          onClick={() => handleTriggerAction('super')}
+          disabled={isTransitioning}
+          className="w-12 h-12 bg-purple-50/70 hover:bg-purple-100 border border-purple-200/80 rounded-2xl flex items-center justify-center text-purple-600 shadow-2xs active:scale-90 transition-all"
+          title="Супер-коннект"
+        >
+          <Zap className="w-5 h-5 stroke-[1.6]" />
+        </button>
+
+      </div>
+
+      {/* ================= ПОЛНОЭКРАННАЯ СТРАНИЦА: ВЗАИМНЫЕ МЭТЧИ ================= */}
       {activeView === 'matches' && (
-        <div className="space-y-3 animate-in fade-in">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-bold text-slate-900">Ваши подтвержденные GymBro ({matchesList.length})</span>
-            <button 
+        <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
+          
+          <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
+            <button
               type="button"
               onClick={() => setActiveView('cards')}
-              className="text-[11px] font-semibold text-blue-600 flex items-center gap-1"
+              className="flex items-center gap-1 text-blue-600 font-semibold text-xs active:scale-95"
             >
-              <ArrowLeft className="w-3 h-3" />
-              <span>К поиску</span>
+              <ArrowLeft className="w-4 h-4" />
+              <span>Назад</span>
             </button>
+            <h2 className="text-xs font-bold text-slate-900">Взаимные мэтчи ({matchesList.length})</h2>
+            <div className="w-12" />
           </div>
 
-          <div className="space-y-2">
-            {matchesList.map(item => (
-              <div 
-                key={item.id}
-                className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between gap-3"
-              >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <img src={item.avatar} alt={item.name} className="w-12 h-12 rounded-2xl object-cover shrink-0 border border-slate-100" />
-                  <div className="overflow-hidden">
-                    <h4 className="text-xs font-bold text-slate-900 truncate">{item.name}, {item.age} лет</h4>
-                    <p className="text-[10.5px] text-slate-500 truncate flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3 text-blue-600 shrink-0" />
-                      <span>{item.gym}</span>
-                    </p>
-                    <span className="text-[9.5px] text-emerald-600 font-medium">Мэтч: {item.time}</span>
-                  </div>
-                </div>
+          <div className="p-4 space-y-3 max-w-md mx-auto w-full pb-20">
+            {/* Поиск по мэтчам */}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                type="text"
+                value={matchesSearch}
+                onChange={e => setMatchesSearch(e.target.value)}
+                placeholder="Поиск по имени или клубу..."
+                className="w-full p-2.5 pl-9 bg-white border border-slate-200/80 rounded-2xl text-xs shadow-xs"
+              />
+            </div>
 
-                <a
-                  href={`https://t.me/${item.telegram}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-xs active:scale-95 transition-all"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span>Написать</span>
-                </a>
-              </div>
-            ))}
+            <div className="space-y-2">
+              {filteredMatches.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-8">Ничего не найдено</p>
+              ) : (
+                filteredMatches.map(item => (
+                  <div 
+                    key={item.id}
+                    className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <img src={item.avatar} alt={item.name} className="w-12 h-12 rounded-2xl object-cover shrink-0 border border-slate-100" />
+                      <div className="overflow-hidden">
+                        <h4 className="text-xs font-bold text-slate-900 truncate">{item.name}, {item.age} лет</h4>
+                        <p className="text-[10.5px] text-slate-500 truncate flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 text-blue-600 shrink-0" />
+                          <span>{item.gym}</span>
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate mt-0.5">{item.bio}</p>
+                      </div>
+                    </div>
+
+                    <a
+                      href={`https://t.me/${item.telegram}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-xs active:scale-95 transition-all"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>Написать</span>
+                    </a>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* 7. РЕЖИМ «КТО ВАС ЛАЙКНУЛ» (ДЛЯ PRO-ПОЛЬЗОВАТЕЛЕЙ) */}
+      {/* ================= ПОЛНОЭКРАННАЯ СТРАНИЦА: КТО ВАС ЛАЙКНУЛ ================= */}
       {activeView === 'likes' && (
-        <div className="space-y-3 animate-in fade-in">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-bold text-slate-900">Входящие симпатии ({likesList.length})</span>
-            <button 
+        <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
+          
+          <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
+            <button
               type="button"
               onClick={() => setActiveView('cards')}
-              className="text-[11px] font-semibold text-blue-600 flex items-center gap-1"
+              className="flex items-center gap-1 text-blue-600 font-semibold text-xs active:scale-95"
             >
-              <ArrowLeft className="w-3 h-3" />
-              <span>К поиску</span>
+              <ArrowLeft className="w-4 h-4" />
+              <span>Назад</span>
             </button>
+            <h2 className="text-xs font-bold text-slate-900">Кто вас лайкнул ({likesList.length})</h2>
+            <div className="w-12" />
           </div>
 
-          <div className="space-y-2">
-            {likesList.map(item => (
-              <div 
-                key={item.id}
-                className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between gap-3"
-              >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <img src={item.avatar} alt={item.name} className="w-12 h-12 rounded-2xl object-cover shrink-0 border border-slate-100" />
-                  <div className="overflow-hidden">
-                    <h4 className="text-xs font-bold text-slate-900 truncate">{item.name}, {item.age} лет</h4>
-                    <p className="text-[10.5px] text-slate-500 truncate">{item.gym}</p>
-                    <span className="text-[9.5px] text-rose-500 font-medium">Поставил лайк: {item.time}</span>
-                  </div>
-                </div>
+          <div className="p-4 space-y-3 max-w-md mx-auto w-full pb-20">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                type="text"
+                value={likesSearch}
+                onChange={e => setLikesSearch(e.target.value)}
+                placeholder="Поиск по симпатиям..."
+                className="w-full p-2.5 pl-9 bg-white border border-slate-200/80 rounded-2xl text-xs shadow-xs"
+              />
+            </div>
 
-                <button
-                  type="button"
-                  onClick={() => alert(`Вы ответили взаимностью атлету ${item.name}! Мэтч создан.`)}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-xs active:scale-95 transition-all"
-                >
-                  <Heart className="w-3.5 h-3.5 fill-white" />
-                  <span>Мэтч</span>
-                </button>
-              </div>
-            ))}
+            <div className="space-y-2">
+              {filteredLikes.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-8">Ничего не найдено</p>
+              ) : (
+                filteredLikes.map(item => (
+                  <div 
+                    key={item.id}
+                    className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <img src={item.avatar} alt={item.name} className="w-12 h-12 rounded-2xl object-cover shrink-0 border border-slate-100" />
+                      <div className="overflow-hidden">
+                        <h4 className="text-xs font-bold text-slate-900 truncate">{item.name}, {item.age} лет</h4>
+                        <p className="text-[10.5px] text-slate-500 truncate">{item.gym}</p>
+                        <span className="text-[10px] text-rose-500 font-medium">Симпатия: {item.time}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => alert(`Вы ответили взаимностью атлету ${item.name}! Мэтч создан.`)}
+                      className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-xs active:scale-95 transition-all"
+                    >
+                      <Heart className="w-3.5 h-3.5 fill-white" />
+                      <span>Мэтч</span>
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -592,7 +640,6 @@ export default function GymBroTab({ userProfile }) {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col justify-between overflow-y-auto">
             
-            {/* Шапка манифеста с кнопкой пропустить */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -613,7 +660,6 @@ export default function GymBroTab({ userProfile }) {
               </button>
             </div>
 
-            {/* Полный текст Манифеста */}
             <div className="space-y-3.5 text-xs text-slate-700 leading-relaxed overflow-y-auto pr-1">
               <div className="p-3 bg-blue-50/70 border border-blue-200/70 rounded-2xl text-[11.5px] text-blue-950 font-medium">
                 Мы знаем, как это бывает. Видишь полотно текста, закатываешь глаза и уже тянешься пальцем, чтобы просто пролистнуть вниз, поставить галочку «согласен» и пойти дальше. Можешь так и сделать, мы абсолютно не обидимся. Но если ты всё-таки остановишься на минуту, нальешь себе черпак любимого протеина и дочитаешь это до конца — возможно, тебе откликнется каждая строчка. Потому что это не просто скучные правила сервиса. Это манифест про нас с тобой.
@@ -671,7 +717,6 @@ export default function GymBroTab({ userProfile }) {
               </div>
             </div>
 
-            {/* Финальная кнопка согласия с манифестом */}
             <button
               type="button"
               onClick={handleCloseManifest}
@@ -683,7 +728,7 @@ export default function GymBroTab({ userProfile }) {
         </div>
       )}
 
-      {/* ================= МОДАЛКА: PRO-ПЕЙВОЛЛ ДЛЯ ЛАЙКОВ ================= */}
+      {/* ================= МОДАЛКА: PRO-ПЕЙВОЛЛ (4 990 ₸ / МЕСЯЦ) ================= */}
       {isProPaywallOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
@@ -707,7 +752,6 @@ export default function GymBroTab({ userProfile }) {
               </button>
             </div>
 
-            {/* Размытые аватары кандидатов для интриги */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-center gap-2">
               {[1, 2, 3, 4, 5].map(i => (
                 <div key={i} className="w-10 h-10 rounded-full bg-slate-300 blur-xs border-2 border-white shadow-xs" />
@@ -727,7 +771,7 @@ export default function GymBroTab({ userProfile }) {
 
             <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-center font-mono">
               <span className="text-[10px] text-slate-400 block font-sans">Стоимость доступа</span>
-              <span className="text-sm font-bold text-slate-900">2 990 ₸ / месяц</span>
+              <span className="text-sm font-bold text-slate-900">4 990 ₸ / месяц</span>
             </div>
 
             <a
