@@ -19,7 +19,12 @@ import {
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
 
-const ALMATY_GYMS = GymsData.ALMATY_GYMS || GymsData.almatyGyms || GymsData.default || [];
+// Безопасное извлечение массива залов
+const GYMS_ARRAY = Array.isArray(GymsData.ALMATY_GYMS) 
+  ? GymsData.ALMATY_GYMS 
+  : (Array.isArray(GymsData.almatyGyms) ? GymsData.almatyGyms : (Array.isArray(GymsData.default) ? GymsData.default : []));
+
+const defaultGym = GYMS_ARRAY.length > 2 ? GYMS_ARRAY[2] : 'Invictus Go | Улица Тимирязева, 42';
 
 export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,7 +112,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     bio: '',
 
     // Залы
-    gym: ALMATY_GYMS[2] || 'Invictus Go | Улица Тимирязева, 42',
+    gym: defaultGym,
     secondary_gym: '',
 
     // Опыт и направления
@@ -131,7 +136,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
       online: true
     },
 
-    // Прайс-лист со сгруппированными абонементами
+    // Прайс-лист
     pricing: {
       personal_single: 8000,
       personal_count: 12,
@@ -261,7 +266,11 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
       const cleanInstagram = formData.instagram.trim().replace(/^@+/, '');
       const fullPhone = `7${formData.phone.replace(/\D/g, '')}`;
 
-      const hasVerificationData = Boolean(formData.certificates_link.trim() || formData.gym_phone.trim() || formData.education_phone.trim());
+      const hasVerificationData = Boolean(
+        (formData.certificates_link && formData.certificates_link.trim()) ||
+        (formData.gym_phone && formData.gym_phone.trim()) ||
+        (formData.education_phone && formData.education_phone.trim())
+      );
 
       const payload = {
         full_name: formData.full_name.trim(),
@@ -270,7 +279,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
         photo_url: formData.photo_url || null,
         avatar_url: formData.photo_url || null,
         instagram: cleanInstagram,
-        bio: formData.bio.trim(),
+        bio: formData.bio ? formData.bio.trim() : '',
         gym: formData.gym,
         secondary_gym: formData.secondary_gym || null,
         experience_years: Number(formData.experience_years) || 1,
@@ -287,9 +296,9 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
         pricing: formData.pricing,
         online_products: formData.online_products,
         promote_online_products: formData.promote_online_products,
-        certificates_link: formData.certificates_link.trim(),
-        gym_contact: formData.gym_phone.trim(),
-        education_contact: formData.education_phone.trim(),
+        certificates_link: formData.certificates_link ? formData.certificates_link.trim() : '',
+        gym_contact: formData.gym_phone ? formData.gym_phone.trim() : '',
+        education_contact: formData.education_phone ? formData.education_phone.trim() : '',
         verification_consent: formData.verification_consent,
         legal_accepted: formData.legal_accepted,
         verification_status: hasVerificationData ? 'pending_verification' : 'unverified',
@@ -371,7 +380,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     <Users className="w-8 h-8 text-slate-400 stroke-[1.6]" />
                   )}
                 </div>
-                <div className="absolute -bottom-1 -right-1 p-1.5 bg-blue-600 text-white rounded-full shadow-md">
+                <div className="absolute -bottom-1 -right-1 p-1.5 bg-slate-800 text-white rounded-full shadow-md">
                   <Camera className="w-3.5 h-3.5" />
                 </div>
               </div>
@@ -394,7 +403,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 value={formData.full_name}
                 onChange={e => setFormData({ ...formData, full_name: e.target.value })}
                 placeholder="Данияр Сериков"
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800"
               />
             </div>
 
@@ -411,12 +420,11 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     value={formData.username}
                     onChange={e => setFormData({ ...formData, username: e.target.value.replace(/[@\s]/g, '') })}
                     placeholder="coach_nick"
-                    className="w-full pl-6 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+                    className="w-full pl-6 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-900 focus:outline-none focus:border-slate-800"
                   />
                 </div>
               </div>
 
-              {/* Поле WhatsApp со встроенным фиксированным +7 */}
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                   WhatsApp <span className="text-rose-500">*</span>
@@ -432,7 +440,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                       setFormData({ ...formData, phone: val });
                     }}
                     placeholder="701 123 45 67"
-                    className="w-full pl-8 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                    className="w-full pl-8 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-slate-800"
                   />
                 </div>
               </div>
@@ -449,12 +457,11 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                   value={formData.instagram}
                   onChange={e => setFormData({ ...formData, instagram: e.target.value.replace(/[@\s]/g, '') })}
                   placeholder="coach_fit"
-                  className="w-full pl-6 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                  className="w-full pl-6 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
             </div>
 
-            {/* О себе */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 О себе, спортивных званиях и методиках
@@ -464,7 +471,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 value={formData.bio}
                 onChange={e => setFormData({ ...formData, bio: e.target.value })}
                 placeholder="Мастер спорта РК, специализируюсь на силовом тренинге и рекомпозиции. Ставлю идеальную биомеханику базы, довожу до результата без срывов и жестких голодовок..."
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-normal text-slate-900 focus:outline-none focus:border-blue-600 resize-none leading-relaxed"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-normal text-slate-900 focus:outline-none focus:border-slate-800 resize-none leading-relaxed"
               />
             </div>
           </div>
@@ -487,9 +494,9 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               <select
                 value={formData.gym}
                 onChange={e => setFormData({ ...formData, gym: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 truncate"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800 truncate"
               >
-                {ALMATY_GYMS.slice(0, 80).map((g, idx) => (
+                {(GYMS_ARRAY || []).slice(0, 80).map((g, idx) => (
                   <option key={idx} value={g}>{g}</option>
                 ))}
               </select>
@@ -502,10 +509,10 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               <select
                 value={formData.secondary_gym}
                 onChange={e => setFormData({ ...formData, secondary_gym: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 truncate"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800 truncate"
               >
                 <option value="">Не указан (тренирую в одном зале)</option>
-                {ALMATY_GYMS.slice(0, 80).map((g, idx) => (
+                {(GYMS_ARRAY || []).slice(0, 80).map((g, idx) => (
                   <option key={idx} value={g}>{g}</option>
                 ))}
               </select>
@@ -986,31 +993,30 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 ml-2 transition-colors ${
                       isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
                     }`}>
-                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Продвижение продуктов (галочка снята по умолчанию) */}
             <div 
               onClick={() => setFormData({ ...formData, promote_online_products: !formData.promote_online_products })}
               className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between cursor-pointer active:scale-98"
             >
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-blue-600" />
+                <Dumbbell className="w-4 h-4 text-blue-600" />
                 <span className="text-xs font-bold text-slate-900">Продвигать мои продукты через GymConnect</span>
               </div>
               <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
-                formData.promote_online_products ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+                formData.promote_online_products ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white border-slate-300'
               }`}>
                 {formData.promote_online_products && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
             </div>
           </div>
 
-          {/* 7. ВЕРИФИКАЦИЯ (КРАСИВО ВЫРОВНЕННЫЙ ТЕКСТ) */}
+          {/* 7. ВЕРИФИКАЦИЯ */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -1093,7 +1099,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 8. ПАРТНЕРСКИЕ ДОКУМЕНТЫ (СИНЯЯ ГАЛОЧКА СОГЛАСИЯ) */}
+          {/* 8. ПАРТНЕРСКИЕ ДОКУМЕНТЫ */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
