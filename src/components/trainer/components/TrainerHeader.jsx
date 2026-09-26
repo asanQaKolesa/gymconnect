@@ -50,6 +50,7 @@ import {
   Headphones
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
+import { sendStudentNotification } from '../../../utils/telegramNotifications';
 import * as GymsData from '../../../data/almatyGyms';
 
 const GYMS_ARRAY = Array.isArray(GymsData.ALMATY_GYMS) 
@@ -66,6 +67,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
   const [isCopied, setIsCopied] = useState(false);
   const [isReferralCopied, setIsReferralCopied] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [searchGymQuery, setSearchGymQuery] = useState('');
   const [searchSecGymQuery, setSearchSecGymQuery] = useState('');
   const [promoType, setPromoType] = useState('offline');
@@ -195,22 +197,22 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
     }
   ];
 
-  // Загрузка подопечных тренера
+  // Загрузка подопечных тренера из Supabase
   useEffect(() => {
     async function loadStudents() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, phone, format, remaining_workouts, goal, health_notes')
+          .select('id, telegram_id, first_name, last_name, phone, format, remaining_workouts, goal, health_notes')
           .eq('trainer_username', cleanUsername);
 
         if (!error && data && data.length > 0) {
           setStudentsList(data);
         } else {
           setStudentsList([
-            { id: '1', first_name: 'Данияр', last_name: 'Аскаров', phone: '+77771234567', format: 'gym', remaining_workouts: 7, goal: 'Гипертрофия', health_notes: 'Протрузия L4-L5, без осевых нагрузок' },
-            { id: '2', first_name: 'Анель', last_name: 'Мусина', phone: '+77017654321', format: 'online', remaining_workouts: 3, goal: 'Похудение', health_notes: 'Без жалоб, давление в норме' },
-            { id: '3', first_name: 'Ерлан', last_name: 'Сатыбалдиев', phone: '+77059998877', format: 'gym', remaining_workouts: 1, goal: 'Тонус и спина', health_notes: 'Травма правого мениска 2023г.' }
+            { id: '1', telegram_id: '12345678', first_name: 'Данияр', last_name: 'Аскаров', phone: '+77771234567', format: 'gym', remaining_workouts: 7, goal: 'Гипертрофия', health_notes: 'Протрузия L4-L5, без осевых нагрузок' },
+            { id: '2', telegram_id: '87654321', first_name: 'Анель', last_name: 'Мусина', phone: '+77017654321', format: 'online', remaining_workouts: 3, goal: 'Похудение', health_notes: 'Без жалоб, давление в норме' },
+            { id: '3', telegram_id: '99887766', first_name: 'Ерлан', last_name: 'Сатыбалдиев', phone: '+77059998877', format: 'gym', remaining_workouts: 1, goal: 'Тонус и спина', health_notes: 'Травма правого мениска 2023г.' }
           ]);
         }
       } catch (e) {
@@ -391,21 +393,35 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
     return true;
   });
 
-  const handleSendBroadcast = () => {
+  // Отправка сообщений: и в Telegram-бот на экран телефона, и в приложение
+  const handleSendBroadcast = async () => {
     if (targetRecipients.length === 0) {
       alert('Выберите хотя бы одного получателя для отправки сообщения.');
       return;
     }
 
-    if (targetRecipients.length === 1) {
-      const single = targetRecipients[0];
-      const cleanPhone = single.phone ? single.phone.replace(/\D/g, '') : '';
-      const encodedMsg = encodeURIComponent(customMessageBody);
-      window.open(`https://wa.me/${cleanPhone}?text=${encodedMsg}`, '_blank');
-    } else {
-      alert(`Сообщение отправлено ${targetRecipients.length} ученикам через Telegram Mini App!`);
+    setIsSendingBroadcast(true);
+    const selectedTemplateTitle = defaultTemplates[selectedTemplateIndex]?.title || 'Уведомление от тренера';
+
+    try {
+      let sentCount = 0;
+      for (const st of targetRecipients) {
+        await sendStudentNotification({
+          studentTelegramId: st.telegram_id,
+          studentId: st.id,
+          title: selectedTemplateTitle,
+          message: customMessageBody
+        });
+        sentCount++;
+      }
+
+      alert(`✅ Успешно! Уведомление отправлено ${sentCount} ученикам от имени бота в Telegram и сохранено внутри приложения.`);
       setActiveModal(null);
       setIsDrawerOpen(true);
+    } catch (err) {
+      alert('Ошибка при отправке: ' + err.message);
+    } finally {
+      setIsSendingBroadcast(false);
     }
   };
 
@@ -669,7 +685,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
 
-                {/* Шаблоны сообщений и рассылка */}
+                {/* Шаблоны сообщений и рассылка от бота */}
                 <button
                   type="button"
                   onClick={() => { setIsDrawerOpen(false); setActiveModal('templates'); }}
@@ -680,8 +696,8 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                       <MessageSquare className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-900">Шаблоны и рассылка</p>
-                      <p className="text-[10px] text-slate-500">Отправка сообщений в зал, онлайн или выборочно</p>
+                      <p className="text-xs font-semibold text-slate-900">Шаблоны и Telegram-рассылка</p>
+                      <p className="text-[10px] text-emerald-600 font-medium">Отправка в личку Telegram от бота</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
@@ -953,7 +969,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
                   placeholder="🔍 Поиск второго клуба..."
                   value={searchSecGymQuery}
                   onChange={e => setSearchSecGymQuery(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] mb-1.5"
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] mb-1.5"
                 />
                 <select
                   value={editForm.secondary_gym}
@@ -1861,7 +1877,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
         </div>
       )}
 
-      {/* ================= 7. ШАБЛОНЫ СООБЩЕНИЙ И СЕГМЕНТИРОВАННАЯ РАССЫЛКА ================= */}
+      {/* ================= 7. ШАБЛОНЫ СООБЩЕНИЙ И TELEGRAM-РАССЫЛКА ОТ БОТА ================= */}
       {activeModal === 'templates' && (
         <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
           <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
@@ -1873,7 +1889,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               <ArrowLeft className="w-4 h-4" />
               <span>Меню</span>
             </button>
-            <h2 className="text-xs font-bold text-slate-900">Шаблоны и рассылка</h2>
+            <h2 className="text-xs font-bold text-slate-900">Шаблоны и рассылка в Telegram</h2>
             <div className="w-12"></div>
           </div>
 
@@ -1954,7 +1970,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               )}
 
               <div className="p-2.5 bg-blue-50/70 border border-blue-200/80 rounded-xl text-[11px] text-blue-900 flex justify-between items-center">
-                <span>Будет отправлено:</span>
+                <span>Будет доставлено от Telegram-бота:</span>
                 <span className="font-bold">{targetRecipients.length} ученикам</span>
               </div>
             </div>
@@ -1963,11 +1979,12 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
           <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 max-w-lg mx-auto shadow-lg">
             <button
               type="button"
+              disabled={isSendingBroadcast}
               onClick={handleSendBroadcast}
-              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all"
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
-              <span>Отправить уведомление ({targetRecipients.length})</span>
+              <span>{isSendingBroadcast ? 'Отправка...' : `Отправить от бота в Telegram (${targetRecipients.length})`}</span>
             </button>
           </div>
         </div>
@@ -2135,7 +2152,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               </div>
 
               <p className="text-xs text-slate-600 leading-relaxed">
-                Если у вас возникли технические сбои, вопросы по списанию тренировок, добавлению новых залов или работе расписания — специалисты техподдержки помогут решить любой вопрос.
+                Если у вас возникли технические сбои, вопросы по списанию тренировок, добавлению новых залов или отправке уведомлений ученикам — специалисты техподдержки помогут решить любой вопрос.
               </p>
               
               <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl space-y-1 text-xs">
