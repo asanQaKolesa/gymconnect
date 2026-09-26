@@ -12,10 +12,10 @@ import {
   Gift, 
   Link as LinkIcon, 
   FileText, 
-  Sparkles, 
   HelpCircle, 
   X, 
-  ChevronRight 
+  ChevronRight, 
+  ShieldCheck 
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
@@ -103,7 +103,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     photo_url: tgUser?.photo_url || '',
     full_name: tgUser ? `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() : '',
     username: tgUser?.username ? tgUser.username.replace('@', '') : '',
-    phone: '', // 10 цифр после +7
+    phone: '',
     instagram: '',
     bio: '',
 
@@ -111,13 +111,13 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     gym: ALMATY_GYMS[2] || 'Invictus Go | Улица Тимирязева, 42',
     secondary_gym: '',
 
-    // Опыт и специализации
+    // Опыт и направления
     experience_years: 3,
     specializations: ['Набор массы и гипертрофия', 'Снижение веса и сушка'],
     work_format: 'hybrid',
     target_audience: 'all',
 
-    // Длительность и бонусы
+    // Длительность и бесплатные бонусы
     workout_duration: 60,
     has_free_trial: false,
     free_trial_duration: '45',
@@ -339,16 +339,16 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
           </span>
         </div>
 
-        {/* Заголовок */}
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 text-center space-y-1">
+        {/* Обновленный заголовок: синяя иконка сохранена, текст заменен по вашему описанию */}
+        <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 text-center space-y-1.5">
           <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-1.5 shadow-sm">
             <Dumbbell className="w-5 h-5 stroke-[2]" />
           </div>
           <h1 className="text-base font-black text-slate-900 tracking-tight">
             Анкета фитнес-тренера
           </h1>
-          <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
-            Официальная аккредитация тренеров в клубах Алматы и подключение к CoachOS
+          <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto font-normal">
+            Добавьтесь в единую базу GymConnect и зарабатывайте вместе с нами. Держите под полным контролем учет ваших финансов, посещения ваших учеников и тренировочный прогресс через CRM-систему CoachOS.
           </p>
         </div>
 
@@ -365,14 +365,14 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             {/* Фото */}
             <div className="flex flex-col items-center text-center">
               <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-blue-500 shadow-md bg-slate-100 flex items-center justify-center">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-100 flex items-center justify-center">
                   {formData.photo_url ? (
                     <img src={formData.photo_url} alt="Аватар тренера" className="w-full h-full object-cover" />
                   ) : (
                     <Users className="w-8 h-8 text-slate-400" />
                   )}
                 </div>
-                <div className="absolute -bottom-1 -right-1 p-1.5 bg-blue-600 text-white rounded-full shadow-md">
+                <div className="absolute -bottom-1 -right-1 p-1.5 bg-slate-800 text-white rounded-full shadow-md">
                   <Camera className="w-3.5 h-3.5" />
                 </div>
               </div>
@@ -396,7 +396,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 value={formData.full_name}
                 onChange={e => setFormData({ ...formData, full_name: e.target.value })}
                 placeholder="Данияр Сериков"
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800"
               />
             </div>
 
@@ -413,7 +413,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     value={formData.username}
                     onChange={e => setFormData({ ...formData, username: e.target.value.replace(/[@\s]/g, '') })}
                     placeholder="coach_nick"
-                    className="w-full pl-6 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+                    className="w-full pl-6 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-900 focus:outline-none focus:border-slate-800"
                   />
                 </div>
               </div>
@@ -434,7 +434,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                       setFormData({ ...formData, phone: val });
                     }}
                     placeholder="701 123 45 67"
-                    className="w-full pl-8 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                    className="w-full pl-8 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-slate-800"
                   />
                 </div>
               </div>
@@ -451,12 +451,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                   value={formData.instagram}
                   onChange={e => setFormData({ ...formData, instagram: e.target.value.replace(/[@\s]/g, '') })}
                   placeholder="coach_fit"
-                  className="w-full pl-6 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                  className="w-full pl-6 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
             </div>
 
-            {/* О себе с креативным плейсхолдером */}
+            {/* О себе с живым описанием */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 О себе, спортивных званиях и методиках
@@ -466,18 +466,18 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 value={formData.bio}
                 onChange={e => setFormData({ ...formData, bio: e.target.value })}
                 placeholder="Мастер спорта РК, специализируюсь на силовом тренинге и рекомпозиции. Ставлю идеальную биомеханику базы, довожу до результата без срывов и жестких голодовок..."
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-normal text-slate-900 focus:outline-none focus:border-blue-600 resize-none leading-relaxed"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-normal text-slate-900 focus:outline-none focus:border-slate-800 resize-none leading-relaxed"
               />
             </div>
           </div>
 
-          {/* 2. ЗАЛЫ ДЛЯ ТРЕНИРОВОК (В ОДНУ СТРОКУ БЕЗ СЪЕЗЖАНИЯ) */}
+          {/* 2. ЗАЛЫ ДЛЯ ТРЕНИРОВОК (МОНОХРОМНЫЙ БЕЙДЖ В ОДНУ СТРОКУ) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-100 whitespace-nowrap">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
                 2. Залы проведения тренировок
               </span>
-              <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-bold border border-slate-200 shrink-0">
+              <span className="text-[10px] text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full font-bold border border-slate-200 shrink-0">
                 База 230+ клубов
               </span>
             </div>
@@ -489,7 +489,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               <select
                 value={formData.gym}
                 onChange={e => setFormData({ ...formData, gym: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 truncate"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800 truncate"
               >
                 {ALMATY_GYMS.slice(0, 80).map((g, idx) => (
                   <option key={idx} value={g}>{g}</option>
@@ -504,7 +504,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               <select
                 value={formData.secondary_gym}
                 onChange={e => setFormData({ ...formData, secondary_gym: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 truncate"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800 truncate"
               >
                 <option value="">Не указан (тренирую в одном зале)</option>
                 {ALMATY_GYMS.slice(0, 80).map((g, idx) => (
@@ -514,7 +514,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 3. СТАЖ И СПЕЦИАЛИЗАЦИЯ */}
+          {/* 3. СТАЖ И СПЕЦИАЛИЗАЦИЯ (МОНОХРОМНЫЙ СТИЛЬ) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -522,7 +522,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            {/* Степпер опыта */}
+            {/* Монохромный степпер опыта */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-slate-900">Опыт работы тренером</p>
@@ -550,7 +550,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Специализации (без обрезания текста) */}
+            {/* Специализации (активные выделяются монохромным темным фоном slate-900) */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
                 Специализации (выберите ваши профильные направления)
@@ -565,7 +565,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                       onClick={() => toggleSpecialization(spec)}
                       className={`p-2.5 rounded-xl border text-left text-xs font-medium transition-all flex items-center justify-between ${
                         isSelected 
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+                          ? 'bg-slate-900 text-white border-slate-900 shadow-sm' 
                           : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
@@ -577,7 +577,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Формат ведения: 2 строки */}
+            {/* Формат ведения: монохромный активный статус */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Формат ведения клиентов
@@ -594,12 +594,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     onClick={() => setFormData({ ...formData, work_format: fmt.id })}
                     className={`py-2 px-1 rounded-xl border transition-all text-center flex flex-col items-center justify-center ${
                       formData.work_format === fmt.id
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
                         : 'bg-slate-50 text-slate-700 border-slate-200'
                     }`}
                   >
                     <span className="text-xs font-bold leading-tight">{fmt.title}</span>
-                    <span className={`text-[10px] leading-tight ${formData.work_format === fmt.id ? 'text-blue-100' : 'text-slate-400'}`}>
+                    <span className={`text-[10px] leading-tight ${formData.work_format === fmt.id ? 'text-slate-300' : 'text-slate-400'}`}>
                       {fmt.sub}
                     </span>
                   </button>
@@ -607,7 +607,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Аудитория (3 варианта) */}
+            {/* Аудитория */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 С кем вы работаете
@@ -615,7 +615,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               <select
                 value={formData.target_audience}
                 onChange={e => setFormData({ ...formData, target_audience: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-slate-800"
               >
                 <option value="all">Со всеми (и мужчины, и женщины)</option>
                 <option value="women">Только девушки и женщины</option>
@@ -624,7 +624,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 4. УСЛОВИЯ И БОНУСЫ (ПРОБНЫЕ ТРЕНИРОВКИ) */}
+          {/* 4. УСЛОВИЯ И БОНУСЫ (МОНОХРОМНЫЕ ИКОНКИ И КНОПКИ) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -632,7 +632,8 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-2xl text-[11px] text-blue-900 leading-relaxed">
+            {/* Пояснение в нейтральных серых тонах */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-700 leading-relaxed font-normal">
               Мы публикуем вас в каталоге проверенных тренеров. Вы не обязаны проводить бесплатные тренировки, но атлеты охотнее выбирают наставников, готовых провести первичное знакомство.
             </div>
 
@@ -648,7 +649,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     onClick={() => setFormData({ ...formData, workout_duration: mins })}
                     className={`py-2 rounded-xl text-xs font-bold border transition-all ${
                       formData.workout_duration === mins
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
                         : 'bg-slate-50 text-slate-700 border-slate-200'
                     }`}
                   >
@@ -658,21 +659,21 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Бесплатная тренировка (галочка снята по умолчанию) */}
+            {/* Бесплатная тренировка (монохромная иконка и темный чекбокс) */}
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
               <div 
                 onClick={() => setFormData({ ...formData, has_free_trial: !formData.has_free_trial })}
                 className="flex items-center justify-between cursor-pointer active:scale-98"
               >
                 <div className="flex items-center gap-2">
-                  <Gift className="w-4 h-4 text-emerald-600" />
+                  <Gift className="w-4 h-4 text-slate-700" />
                   <div>
                     <p className="text-xs font-bold text-slate-900">Бесплатная пробная тренировка</p>
                     <p className="text-[10px] text-slate-500">Знакомство с атлетом в зале или онлайн</p>
                   </div>
                 </div>
                 <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${
-                  formData.has_free_trial ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+                  formData.has_free_trial ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
                 }`}>
                   {formData.has_free_trial && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
@@ -685,7 +686,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     <select
                       value={formData.free_trial_duration}
                       onChange={e => setFormData({ ...formData, free_trial_duration: e.target.value })}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-medium"
+                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
                     >
                       <option value="30">30 минут</option>
                       <option value="45">45 минут</option>
@@ -697,7 +698,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     <select
                       value={formData.free_trial_format}
                       onChange={e => setFormData({ ...formData, free_trial_format: e.target.value })}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-medium"
+                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
                     >
                       <option value="gym">В моем зале</option>
                       <option value="online">Онлайн</option>
@@ -708,33 +709,33 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               )}
             </div>
 
-            {/* Бесплатная консультация (галочка снята по умолчанию) */}
+            {/* Бесплатная консультация (монохромная иконка) */}
             <div 
               onClick={() => setFormData({ ...formData, has_free_consultation: !formData.has_free_consultation })}
               className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between cursor-pointer active:scale-98"
             >
               <div className="flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-blue-600" />
+                <HelpCircle className="w-4 h-4 text-slate-700" />
                 <div>
                   <p className="text-xs font-bold text-slate-900">Бесплатная разовая консультация</p>
                   <p className="text-[10px] text-slate-500">Разбор текущего питания, замеры и цели</p>
                 </div>
               </div>
               <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${
-                formData.has_free_consultation ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+                formData.has_free_consultation ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
               }`}>
                 {formData.has_free_consultation && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
             </div>
           </div>
 
-          {/* 5. УСЛУГИ, СТОИМОСТЬ И КОЛИЧЕСТВО ТРЕНИРОВОК В АБОНЕМЕНТЕ */}
+          {/* 5. УСЛУГИ, СТОИМОСТЬ И КОЛИЧЕСТВО ТРЕНИРОВОК */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 5. Услуги и прайс-лист (₸)
               </span>
-              <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-medium border border-slate-200">
                 По желанию
               </span>
             </div>
@@ -751,7 +752,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               >
                 <span className="text-xs font-bold text-slate-900">1. Персональные тренировки (1 на 1)</span>
                 <div className={`w-4 h-4 rounded-md flex items-center justify-center border ${
-                  formData.services_offered.personal ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+                  formData.services_offered.personal ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
                 }`}>
                   {formData.services_offered.personal && <Check className="w-3 h-3 stroke-[3]" />}
                 </div>
@@ -798,7 +799,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               >
                 <span className="text-xs font-bold text-slate-900">2. Сплит-тренировки (пара, 2 друга)</span>
                 <div className={`w-4 h-4 rounded-md flex items-center justify-center border ${
-                  formData.services_offered.split ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+                  formData.services_offered.split ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
                 }`}>
                   {formData.services_offered.split && <Check className="w-3 h-3 stroke-[3]" />}
                 </div>
@@ -845,7 +846,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               >
                 <span className="text-xs font-bold text-slate-900">3. Мини-группы (до 3–5 человек)</span>
                 <div className={`w-4 h-4 rounded-md flex items-center justify-center border ${
-                  formData.services_offered.group ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+                  formData.services_offered.group ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
                 }`}>
                   {formData.services_offered.group && <Check className="w-3 h-3 stroke-[3]" />}
                 </div>
@@ -892,7 +893,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               >
                 <span className="text-xs font-bold text-slate-900">4. Онлайн-ведение и сопровождение</span>
                 <div className={`w-4 h-4 rounded-md flex items-center justify-center border ${
-                  formData.services_offered.online ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+                  formData.services_offered.online ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
                 }`}>
                   {formData.services_offered.online && <Check className="w-3 h-3 stroke-[3]" />}
                 </div>
@@ -924,13 +925,13 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 6. ОНЛАЙН-ПРОДУКТЫ ТРЕНЕРА */}
+          {/* 6. ОНЛАЙН-ПРОДУКТЫ ТРЕНЕРА (МОНОХРОМНЫЙ ВЫБОР) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 6. Ваши онлайн-продукты
               </span>
-              <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-bold">
+              <span className="text-[10px] text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full font-bold border border-slate-200">
                 Маркетплейс
               </span>
             </div>
@@ -947,12 +948,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     key={product}
                     onClick={() => toggleOnlineProduct(product)}
                     className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer text-xs transition-all ${
-                      isSelected ? 'bg-blue-50/70 border-blue-400 text-blue-900 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-700'
+                      isSelected ? 'bg-slate-900 text-white border-slate-900 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                     }`}
                   >
                     <span>{product}</span>
                     <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 ml-2 ${
-                      isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+                      isSelected ? 'bg-white text-slate-900 border-white' : 'bg-white border-slate-300'
                     }`}>
                       {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                     </div>
@@ -961,17 +962,17 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               })}
             </div>
 
-            {/* Галочка продвижения снята по умолчанию */}
+            {/* Продвижение продуктов: монохромный чекбокс */}
             <div 
               onClick={() => setFormData({ ...formData, promote_online_products: !formData.promote_online_products })}
               className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between cursor-pointer active:scale-98"
             >
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-blue-600" />
+                <Dumbbell className="w-4 h-4 text-slate-700" />
                 <span className="text-xs font-bold text-slate-900">Продвигать мои продукты через GymConnect</span>
               </div>
               <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${
-                formData.promote_online_products ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+                formData.promote_online_products ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
               }`}>
                 {formData.promote_online_products && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
@@ -984,12 +985,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 7. Верификация квалификации
               </span>
-              <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-medium border border-slate-200">
                 По желанию
               </span>
             </div>
 
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 leading-relaxed">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 leading-relaxed font-normal">
               Вы можете не указывать дипломы и телефоны — тогда профиль получит статус <b>«Не верифицирован»</b>. При предоставлении открытой ссылки на сертификаты и контактов зала ваш профиль получит статус <b>«Верифицирован ✔️»</b> и приоритет в каталоге.
             </div>
 
@@ -1004,7 +1005,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                   value={formData.certificates_link}
                   onChange={e => setFormData({ ...formData, certificates_link: e.target.value })}
                   placeholder="https://drive.google.com/drive/folders/..."
-                  className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-600"
+                  className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
               <p className="text-[10px] text-slate-400 mt-1">Откройте доступ «Все, у кого есть ссылка» для проверки</p>
@@ -1038,13 +1039,13 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Согласие на проверку (галочка снята по умолчанию) */}
+            {/* Согласие на проверку */}
             <div 
               onClick={() => setFormData({ ...formData, verification_consent: !formData.verification_consent })}
               className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-start gap-2.5 cursor-pointer active:scale-98"
             >
               <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border mt-0.5 ${
-                formData.verification_consent ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+                formData.verification_consent ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
               }`}>
                 {formData.verification_consent && <Check className="w-3 h-3 stroke-[3]" />}
               </div>
@@ -1060,7 +1061,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 8. Партнерские документы
               </span>
-              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">
+              <span className="text-[10px] text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-full font-bold border border-slate-200">
                 Обязательно
               </span>
             </div>
@@ -1077,7 +1078,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                   className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl flex items-center justify-between cursor-pointer text-xs transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <FileText className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                     <span className="font-semibold text-slate-800 line-clamp-1">{doc.title}</span>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
@@ -1085,17 +1086,17 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               ))}
             </div>
 
-            {/* Юридический чекбокс согласия (галочка снята по умолчанию) */}
+            {/* Юридический чекбокс согласия */}
             <div 
               onClick={() => setFormData({ ...formData, legal_accepted: !formData.legal_accepted })}
-              className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-start gap-2.5 cursor-pointer active:scale-98"
+              className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-start gap-2.5 cursor-pointer active:scale-98"
             >
               <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border mt-0.5 ${
-                formData.legal_accepted ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'
+                formData.legal_accepted ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-300'
               }`}>
                 {formData.legal_accepted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
-              <p className="text-[10.5px] text-blue-950 leading-snug">
+              <p className="text-[10.5px] text-slate-800 leading-snug">
                 Я подтверждаю достоверность данных, ознакомился с документами и <b>даю согласие на использование моих фото, материалов и анкеты</b> в каталоге и социальных сетях GymConnect.
               </p>
             </div>
@@ -1106,7 +1107,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             <button
               type="submit"
               disabled={isSubmitting || !formData.legal_accepted}
-              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-xl shadow-blue-600/30 active:scale-98 transition-all disabled:opacity-50"
+              className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-xl shadow-slate-900/25 active:scale-98 transition-all disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
               <span>{isSubmitting ? 'Отправка заявки...' : 'Завершить регистрацию в CoachOS'}</span>
@@ -1117,7 +1118,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
 
       </div>
 
-      {/* Модальное окно чтения документов */}
+      {/* Модальное окно чтения документов тренера */}
       {activeLegalModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-3.5 shadow-2xl max-h-[85vh] flex flex-col justify-between">
@@ -1139,7 +1140,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             <button
               type="button"
               onClick={() => setActiveLegalModal(null)}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold active:scale-98"
+              className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold active:scale-98"
             >
               Понятно, закрыть
             </button>
