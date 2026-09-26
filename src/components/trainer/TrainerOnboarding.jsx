@@ -14,19 +14,15 @@ import {
   FileText, 
   HelpCircle, 
   X, 
-  ChevronRight,
   Search,
   MapPin
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
 
-// Безопасное извлечение массива залов
 const GYMS_ARRAY = Array.isArray(GymsData.ALMATY_GYMS) 
   ? GymsData.ALMATY_GYMS 
   : (Array.isArray(GymsData.almatyGyms) ? GymsData.almatyGyms : (Array.isArray(GymsData.default) ? GymsData.default : []));
-
-const defaultGym = GYMS_ARRAY.length > 2 ? GYMS_ARRAY[2] : 'Invictus Go | Улица Тимирязева, 42';
 
 export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,19 +95,10 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
 1. Настоящим тренер дает безоговорочное согласие сервису GymConnect на:
 1.1. Размещение профиля, фотографии, регалий и прайс-листа в публичном каталоге Telegram Mini App.
 1.2. Использование материалов анкеты в официальных социальных сетях и каналах GymConnect для продвижения тренерских услуг.`
-    },
-    {
-      id: 'pricing_terms',
-      title: 'Регламент оказания услуг и взаимодействия с клиентами',
-      content: `РЕГЛАМЕНТ ТРЕНЕРСКОЙ ДЕЯТЕЛЬНОСТИ
-
-1. ВЗАИМОРАСЧЕТЫ
-1.1. Тренер самостоятельно определяет стоимость персональных и групповых занятий согласно своему прайс-листу.
-1.2. При согласии на бесплатную пробную тренировку тренер обязуется провести полноценную вводную консультацию атлету.`
     }
   ];
 
-  // Основной стейт анкеты (Имя и Фамилия разделены)
+  // Основной стейт анкеты
   const [formData, setFormData] = useState({
     photo_url: tgUser?.photo_url || '',
     first_name: tgUser?.first_name || '',
@@ -121,13 +108,13 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     instagram: '',
     bio: '',
 
-    // Залы
-    gym: defaultGym,
+    // Залы (не обязательно)
+    gym: '',
     secondary_gym: '',
 
-    // Опыт и направления
+    // Опыт и направления (не обязательно)
     experience_years: 3,
-    specializations: ['Набор массы и гипертрофия', 'Снижение веса и сушка'],
+    specializations: ['Набор массы и гипертрофия'],
     work_format: 'hybrid',
     target_audience: 'all',
 
@@ -138,7 +125,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     free_trial_format: 'both',
     has_free_consultation: false,
 
-    // Выбранные услуги
+    // Услуги и прайс
     services_offered: {
       personal: true,
       split: false,
@@ -146,7 +133,6 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
       online: true
     },
 
-    // Прайс-лист со сгруппированными абонементами
     pricing: {
       personal_single: 8000,
       personal_count: 12,
@@ -254,49 +240,34 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // СТРОГО ОБЯЗАТЕЛЬНЫЕ ПОЛЯ: Имя, Фамилия, WhatsApp
     if (!formData.first_name.trim()) {
       alert('Пожалуйста, укажите имя тренера');
       return;
     }
 
-    if (!formData.username.trim()) {
-      alert('Пожалуйста, укажите Telegram Username');
+    if (!formData.last_name.trim()) {
+      alert('Пожалуйста, укажите фамилию тренера');
       return;
     }
 
     if (!formData.phone.trim() || formData.phone.length < 10) {
-      alert('Пожалуйста, введите 10 цифр номера WhatsApp');
-      return;
-    }
-
-    if (!formData.gym.trim()) {
-      alert('Пожалуйста, выберите основной фитнес-клуб');
-      return;
-    }
-
-    if (!formData.legal_accepted) {
-      alert('Для завершения регистрации подтвердите согласие с партнерскими документами GymConnect.');
+      alert('Пожалуйста, укажите 10 цифр номера WhatsApp');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const cleanUsername = formData.username.trim().replace(/^@+/, '');
-      const cleanInstagram = formData.instagram.trim().replace(/^@+/, '');
+      const cleanUsername = formData.username ? formData.username.trim().replace(/^@+/, '') : (tgUser?.username || `coach_${Date.now()}`);
+      const cleanInstagram = formData.instagram ? formData.instagram.trim().replace(/^@+/, '') : '';
       const fullPhone = `7${formData.phone.replace(/\D/g, '')}`;
       const fullNameCombined = `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim();
 
-      const hasVerificationData = Boolean(
-        (formData.certificates_link && formData.certificates_link.trim()) ||
-        (formData.gym_phone && formData.gym_phone.trim()) ||
-        (formData.education_phone && formData.education_phone.trim())
-      );
-
-      // Полный совместимый payload: отправляем и first_name/last_name, и full_name
-      const payload = {
+      // Базовый полный объект для сохранения
+      let payload = {
         first_name: formData.first_name.trim(),
-        last_name: formData.last_name ? formData.last_name.trim() : '',
+        last_name: formData.last_name.trim(),
         full_name: fullNameCombined,
         username: cleanUsername,
         phone: fullPhone,
@@ -304,7 +275,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
         avatar_url: formData.photo_url || null,
         instagram: cleanInstagram,
         bio: formData.bio ? formData.bio.trim() : '',
-        gym: formData.gym,
+        gym: formData.gym ? formData.gym : (GYMS_ARRAY[2] || 'Invictus Go'),
         secondary_gym: formData.secondary_gym || null,
         experience_years: Number(formData.experience_years) || 1,
         specializations: formData.specializations,
@@ -325,22 +296,40 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
         education_contact: formData.education_phone ? formData.education_phone.trim() : '',
         verification_consent: formData.verification_consent,
         legal_accepted: formData.legal_accepted,
-        verification_status: hasVerificationData ? 'pending_verification' : 'unverified',
+        verification_status: 'unverified',
         status: 'pending',
         created_at: new Date().toISOString()
       };
 
-      const { error } = await supabase
-        .from('trainer_profiles')
-        .upsert([payload], { onConflict: 'username' });
+      // САМОВОССТАНАВЛИВАЮЩИЙСЯ ЦИКЛ СОХРАНЕНИЯ:
+      // Если в таблице Supabase не хватает какой-то колонки, мы автоматически убираем ее и сохраняем без ошибок!
+      let saveSuccess = false;
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const { error } = await supabase
+          .from('trainer_profiles')
+          .upsert([payload], { onConflict: 'username' });
 
-      if (error) {
-        console.error('Ошибка сохранения тренера:', error);
-        alert('Ошибка при сохранении: ' + error.message);
-        return;
+        if (!error) {
+          saveSuccess = true;
+          break;
+        }
+
+        // Поиск отсутствующей колонки в сообщении ошибки PostgREST
+        const missingMatch = error.message.match(/Could not find the '([^']+)' column/i);
+        if (missingMatch && missingMatch[1] && payload[missingMatch[1]] !== undefined) {
+          console.warn(`Колонка "${missingMatch[1]}" отсутствует в таблице trainer_profiles, пропускаем её...`);
+          delete payload[missingMatch[1]];
+        } else {
+          // Другая ошибка (например RLS или сеть)
+          throw error;
+        }
       }
 
-      alert('Ваша анкета в CoachOS успешно отправлена! Профиль появится в каталоге после проверки администратором.');
+      if (!saveSuccess) {
+        throw new Error('Не удалось согласовать поля с базой данных.');
+      }
+
+      alert('Ваша заявка в CoachOS успешно зарегистрирована! Профиль будет проверен администратором.');
       
       if (onComplete) {
         onComplete(cleanUsername);
@@ -348,7 +337,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
         handleBackAction();
       }
     } catch (err) {
-      console.error('Критическая ошибка отправки анкеты тренера:', err);
+      console.error('Ошибка сохранения анкеты тренера:', err);
       alert('Ошибка при сохранении: ' + err.message);
     } finally {
       setIsSubmitting(false);
@@ -390,11 +379,14 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
 
         <form onSubmit={handleSubmit} className="space-y-3 pb-8">
 
-          {/* 1. ПРОФИЛЬ ТРЕНЕРА + ИМЯ И ФАМИЛИЯ РАЗДЕЛЬНО */}
+          {/* 1. ПРОФИЛЬ ТРЕНЕРА — ИМЯ, ФАМИЛИЯ И WHATSAPP ОБЯЗАТЕЛЬНЫ */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 1. Профиль тренера
+              </span>
+              <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
+                Обязательный блок
               </span>
             </div>
 
@@ -421,7 +413,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               />
             </div>
 
-            {/* Имя и Фамилия раздельно в две колонки */}
+            {/* Имя и Фамилия — оба обязательные */}
             <div className="grid grid-cols-2 gap-2.5">
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">
@@ -439,10 +431,11 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
 
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                  Фамилия <span className="text-slate-400 font-normal text-[10px]">(не обязательно)</span>
+                  Фамилия тренера <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
+                  required
                   value={formData.last_name}
                   onChange={e => setFormData({ ...formData, last_name: e.target.value })}
                   placeholder="Сериков"
@@ -454,13 +447,12 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             <div className="grid grid-cols-2 gap-2.5">
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                  Telegram Username <span className="text-rose-500">*</span>
+                  Telegram Username
                 </label>
                 <div className="relative flex items-center">
                   <span className="absolute left-2.5 text-slate-400 font-mono text-xs font-bold">@</span>
                   <input
                     type="text"
-                    required
                     value={formData.username}
                     onChange={e => setFormData({ ...formData, username: e.target.value.replace(/[@\s]/g, '') })}
                     placeholder="coach_nick"
@@ -469,7 +461,6 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 </div>
               </div>
 
-              {/* Поле WhatsApp со встроенным фиксированным +7 */}
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                   WhatsApp <span className="text-rose-500">*</span>
@@ -507,10 +498,9 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* О себе */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                О себе, спортивных званиях и методиках
+                О себе, спортивных званиях и методиках <span className="text-slate-400 font-normal">(не обязательно)</span>
               </label>
               <textarea
                 rows={3}
@@ -522,27 +512,27 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 2. ЗАЛЫ ДЛЯ ТРЕНИРОВОК (ЖИВОЙ ПОИСК) */}
+          {/* 2. ЗАЛЫ ДЛЯ ТРЕНИРОВОК (НЕОБЯЗАТЕЛЬНО) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
             <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-100 whitespace-nowrap">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
                 2. Залы проведения тренировок
               </span>
-              <span className="text-[10px] text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full font-bold border border-slate-200 shrink-0">
-                База 230+ клубов
+              <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
+                По желанию
               </span>
             </div>
 
             {/* Выбор основного зала */}
             <div className="relative">
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                Основной фитнес-клуб <span className="text-rose-500">*</span>
+                Основной фитнес-клуб
               </label>
 
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                <div className="flex items-center gap-1.5 text-xs text-blue-700 font-semibold">
+                <div className="flex items-center gap-1.5 text-xs text-slate-800 font-medium">
                   <MapPin className="w-3.5 h-3.5 shrink-0 text-blue-600" />
-                  <span className="truncate">{formData.gym || 'Клуб не выбран — начните ввод ниже'}</span>
+                  <span className="truncate">{formData.gym || 'Клуб не выбран — найдите в списке'}</span>
                 </div>
 
                 <div className="relative">
@@ -555,7 +545,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                       setGymSearchQuery(e.target.value);
                       setIsGymDropdownOpen(true);
                     }}
-                    placeholder="Начните вводить название зала (Invictus, Adrenaline...)"
+                    placeholder="Поиск зала по названию (Invictus, Adrenaline...)"
                     className="w-full pl-8 pr-7 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600"
                   />
                   {gymSearchQuery && (
@@ -598,7 +588,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             {/* Выбор второго зала */}
             <div className="relative">
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                Второй зал для тренировок <span className="text-slate-400 font-normal">(не обязательно)</span>
+                Второй зал для тренировок
               </label>
 
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
@@ -679,11 +669,14 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 3. СТАЖ И СПЕЦИАЛИЗАЦИЯ */}
+          {/* 3. СТАЖ И СПЕЦИАЛИЗАЦИЯ (НЕОБЯЗАТЕЛЬНО) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 3. Стаж и направления
+              </span>
+              <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
+                По желанию
               </span>
             </div>
 
@@ -691,7 +684,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-slate-900">Опыт работы тренером</p>
-                <p className="text-[10px] text-slate-500">Подтвержденный стаж ведения атлетов</p>
+                <p className="text-[10px] text-slate-500">Стаж ведения атлетов</p>
               </div>
 
               <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
@@ -718,7 +711,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             {/* Специализации */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
-                Специализации (выберите ваши профильные направления)
+                Специализации (выберите профильные направления)
               </label>
               <div className="grid grid-cols-1 gap-1.5">
                 {specializationList.map((spec) => {
@@ -772,7 +765,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Аудитория (3 варианта) */}
+            {/* Аудитория */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 С кем вы работаете
@@ -789,19 +782,21 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 4. УСЛОВИЯ И БОНУСЫ */}
+          {/* 4. УСЛОВИЯ И БОНУСЫ (НЕОБЯЗАТЕЛЬНО) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 4. Условия и промо-бонусы
               </span>
+              <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
+                По желанию
+              </span>
             </div>
 
-            {/* Выровненный блок с пояснением */}
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-700 leading-relaxed font-normal space-y-1">
               <p className="font-semibold text-slate-900">Размещение в каталоге наставников:</p>
               <p>
-                Мы публикуем вашу анкету в едином каталоге тренеров Алматы. Проведение бесплатного вводного занятия не обязательно, но позволяет вам наглядно презентовать свой подход и быстрее конвертировать новых атлетов в постоянных клиентов.
+                Мы публикуем вашу анкету в каталоге тренеров Алматы. Проведение бесплатного вводного занятия не обязательно, но позволяет презентовать свой подход и быстрее привлечь постоянных клиентов.
               </p>
             </div>
 
@@ -897,7 +892,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 5. УСЛУГИ И ПРАЙС-ЛИСТ (ЛОГИЧНО СГРУППИРОВАННЫЕ ПЛАШКИ) */}
+          {/* 5. УСЛУГИ И ПРАЙС-ЛИСТ (НЕОБЯЗАТЕЛЬНО) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -908,11 +903,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            <p className="text-[11px] text-slate-500 leading-snug">
-              Отметьте актуальные форматы тренировок и укажите цены разовых занятий и абонементов:
-            </p>
-
-            {/* 1. Персональные тренировки */}
+            {/* 1. Персональные */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
               <div 
                 onClick={() => toggleServiceOffered('personal')}
@@ -1123,7 +1114,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 6. ОНЛАЙН-ПРОДУКТЫ ТРЕНЕРА */}
+          {/* 6. ОНЛАЙН-ПРОДУКТЫ ТРЕНЕРА (НЕОБЯЗАТЕЛЬНО) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -1133,10 +1124,6 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 Маркетплейс
               </span>
             </div>
-
-            <p className="text-[11px] text-slate-500 leading-snug">
-              Отметьте готовые продукты, которые вы продаете атлетам в Алматы и онлайн:
-            </p>
 
             <div className="space-y-1.5">
               {onlineProductsList.map((product) => {
@@ -1159,25 +1146,9 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                 );
               })}
             </div>
-
-            {/* Продвижение продуктов (галочка снята по умолчанию) */}
-            <div 
-              onClick={() => setFormData({ ...formData, promote_online_products: !formData.promote_online_products })}
-              className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between cursor-pointer active:scale-98"
-            >
-              <div className="flex items-center gap-2">
-                <Dumbbell className="w-4 h-4 text-blue-600" />
-                <span className="text-xs font-bold text-slate-900">Продвигать мои продукты через GymConnect</span>
-              </div>
-              <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
-                formData.promote_online_products ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white border-slate-300'
-              }`}>
-                {formData.promote_online_products && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-              </div>
-            </div>
           </div>
 
-          {/* 7. ВЕРИФИКАЦИЯ */}
+          {/* 7. ВЕРИФИКАЦИЯ (НЕОБЯЗАТЕЛЬНО) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -1266,14 +1237,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 8. Партнерские документы
               </span>
-              <span className="text-[10px] text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full font-bold border border-blue-200">
-                Обязательно
-              </span>
             </div>
-
-            <p className="text-[11px] text-slate-500 leading-snug">
-              Ознакомьтесь с условиями партнерской оферты тренера перед отправкой анкеты:
-            </p>
 
             <div className="space-y-1.5">
               {trainerLegalDocs.map((doc) => (
@@ -1315,7 +1279,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
           <div className="pt-1">
             <button
               type="submit"
-              disabled={isSubmitting || !formData.legal_accepted}
+              disabled={isSubmitting}
               className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-xl shadow-blue-600/30 active:scale-98 transition-all disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
