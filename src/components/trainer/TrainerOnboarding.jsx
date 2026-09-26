@@ -14,9 +14,7 @@ import {
   FileText, 
   HelpCircle, 
   X, 
-  ChevronRight, 
-  ShieldCheck,
-  Sparkles
+  ChevronRight 
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
@@ -269,8 +267,8 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
         full_name: formData.full_name.trim(),
         username: cleanUsername,
         phone: fullPhone,
-        photo_url: formData.photo_url,
-        avatar_url: formData.photo_url,
+        photo_url: formData.photo_url || null,
+        avatar_url: formData.photo_url || null,
         instagram: cleanInstagram,
         bio: formData.bio.trim(),
         gym: formData.gym,
@@ -363,7 +361,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            {/* Фото (текст под фото убран) */}
+            {/* Фото */}
             <div className="flex flex-col items-center text-center">
               <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                 <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-100 flex items-center justify-center">
@@ -514,7 +512,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 3. СТАЖ И СПЕЦИАЛИЗАЦИЯ (АКТИВНЫЙ ЦВЕТ — СИНИЙ) */}
+          {/* 3. СТАЖ И СПЕЦИАЛИЗАЦИЯ */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -550,7 +548,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Специализации (активный цвет — синий) */}
+            {/* Специализации */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
                 Специализации (выберите ваши профильные направления)
@@ -577,7 +575,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Формат ведения: 2 строки (активный цвет — синий) */}
+            {/* Формат ведения: 2 строки */}
             <div>
               <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                 Формат ведения клиентов
@@ -624,7 +622,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 4. УСЛОВИЯ И БОНУСЫ (КРАСИВО ВЫРОВНЕННЫЙ ТЕКСТ) */}
+          {/* 4. УСЛОВИЯ И БОНУСЫ */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -632,7 +630,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            {/* Красиво выровненный блок с понятным описанием */}
+            {/* Понятное описание */}
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-700 leading-relaxed font-normal space-y-1">
               <p className="font-semibold text-slate-900">Размещение в каталоге наставников:</p>
               <p>
@@ -662,7 +660,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Бесплатная тренировка (синий акцент галочки) */}
+            {/* Бесплатная тренировка */}
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
               <div 
                 onClick={() => setFormData({ ...formData, has_free_trial: !formData.has_free_trial })}
@@ -766,7 +764,6 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
 
               {formData.services_offered.personal && (
                 <div className="space-y-2 pt-1 border-t border-slate-200/70">
-                  {/* Разовая тренировка */}
                   <div>
                     <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Стоимость разового занятия (₸)</label>
                     <input
@@ -777,7 +774,6 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
                     />
                   </div>
 
-                  {/* Сгруппированная плашка абонемента: кол-во занятий + общая стоимость */}
                   <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1.5">
                     <p className="text-[10px] font-bold text-slate-600">Пакетный абонемент</p>
                     <div className="grid grid-cols-2 gap-2">
@@ -1014,7 +1010,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* 7. ВЕРИФИКАЦИЯ (КРАСИВО СКОМПОНОВАННЫЙ БЛОК) */}
+          {/* 7. ВЕРИФИКАЦИЯ (КРАСИВО ВЫРОВНЕННЫЙ ТЕКСТ) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -1025,7 +1021,6 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </span>
             </div>
 
-            {/* Выровненный информационный блок без разрыва слов */}
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-700 leading-relaxed font-normal space-y-1">
               <p className="font-semibold text-slate-900">Статус подтвержденного тренера:</p>
               <p>
@@ -1078,7 +1073,6 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               </div>
             </div>
 
-            {/* Аккуратная карточка согласия на верификацию */}
             <div 
               onClick={() => setFormData({ ...formData, verification_consent: !formData.verification_consent })}
               className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-start gap-2.5 cursor-pointer active:scale-98 transition-all"
@@ -1130,7 +1124,6 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               ))}
             </div>
 
-            {/* Аккуратная юридическая карточка согласия */}
             <div 
               onClick={() => setFormData({ ...formData, legal_accepted: !formData.legal_accepted })}
               className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-start gap-2.5 cursor-pointer active:scale-98 transition-all"
@@ -1151,7 +1144,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
             </div>
           </div>
 
-          {/* Финальная кнопка (Синий акцент) */}
+          {/* Финальная кнопка */}
           <div className="pt-1">
             <button
               type="submit"
@@ -1167,7 +1160,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
 
       </div>
 
-      {/* Модальное окно чтения документов */}
+      {/* Модальное окно чтения документов тренера */}
       {activeLegalModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-3.5 shadow-2xl max-h-[85vh] flex flex-col justify-between">
