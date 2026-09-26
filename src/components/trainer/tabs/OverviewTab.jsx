@@ -1,438 +1,510 @@
 // src/components/trainer/tabs/OverviewTab.jsx
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { 
+  Users, 
+  TrendingUp, 
   Calendar, 
   Clock, 
-  UserPlus, 
-  Sparkles, 
+  Plus, 
   BellRing, 
-  Dumbbell, 
-  Building2, 
+  CheckCircle2, 
+  X, 
+  ChevronRight, 
+  Phone, 
   AlertTriangle,
-  ArrowUpRight
+  Send,
+  MessageCircle,
+  Dumbbell,
+  Check
 } from 'lucide-react';
-import { supabase } from '../../../supabaseClient';
 
-export default function OverviewTab({ 
-  activeCount = 0, 
-  pausedCount = 0, 
-  leftCount = 0, 
-  lowBalanceCount = 0, 
-  totalEarnings = 0, 
-  students = [], 
-  onSelectStudent = () => {}, 
-  onOpenAddModal = () => {} 
-}) {
-  const [expandedStudentId, setExpandedStudentId] = useState(null);
-  const [selectedFormatFilter, setSelectedFormatFilter] = useState('all');
-  const [selectedGymFilter, setSelectedGymFilter] = useState('all');
+export default function OverviewTab({ trainer, onAddStudentClick }) {
+  // Фильтр формата
+  const [filterFormat, setFilterFormat] = useState('all'); // 'all' | 'gym' | 'online'
 
-  const daysMap = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-  const todayName = daysMap[new Date().getDay()];
-  const formattedToday = new Date().toLocaleDateString('ru-RU', { 
-    weekday: 'long', 
-    day: 'numeric', 
-    month: 'long' 
+  // Модальные окна
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [reminderType, setReminderType] = useState('today'); // 'today' | 'payment' | 'absence'
+  const [isLocalAddModalOpen, setIsLocalAddModalOpen] = useState(false);
+
+  // Форма добавления нового ученика
+  const [newStudentForm, setNewStudentForm] = useState({
+    name: '',
+    phone: '',
+    format: 'gym',
+    totalWorkouts: 12,
+    pricePaid: 70000,
+    firstSessionDate: '2026-09-26'
   });
 
-  const safeStudents = Array.isArray(students) ? students : [];
+  // Расписание на сегодняшний день (Суббота)
+  const [todaySchedule, setTodaySchedule] = useState([
+    { id: '1', time: '10:00', name: 'Данияр Аскаров', gym: 'Invictus Go', format: 'gym', status: 'completed', remaining: 6 },
+    { id: '2', time: '12:00', name: 'Анель Мусина', gym: 'Онлайн ведение', format: 'online', status: 'pending', remaining: 3 },
+    { id: '3', time: '15:30', name: 'Ерлан Сатыбалдиев', gym: 'Invictus Go', format: 'gym', status: 'pending', remaining: 1 },
+    { id: '4', time: '18:00', name: 'Мадина Омарова', gym: 'Invictus Go', format: 'gym', status: 'pending', remaining: 8 }
+  ]);
 
-  const uniqueGyms = useMemo(() => {
-    const gyms = safeStudents.map(s => s.gym).filter(Boolean);
-    return ['all', ...new Set(gyms)];
-  }, [safeStudents]);
+  // Демо-список подопечных для напоминаний
+  const [studentsData, setStudentsData] = useState([
+    { id: '1', name: 'Данияр Аскаров', phone: '+77771234567', format: 'gym', remaining: 6, status: 'active' },
+    { id: '2', name: 'Анель Мусина', phone: '+77017654321', format: 'online', remaining: 3, status: 'active' },
+    { id: '3', name: 'Ерлан Сатыбалдиев', phone: '+77059998877', format: 'gym', remaining: 1, status: 'active' },
+    { id: '4', name: 'Мадина Омарова', phone: '+77473332211', format: 'gym', remaining: 8, status: 'active' },
+    { id: '5', name: 'Азамат Темирханов', phone: '+77025554433', format: 'gym', remaining: 0, status: 'paused' },
+    { id: '6', name: 'Камила Жумабаева', phone: '+77784443322', format: 'online', remaining: 0, status: 'finished' }
+  ]);
 
-  const filteredStudents = useMemo(() => {
-    return safeStudents.filter(s => {
-      const matchGym = selectedGymFilter === 'all' || s.gym === selectedGymFilter;
-      const matchFormat = 
-        selectedFormatFilter === 'all' ? true :
-        selectedFormatFilter === 'online' ? (s.training_format === 'coach_online' || (s.package_type || '').includes('online')) :
-        (s.training_format !== 'coach_online');
-      return matchGym && matchFormat;
+  // Списание тренировки по расписанию
+  const handleCompleteSession = (id) => {
+    setTodaySchedule(prev => prev.map(item => {
+      if (item.id === id) {
+        return {
+          ...item,
+          status: item.status === 'completed' ? 'pending' : 'completed',
+          remaining: item.status === 'completed' ? item.remaining + 1 : Math.max(0, item.remaining - 1)
+        };
+      }
+      return item;
+    }));
+  };
+
+  // Сохранение нового ученика
+  const handleSaveStudent = (e) => {
+    e.preventDefault();
+    if (!newStudentForm.name.trim()) return;
+
+    const newEntry = {
+      id: Date.now().toString(),
+      name: newStudentForm.name,
+      phone: newStudentForm.phone,
+      format: newStudentForm.format,
+      remaining: Number(newStudentForm.totalWorkouts),
+      status: 'active'
+    };
+
+    setStudentsData([newEntry, ...studentsData]);
+    setIsLocalAddModalOpen(false);
+    setNewStudentForm({
+      name: '',
+      phone: '',
+      format: 'gym',
+      totalWorkouts: 12,
+      pricePaid: 70000,
+      firstSessionDate: '2026-09-26'
     });
-  }, [safeStudents, selectedGymFilter, selectedFormatFilter]);
+    alert('Ученик успешно добавлен в вашу базу!');
+  };
 
-  const todayStudents = useMemo(() => {
-    return filteredStudents.filter(s => {
-      const days = Array.isArray(s.workout_days) ? s.workout_days : ['Понедельник', 'Среда', 'Пятница'];
-      return (s.status === 'active' || !s.status) && days.includes(todayName);
-    });
-  }, [filteredStudents, todayName]);
+  // Отправка напоминания в WhatsApp
+  const handleSendReminder = (phone, text) => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const encoded = encodeURIComponent(text);
+    window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
+  };
 
-  const morningStudents = todayStudents.filter(s => (s.workout_time_slot || '').toLowerCase().includes('утро'));
-  const afternoonStudents = todayStudents.filter(s => {
-    const slot = (s.workout_time_slot || '').toLowerCase();
-    return slot.includes('обед') || slot.includes('день');
-  });
-  const eveningStudents = todayStudents.filter(s => {
-    const slot = (s.workout_time_slot || '').toLowerCase();
-    return slot.includes('вечер') || (!slot.includes('утро') && !slot.includes('обед') && !slot.includes('день'));
+  // Фильтрация расписания по формату
+  const filteredSchedule = todaySchedule.filter(item => {
+    if (filterFormat === 'gym') return item.format === 'gym';
+    if (filterFormat === 'online') return item.format === 'online';
+    return true;
   });
 
-  const lowBalanceStudents = safeStudents.filter(
-    s => (s.status === 'active' || !s.status) && (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2
-  );
+  return (
+    <div className="space-y-4 pb-20 select-none">
+      
+      {/* 1. ФИЛЬТР ФОРМАТА (ВСЕ / В ЗАЛЕ / ОНЛАЙН) */}
+      <div className="flex items-center justify-between gap-2 p-1 bg-slate-200/70 rounded-2xl">
+        <button
+          type="button"
+          onClick={() => setFilterFormat('all')}
+          className={`flex-1 py-1.5 text-xs font-medium rounded-xl transition-all ${
+            filterFormat === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+          }`}
+        >
+          Все форматы
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterFormat('gym')}
+          className={`flex-1 py-1.5 text-xs font-medium rounded-xl transition-all ${
+            filterFormat === 'gym' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+          }`}
+        >
+          В зале
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterFormat('online')}
+          className={`flex-1 py-1.5 text-xs font-medium rounded-xl transition-all ${
+            filterFormat === 'online' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+          }`}
+        >
+          Онлайн
+        </button>
+      </div>
 
-  const attendanceRate = safeStudents.length > 0 ? 89 : 0;
+      {/* 2. КНОПКИ ДЕЙСТВИЙ: ДОБАВИТЬ УЧЕНИКА И НАПОМНИТЬ */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => onAddStudentClick ? onAddStudentClick() : setIsLocalAddModalOpen(true)}
+          className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all"
+        >
+          <Plus className="w-4 h-4 stroke-[2.2]" />
+          <span className="text-xs font-semibold">Добавить ученика</span>
+        </button>
 
-  const currentMonthEarnings = totalEarnings > 0 ? Math.round(totalEarnings / 1000) : 380;
-  const revenueHistory = [
-    { month: 'Май', amount: 260, height: '45%' },
-    { month: 'Июн', amount: 310, height: '58%' },
-    { month: 'Июл', amount: 290, height: '52%' },
-    { month: 'Авг', amount: 360, height: '70%' },
-    { month: 'Сен', amount: currentMonthEarnings, height: '85%', current: true }
-  ];
+        <button
+          type="button"
+          onClick={() => setIsReminderModalOpen(true)}
+          className="p-3 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200/80 rounded-2xl flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all"
+        >
+          <BellRing className="w-4 h-4 text-blue-600" />
+          <span className="text-xs font-semibold">Напомнить</span>
+        </button>
+      </div>
 
-  const handleRemindLowBalance = () => {
-    if (lowBalanceStudents.length === 0) {
-      alert('У всех активных атлетов достаточно оплаченных занятий!');
-      return;
-    }
-    
-    const target = lowBalanceStudents.find(s => s.phone);
-    if (target) {
-      const cleanPhone = target.phone.replace(/\D/g, '');
-      const message = encodeURIComponent(`Привет, ${target.first_name}! У тебя на балансе осталось ${target.left_trainings || 2} зан. Подскажи, когда планируешь продление абонемента? 💪`);
-      window.open(`https://wa.me/7${cleanPhone}?text=${message}`, '_blank');
-    } else {
-      alert(`Найдено учеников с малым остатком: ${lowBalanceStudents.length}`);
-    }
-  };
-
-  const handleAttendanceYes = async (e, student) => {
-    e.stopPropagation();
-    const currentLeft = student.left_trainings !== undefined ? student.left_trainings : 12;
-    if (currentLeft <= 0) {
-      alert('У атлета закончились оплаченные тренировки в абонементе!');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ left_trainings: currentLeft - 1 })
-      .eq('id', student.id);
-
-    if (error) {
-      alert('Ошибка списания: ' + error.message);
-    } else {
-      alert(`Тренировка зафиксирована! У ${student.first_name} осталось ${currentLeft - 1} зан.`);
-      window.location.reload();
-    }
-  };
-
-  const handleAttendanceNo = (e, student) => {
-    e.stopPropagation();
-    alert(`Пропуск зафиксирован для ${student.first_name}. Занятие не списывалось.`);
-  };
-
-  const renderStudentCard = (student) => {
-    const isExpanded = expandedStudentId === student.id;
-    const leftTr = student.left_trainings !== undefined ? student.left_trainings : 12;
-
-    return (
-      <div key={student.id} className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 transition-all space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-slate-900 text-white rounded-xl flex items-center justify-center font-semibold text-xs shadow-xs">
-              {student.first_name?.[0] || 'U'}
+      {/* 3. ОСНОВНЫЕ KPI КАРТОЧКИ С ТОНКОЙ И ЧИСТОЙ ТИПОГРАФИКОЙ */}
+      <div className="space-y-2.5">
+        
+        {/* КАРТОЧКА: ВЫРУЧКА ЗА МЕСЯЦ */}
+        <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-medium text-slate-400">Выручка за сентябрь</span>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-xl font-semibold text-slate-900 font-mono tracking-tight">420 000 ₸</span>
+              <span className="text-[10px] font-medium text-emerald-600">+14% к авг</span>
             </div>
+          </div>
+          <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <TrendingUp className="w-4 h-4" />
+          </div>
+        </div>
+
+        {/* СЕТКА: АКТИВНАЯ БАЗА И СРЕДНЯЯ ЯВКА */}
+        <div className="grid grid-cols-2 gap-2.5">
+          
+          {/* АКТИВНАЯ БАЗА С РАЗДЕЛЕНИЕМ ПАУЗА / ЗАВЕРШИЛИ */}
+          <div className="bg-white p-3.5 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5 flex flex-col justify-between">
             <div>
-              <h4 
-                className="font-semibold text-slate-900 text-xs cursor-pointer hover:text-blue-600 transition-colors"
-                onClick={() => onSelectStudent(student)}
-              >
-                {student.first_name} {student.last_name || ''}
-              </h4>
-              <p className="text-[10px] text-slate-500">
-                {student.gym ? student.gym.split('|')[0] : 'Зал не указан'} • <span className="text-blue-600 font-semibold font-mono">Остаток: {leftTr} зан.</span>
+              <span className="text-[11px] font-medium text-slate-400">Активная база</span>
+              <p className="text-lg font-semibold text-slate-900 font-mono mt-0.5">14 атлетов</p>
+            </div>
+
+            {/* Аккуратные плашки снизу */}
+            <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px]">
+              <div className="flex justify-between items-center text-amber-700 bg-amber-50/70 px-2 py-0.5 rounded-lg">
+                <span>На паузе:</span>
+                <span className="font-mono font-semibold">2</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg">
+                <span>Завершили:</span>
+                <span className="font-mono font-semibold">1</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ПОСЕЩАЕМОСТЬ И СРЕДНЯЯ ЯВКА */}
+          <div className="bg-white p-3.5 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5 flex flex-col justify-between">
+            <div>
+              <span className="text-[11px] font-medium text-slate-400">Средняя явка</span>
+              <p className="text-lg font-semibold text-blue-600 font-mono mt-0.5">92%</p>
+            </div>
+
+            {/* Детализация посещаемости */}
+            <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px]">
+              <div className="flex justify-between items-center text-emerald-700 bg-emerald-50/70 px-2 py-0.5 rounded-lg">
+                <span>По графику:</span>
+                <span className="font-mono font-semibold">46 зан.</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg">
+                <span>Переносы:</span>
+                <span className="font-mono font-semibold">4</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* 4. РАСПИСАНИЕ НА СЕГОДНЯ (СУББОТА) */}
+      <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-blue-600" />
+            <div>
+              <h3 className="text-xs font-semibold text-slate-900">Суббота, расписание на сегодня</h3>
+              <p className="text-[10px] text-slate-400">
+                Запланировано: {filteredSchedule.length} тренировок
               </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-1.5 justify-end">
-            <button
-              type="button"
-              onClick={() => setExpandedStudentId(isExpanded ? null : student.id)}
-              className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-600 rounded-lg text-[10px] font-medium transition-all border border-slate-200 shadow-2xs"
-            >
-              {isExpanded ? 'Скрыть' : 'План'}
-            </button>
-
-            <button
-              type="button"
-              onClick={(e) => handleAttendanceYes(e, student)}
-              className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-semibold shadow-2xs active:scale-95"
-            >
-              Был
-            </button>
-
-            <button
-              type="button"
-              onClick={(e) => handleAttendanceNo(e, student)}
-              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-medium active:scale-95"
-            >
-              Не был
-            </button>
-          </div>
-        </div>
-
-        {isExpanded && (
-          <div className="p-2.5 bg-white border border-slate-200/80 rounded-xl space-y-1 text-xs animate-in fade-in duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-1">
-              <span className="font-semibold text-slate-800 text-[11px] flex items-center gap-1">
-                <Dumbbell className="w-3.5 h-3.5 text-blue-600" />
-                <span>Цель: {student.goal || 'Гипертрофия и сила'}</span>
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">
-                {student.workout_time_slot || 'Вечерний слот'}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-600 leading-relaxed font-normal">
-              Базовая гипертрофия: 4 подхода тяги, 4 подхода приседаний, пресс 3 подхода.
-            </p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <div className="space-y-3 text-xs select-none">
-      
-      {/* 1. ИНТЕРАКТИВНЫЕ ФИЛЬТРЫ: АККУРАТНЫЕ ТОНКИЕ КНОПКИ */}
-      <div className="bg-white p-2 rounded-2xl border border-slate-200/70 shadow-xs flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-        <div className="flex items-center gap-1 shrink-0">
-          <Building2 className="w-3.5 h-3.5 text-slate-400 ml-1" />
-          <select
-            value={selectedGymFilter}
-            onChange={(e) => setSelectedGymFilter(e.target.value)}
-            className="p-1 bg-slate-50 border border-slate-200 rounded-lg text-[10.5px] font-medium text-slate-700 focus:outline-none max-w-[130px] truncate"
-          >
-            <option value="all">Все залы ({safeStudents.length})</option>
-            {uniqueGyms.filter(g => g !== 'all').map((gym, idx) => (
-              <option key={idx} value={gym}>{gym.split('|')[0]}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg shrink-0">
-          {[
-            { id: 'all', label: 'Все' },
-            { id: 'offline', label: 'В зале' },
-            { id: 'online', label: 'Онлайн' }
-          ].map(fmt => (
-            <button
-              key={fmt.id}
-              type="button"
-              onClick={() => setSelectedFormatFilter(fmt.id)}
-              className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all ${
-                selectedFormatFilter === fmt.id 
-                  ? 'bg-white text-slate-900 shadow-2xs' 
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {fmt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 2. ГРАФИК ДИНАМИКИ ДОХОДОВ */}
-      <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-2.5">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Выручка за месяц</p>
-              <span className="text-[9.5px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded-md flex items-center gap-0.5 border border-emerald-200/60">
-                <ArrowUpRight className="w-3 h-3 stroke-[2]" /> +18%
-              </span>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 tracking-tight mt-0.5 font-mono">
-              {totalEarnings > 0 ? totalEarnings.toLocaleString() : '480 000'} ₸
-            </h3>
-            <p className="text-[10px] text-slate-400 font-normal">Прогноз до конца месяца: ~580 000 ₸</p>
-          </div>
-
-          <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-            {safeStudents.length} атлетов
+          <span className="text-[10px] font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg">
+            26 сентября
           </span>
         </div>
 
-        {/* Столбики */}
-        <div className="pt-2 border-t border-slate-100">
-          <div className="h-24 flex items-end justify-between gap-3 px-2 pt-1">
-            {revenueHistory.map((item, idx) => (
-              <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group">
-                <span className="text-[9px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {item.amount}k
-                </span>
-                
-                <div className="w-full bg-slate-100 rounded-t-lg overflow-hidden h-full flex items-end">
-                  <div 
-                    className={`w-full rounded-t-lg transition-all duration-300 ${
-                      item.current 
-                        ? 'bg-blue-600 shadow-xs' 
-                        : 'bg-slate-300 group-hover:bg-slate-400'
+        {/* Список занятий по таймлайну */}
+        <div className="space-y-2">
+          {filteredSchedule.length === 0 ? (
+            <p className="text-xs text-slate-400 text-center py-4">На сегодня тренировок в этом формате нет</p>
+          ) : (
+            filteredSchedule.map((item) => {
+              const isDone = item.status === 'completed';
+              return (
+                <div
+                  key={item.id}
+                  className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                    isDone 
+                      ? 'bg-slate-50/70 border-slate-200/60 opacity-80' 
+                      : 'bg-white border-slate-200/90'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-center w-11 shrink-0 font-mono">
+                      <span className="text-xs font-semibold text-slate-800 block">{item.time}</span>
+                      <span className="text-[9px] text-slate-400">{item.format === 'gym' ? 'Зал' : 'Онлайн'}</span>
+                    </div>
+
+                    <div className="space-y-0.5 overflow-hidden">
+                      <p className={`text-xs font-medium truncate ${isDone ? 'line-through text-slate-500' : 'text-slate-900'}`}>
+                        {item.name}
+                      </p>
+                      <p className="text-[10px] text-slate-400 truncate">
+                        {item.gym} • остаток: <span className="font-mono font-semibold text-blue-600">{item.remaining} зан.</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Кнопка списания тренировки */}
+                  <button
+                    type="button"
+                    onClick={() => handleCompleteSession(item.id)}
+                    className={`px-3 py-1.5 rounded-xl text-[10.5px] font-semibold flex items-center gap-1 transition-all active:scale-95 shrink-0 ${
+                      isDone
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
                     }`}
-                    style={{ height: item.height }}
-                  />
+                  >
+                    {isDone ? <Check className="w-3 h-3 text-emerald-600" /> : null}
+                    <span>{isDone ? 'Проведено' : 'Списать -1'}</span>
+                  </button>
                 </div>
+              );
+            })
+          )}
+        </div>
+      </div>
 
-                <span className={`text-[10px] font-medium ${item.current ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
-                  {item.month}
-                </span>
+      {/* ================= МОДАЛКА: БЫСТРЫЕ НАПОМИНАНИЯ (3 СЦЕНАРИЯ) ================= */}
+      {isReminderModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col justify-between overflow-y-auto">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <BellRing className="w-4 h-4 text-blue-600" />
+                <h3 className="text-xs font-semibold text-slate-900">Быстрые напоминания</h3>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 3. СЕТКА KPI-МЕТРИК С ТОНКИМИ ШРИФТАМИ */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="bg-white border border-slate-200/70 p-3 rounded-2xl shadow-xs space-y-0.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Активная база</span>
-            <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded">
-              ▲ +3
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <h4 className="text-lg font-bold text-slate-900">{activeCount || safeStudents.length}</h4>
-            <span className="text-[10.5px] text-slate-400 font-normal">атлетов</span>
-          </div>
-          <p className="text-[9.5px] text-slate-400 font-normal">Пауза: {pausedCount} • Завершили: {leftCount}</p>
-        </div>
-
-        <div className="bg-white border border-slate-200/70 p-3 rounded-2xl shadow-xs space-y-0.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Средняя явка</span>
-            <span className="text-[9px] font-semibold text-blue-700 bg-blue-50 px-1 py-0.2 rounded">
-              Хорошо
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <h4 className="text-lg font-bold text-blue-600 font-mono">{attendanceRate}%</h4>
-            <span className="text-[10.5px] text-slate-400 font-normal">доходимость</span>
-          </div>
-          <p className="text-[9.5px] text-slate-400 font-normal">Мин. прогулов за месяц</p>
-        </div>
-      </div>
-
-      {/* Зона риска */}
-      {lowBalanceCount > 0 && (
-        <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-2.5 flex items-center justify-between gap-2 shadow-2xs">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <div>
-              <p className="text-[11px] font-semibold text-amber-900 leading-tight">
-                Мало занятий: {lowBalanceCount} ученика
-              </p>
-              <p className="text-[9.5px] text-amber-800">Остаток ≤ 2 тренировок</p>
+              <button
+                type="button"
+                onClick={() => setIsReminderModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={handleRemindLowBalance}
-            className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-semibold shadow-2xs active:scale-95"
-          >
-            Напомнить в WA
-          </button>
+            {/* Выбор сценария */}
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setReminderType('today')}
+                className={`py-2 text-[10.5px] font-medium rounded-xl text-center transition-all ${
+                  reminderType === 'today' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600'
+                }`}
+              >
+                О тренировке
+              </button>
+              <button
+                type="button"
+                onClick={() => setReminderType('payment')}
+                className={`py-2 text-[10.5px] font-medium rounded-xl text-center transition-all ${
+                  reminderType === 'payment' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600'
+                }`}
+              >
+                Об оплате
+              </button>
+              <button
+                type="button"
+                onClick={() => setReminderType('absence')}
+                className={`py-2 text-[10.5px] font-medium rounded-xl text-center transition-all ${
+                  reminderType === 'absence' ? 'bg-white text-rose-600 shadow-xs font-semibold' : 'text-slate-600'
+                }`}
+              >
+                Не будет в зале
+              </button>
+            </div>
+
+            {/* Список учеников по выбранному сценарию */}
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {reminderType === 'today' && (
+                <>
+                  <p className="text-[10px] text-slate-400 px-1">Атлеты, записанные на сегодня (Суббота):</p>
+                  {todaySchedule.map(st => (
+                    <div key={st.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-slate-900">{st.name}</p>
+                        <p className="text-[10px] text-slate-400">Время: {st.time}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleSendReminder('+77771234567', `Привет, ${st.name}! Напоминаю о сегодняшней тренировке в ${st.time}. Жду вовремя! 💪`)}
+                        className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95"
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                        <span>WhatsApp</span>
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {reminderType === 'payment' && (
+                <>
+                  <p className="text-[10px] text-slate-400 px-1">Ученики с остатком 1 или 0 занятий:</p>
+                  {studentsData.filter(s => s.remaining <= 1).map(st => (
+                    <div key={st.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-slate-900">{st.name}</p>
+                        <p className="text-[10px] text-amber-600 font-medium">Осталось: {st.remaining} зан.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleSendReminder(st.phone, `Привет, ${st.name}! По твоему абонементу осталось ${st.remaining} зан. Давай запланируем продление, чтобы сохранить график!`)}
+                        className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95"
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                        <span>Напомнить</span>
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {reminderType === 'absence' && (
+                <>
+                  <p className="text-[10px] text-rose-500 px-1">Предупреждение об отмене или форс-мажоре:</p>
+                  <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-2xl space-y-2">
+                    <p className="text-[11px] text-rose-900">
+                      Отправить всем ученикам на сегодня: «Уважаемые атлеты, по техническим причинам меня сегодня не будет в зале. Все занятия переносятся без сгорания».
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => alert('Уведомление отправлено всем подопечным на сегодня!')}
+                      className="w-full py-2 bg-rose-600 text-white rounded-xl text-xs font-semibold active:scale-98"
+                    >
+                      Разослать всем на сегодня
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+          </div>
         </div>
       )}
 
-      {/* 4. БЫСТРЫЕ ДЕЙСТВИЯ: ТОНКИЕ КНОПКИ */}
-      <div className="bg-white rounded-2xl p-2.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <Sparkles className="w-3.5 h-3.5" />
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold text-slate-900 leading-tight">Ученики</p>
-            <p className="text-[9.5px] text-slate-400">Быстрое действие</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <button 
-            type="button"
-            onClick={handleRemindLowBalance}
-            className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium text-[10.5px] flex items-center gap-1 active:scale-95"
-          >
-            <BellRing className="w-3 h-3 text-slate-500" />
-            <span>Напомнить</span>
-          </button>
-
-          <button 
-            type="button"
-            onClick={onOpenAddModal}
-            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-[10.5px] flex items-center gap-1 shadow-2xs active:scale-95"
-          >
-            <UserPlus className="w-3 h-3" />
-            <span>+ Ученик</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 5. ТАЙМЛАЙН ТРЕНИРОВОК НА СЕГОДНЯ */}
-      <div className="bg-white border border-slate-200/70 rounded-3xl p-3.5 shadow-xs space-y-2.5">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-blue-600" />
-            <div>
-              <h3 className="font-semibold text-xs text-slate-900 capitalize">
-                {formattedToday}
-              </h3>
-              <p className="text-[9.5px] text-slate-400">Расписание на сегодня</p>
+      {/* ================= МОДАЛКА: ДОБАВИТЬ УЧЕНИКА ================= */}
+      {isLocalAddModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col justify-between overflow-y-auto">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Plus className="w-4 h-4 text-blue-600" />
+                <h3 className="text-xs font-semibold text-slate-900">Добавить нового ученика</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLocalAddModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          </div>
 
-          <span className="bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded text-[10px] font-mono">
-            {todayStudents.length} записей
-          </span>
+            <form onSubmit={handleSaveStudent} className="space-y-3 text-xs">
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">ФИО подопечного *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Имя Фамилия"
+                  value={newStudentForm.name}
+                  onChange={e => setNewStudentForm({ ...newStudentForm, name: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">WhatsApp номер (+7) *</label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="+7 (777) 000-00-00"
+                  value={newStudentForm.phone}
+                  onChange={e => setNewStudentForm({ ...newStudentForm, phone: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-1">Формат занятий</label>
+                  <select
+                    value={newStudentForm.format}
+                    onChange={e => setNewStudentForm({ ...newStudentForm, format: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  >
+                    <option value="gym">В зале</option>
+                    <option value="online">Онлайн</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-1">Кол-во занятий</label>
+                  <input
+                    type="number"
+                    value={newStudentForm.totalWorkouts}
+                    onChange={e => setNewStudentForm({ ...newStudentForm, totalWorkouts: Number(e.target.value) })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-center font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">Сумма оплаты (₸)</label>
+                <input
+                  type="number"
+                  value={newStudentForm.pricePaid}
+                  onChange={e => setNewStudentForm({ ...newStudentForm, pricePaid: Number(e.target.value) })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-semibold text-blue-600"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold text-xs active:scale-98 transition-all mt-2"
+              >
+                Сохранить в базу
+              </button>
+            </form>
+
+          </div>
         </div>
-
-        {todayStudents.length > 0 ? (
-          <div className="space-y-2.5">
-            {morningStudents.length > 0 && (
-              <div className="space-y-1">
-                <h4 className="text-[9.5px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-amber-500" /> Утро (08:00 - 12:00)
-                </h4>
-                {morningStudents.map(renderStudentCard)}
-              </div>
-            )}
-
-            {afternoonStudents.length > 0 && (
-              <div className="space-y-1">
-                <h4 className="text-[9.5px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-blue-500" /> День (12:00 - 16:00)
-                </h4>
-                {afternoonStudents.map(renderStudentCard)}
-              </div>
-            )}
-
-            {eveningStudents.length > 0 && (
-              <div className="space-y-1">
-                <h4 className="text-[9.5px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-indigo-500" /> Вечер (16:00 - 21:00)
-                </h4>
-                {eveningStudents.map(renderStudentCard)}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-6 text-slate-400 space-y-1">
-            <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center mx-auto mb-1 text-slate-300">
-              <Calendar className="w-4 h-4 stroke-[1.5]" />
-            </div>
-            <p className="font-semibold text-slate-700 text-[11px]">На сегодня запланированных тренировок нет</p>
-            <p className="text-[9.5px] text-slate-400">Дни занятий атлетов задаются во вкладке «Ученики»</p>
-          </div>
-        )}
-      </div>
+      )}
 
     </div>
   );
