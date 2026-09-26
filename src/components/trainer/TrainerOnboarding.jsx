@@ -14,15 +14,21 @@ import {
   FileText, 
   HelpCircle, 
   X, 
+  ChevronRight,
   Search,
   MapPin
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
 
+// Безопасное извлечение массива залов с гарантией массива
 const GYMS_ARRAY = Array.isArray(GymsData.ALMATY_GYMS) 
   ? GymsData.ALMATY_GYMS 
   : (Array.isArray(GymsData.almatyGyms) ? GymsData.almatyGyms : (Array.isArray(GymsData.default) ? GymsData.default : []));
+
+const defaultGym = (Array.isArray(GYMS_ARRAY) && GYMS_ARRAY.length > 2) 
+  ? GYMS_ARRAY[2] 
+  : 'Invictus Go | Улица Тимирязева, 42';
 
 export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,7 +115,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     bio: '',
 
     // Залы (не обязательно)
-    gym: '',
+    gym: defaultGym,
     secondary_gym: '',
 
     // Опыт и направления (не обязательно)
@@ -163,13 +169,15 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
   });
 
   const filteredPrimaryGyms = useMemo(() => {
-    if (!gymSearchQuery.trim()) return GYMS_ARRAY.slice(0, 35);
-    return GYMS_ARRAY.filter(g => typeof g === 'string' && g.toLowerCase().includes(gymSearchQuery.toLowerCase()));
+    const list = Array.isArray(GYMS_ARRAY) ? GYMS_ARRAY : [];
+    if (!gymSearchQuery.trim()) return list.slice(0, 35);
+    return list.filter(g => typeof g === 'string' && g.toLowerCase().includes(gymSearchQuery.toLowerCase()));
   }, [gymSearchQuery]);
 
   const filteredSecondaryGyms = useMemo(() => {
-    if (!secondaryGymSearchQuery.trim()) return GYMS_ARRAY.slice(0, 35);
-    return GYMS_ARRAY.filter(g => typeof g === 'string' && g.toLowerCase().includes(secondaryGymSearchQuery.toLowerCase()));
+    const list = Array.isArray(GYMS_ARRAY) ? GYMS_ARRAY : [];
+    if (!secondaryGymSearchQuery.trim()) return list.slice(0, 35);
+    return list.filter(g => typeof g === 'string' && g.toLowerCase().includes(secondaryGymSearchQuery.toLowerCase()));
   }, [secondaryGymSearchQuery]);
 
   const handleBackAction = () => {
@@ -264,7 +272,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
       const fullPhone = `7${formData.phone.replace(/\D/g, '')}`;
       const fullNameCombined = `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim();
 
-      // Базовый полный объект для сохранения
+      // Базовый полный объект
       let payload = {
         first_name: formData.first_name.trim(),
         last_name: formData.last_name.trim(),
@@ -275,7 +283,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
         avatar_url: formData.photo_url || null,
         instagram: cleanInstagram,
         bio: formData.bio ? formData.bio.trim() : '',
-        gym: formData.gym ? formData.gym : (GYMS_ARRAY[2] || 'Invictus Go'),
+        gym: formData.gym ? formData.gym : defaultGym,
         secondary_gym: formData.secondary_gym || null,
         experience_years: Number(formData.experience_years) || 1,
         specializations: formData.specializations,
@@ -301,8 +309,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
         created_at: new Date().toISOString()
       };
 
-      // САМОВОССТАНАВЛИВАЮЩИЙСЯ ЦИКЛ СОХРАНЕНИЯ:
-      // Если в таблице Supabase не хватает какой-то колонки, мы автоматически убираем ее и сохраняем без ошибок!
+      // Самовосстанавливающийся цикл сохранения
       let saveSuccess = false;
       for (let attempt = 0; attempt < 12; attempt++) {
         const { error } = await supabase
@@ -314,13 +321,11 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
           break;
         }
 
-        // Поиск отсутствующей колонки в сообщении ошибки PostgREST
         const missingMatch = error.message.match(/Could not find the '([^']+)' column/i);
         if (missingMatch && missingMatch[1] && payload[missingMatch[1]] !== undefined) {
           console.warn(`Колонка "${missingMatch[1]}" отсутствует в таблице trainer_profiles, пропускаем её...`);
           delete payload[missingMatch[1]];
         } else {
-          // Другая ошибка (например RLS или сеть)
           throw error;
         }
       }
