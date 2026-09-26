@@ -1,5 +1,5 @@
 // src/components/trainer/components/TrainerHeader.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dumbbell, 
   LogOut, 
@@ -22,12 +22,15 @@ import {
   HelpCircle,
   Plus,
   Minus,
+  ChevronRight,
   Link as LinkIcon
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import * as GymsData from '../../../data/almatyGyms';
 
-const GYMS_ARRAY = Array.isArray(GymsData.ALMATY_GYMS) ? GymsData.ALMATY_GYMS : [];
+const GYMS_ARRAY = Array.isArray(GymsData.ALMATY_GYMS) 
+  ? GymsData.ALMATY_GYMS 
+  : (Array.isArray(GymsData.almatyGyms) ? GymsData.almatyGyms : (Array.isArray(GymsData.default) ? GymsData.default : []));
 
 export default function TrainerHeader({ trainer, onLogout, onBack }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -83,6 +86,39 @@ export default function TrainerHeader({ trainer, onLogout, onBack }) {
     bio: trainer?.bio || '',
     certificates_link: trainer?.certificates_link || ''
   });
+
+  // Синхронизация формы при обновлении пропса trainer
+  useEffect(() => {
+    if (trainer) {
+      setEditForm({
+        first_name: trainer.first_name || '',
+        last_name: trainer.last_name || '',
+        phone: trainer.phone || '',
+        instagram: trainer.instagram || '',
+        gym: trainer.gym || (GYMS_ARRAY[2] || 'Invictus Go'),
+        secondary_gym: trainer.secondary_gym || '',
+        experience_years: Number(trainer.experience_years) || 3,
+        specializations: Array.isArray(trainer.specializations) ? trainer.specializations : ['Набор массы и гипертрофия'],
+        work_format: trainer.work_format || 'hybrid',
+        target_audience: trainer.target_audience || 'all',
+        workout_duration: Number(trainer.workout_duration) || 60,
+        has_free_trial: Boolean(trainer.has_free_trial),
+        free_trial_duration: trainer.free_trial_duration || '45',
+        has_free_consultation: Boolean(trainer.has_free_consultation),
+        pricing: {
+          personal_single: trainer.pricing?.personal_single || 8000,
+          personal_count: trainer.pricing?.personal_count || 12,
+          personal_block: trainer.pricing?.personal_block || 70000,
+          split_single: trainer.pricing?.split_single || 12000,
+          split_count: trainer.pricing?.split_count || 12,
+          split_block: trainer.pricing?.split_block || 100000,
+          online_month: trainer.pricing?.online_month || 35000
+        },
+        bio: trainer.bio || '',
+        certificates_link: trainer.certificates_link || ''
+      });
+    }
+  }, [trainer]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(publicCoachLink);
@@ -150,7 +186,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack }) {
   return (
     <>
       {/* ================= АККУРАТНАЯ ВЕРХНЯЯ ШАПКА ================= */}
-      <header className="bg-white border-b border-slate-200/70 p-3 sticky top-0 z-30 select-none shadow-xs">
+      <header className="bg-white border-b border-slate-200/70 p-3 sticky top-0 z-30 select-none shadow-sm">
         <div className="flex items-center justify-between gap-2 max-w-md mx-auto">
           
           {/* Левая часть: кнопка вызова бокового меню */}
@@ -214,7 +250,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack }) {
                       {trainer?.full_name || `${trainer?.first_name || 'Тренер'} ${trainer?.last_name || ''}`}
                     </p>
                     <p className="text-[10px] text-blue-600 font-mono mt-0.5">@{cleanUsername}</p>
-                    <span className="inline-block text-[9px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded-md mt-1">
+                    <span className="inline-block text-[9px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md mt-1">
                       {trainer?.gym ? trainer.gym.split('|')[0] : 'Алматы'}
                     </span>
                   </div>
@@ -258,7 +294,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack }) {
                   className="w-full p-2.5 bg-blue-50/70 hover:bg-blue-100 border border-blue-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all"
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-blue-200 flex items-center justify-center text-blue-600 shadow-sm">
                       <Rocket className="w-4 h-4" />
                     </div>
                     <div>
