@@ -1,106 +1,175 @@
 // src/components/trainer/tabs/FinanceTab.jsx
 import React, { useState } from 'react';
 import { supabase } from '../../../supabaseClient';
-import { DollarSign, AlertCircle, CheckCircle2, Calendar, User } from 'lucide-react';
+import { 
+  DollarSign, 
+  CheckCircle2, 
+  Clock, 
+  ChevronRight, 
+  AlertCircle,
+  Calendar,
+  Wallet
+} from 'lucide-react';
+import StudentDetailModal from '../components/StudentDetailModal';
 
-export default function FinanceTab({ students, onUpdate }) {
+export default function FinanceTab({ students = [], onUpdate }) {
   const [updatingId, setUpdatingId] = useState(null);
+  const [selectedStudentForModal, setSelectedStudentForModal] = useState(null);
 
-  // Считаем общий потенциальный и подтвержденный доход
+  // Фильтрация и финансовые метрики
   const activeStudents = students.filter(s => s.status === 'active' || !s.status);
-  const totalMonthlyPotential = activeStudents.reduce((sum, s) => sum + (Number(s.monthly_price) || 0), 0);
   
-  // Ученики с критическим остатком тренировок (<= 2)
-  const lowBalanceStudents = activeStudents.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2);
+  // Общий потенциальный доход
+  const totalPotential = activeStudents.reduce((sum, s) => sum + (Number(s.monthly_price) || 0), 0);
+  
+  // Фактически собранные средства (оплаченные)
+  const paidEarnings = activeStudents
+    .filter(s => s.payment_status === 'paid' || !s.payment_status)
+    .reduce((sum, s) => sum + (Number(s.monthly_price) || 0), 0);
 
-  const handleTogglePaymentStatus = async (student) => {
+  // Ожидают оплаты (задолженность)
+  const pendingEarnings = totalPotential - paidEarnings;
+
+  // Ученики с остатком занятий <= 2
+  const lowBalanceStudents = activeStudents.filter(s => {
+    const left = s.left_trainings !== undefined ? s.left_trainings : (s.remaining_workouts !== undefined ? s.remaining_workouts : 12);
+    return left <= 2;
+  });
+
+  const handleTogglePaymentStatus = async (e, student) => {
+    e.stopPropagation();
     setUpdatingId(student.id);
     const newStatus = student.payment_status === 'paid' ? 'pending' : 'paid';
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ payment_status: newStatus })
-      .eq('id', student.id);
+    try {
+      if (student.id) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ payment_status: newStatus })
+          .eq('id', student.id);
 
-    setUpdatingId(null);
-    if (error) {
-      alert('Ошибка обновления статуса оплаты: ' + error.message);
-    } else {
+        if (error) throw error;
+      }
       if (onUpdate) onUpdate();
+    } catch (err) {
+      alert('Ошибка обновления статуса оплаты: ' + err.message);
+    } finally {
+      setUpdatingId(null);
     }
   };
 
   return (
-    <div className="space-y-4 text-xs">
-      {/* Сводка по финансам */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-          <p className="text-[10px] text-slate-400 uppercase font-semibold">Потенциальный доход / мес</p>
-          <h3 className="text-2xl font-black text-slate-900 mt-1">{totalMonthlyPotential.toLocaleString()} ₸</h3>
+    <div className="space-y-3.5 select-none pb-12 text-xs">
+      
+      {/* 1. Сводные финансовые KPI карточки */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="bg-white border border-slate-200/80 p-3.5 rounded-3xl shadow-xs space-y-1">
+          <p className="text-[10.5px] text-slate-400 font-medium">Собрано в кассу</p>
+          <p className="text-lg font-bold text-emerald-600 font-mono">
+            {paidEarnings.toLocaleString()} ₸
+          </p>
+          <span className="text-[10px] text-slate-400 block">
+            {activeStudents.filter(s => s.payment_status === 'paid' || !s.payment_status).length} учеников оплатили
+          </span>
         </div>
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-          <p className="text-[10px] text-slate-400 uppercase font-semibold">Активных плательщиков</p>
-          <h3 className="text-2xl font-black text-blue-600 mt-1">{activeStudents.length} <span className="text-xs font-normal text-slate-500">уч.</span></h3>
-        </div>
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-          <p className="text-[10px] text-slate-400 uppercase font-semibold">Требуют продления абонемента</p>
-          <h3 className={`text-2xl font-black mt-1 ${lowBalanceStudents.length > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-            {lowBalanceStudents.length} <span className="text-xs font-normal text-slate-500">уч.</span>
-          </h3>
+
+        <div className="bg-white border border-slate-200/80 p-3.5 rounded-3xl shadow-xs space-y-1">
+          <p className="text-[10.5px] text-slate-400 font-medium">Ожидает оплаты</p>
+          <p className="text-lg font-bold text-amber-600 font-mono">
+            {pendingEarnings.toLocaleString()} ₸
+          </p>
+          <span className="text-[10px] text-slate-400 block">
+            {activeStudents.filter(s => s.payment_status === 'pending').length} задолженностей
+          </span>
         </div>
       </div>
 
-      {/* Список оплат учеников */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-slate-100 flex items-center gap-2">
-          <DollarSign className="w-5 h-5 text-emerald-600" />
+      {/* 2. Напоминание по окончанию абонементов */}
+      {lowBalanceStudents.length > 0 && (
+        <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-center gap-2.5 text-amber-900 text-[11px]">
+          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>
+            У <b>{lowBalanceStudents.length}</b> учеников осталось ≤ 2 занятий. Пора предложить продление на новый месяц.
+          </span>
+        </div>
+      )}
+
+      {/* 3. Список учета абонементов подопечных */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-sm text-slate-900">Касса и учет абонементов</h3>
-            <p className="text-[10px] text-slate-500">Контроль оплат и остатка тренировок подопечных</p>
+            <h3 className="font-bold text-sm text-slate-900">Касса и абонементы</h3>
+            <p className="text-[10.5px] text-slate-400">Нажмите на карточку для открытия полного досье</p>
+          </div>
+          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <Wallet className="w-4 h-4" />
           </div>
         </div>
 
         <div className="divide-y divide-slate-100">
           {students.length > 0 ? (
             students.map((student) => {
-              const left = student.left_trainings !== undefined ? student.left_trainings : 12;
+              const left = student.left_trainings !== undefined 
+                ? student.left_trainings 
+                : (student.remaining_workouts !== undefined ? student.remaining_workouts : 12);
               const total = student.total_trainings || 12;
-              const isPaid = student.payment_status === 'paid';
+              const isPaid = student.payment_status === 'paid' || !student.payment_status;
 
               return (
-                <div key={student.id} className="p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-sm text-slate-900">{student.first_name} {student.last_name}</h4>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${
-                        isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                <div 
+                  key={student.id} 
+                  onClick={() => setSelectedStudentForModal(student)}
+                  className="p-3.5 hover:bg-slate-50 transition-colors flex flex-col gap-2.5 cursor-pointer active:scale-[0.99]"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-bold text-xs text-slate-900">
+                          {student.first_name} {student.last_name || ''}
+                        </h4>
+                        <span className={`text-[9.5px] px-1.5 py-0.5 rounded-md font-semibold ${
+                          isPaid ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                        }`}>
+                          {isPaid ? 'Оплачено' : 'Ожидает'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        {student.gym ? student.gym.split('|')[0] : 'Зал не указан'}
+                      </p>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <p className="font-bold font-mono text-xs text-slate-900">
+                        {student.monthly_price ? `${Number(student.monthly_price).toLocaleString()} ₸` : '70 000 ₸'}
+                      </p>
+                      <span className={`text-[10px] font-mono font-semibold ${
+                        left <= 2 ? 'text-rose-600' : 'text-slate-400'
                       }`}>
-                        {isPaid ? 'Оплачено' : 'Ожидает оплаты'}
+                        Остаток: {left} / {total} зан.
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500">
-                      Тариф: <span className="font-medium text-slate-700">{student.package_type || 'individual'}</span> | Стоимость: <b className="text-emerald-600 font-mono">{student.monthly_price ? `${student.monthly_price.toLocaleString()} ₸` : '0 ₸'}</b>
-                    </p>
                   </div>
 
-                  <div className="flex items-center gap-3 w-full md:w-auto justify-between pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
-                    <span className={`text-[10px] px-2.5 py-1 rounded-lg border font-semibold flex items-center gap-1 ${
-                      left <= 2 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-100 text-slate-700 border-slate-200'
-                    }`}>
-                      <Calendar className="w-3.5 h-3.5" /> Остаток: {left} / {total} зан.
+                  {/* Кнопка смены статуса оплаты */}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                    <span className="text-[10.5px] text-slate-400 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      <span>Блок на {total} занятий</span>
                     </span>
 
                     <button
                       type="button"
                       disabled={updatingId === student.id}
-                      onClick={() => handleTogglePaymentStatus(student)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-sm ${
-                        isPaid 
-                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200' 
-                          : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      onClick={(e) => handleTogglePaymentStatus(e, student)}
+                      className={`py-1 px-2.5 rounded-lg text-[10.5px] font-semibold transition-all border cursor-pointer active:scale-95 ${
+                        isPaid
+                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
                       }`}
                     >
-                      {isPaid ? 'Отменить оплату' + (updatingId === student.id ? '...' : '') : 'Отметить оплачено' + (updatingId === student.id ? '...' : '')}
+                      {updatingId === student.id 
+                        ? 'Сохранение...' 
+                        : isPaid ? 'Отменить оплату' : 'Отметить оплаченным'}
                     </button>
                   </div>
                 </div>
@@ -113,6 +182,15 @@ export default function FinanceTab({ students, onUpdate }) {
           )}
         </div>
       </div>
+
+      {/* Полноэкранный профиль ученика */}
+      <StudentDetailModal 
+        isOpen={Boolean(selectedStudentForModal)}
+        onClose={() => setSelectedStudentForModal(null)}
+        student={selectedStudentForModal}
+        onUpdate={onUpdate}
+      />
+
     </div>
   );
 }
