@@ -1,39 +1,73 @@
 // src/components/trainer/tabs/WorkoutsTab.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
-import { Dumbbell, Plus, Trash2, CheckCircle2, Activity, Flame, Calendar } from 'lucide-react';
+import { 
+  Dumbbell, 
+  Plus, 
+  Trash2, 
+  CheckCircle2, 
+  Activity, 
+  Flame, 
+  Calendar, 
+  Sparkles, 
+  Save, 
+  ChevronRight,
+  User,
+  ExternalLink
+} from 'lucide-react';
+import StudentDetailModal from '../components/StudentDetailModal';
 
-export default function WorkoutsTab({ students }) {
+export default function WorkoutsTab({ students = [], onUpdate }) {
   const [selectedStudentId, setSelectedStudentId] = useState(students[0]?.id || '');
+  const [selectedStudentForModal, setSelectedStudentForModal] = useState(null);
   
   // Параметры программы
   const [workoutType, setWorkoutType] = useState('fullbody'); // 'fullbody' | 'split'
   const [experienceLevel, setExperienceLevel] = useState('beginner_1');
   const [frequency, setFrequency] = useState(3);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Кардио, разминка и ограничения
   const [warmup, setWarmup] = useState('Суставная разминка 10 мин');
   const [cardioBefore, setCardioBefore] = useState('Эллипс 5-7 мин');
-  const [cardioAfter, setCardioAfter] = useState('Заминка / Дорожка 10 мин');
+  const [cardioAfter, setCardioAfter] = useState('Дорожка / шаг 10 мин');
   const [contraindications, setContraindications] = useState('Без осевой нагрузки на поясницу');
 
   // База упражнений по группам мышц
   const exerciseDatabase = {
     'Грудь': ['Жим лежа со штангой', 'Жим гантелей на наклонной', 'Сведение рук в кроссовере', 'Отжимания на брусьях'],
     'Спина': ['Подтягивания на перекладине', 'Тяга верхнего блока', 'Тяга штанги в наклоне', 'Горизонтальная тяга'],
-    'Ноги': ['Приседания со штангой', 'Жим ногами в платформе', 'Болгарские выпады', 'Сгибание ног лежа'],
+    'Ноги': ['Приседания со штангой', 'Жим ногами в платформе', 'Болгарские выпады', 'Румынская тяга', 'Сгибание ног'],
     'Плечи': ['Жим штанги стоя (Армейский)', 'Махи гантелями в стороны', 'Протяжка к подбородку', 'Махи в наклоне'],
-    'Руки': ['Подъем штанги на бицепс', 'Французский жим лежа', 'Сгибание рук с гантелями (молотки)', 'Разгибания на трицепс в блоке'],
-    'Пресс / Кор': ['Скручивания на полу', 'Подъем ног в висе', 'Планка', 'Русские скручивания']
+    'Руки': ['Подъем штанги на бицепс', 'Французский жим лежа', 'Сгибание рук с гантелями (молотки)', 'Разгибания в блоке'],
+    'Пресс': ['Скручивания на полу', 'Подъем ног в висе', 'Планка', 'Русские скручивания']
   };
 
   const [daysWorkouts, setDaysWorkouts] = useState({
-    1: { title: 'День 1: Верх тела / Грудь-Спина', exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 10, weight: 60, exerciseType: 'Сет' }] },
-    2: { title: 'День 2: Низ тела / Ноги', exercises: [{ muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 10, weight: 50, exerciseType: 'Сет' }] },
+    1: { title: 'День 1: Верх тела (Грудь + Спина)', exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 10, weight: 60, exerciseType: 'Сет' }] },
+    2: { title: 'День 2: Низ тела (Ноги + Пресс)', exercises: [{ muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 10, weight: 50, exerciseType: 'Сет' }] },
     3: { title: 'День 3: Плечи и Руки', exercises: [{ muscleGroup: 'Плечи', name: 'Жим штанги стоя (Армейский)', sets: 3, reps: 12, weight: 30, exerciseType: 'Сет' }] }
   });
 
   const [activeDay, setActiveDay] = useState(1);
+
+  // Синхронизация при смене ученика: если у него уже была сохранена программа — загружаем её
+  useEffect(() => {
+    if (students.length > 0 && !selectedStudentId) {
+      setSelectedStudentId(students[0].id);
+    }
+    const current = students.find(s => s.id === selectedStudentId);
+    if (current?.assigned_program && typeof current.assigned_program === 'object') {
+      const prog = current.assigned_program;
+      if (prog.days) setDaysWorkouts(prog.days);
+      if (prog.frequency) setFrequency(prog.frequency);
+      if (prog.workoutType) setWorkoutType(prog.workoutType);
+      if (prog.warmup) setWarmup(prog.warmup);
+      if (prog.contraindications) setContraindications(prog.contraindications);
+    }
+    setSaveSuccess(false);
+  }, [selectedStudentId, students]);
 
   const handleFrequencyChange = (newFreq) => {
     setFrequency(newFreq);
@@ -87,72 +121,162 @@ export default function WorkoutsTab({ students }) {
     });
   };
 
-  // Сохранение программы прямо в Supabase в карточку ученика
+  // Загрузка готового шаблона
+  const applyPresetTemplate = (presetKey) => {
+    if (presetKey === 'fullbody3') {
+      setFrequency(3);
+      setWorkoutType('fullbody');
+      setDaysWorkouts({
+        1: { title: 'День 1: Full Body (Сила A)', exercises: [
+          { muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 8, weight: 60, exerciseType: 'Сет' },
+          { muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 8, weight: 60, exerciseType: 'Сет' },
+          { muscleGroup: 'Спина', name: 'Тяга верхнего блока', sets: 4, reps: 10, weight: 50, exerciseType: 'Сет' }
+        ]},
+        2: { title: 'День 2: Full Body (Гипертрофия B)', exercises: [
+          { muscleGroup: 'Ноги', name: 'Жим ногами в платформе', sets: 4, reps: 12, weight: 100, exerciseType: 'Сет' },
+          { muscleGroup: 'Плечи', name: 'Жим штанги стоя (Армейский)', sets: 4, reps: 10, weight: 35, exerciseType: 'Сет' },
+          { muscleGroup: 'Спина', name: 'Горизонтальная тяга', sets: 3, reps: 12, weight: 45, exerciseType: 'Сет' }
+        ]},
+        3: { title: 'День 3: Full Body (Объем C)', exercises: [
+          { muscleGroup: 'Ноги', name: 'Румынская тяга', sets: 4, reps: 10, weight: 55, exerciseType: 'Сет' },
+          { muscleGroup: 'Грудь', name: 'Жим гантелей на наклонной', sets: 3, reps: 12, weight: 22, exerciseType: 'Сет' },
+          { muscleGroup: 'Руки', name: 'Подъем штанги на бицепс', sets: 3, reps: 12, weight: 25, exerciseType: 'Сет' }
+        ]}
+      });
+    } else if (presetKey === 'split_upper_lower') {
+      setFrequency(4);
+      setWorkoutType('split');
+      setDaysWorkouts({
+        1: { title: 'День 1: Верх (Тяжелый)', exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 8, weight: 70, exerciseType: 'Сет' }] },
+        2: { title: 'День 2: Низ (Тяжелый)', exercises: [{ muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 8, weight: 70, exerciseType: 'Сет' }] },
+        3: { title: 'День 3: Верх (Многоповторный)', exercises: [{ muscleGroup: 'Спина', name: 'Тяга верхнего блока', sets: 4, reps: 12, weight: 50, exerciseType: 'Сет' }] },
+        4: { title: 'День 4: Низ (Многоповторный)', exercises: [{ muscleGroup: 'Ноги', name: 'Болгарские выпады', sets: 3, reps: 12, weight: 14, exerciseType: 'Сет' }] }
+      });
+    }
+  };
+
+  // Сохранение в Supabase
   const handleSaveProgram = async () => {
     if (!selectedStudentId) {
       alert('Выберите ученика!');
       return;
     }
 
-    const programPayload = {
-      frequency,
-      workoutType,
-      experienceLevel,
-      warmup,
-      cardioBefore,
-      cardioAfter,
-      contraindications,
-      days: daysWorkouts
-    };
+    setSaving(true);
+    setSaveSuccess(false);
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ assigned_program: programPayload })
-      .eq('id', selectedStudentId);
+    try {
+      const programPayload = {
+        frequency,
+        workoutType,
+        experienceLevel,
+        warmup,
+        cardioBefore,
+        cardioAfter,
+        contraindications,
+        days: daysWorkouts,
+        updated_at: new Date().toISOString()
+      };
 
-    if (error) {
-      alert('Ошибка сохранения программы: ' + error.message);
-    } else {
-      alert(`Многодневная программа (${frequency} дня/нед) успешно сохранена и назначена ученику!`);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ assigned_program: programPayload })
+        .eq('id', selectedStudentId);
+
+      if (error) throw error;
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      alert('Ошибка при сохранении программы: ' + err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
-  return (
-    <div className="space-y-4 text-xs">
-      
-      {/* ШАГ 1: Параметры и ученик */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
-        <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-          <Dumbbell className="w-4 h-4 text-blue-600" />
-          <h3 className="font-bold text-sm text-slate-900">Шаг 1: Параметры программы и ученик</h3>
-        </div>
+  const currentStudent = students.find(s => s.id === selectedStudentId);
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block font-medium text-slate-700 mb-1">Выберите ученика *</label>
-            <select
-              value={selectedStudentId}
-              onChange={(e) => setSelectedStudentId(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium"
-            >
-              {students.length > 0 ? (
-                students.map(s => (
-                  <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.goal})</option>
-                ))
-              ) : (
-                <option value="">Нет учеников в базе</option>
-              )}
-            </select>
+  return (
+    <div className="space-y-3.5 select-none pb-12 text-xs">
+      
+      {/* 1. Блок ученика и быстрого шаблона */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-xs space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Dumbbell className="w-4 h-4 stroke-[2.2]" />
+            </div>
+            <div>
+              <h3 className="font-bold text-xs text-slate-900">Назначение программы</h3>
+              <p className="text-[10px] text-slate-400">Выберите ученика для персонального плана</p>
+            </div>
           </div>
 
+          {currentStudent && (
+            <button
+              type="button"
+              onClick={() => setSelectedStudentForModal(currentStudent)}
+              className="text-[11px] font-semibold text-blue-600 flex items-center gap-1 active:scale-95 cursor-pointer"
+            >
+              <span>Анкета</span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+
+        <div>
+          <label className="text-[10px] font-semibold text-slate-500 block mb-1">Подопечный атлет *</label>
+          <select
+            value={selectedStudentId}
+            onChange={(e) => setSelectedStudentId(e.target.value)}
+            className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
+          >
+            {students.length > 0 ? (
+              students.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.first_name} {s.last_name || ''} ({s.goal || 'Тонус'}) • {s.gym ? s.gym.split('|')[0] : 'Зал'}
+                </option>
+              ))
+            ) : (
+              <option value="">Нет учеников в базе</option>
+            )}
+          </select>
+        </div>
+
+        {/* Быстрые пресеты */}
+        <div className="space-y-1.5 pt-1">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Быстрые готовые шаблоны:</span>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => applyPresetTemplate('fullbody3')}
+              className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left text-[10.5px] font-semibold text-slate-700 active:scale-95 cursor-pointer"
+            >
+              ⚡ Full Body (3 дня)
+            </button>
+            <button
+              type="button"
+              onClick={() => applyPresetTemplate('split_upper_lower')}
+              className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-left text-[10.5px] font-semibold text-slate-700 active:scale-95 cursor-pointer"
+            >
+              ⚡ Сплит Верх / Низ (4 дня)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Параметры сплита и частота */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-xs space-y-3">
+        <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block font-medium text-slate-700 mb-1">Тип нагрузки</label>
-            <div className="grid grid-cols-2 gap-2">
+            <label className="text-[10px] font-semibold text-slate-500 block mb-1">Формат сплита</label>
+            <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-100 rounded-xl">
               <button
                 type="button"
                 onClick={() => setWorkoutType('fullbody')}
-                className={`py-2 px-3 rounded-xl font-semibold border transition-all ${
-                  workoutType === 'fullbody' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'
+                className={`py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+                  workoutType === 'fullbody' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600'
                 }`}
               >
                 Full Body
@@ -160,180 +284,130 @@ export default function WorkoutsTab({ students }) {
               <button
                 type="button"
                 onClick={() => setWorkoutType('split')}
-                className={`py-2 px-3 rounded-xl font-semibold border transition-all ${
-                  workoutType === 'split' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200'
+                className={`py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+                  workoutType === 'split' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600'
                 }`}
               >
-                Split (Сплит)
+                Split
               </button>
             </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-          <div>
-            <label className="block font-medium text-slate-700 mb-1">Уровень подготовки</label>
-            <select
-              value={experienceLevel}
-              onChange={(e) => setExperienceLevel(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
-            >
-              <option value="beginner_0">Абсолютный новичок (никогда не занимался)</option>
-              <option value="beginner_1">Новичок (базовое понимание упражнений)</option>
-              <option value="intermediate_low">Любитель (стаж от 3 до 6 месяцев)</option>
-              <option value="intermediate_high">Уверенный любитель (стаж от 6 мес до 1.5 лет)</option>
-              <option value="advanced">Продвинутый атлет (стаж от 1.5 - 3 лет)</option>
-              <option value="pro">Профи / Опытный культурист</option>
-            </select>
-          </div>
 
           <div>
-            <label className="block font-medium text-slate-700 mb-1">Дней тренировок в неделю</label>
-            <div className="grid grid-cols-4 gap-1.5">
+            <label className="text-[10px] font-semibold text-slate-500 block mb-1">Дней в неделю</label>
+            <div className="grid grid-cols-4 gap-1">
               {[2, 3, 4, 5].map((num) => (
                 <button
                   key={num}
                   type="button"
                   onClick={() => handleFrequencyChange(num)}
-                  className={`py-2 rounded-xl font-semibold border transition-all text-center ${
-                    frequency === num ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-600 border-slate-200'
+                  className={`py-1.5 rounded-xl font-bold border transition-all text-center text-xs ${
+                    frequency === num 
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' 
+                      : 'bg-slate-50 text-slate-700 border-slate-200'
                   }`}
                 >
-                  {num} дн.
+                  {num}
                 </button>
               ))}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ШАГ 2: Разминка, кардио и ограничения */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
-        <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-          <Activity className="w-4 h-4 text-emerald-600" />
-          <h3 className="font-bold text-sm text-slate-900">Шаг 2: Разминка, Кардио и Ограничения</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Разминка и ограничения */}
+        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
           <div>
-            <label className="block font-medium text-slate-700 mb-1">Разминка</label>
+            <label className="text-[10px] font-semibold text-slate-500 block mb-1">Разминка</label>
             <input 
               type="text"
               value={warmup}
               onChange={(e) => setWarmup(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
             />
           </div>
+
           <div>
-            <label className="block font-medium text-slate-700 mb-1">Противопоказания / Травмы</label>
+            <label className="text-[10px] font-semibold text-slate-500 block mb-1">Противопоказания</label>
             <input 
               type="text"
               value={contraindications}
               onChange={(e) => setContraindications(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-rose-600 font-medium"
-            />
-          </div>
-          <div>
-            <label className="block font-medium text-slate-700 mb-1">Кардио ДО тренировки</label>
-            <input 
-              type="text"
-              value={cardioBefore}
-              onChange={(e) => setCardioBefore(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
-            />
-          </div>
-          <div>
-            <label className="block font-medium text-slate-700 mb-1">Кардио ПОСЛЕ (Заминка)</label>
-            <input 
-              type="text"
-              value={cardioAfter}
-              onChange={(e) => setCardioAfter(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+              className="w-full p-2 bg-rose-50/70 border border-rose-200 rounded-xl text-xs text-rose-800 font-medium"
             />
           </div>
         </div>
       </div>
 
-      {/* ШАГ 3: Сегментация по дням и упражнения */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
-        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 text-orange-500" />
-            <h3 className="font-bold text-sm text-slate-900">Шаг 3: Наполнение тренировок по дням</h3>
-          </div>
+      {/* 3. Упражнения по тренировочным дням */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-xs space-y-3.5">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <span className="text-xs font-bold text-slate-900">Упражнения и нагрузки</span>
+          
+          <button 
+            type="button"
+            onClick={handleAddExerciseToCurrentDay}
+            className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 active:scale-95 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Добавить</span>
+          </button>
         </div>
 
-        {/* Переключатель дней */}
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        {/* Переключатель активного дня */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
           {Array.from({ length: frequency }, (_, i) => i + 1).map((dayNum) => (
             <button
               key={dayNum}
               type="button"
               onClick={() => setActiveDay(dayNum)}
-              className={`py-2 px-4 rounded-xl font-bold transition-all text-xs flex items-center gap-1.5 ${
-                activeDay === dayNum ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              className={`py-1.5 px-3 rounded-xl font-bold transition-all text-xs shrink-0 cursor-pointer ${
+                activeDay === dayNum 
+                  ? 'bg-blue-600 text-white shadow-2xs' 
+                  : 'bg-slate-100 text-slate-700'
               }`}
             >
-              <Calendar className="w-3.5 h-3.5" /> День {dayNum}
+              День {dayNum}
             </button>
           ))}
         </div>
 
-        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-          <label className="block font-semibold text-slate-700">Название тренировки (День {activeDay})</label>
-          <input 
-            type="text"
-            value={daysWorkouts[activeDay]?.title || ''}
-            onChange={(e) => {
-              const updated = { ...daysWorkouts };
-              updated[activeDay].title = e.target.value;
-              setDaysWorkouts(updated);
-            }}
-            className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-900"
-          />
-        </div>
+        {/* Название тренировочного дня */}
+        <input 
+          type="text"
+          value={daysWorkouts[activeDay]?.title || ''}
+          onChange={(e) => {
+            const updated = { ...daysWorkouts };
+            updated[activeDay].title = e.target.value;
+            setDaysWorkouts(updated);
+          }}
+          placeholder={`Название Дня ${activeDay}`}
+          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
+        />
 
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <h4 className="font-bold text-slate-800">Упражнения для Дня {activeDay}:</h4>
-            <button 
-              type="button"
-              onClick={handleAddExerciseToCurrentDay}
-              className="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-xl"
-            >
-              <Plus className="w-3.5 h-3.5" /> Добавить упражнение
-            </button>
-          </div>
+        {/* Карточки упражнений текущего дня */}
+        <div className="space-y-2">
+          {(daysWorkouts[activeDay]?.exercises || []).map((ex, index) => {
+            const currentMuscle = ex.muscleGroup || 'Грудь';
+            const availableExercises = exerciseDatabase[currentMuscle] || [];
 
-          <div className="space-y-2.5">
-            {(daysWorkouts[activeDay]?.exercises || []).map((ex, index) => {
-              const currentMuscle = ex.muscleGroup || 'Грудь';
-              const availableExercises = exerciseDatabase[currentMuscle] || [];
-
-              return (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  
-                  {/* Группа мышц */}
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] text-slate-400 mb-0.5">Группа мышц</label>
+            return (
+              <div key={index} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="grid grid-cols-2 gap-1.5 flex-1">
                     <select
                       value={currentMuscle}
                       onChange={(e) => handleExerciseChange(index, 'muscleGroup', e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-blue-600"
+                      className="p-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-blue-700"
                     >
                       {Object.keys(exerciseDatabase).map((mg, i) => (
                         <option key={i} value={mg}>{mg}</option>
                       ))}
                     </select>
-                  </div>
 
-                  {/* Упражнение */}
-                  <div className="md:col-span-3">
-                    <label className="block text-[10px] text-slate-400 mb-0.5">Упражнение</label>
                     <select
                       value={ex.name}
                       onChange={(e) => handleExerciseChange(index, 'name', e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900"
+                      className="p-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-bold text-slate-900 truncate"
                     >
                       {availableExercises.map((item, i) => (
                         <option key={i} value={item}>{item}</option>
@@ -341,125 +415,85 @@ export default function WorkoutsTab({ students }) {
                     </select>
                   </div>
 
-                  {/* Подходы */}
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] text-slate-400 mb-0.5">Подходы</label>
-                    <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => handleExerciseChange(index, 'sets', Math.max(1, Number(ex.sets || 3) - 1))}
-                        className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
-                      >
-                        -
-                      </button>
-                      <input 
-                        type="number"
-                        value={ex.sets}
-                        onChange={(e) => handleExerciseChange(index, 'sets', Number(e.target.value))}
-                        className="w-full p-1.5 text-center text-xs font-bold focus:outline-none text-slate-900"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleExerciseChange(index, 'sets', Math.min(10, Number(ex.sets || 3) + 1))}
-                        className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Повторения */}
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] text-slate-400 mb-0.5">Повторения (1-30)</label>
-                    <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => handleExerciseChange(index, 'reps', Math.max(1, Number(ex.reps || 10) - 1))}
-                        className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
-                      >
-                        -
-                      </button>
-                      <input 
-                        type="number"
-                        value={ex.reps}
-                        onChange={(e) => handleExerciseChange(index, 'reps', Number(e.target.value))}
-                        className="w-full p-1.5 text-center text-xs font-bold focus:outline-none text-slate-900"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleExerciseChange(index, 'reps', Math.min(30, Number(ex.reps || 10) + 1))}
-                        className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Вес */}
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] text-slate-400 mb-0.5">Вес (кг)</label>
-                    <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => handleExerciseChange(index, 'weight', Math.max(0, Number(ex.weight || 0) - 5))}
-                        className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
-                      >
-                        -
-                      </button>
-                      <input 
-                        type="number"
-                        value={ex.weight}
-                        onChange={(e) => handleExerciseChange(index, 'weight', Number(e.target.value))}
-                        className="w-full p-1.5 text-center text-xs font-bold focus:outline-none font-mono text-slate-900"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleExerciseChange(index, 'weight', Math.min(200, Number(ex.weight || 0) + 5))}
-                        className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Удаление */}
-                  <div className="md:col-span-1 flex items-center justify-between gap-1 pt-3">
-                    <select
-                      value={ex.exerciseType || 'Сет'}
-                      onChange={(e) => handleExerciseChange(index, 'exerciseType', e.target.value)}
-                      className="p-1 bg-amber-50 text-amber-800 border border-amber-200 rounded text-[10px] font-bold"
+                  {daysWorkouts[activeDay].exercises.length > 1 && (
+                    <button 
+                      type="button"
+                      onClick={() => handleRemoveExercise(index)}
+                      className="p-1 text-slate-400 hover:text-rose-600 transition-colors shrink-0"
                     >
-                      <option value="Сет">Сет</option>
-                      <option value="Суперсет">Суперсет</option>
-                      <option value="Дропсет">Дропсет</option>
-                    </select>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
 
-                    {daysWorkouts[activeDay].exercises.length > 1 && (
-                      <button 
-                        type="button"
-                        onClick={() => handleRemoveExercise(index)}
-                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                        title="Удалить"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                {/* Подходы, Повторения и Вес */}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-white p-1.5 rounded-xl border border-slate-200">
+                    <span className="text-[9px] text-slate-400 block">Подходы</span>
+                    <input 
+                      type="number"
+                      value={ex.sets}
+                      onChange={(e) => handleExerciseChange(index, 'sets', Number(e.target.value))}
+                      className="w-full text-center text-xs font-bold text-slate-900 bg-transparent"
+                    />
                   </div>
 
+                  <div className="bg-white p-1.5 rounded-xl border border-slate-200">
+                    <span className="text-[9px] text-slate-400 block">Повторения</span>
+                    <input 
+                      type="number"
+                      value={ex.reps}
+                      onChange={(e) => handleExerciseChange(index, 'reps', Number(e.target.value))}
+                      className="w-full text-center text-xs font-bold text-slate-900 bg-transparent"
+                    />
+                  </div>
+
+                  <div className="bg-white p-1.5 rounded-xl border border-slate-200">
+                    <span className="text-[9px] text-slate-400 block">Вес (кг)</span>
+                    <input 
+                      type="number"
+                      value={ex.weight}
+                      onChange={(e) => handleExerciseChange(index, 'weight', Number(e.target.value))}
+                      className="w-full text-center text-xs font-bold font-mono text-blue-600 bg-transparent"
+                    />
+                  </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
 
-        <button
-          type="button"
-          onClick={handleSaveProgram}
-          className="w-full mt-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 text-xs"
-        >
-          <CheckCircle2 className="w-4 h-4" /> Сохранить многодневную программу и выдать ученику
-        </button>
+        {/* Кнопка сохранения с обратной связью */}
+        <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+          {saveSuccess ? (
+            <span className="text-emerald-600 text-xs font-semibold flex items-center gap-1">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Программа назначена!</span>
+            </span>
+          ) : (
+            <span className="text-slate-400 text-[10px]">Синхронизируется с карточкой ученика</span>
+          )}
+
+          <button
+            type="button"
+            disabled={saving}
+            onClick={handleSaveProgram}
+            className="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>{saving ? 'Сохранение...' : 'Сохранить программу'}</span>
+          </button>
+        </div>
       </div>
+
+      {/* Полноэкранный профиль ученика */}
+      <StudentDetailModal 
+        isOpen={Boolean(selectedStudentForModal)}
+        onClose={() => setSelectedStudentForModal(null)}
+        student={selectedStudentForModal}
+        onUpdate={onUpdate}
+      />
+
     </div>
   );
 }
