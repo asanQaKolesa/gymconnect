@@ -1,9 +1,21 @@
 // src/components/trainer/tabs/StudentsListTab.jsx
 import React, { useState } from 'react';
-import { ChevronRight, MessageCircle, Calendar, Dumbbell, Eye, AlertCircle, Cake, FileText } from 'lucide-react';
+import { 
+  ChevronRight, 
+  MessageCircle, 
+  Calendar, 
+  Dumbbell, 
+  Eye, 
+  AlertCircle, 
+  Cake, 
+  FileText,
+  User,
+  Plus
+} from 'lucide-react';
+import StudentDetailModal from '../components/StudentDetailModal';
 
-export default function StudentsListTab({ students, formatGoal, onSelectStudent, onOpenAddModal }) {
-  const [expandedStudentId, setExpandedStudentId] = useState(null);
+export default function StudentsListTab({ students = [], formatGoal, onOpenAddModal, onUpdate }) {
+  const [selectedStudentForModal, setSelectedStudentForModal] = useState(null);
 
   const handleWhatsAppClick = (e, phone) => {
     e.stopPropagation();
@@ -12,7 +24,7 @@ export default function StudentsListTab({ students, formatGoal, onSelectStudent,
       return;
     }
     const cleanPhone = phone.replace(/\D/g, '');
-    window.open(`https://wa.me/7${cleanPhone}`, '_blank');
+    window.open(`https://wa.me/7${cleanPhone.startsWith('7') ? cleanPhone.slice(1) : cleanPhone}`, '_blank');
   };
 
   const formatUsername = (username) => {
@@ -31,21 +43,18 @@ export default function StudentsListTab({ students, formatGoal, onSelectStudent,
     return formatGoal ? formatGoal(goal) : goal;
   };
 
-  // Проверка на день рождения сегодня (формат даты YYYY-MM-DD или DD.MM)
+  // Проверка на день рождения сегодня
   const isBirthdayToday = (birthDateStr) => {
     if (!birthDateStr) return false;
     const today = new Date();
     const todayMonth = today.getMonth() + 1;
     const todayDay = today.getDate();
 
-    // Парсим строку даты
     const parts = birthDateStr.split(/[-.]/);
     if (parts.length >= 2) {
-      // Если формат YYYY-MM-DD
       if (parts[0].length === 4) {
         return Number(parts[1]) === todayMonth && Number(parts[2]) === todayDay;
       }
-      // Если формат DD.MM.YYYY
       if (parts[2]?.length === 4 || parts.length === 2) {
         return Number(parts[0]) === todayDay && Number(parts[1]) === todayMonth;
       }
@@ -53,157 +62,167 @@ export default function StudentsListTab({ students, formatGoal, onSelectStudent,
     return false;
   };
 
-  // Считаем учеников с низким балансом
-  const lowBalanceStudents = students.filter(s => (s.status === 'active' || !s.status) && (s.left_trainings !== undefined ? s.left_trainings : 12) <= 2);
+  const lowBalanceStudents = students.filter(s => 
+    (s.status === 'active' || !s.status) && 
+    (s.left_trainings !== undefined ? s.left_trainings : (s.remaining_workouts !== undefined ? s.remaining_workouts : 12)) <= 2
+  );
+  
   const birthdayStudents = students.filter(s => isBirthdayToday(s.birth_date));
 
   return (
-    <div className="space-y-4">
-      {/* Лента быстрых уведомлений / алертов */}
+    <div className="space-y-3.5 select-none pb-12">
+      
+      {/* 1. Блок оповещений по базе учеников */}
       {(lowBalanceStudents.length > 0 || birthdayStudents.length > 0) && (
-        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl p-4 shadow-sm flex flex-col gap-2 text-xs">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-3xl p-4 shadow-xs flex flex-col gap-2 text-xs">
           <div className="flex items-center gap-2 font-bold text-sm">
             <AlertCircle className="w-4 h-4" />
-            <span>Важные уведомления по базе учеников</span>
+            <span>Важные уведомления</span>
           </div>
-          <div className="space-y-1 text-amber-50">
+          <div className="space-y-1 text-amber-50 leading-relaxed">
             {lowBalanceStudents.length > 0 && (
-              <p>• У <b>{lowBalanceStudents.length}</b> учеников осталось мало оплаченных занятий (≤ 2 зан.). Рекомендуем напомнить об продлении абонемента.</p>
+              <p>• У <b>{lowBalanceStudents.length}</b> учеников осталось ≤ 2 занятий. Пора напомнить о продлении блока.</p>
             )}
             {birthdayStudents.length > 0 && (
-              <p>• 🎉 Сегодня день рождения у: <b>{birthdayStudents.map(s => `${s.first_name} ${s.last_name}`).join(', ')}</b>! Обязательно поздравьте их.</p>
+              <p>• 🎉 Сегодня день рождения у: <b>{birthdayStudents.map(s => `${s.first_name} ${s.last_name || ''}`).join(', ')}</b>!</p>
             )}
           </div>
         </div>
       )}
 
-      {/* Основной блок списка учеников */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      {/* 2. Шапка списка учеников */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs">
         <div className="p-4 border-b border-slate-100 flex justify-between items-center">
           <div>
-            <h3 className="font-bold text-sm text-slate-900">Мои подопечные</h3>
-            <p className="text-[10px] text-slate-500">Управление тренировками, абонементами и связью</p>
+            <h3 className="font-bold text-sm text-slate-900">База подопечных ({students.length})</h3>
+            <p className="text-[10px] text-slate-400">Нажмите на карточку для открытия полного профиля</p>
           </div>
           <button 
+            type="button"
             onClick={onOpenAddModal}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-all shadow-sm"
+            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
           >
-            + Добавить ученика
+            <Plus className="w-3.5 h-3.5" />
+            <span>Добавить</span>
           </button>
         </div>
 
+        {/* 3. Список карточек учеников */}
         <div className="divide-y divide-slate-100">
           {students.length > 0 ? (
             students.map((student) => {
-              const leftTrainings = student.left_trainings !== undefined ? student.left_trainings : 12;
+              const leftTrainings = student.left_trainings !== undefined 
+                ? student.left_trainings 
+                : (student.remaining_workouts !== undefined ? student.remaining_workouts : 12);
               const totalTrainings = student.total_trainings || 12;
-              const isExpanded = expandedStudentId === student.id;
               const hasBirthday = isBirthdayToday(student.birth_date);
 
               return (
                 <div 
                   key={student.id} 
-                  className="p-4 hover:bg-slate-50 transition-colors flex flex-col gap-3"
+                  onClick={() => setSelectedStudentForModal(student)}
+                  className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col gap-2.5 cursor-pointer active:scale-[0.99]"
                 >
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-                    <div className="space-y-1 cursor-pointer flex-1" onClick={() => onSelectStudent(student)}>
-                      <h4 className="font-semibold text-sm text-slate-900 flex items-center gap-2 flex-wrap">
-                        <span>{student.first_name} {student.last_name}</span>
-                        
-                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${
-                          student.status === 'paused' ? 'bg-amber-100 text-amber-800' :
-                          student.status === 'left' ? 'bg-rose-100 text-rose-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {student.status === 'paused' ? 'На паузе' : student.status === 'left' ? 'Ушел' : 'Активен'}
-                        </span>
-
-                        {hasBirthday && (
-                          <span className="text-[10px] bg-pink-100 text-pink-700 px-2 py-0.5 rounded-md font-bold flex items-center gap-1 animate-pulse">
-                            <Cake className="w-3 h-3" /> День рождения сегодня!
-                          </span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs overflow-hidden">
+                        {student.photo_url || student.avatar_url ? (
+                          <img src={student.photo_url || student.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span>{student.first_name ? student.first_name[0] : 'U'}</span>
                         )}
-                      </h4>
-                      
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Цель: <span className="text-blue-600 font-medium">{getLocalizedGoal(student.goal)}</span> | Зал: {student.gym || 'Не указан'}
-                      </p>
+                      </div>
 
-                      {/* Блок вывода заметки тренера, если она сохранена */}
-                      {student.trainer_notes && (
-                        <div className="flex items-start gap-1.5 mt-1.5 bg-amber-50/80 border border-amber-200 p-2 rounded-xl text-[11px] text-amber-900">
-                          <FileText className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                          <span><b>Заметка:</b> {student.trainer_notes}</span>
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-bold text-xs text-slate-900 leading-tight">
+                            {student.first_name} {student.last_name || ''}
+                          </h4>
+
+                          <span className={`text-[9.5px] px-1.5 py-0.5 rounded-md font-bold ${
+                            student.status === 'paused' 
+                              ? 'bg-amber-100 text-amber-800' 
+                              : student.status === 'left' 
+                                ? 'bg-rose-100 text-rose-800' 
+                                : 'bg-blue-50 text-blue-700'
+                          }`}>
+                            {student.status === 'paused' ? 'Пауза' : student.status === 'left' ? 'Завершил' : 'Активен'}
+                          </span>
+
+                          {hasBirthday && (
+                            <span className="text-[9.5px] bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded-md font-bold flex items-center gap-1">
+                              <Cake className="w-2.5 h-2.5" /> ДР
+                            </span>
+                          )}
                         </div>
-                      )}
 
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
-                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200 font-mono">
-                          {formatUsername(student.username)}
-                        </span>
-                        <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md border border-emerald-100 font-semibold">
-                          {student.monthly_price ? `${student.monthly_price.toLocaleString()} ₸` : '0 ₸'}
-                        </span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold flex items-center gap-1 ${
-                          leftTrainings <= 2 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                        }`}>
-                          <Calendar className="w-3 h-3" /> Остаток: {leftTrainings} / {totalTrainings} зан.
-                        </span>
+                        <p className="text-[11px] text-slate-500">
+                          {getLocalizedGoal(student.goal)} • {student.gym ? student.gym.split('|')[0] : 'Зал не указан'}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full md:w-auto justify-end pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
-                      <button
-                        onClick={() => setExpandedStudentId(isExpanded ? null : student.id)}
-                        className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all border border-blue-200"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>{isExpanded ? 'Скрыть программу' : 'Программа'}</span>
-                      </button>
-
-                      {student.phone && (
-                        <button
-                          onClick={(e) => handleWhatsAppClick(e, student.phone)}
-                          className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors border border-emerald-200"
-                          title="Написать в WhatsApp"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span>WhatsApp</span>
-                        </button>
-                      )}
-                      <span className="text-xs font-semibold text-blue-600 hidden md:inline cursor-pointer" onClick={() => onSelectStudent(student)}>Профиль</span>
-                      <ChevronRight className="w-4 h-4 text-slate-400 cursor-pointer" onClick={() => onSelectStudent(student)} />
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] text-slate-400 block font-normal">Остаток</span>
+                      <span className={`text-xs font-bold font-mono px-2 py-0.5 rounded-lg border inline-block mt-0.5 ${
+                        leftTrainings <= 2 
+                          ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                          : 'bg-slate-50 text-slate-800 border-slate-200'
+                      }`}>
+                        {leftTrainings} / {totalTrainings}
+                      </span>
                     </div>
                   </div>
 
-                  {isExpanded && (
-                    <div className="p-3 bg-slate-50 border border-blue-100 rounded-xl space-y-2 animate-in fade-in duration-200 text-xs mt-1">
-                      <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                        <span className="font-bold text-slate-800 flex items-center gap-1">
-                          <Dumbbell className="w-3.5 h-3.5 text-blue-600" /> Тариф: {student.package_type || 'Персональный (1 на 1)'}
-                        </span>
-                        <span className="text-[10px] text-slate-500 font-mono">График: {(student.workout_days || []).join(', ')} ({student.workout_time_slot || 'Вечер'})</span>
-                      </div>
+                  {/* Нижняя строчка с бейджами и быстрым WhatsApp */}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[10.5px]">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500 font-mono">
+                        {formatUsername(student.username)}
+                      </span>
+                      <span className="text-emerald-700 font-semibold font-mono">
+                        {student.monthly_price ? `${Number(student.monthly_price).toLocaleString()} ₸` : '0 ₸'}
+                      </span>
+                    </div>
 
-                      <div className="text-slate-600 space-y-1">
-                        <p><b>Назначенный план упражнений:</b></p>
-                        <div className="bg-white p-2 rounded-lg border border-slate-200 font-mono text-[11px] space-y-1 text-slate-700">
-                          <p>• День 1 (База): Приседания со штангой — 4x8, Жим лежа — 4x8</p>
-                          <p>• День 2 (Верх): Тяга блока — 4x10, Подтягивания — 3x8</p>
-                          <p>• День 3 (Ноги/Плечи): Румынская тяга — 4x10, Махи гантелями — 3x12</p>
-                        </div>
+                    <div className="flex items-center gap-1.5">
+                      {student.phone && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleWhatsAppClick(e, student.phone)}
+                          className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg font-semibold flex items-center gap-1 border border-emerald-200/80 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          <span>Написать</span>
+                        </button>
+                      )}
+
+                      <div className="p-1 text-slate-400">
+                        <ChevronRight className="w-4 h-4" />
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })
           ) : (
-            <div className="p-8 text-center text-slate-400 text-xs">
-              У вас пока нет привязанных учеников. Нажмите кнопку «Добавить ученика» выше.
+            <div className="p-10 text-center text-slate-400 text-xs">
+              <User className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+              <p className="font-semibold text-slate-700">У вас пока нет учеников в базе.</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Нажмите «Добавить», чтобы зарегистрировать первого атлета.</p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Полноэкранный профиль выбранного ученика */}
+      <StudentDetailModal 
+        isOpen={Boolean(selectedStudentForModal)}
+        onClose={() => setSelectedStudentForModal(null)}
+        student={selectedStudentForModal}
+        onUpdate={onUpdate}
+      />
+
     </div>
   );
 }
