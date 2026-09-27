@@ -91,6 +91,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
       {/* ================= АККУРАТНАЯ ШАПКА ================= */}
       <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 sticky top-0 z-40 select-none shadow-xs">
         <div className="flex items-center justify-between gap-2 max-w-md mx-auto w-full">
+          {/* Единственная основная кнопка меню */}
           <button
             type="button"
             onClick={() => setIsDrawerOpen(true)}
@@ -133,16 +134,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
           </div>
         </div>
       </header>
-
-      {/* ================= ПЛАВАЮЩАЯ КНОПКА МЕНЮ (ПРИ СКРОЛЛЕ) ================= */}
-      <button
-        type="button"
-        onClick={() => setIsDrawerOpen(true)}
-        className="fixed bottom-24 right-4 z-40 w-12 h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl shadow-xl shadow-slate-900/30 flex items-center justify-center active:scale-90 transition-all border border-slate-700 sm:hidden cursor-pointer"
-        title="Быстрое меню тренера"
-      >
-        <Menu className="w-5 h-5 text-white stroke-[2.2]" />
-      </button>
 
       {/* ================= БОКОВОЕ МЕНЮ (SLIDE-OVER DRAWER) ================= */}
       {isDrawerOpen && (
