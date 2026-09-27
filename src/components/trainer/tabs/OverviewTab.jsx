@@ -1,28 +1,23 @@
 // src/components/trainer/tabs/OverviewTab.jsx
 import React, { useState } from 'react';
 import { 
-  Users, 
   TrendingUp, 
   Calendar, 
-  Clock, 
   Plus, 
   BellRing, 
   CheckCircle2, 
   XCircle, 
   X, 
-  ChevronRight, 
-  Phone, 
-  AlertTriangle,
-  Send,
+  Dumbbell, 
+  Check, 
+  Eye, 
+  BarChart3, 
+  ArrowUpRight, 
+  ShieldCheck,
   MessageCircle,
-  Dumbbell,
-  Check,
-  Eye,
-  BarChart3,
-  Flame,
-  ArrowUpRight,
-  ShieldCheck
+  ChevronRight
 } from 'lucide-react';
+import StudentDetailModal from '../components/StudentDetailModal';
 
 export default function OverviewTab({ 
   trainer, 
@@ -40,6 +35,9 @@ export default function OverviewTab({
   const [reminderType, setReminderType] = useState('today'); // 'today' | 'payment' | 'absence'
   const [isLocalAddModalOpen, setIsLocalAddModalOpen] = useState(false);
   const [selectedStudentForWorkout, setSelectedStudentForWorkout] = useState(null);
+  
+  // Выбранный ученик для открытия полноценного профиля
+  const [selectedStudentForProfile, setSelectedStudentForProfile] = useState(null);
 
   // Форма добавления нового ученика
   const [newStudentForm, setNewStudentForm] = useState({
@@ -51,17 +49,30 @@ export default function OverviewTab({
     firstSessionDate: '2026-09-26'
   });
 
-  // Расписание на сегодняшний день (Суббота) с детальными программами
+  // Расписание на сегодняшний день с упражнениями и привязкой к профилю
   const [todaySchedule, setTodaySchedule] = useState([
     { 
       id: '1', 
       time: '10:00', 
+      first_name: 'Данияр',
+      last_name: 'Аскаров',
       name: 'Данияр Аскаров', 
       phone: '+77771234567',
+      username: 'daniyar_fit',
+      age: 27,
+      height: 182,
+      weight: 84,
+      gender: 'male',
+      goal: 'Набор массы',
       gym: 'Invictus Go (Mega Park)', 
       format: 'gym', 
       status: 'completed', 
+      left_trainings: 6,
       remaining: 6,
+      monthly_price: 70000,
+      payment_status: 'paid',
+      health_notes: 'Протрузия L4-L5, без осевых компрессий со штангой.',
+      trainer_notes: 'Хорошо прогрессирует в тягах. Делаем акцент на широчайшие.',
       focus: 'Спина и бицепс (тяговый день)',
       exercises: [
         { name: 'Тяга верхнего блока широким хватом', sets: '4 × 10', weight: '65 кг' },
@@ -73,12 +84,25 @@ export default function OverviewTab({
     { 
       id: '2', 
       time: '12:00', 
+      first_name: 'Анель',
+      last_name: 'Мусина',
       name: 'Анель Мусина', 
       phone: '+77017654321',
+      username: 'anel_sport',
+      age: 24,
+      height: 168,
+      weight: 56,
+      gender: 'female',
+      goal: 'Похудение и тонус',
       gym: 'Онлайн ведение (Zoom)', 
       format: 'online', 
       status: 'pending', 
+      left_trainings: 3,
       remaining: 3,
+      monthly_price: 45000,
+      payment_status: 'paid',
+      health_notes: 'Без жалоб, давление стабильное.',
+      trainer_notes: 'Следить за потреблением белка, часто не добирает норму.',
       focus: 'Ягодицы и кора (акцент на форму)',
       exercises: [
         { name: 'Ягодичный мост со штангой', sets: '4 × 12', weight: '50 кг' },
@@ -90,12 +114,25 @@ export default function OverviewTab({
     { 
       id: '3', 
       time: '15:30', 
+      first_name: 'Ерлан',
+      last_name: 'Сатыбалдиев',
       name: 'Ерлан Сатыбалдиев', 
       phone: '+77059998877',
+      username: 'erlan_power',
+      age: 31,
+      height: 176,
+      weight: 80,
+      gender: 'male',
+      goal: 'Силовой жим',
       gym: 'Invictus Go (Mega Park)', 
       format: 'gym', 
       status: 'pending', 
+      left_trainings: 1,
       remaining: 1,
+      monthly_price: 70000,
+      payment_status: 'pending',
+      health_notes: 'Старая травма правого плеча, разминка на ротаторы обязательна.',
+      trainer_notes: 'Осталась 1 тренировка! Напомнить о продлении блока.',
       focus: 'Грудь и трицепс (жим + гипертрофия)',
       exercises: [
         { name: 'Жим штанги лежа на горизонтальной', sets: '4 × 8', weight: '85 кг' },
@@ -107,12 +144,25 @@ export default function OverviewTab({
     { 
       id: '4', 
       time: '18:00', 
+      first_name: 'Мадина',
+      last_name: 'Омарова',
       name: 'Мадина Омарова', 
       phone: '+77473332211',
+      username: 'madina_active',
+      age: 26,
+      height: 172,
+      weight: 62,
+      gender: 'female',
+      goal: 'Рекомпозиция',
       gym: 'Invictus Go (Mega Park)', 
       format: 'gym', 
       status: 'pending', 
+      left_trainings: 8,
       remaining: 8,
+      monthly_price: 70000,
+      payment_status: 'paid',
+      health_notes: 'Противопоказаний нет.',
+      trainer_notes: 'Отличная дисциплина, посещает без пропусков.',
       focus: 'Full Body функционал и выносливость',
       exercises: [
         { name: 'Приседания с кубковым хватом', sets: '4 × 15', weight: '16 кг' },
@@ -123,7 +173,6 @@ export default function OverviewTab({
     }
   ]);
 
-  // Демо-список подопечных для напоминаний
   const [studentsData, setStudentsData] = useState([
     { id: '1', name: 'Данияр Аскаров', phone: '+77771234567', format: 'gym', remaining: 6, status: 'active' },
     { id: '2', name: 'Анель Мусина', phone: '+77017654321', format: 'online', remaining: 3, status: 'active' },
@@ -133,7 +182,6 @@ export default function OverviewTab({
     { id: '6', name: 'Камила Жумабаева', phone: '+77784443322', format: 'online', remaining: 0, status: 'finished' }
   ]);
 
-  // Недельный график загрузки смен тренера (Пн - Вс)
   const weeklyLoadStats = [
     { day: 'Пн', count: 6, percent: 85, isToday: false },
     { day: 'Вт', count: 4, percent: 55, isToday: false },
@@ -144,37 +192,44 @@ export default function OverviewTab({
     { day: 'Вс', count: 1, percent: 15, isToday: false }
   ];
 
-  // Установка статуса «Проведено» (списание занятия)
-  const handleMarkCompleted = (id) => {
+  const handleMarkCompleted = (e, id) => {
+    e.stopPropagation();
     setTodaySchedule(prev => prev.map(item => {
       if (item.id === id) {
         const wasCompleted = item.status === 'completed';
+        const updatedLeft = wasCompleted ? item.remaining : Math.max(0, item.remaining - 1);
         return {
           ...item,
           status: 'completed',
-          remaining: wasCompleted ? item.remaining : Math.max(0, item.remaining - 1)
+          remaining: updatedLeft,
+          left_trainings: updatedLeft
         };
       }
       return item;
     }));
   };
 
-  // Установка статуса «Не проведено» (без списания / отмена)
-  const handleMarkCanceled = (id) => {
+  const handleMarkCanceled = (e, id) => {
+    e.stopPropagation();
     setTodaySchedule(prev => prev.map(item => {
       if (item.id === id) {
         const wasCompleted = item.status === 'completed';
+        const updatedLeft = wasCompleted ? item.remaining + 1 : item.remaining;
         return {
           ...item,
           status: 'canceled',
-          remaining: wasCompleted ? item.remaining + 1 : item.remaining
+          remaining: updatedLeft,
+          left_trainings: updatedLeft
         };
       }
       return item;
     }));
   };
 
-  // Сохранение нового ученика
+  const handleOpenStudentDetail = (studentItem) => {
+    setSelectedStudentForProfile(studentItem);
+  };
+
   const handleSaveStudent = (e) => {
     e.preventDefault();
     if (!newStudentForm.name.trim()) return;
@@ -182,9 +237,12 @@ export default function OverviewTab({
     const newEntry = {
       id: Date.now().toString(),
       name: newStudentForm.name,
+      first_name: newStudentForm.name.split(' ')[0],
+      last_name: newStudentForm.name.split(' ').slice(1).join(' '),
       phone: newStudentForm.phone,
       format: newStudentForm.format,
       remaining: Number(newStudentForm.totalWorkouts),
+      left_trainings: Number(newStudentForm.totalWorkouts),
       status: 'active'
     };
 
@@ -198,7 +256,7 @@ export default function OverviewTab({
       pricePaid: 70000,
       firstSessionDate: '2026-09-26'
     });
-    alert('Ученик успешно добавлен в вашу базу!');
+    alert('Ученик успешно добавлен в базу!');
   };
 
   const handleSendReminder = (phone, text) => {
@@ -207,7 +265,6 @@ export default function OverviewTab({
     window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
   };
 
-  // Фильтрация сегодняшнего расписания
   const filteredSchedule = todaySchedule.filter(item => {
     if (filterFormat === 'gym') return item.format === 'gym';
     if (filterFormat === 'online') return item.format === 'online';
@@ -219,12 +276,12 @@ export default function OverviewTab({
   return (
     <div className="space-y-3.5 pb-10 select-none">
       
-      {/* 1. ФИЛЬТР ФОРМАТА (ВСЕ / В ЗАЛЕ / ОНЛАЙН) */}
+      {/* 1. Фильтр формата */}
       <div className="flex items-center justify-between gap-1.5 p-1 bg-slate-200/70 rounded-2xl">
         <button
           type="button"
           onClick={() => setFilterFormat('all')}
-          className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
             filterFormat === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
           }`}
         >
@@ -233,16 +290,16 @@ export default function OverviewTab({
         <button
           type="button"
           onClick={() => setFilterFormat('gym')}
-          className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
             filterFormat === 'gym' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
           }`}
         >
-          В зале (оффлайн)
+          В зале
         </button>
         <button
           type="button"
           onClick={() => setFilterFormat('online')}
-          className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
             filterFormat === 'online' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
           }`}
         >
@@ -250,12 +307,12 @@ export default function OverviewTab({
         </button>
       </div>
 
-      {/* 2. КНОПКИ БЫСТРЫХ ДЕЙСТВИЙ */}
+      {/* 2. Быстрые кнопки */}
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => onAddStudentClick ? onAddStudentClick() : setIsLocalAddModalOpen(true)}
-          className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all"
+          className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4 stroke-[2.2]" />
           <span className="text-xs font-semibold">Добавить ученика</span>
@@ -264,20 +321,18 @@ export default function OverviewTab({
         <button
           type="button"
           onClick={() => setIsReminderModalOpen(true)}
-          className="p-3 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200/80 rounded-2xl flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all"
+          className="p-3 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200/80 rounded-2xl flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all cursor-pointer"
         >
           <BellRing className="w-4 h-4 text-blue-600" />
           <span className="text-xs font-semibold">Напомнить</span>
         </button>
       </div>
 
-      {/* 3. ОСНОВНЫЕ KPI КАРТОЧКИ С ТОНКИМИ ШРИФТАМИ */}
+      {/* 3. KPI Карточки */}
       <div className="space-y-2.5">
-        
-        {/* КАРТОЧКА: ВЫРУЧКА ЗА МЕСЯЦ */}
         <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-medium text-slate-400">Выручка за сентябрь</span>
+            <span className="text-[11px] font-medium text-slate-400">Выручка за месяц</span>
             <div className="flex items-baseline gap-1.5 mt-0.5">
               <span className="text-xl font-semibold text-slate-900 font-mono tracking-tight">
                 {totalEarnings.toLocaleString()} ₸
@@ -292,16 +347,12 @@ export default function OverviewTab({
           </div>
         </div>
 
-        {/* СЕТКА: АКТИВНАЯ БАЗА И СРЕДНЯЯ ЯВКА */}
         <div className="grid grid-cols-2 gap-2.5">
-          
-          {/* АКТИВНАЯ БАЗА */}
           <div className="bg-white p-3.5 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5 flex flex-col justify-between">
             <div>
               <span className="text-[11px] font-medium text-slate-400">Активная база</span>
               <p className="text-lg font-semibold text-slate-900 font-mono mt-0.5">{activeCount} атлетов</p>
             </div>
-
             <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px]">
               <div className="flex justify-between items-center text-amber-800 bg-amber-50/80 px-2 py-0.5 rounded-lg border border-amber-200/60 font-medium">
                 <span>На паузе:</span>
@@ -314,13 +365,11 @@ export default function OverviewTab({
             </div>
           </div>
 
-          {/* ПОСЕЩАЕМОСТЬ И СРЕДНЯЯ ЯВКА */}
           <div className="bg-white p-3.5 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5 flex flex-col justify-between">
             <div>
               <span className="text-[11px] font-medium text-slate-400">Средняя явка</span>
               <p className="text-lg font-semibold text-blue-600 font-mono mt-0.5">92%</p>
             </div>
-
             <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px]">
               <div className="flex justify-between items-center text-emerald-800 bg-emerald-50/80 px-2 py-0.5 rounded-lg border border-emerald-200/60 font-medium">
                 <span>По графику:</span>
@@ -332,10 +381,8 @@ export default function OverviewTab({
               </div>
             </div>
           </div>
-
         </div>
 
-        {/* ДОПОЛНИТЕЛЬНАЯ ПРОФЕССИОНАЛЬНАЯ АНАЛИТИКА: RETENTION И СРЕДНИЙ ЧЕК */}
         <div className="grid grid-cols-2 gap-2.5">
           <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -358,7 +405,7 @@ export default function OverviewTab({
           </div>
         </div>
 
-        {/* ГРАФИК ЗАГРУЗКИ ПО ДНЯМ НЕДЕЛИ */}
+        {/* Недельная загрузка */}
         <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-900">Недельная загрузка залов</span>
@@ -372,12 +419,10 @@ export default function OverviewTab({
                 <div className="w-full bg-slate-100 rounded-lg h-12 flex items-end p-0.5">
                   <div 
                     className={`w-full rounded-md transition-all ${
-                      item.isToday 
-                        ? 'bg-blue-600 shadow-xs' 
-                        : 'bg-slate-300'
+                      item.isToday ? 'bg-blue-600 shadow-xs' : 'bg-slate-300'
                     }`}
                     style={{ height: `${item.percent}%` }}
-                  ></div>
+                  />
                 </div>
                 <span className={`text-[10px] font-bold ${item.isToday ? 'text-blue-600' : 'text-slate-400'}`}>
                   {item.day}
@@ -388,15 +433,15 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 4. РАСПИСАНИЕ НА СЕГОДНЯ (СУББОТА) — АДАПТИВНОЕ, БЕЗ СЪЕЗЖАНИЙ */}
+      {/* 4. Расписание на сегодня — КАРТОЧКА КЛИКАБЕЛЬНА, КНОПКИ В ОДНУ СТРОКУ */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-blue-600" />
             <div>
-              <h3 className="text-xs font-bold text-slate-900">Суббота, расписание на сегодня</h3>
+              <h3 className="text-xs font-bold text-slate-900">Расписание на сегодня</h3>
               <p className="text-[10px] text-slate-400">
-                Проведено: {completedTodayCount} из {todaySchedule.length} занятий
+                Проведено: {completedTodayCount} из {todaySchedule.length} занятий • Нажмите на карточку для профиля
               </p>
             </div>
           </div>
@@ -405,7 +450,6 @@ export default function OverviewTab({
           </span>
         </div>
 
-        {/* СПИСОК КАРТОЧЕК РАСПИСАНИЯ — НА ВСЮ ШИРИНУ, НИЧЕГО НЕ ВЫЛЕЗАЕТ */}
         <div className="space-y-3">
           {filteredSchedule.length === 0 ? (
             <p className="text-xs text-slate-400 text-center py-4">На сегодня тренировок в этом формате нет</p>
@@ -417,15 +461,17 @@ export default function OverviewTab({
               return (
                 <div
                   key={item.id}
-                  className={`w-full p-3.5 rounded-2xl border transition-all space-y-2.5 ${
+                  onClick={() => handleOpenStudentDetail(item)}
+                  className={`w-full p-3.5 rounded-2xl border transition-all space-y-2.5 cursor-pointer active:scale-[0.99] hover:border-blue-300 ${
                     isCompleted 
                       ? 'bg-emerald-50/40 border-emerald-200/80' 
                       : isCanceled
                         ? 'bg-rose-50/40 border-rose-200/70'
                         : 'bg-slate-50/60 border-slate-200/90'
                   }`}
+                  title="Нажмите, чтобы открыть полный профиль ученика"
                 >
-                  {/* Верхний ряд: Время, Формат и статус */}
+                  {/* Верхняя строчка: Время, Формат и статус */}
                   <div className="flex items-center justify-between gap-2 border-b border-slate-200/50 pb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded-lg border border-slate-200/80">
@@ -448,7 +494,7 @@ export default function OverviewTab({
                       )}
                       {isCanceled && (
                         <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <XCircle className="w-3 h-3" /> Не проведено
+                          <XCircle className="w-3 h-3" /> Пропуск
                         </span>
                       )}
                       {!isCompleted && !isCanceled && (
@@ -459,16 +505,19 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  {/* Средний ряд: Имя, Локация и остаток */}
+                  {/* Средняя часть: Имя, Локация, Фокус и Остаток */}
                   <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-0.5">
-                      <h4 className="text-xs font-bold text-slate-900 leading-tight">
-                        {item.name}
-                      </h4>
-                      <p className="text-[10.5px] text-slate-500">
+                    <div className="space-y-0.5 overflow-hidden">
+                      <div className="flex items-center gap-1">
+                        <h4 className="text-xs font-bold text-slate-900 leading-tight hover:text-blue-600 transition-colors">
+                          {item.name}
+                        </h4>
+                        <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />
+                      </div>
+                      <p className="text-[10.5px] text-slate-500 truncate">
                         {item.gym}
                       </p>
-                      <p className="text-[10px] text-blue-600 font-medium">
+                      <p className="text-[10px] text-blue-600 font-medium truncate">
                         Фокус: {item.focus}
                       </p>
                     </div>
@@ -481,46 +530,48 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  {/* Нижний ряд: Кнопки «Программа дня», «Проведено» и «Не проведено» */}
+                  {/* Нижняя строчка: 3 КНОПКИ СТРОГО В ОДНУ СТРОКУ БЕЗ ПЕРЕНОСОВ */}
                   <div className="flex items-center gap-1.5 pt-1">
                     
-                    {/* Кнопка открытия программы дня */}
+                    {/* Кнопка 1: План дня */}
                     <button
                       type="button"
-                      onClick={() => setSelectedStudentForWorkout(item)}
-                      className="flex-1 py-2 px-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs"
-                      title="Посмотреть программу на сегодня"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedStudentForWorkout(item);
+                      }}
+                      className="flex-1 min-w-0 py-2 px-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl text-[10.5px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs whitespace-nowrap overflow-hidden cursor-pointer"
                     >
-                      <Eye className="w-3.5 h-3.5 text-blue-600" />
-                      <span>План дня</span>
+                      <Eye className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span className="truncate">План дня</span>
                     </button>
 
-                    {/* Кнопка Проведено */}
+                    {/* Кнопка 2: Проведено */}
                     <button
                       type="button"
-                      onClick={() => handleMarkCompleted(item.id)}
-                      className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs ${
+                      onClick={(e) => handleMarkCompleted(e, item.id)}
+                      className={`flex-1 min-w-0 py-2 px-1.5 rounded-xl text-[10.5px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs whitespace-nowrap overflow-hidden cursor-pointer ${
                         isCompleted 
                           ? 'bg-emerald-600 text-white font-bold' 
                           : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80'
                       }`}
                     >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Проведено</span>
+                      <Check className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Проведено</span>
                     </button>
 
-                    {/* Кнопка Не проведено */}
+                    {/* Кнопка 3: Пропуск (вместо Не проведено — строго в 1 строку!) */}
                     <button
                       type="button"
-                      onClick={() => handleMarkCanceled(item.id)}
-                      className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs ${
+                      onClick={(e) => handleMarkCanceled(e, item.id)}
+                      className={`flex-1 min-w-0 py-2 px-1.5 rounded-xl text-[10.5px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs whitespace-nowrap overflow-hidden cursor-pointer ${
                         isCanceled 
                           ? 'bg-rose-600 text-white font-bold' 
                           : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80'
                       }`}
                     >
-                      <X className="w-3.5 h-3.5" />
-                      <span>Не проведено</span>
+                      <X className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Пропуск</span>
                     </button>
 
                   </div>
@@ -531,11 +582,20 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* ================= МОДАЛКА: ПРОСМОТР ПРОГРАММЫ НА ЭТОТ ДЕНЬ ================= */}
+      {/* ================= МОДАЛКА ПОЛНОГО ПРОФИЛЯ УЧЕНИКА ================= */}
+      <StudentDetailModal 
+        isOpen={Boolean(selectedStudentForProfile)}
+        onClose={() => setSelectedStudentForProfile(null)}
+        student={selectedStudentForProfile}
+        onUpdate={() => {
+          // Обновление локального стейта после правок тренера
+        }}
+      />
+
+      {/* ================= МОДАЛКА ПЛАНА ТРЕНИРОВКИ ДНЯ ================= */}
       {selectedStudentForWorkout && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col justify-between overflow-y-auto">
-            
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
@@ -549,13 +609,12 @@ export default function OverviewTab({
               <button
                 type="button"
                 onClick={() => setSelectedStudentForWorkout(null)}
-                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Содержимое программы дня */}
             <div className="space-y-3 text-xs">
               <div className="p-3 bg-blue-50/70 border border-blue-200/70 rounded-2xl">
                 <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider block">Целевой фокус сессии:</span>
@@ -565,7 +624,6 @@ export default function OverviewTab({
 
               <div className="space-y-2">
                 <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">Упражнения и рабочие веса:</span>
-                
                 {selectedStudentForWorkout.exercises.map((ex, idx) => (
                   <div key={idx} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
                     <div>
@@ -580,22 +638,34 @@ export default function OverviewTab({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setSelectedStudentForWorkout(null)}
-              className="w-full py-3 bg-slate-900 text-white rounded-2xl text-xs font-semibold active:scale-98 transition-all"
-            >
-              Закрыть программу
-            </button>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const student = selectedStudentForWorkout;
+                  setSelectedStudentForWorkout(null);
+                  handleOpenStudentDetail(student);
+                }}
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-semibold active:scale-98 transition-all cursor-pointer"
+              >
+                Открыть профиль ученика
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedStudentForWorkout(null)}
+                className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-semibold active:scale-98 transition-all cursor-pointer"
+              >
+                Закрыть
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ================= МОДАЛКА: БЫСТРЫЕ НАПОМИНАНИЯ (3 СЦЕНАРИЯ) ================= */}
+      {/* ================= МОДАЛКА БЫСТРЫХ НАПОМИНАНИЙ ================= */}
       {isReminderModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col justify-between overflow-y-auto">
-            
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <BellRing className="w-4 h-4 text-blue-600" />
@@ -604,18 +674,17 @@ export default function OverviewTab({
               <button
                 type="button"
                 onClick={() => setIsReminderModalOpen(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Выбор сценария */}
             <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl">
               <button
                 type="button"
                 onClick={() => setReminderType('today')}
-                className={`py-2 text-[10.5px] font-medium rounded-xl text-center transition-all ${
+                className={`py-2 text-[10.5px] font-medium rounded-xl text-center transition-all cursor-pointer ${
                   reminderType === 'today' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600'
                 }`}
               >
@@ -624,7 +693,7 @@ export default function OverviewTab({
               <button
                 type="button"
                 onClick={() => setReminderType('payment')}
-                className={`py-2 text-[10.5px] font-medium rounded-xl text-center transition-all ${
+                className={`py-2 text-[10.5px] font-medium rounded-xl text-center transition-all cursor-pointer ${
                   reminderType === 'payment' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600'
                 }`}
               >
@@ -633,7 +702,7 @@ export default function OverviewTab({
               <button
                 type="button"
                 onClick={() => setReminderType('absence')}
-                className={`py-2 text-[10.5px] font-medium rounded-xl text-center transition-all ${
+                className={`py-2 text-[10.5px] font-medium rounded-xl text-center transition-all cursor-pointer ${
                   reminderType === 'absence' ? 'bg-white text-rose-600 shadow-xs font-semibold' : 'text-slate-600'
                 }`}
               >
@@ -641,11 +710,10 @@ export default function OverviewTab({
               </button>
             </div>
 
-            {/* Список учеников по выбранному сценарию */}
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {reminderType === 'today' && (
                 <>
-                  <p className="text-[10px] text-slate-400 px-1">Атлеты, записанные на сегодня (Суббота):</p>
+                  <p className="text-[10px] text-slate-400 px-1">Атлеты, записанные на сегодня:</p>
                   {todaySchedule.map(st => (
                     <div key={st.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
                       <div>
@@ -655,7 +723,7 @@ export default function OverviewTab({
                       <button
                         type="button"
                         onClick={() => handleSendReminder(st.phone, `Привет, ${st.name}! Напоминаю о сегодняшней тренировке в ${st.time}. Жду вовремя! 💪`)}
-                        className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95"
+                        className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95 cursor-pointer"
                       >
                         <MessageCircle className="w-3 h-3" />
                         <span>WhatsApp</span>
@@ -677,7 +745,7 @@ export default function OverviewTab({
                       <button
                         type="button"
                         onClick={() => handleSendReminder(st.phone, `Привет, ${st.name}! По твоему абонементу осталось ${st.remaining} зан. Давай запланируем продление, чтобы сохранить график!`)}
-                        className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95"
+                        className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95 cursor-pointer"
                       >
                         <MessageCircle className="w-3 h-3" />
                         <span>Напомнить</span>
@@ -688,33 +756,28 @@ export default function OverviewTab({
               )}
 
               {reminderType === 'absence' && (
-                <>
-                  <p className="text-[10px] text-rose-500 px-1">Предупреждение об отмене или форс-мажоре:</p>
-                  <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-2xl space-y-2">
-                    <p className="text-[11px] text-rose-900 leading-relaxed">
-                      Отправить всем ученикам на сегодня: «Уважаемые атлеты, по техническим причинам меня сегодня не будет в зале. Все занятия переносятся без сгорания».
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => alert('Уведомление отправлено всем подопечным на сегодня!')}
-                      className="w-full py-2 bg-rose-600 text-white rounded-xl text-xs font-semibold active:scale-98"
-                    >
-                      Разослать всем на сегодня
-                    </button>
-                  </div>
-                </>
+                <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-2xl space-y-2">
+                  <p className="text-[11px] text-rose-900 leading-relaxed">
+                    Отправить всем ученикам на сегодня: «Уважаемые атлеты, по техническим причинам меня сегодня не будет в зале. Все занятия переносятся без сгорания».
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => alert('Уведомление отправлено всем подопечным на сегодня!')}
+                    className="w-full py-2 bg-rose-600 text-white rounded-xl text-xs font-semibold active:scale-98 cursor-pointer"
+                  >
+                    Разослать всем на сегодня
+                  </button>
+                </div>
               )}
             </div>
-
           </div>
         </div>
       )}
 
-      {/* ================= МОДАЛКА: ДОБАВИТЬ УЧЕНИКА ================= */}
+      {/* ================= МОДАЛКА БЫСТРОГО ДОБАВЛЕНИЯ УЧЕНИКА ================= */}
       {isLocalAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col justify-between overflow-y-auto">
-            
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Plus className="w-4 h-4 text-blue-600" />
@@ -723,7 +786,7 @@ export default function OverviewTab({
               <button
                 type="button"
                 onClick={() => setIsLocalAddModalOpen(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -747,7 +810,7 @@ export default function OverviewTab({
                 <input
                   type="tel"
                   required
-                  placeholder="+7 (777) 000-00-00"
+                  placeholder="+7 (701) 000-00-00"
                   value={newStudentForm.phone}
                   onChange={e => setNewStudentForm({ ...newStudentForm, phone: e.target.value })}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
@@ -790,12 +853,11 @@ export default function OverviewTab({
 
               <button
                 type="submit"
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold text-xs active:scale-98 transition-all mt-2"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold text-xs active:scale-98 transition-all mt-2 cursor-pointer"
               >
                 Сохранить в базу
               </button>
             </form>
-
           </div>
         </div>
       )}
