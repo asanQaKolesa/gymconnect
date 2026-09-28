@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient';
 // Официальный токен бота GymConnect (@gymconnect_ala_bot)
 const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '8825396654:AAH0GzJqWOzqjys5re9De-Bc7jPIqwxtfDI';
 
-// ПРЯМЫЕ HTTPS-ССЫЛКИ ДЛЯ КНОПОК WEB_APP (Telegram API строго запрещает t.me ссылки в web_app.url!)
+// ПРЯМЫЕ ССЫЛКИ ДЛЯ КНОПОК WEB_APP (Telegram строго требует реальный HTTPS домен без t.me)
 const APP_URL = 'https://asanqakolesa.github.io/gymconnect/';
 const CRM_WEBAPP_URL = 'https://asanqakolesa.github.io/gymconnect/?trainer=true';
 
@@ -29,7 +29,6 @@ async function sendTelegramApiMessage(chatId, htmlText, webAppUrl = null, button
     parse_mode: 'HTML'
   };
 
-  // В web_app.url передаем ТОЛЬКО валидный внешний HTTPS-адрес хостинга GitHub Pages!
   if (webAppUrl) {
     payload.reply_markup = {
       inline_keyboard: [
@@ -81,7 +80,6 @@ export async function sendTrainerAttendanceNotification({
 }) {
   const cleanU = (trainerUsername || '').replace('@', '').trim().toLowerCase();
 
-  // Определяем точный Chat ID тренера
   let targetChatId = trainerTelegramId || KNOWN_CHAT_IDS[cleanU] || null;
 
   if (!targetChatId && cleanU) {
@@ -144,6 +142,7 @@ export async function sendStudentNotification({
   // Автоматический поиск точного Telegram ID ученика
   let targetChatId = studentTelegramId || KNOWN_CHAT_IDS[cleanU] || null;
 
+  // Если не нашли сразу — запрашиваем из базы Supabase
   if (!targetChatId && cleanU) {
     try {
       const { data } = await supabase
@@ -160,7 +159,6 @@ export async function sendStudentNotification({
     }
   }
 
-  // Если всё еще не найден, проверяем по studentId
   if (!targetChatId && studentId) {
     try {
       const { data } = await supabase
@@ -175,13 +173,17 @@ export async function sendStudentNotification({
     } catch (e) {}
   }
 
+  // Если это тестовый аккаунт основателя
+  if (!targetChatId && (cleanU === 'asanali_kk' || cleanU.includes('asanali'))) {
+    targetChatId = KNOWN_CHAT_IDS['asanali_kk'];
+  }
+
   const messageHtml = `
 🔔 <b>GymConnect: ${title}</b>
 
 ${message}
 `.trim();
 
-  // Сохраняем уведомление в таблице notifications для отображения внутри приложения
   if (studentId || targetChatId) {
     supabase.from('notifications').insert([{
       title,
@@ -194,7 +196,6 @@ ${message}
     }]).catch(() => {});
   }
 
-  // Отправляем пуш ученику с валидной ссылкой web_app
   return await sendTelegramApiMessage(
     targetChatId, 
     messageHtml, 
