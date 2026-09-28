@@ -23,6 +23,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import { sendTrainerAttendanceNotification } from '../../utils/telegramNotifications';
 
 export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, onUpdate }) {
   // 1. ХУКИ СОСТОЯНИЯ (СТРОГО НА САМОМ ВЕРХУ)
@@ -136,7 +137,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
 
   const coachShift = getCoachTodayShift();
 
-  // 4. СКВОЗНАЯ ОТПРАВКА ЯВКИ В SUPABASE
+  // 4. СКВОЗНАЯ ОТПРАВКА ЯВКИ В SUPABASE + МГНОВЕННЫЙ ПУШ В ТЕЛЕГРАМ ТРЕНЕРУ
   const handleSetAttendance = async (status) => {
     setAttendanceToday(status);
     const todayStr = new Date().toISOString().split('T')[0];
@@ -148,7 +149,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
     setAttendanceNotice(true);
     setTimeout(() => setAttendanceNotice(false), 3000);
 
-    // Фиксируем явку в Supabase, чтобы тренер сразу увидел её в своем дашборде
+    // 1. Фиксируем явку в базе данных Supabase
     if (athleteData?.id) {
       try {
         const { error } = await supabase
@@ -160,12 +161,26 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
           .eq('id', athleteData.id);
 
         if (error && error.message.includes('attendance_today')) {
-          console.warn('Колонки attendance_today нет в profiles, сохранено локально');
+          console.warn('Колонки attendance_today нет в таблице profiles, сохранено локально');
         }
       } catch (err) {
         console.warn('Ошибка сохранения явки в Supabase:', err);
       }
     }
+
+    // 2. Мгновенно отправляем пуш-сообщение ботом в Telegram тренеру
+    const studentFullName = `${athleteData?.first_name || 'Атлет'} ${athleteData?.last_name || ''}`.trim();
+    const trainingTime = athleteData?.workout_time_slot || 'Сегодня';
+    const trainingGym = athleteData?.gym || trainerData?.gym || 'Зал в Алматы';
+
+    sendTrainerAttendanceNotification({
+      trainerTelegramId: trainerData?.telegram_id,
+      trainerUsername: cleanTrainerUsername,
+      studentName: studentFullName,
+      timeSlot: trainingTime,
+      gymName: trainingGym,
+      isAttending: status === 'attending'
+    }).catch(e => console.warn('Фоновая отправка пуша в Telegram:', e));
   };
 
   // 5. ПРИВЯЗКА ТРЕНЕРА ПО ТЕЛЕГРАМ-НИКУ
@@ -399,7 +414,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
             {activeTab === 'program' && (
               <div className="space-y-3.5">
                 
-                {/* Интерактивная явка с отправкой на сервер */}
+                {/* Интерактивная явка с отправкой пуша в Telegram тренеру */}
                 <div className="bg-white rounded-3xl p-4 border border-blue-200/80 shadow-xs space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
@@ -410,7 +425,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                   </div>
 
                   <p className="text-[11px] text-slate-500 leading-snug">
-                    Отметьте статус, чтобы тренер в своей CRM заранее видел вашу готовность к занятию:
+                    Отметьте статус, чтобы тренер в своей CRM и боте Telegram заранее получил уведомление о готовности:
                   </p>
 
                   <div className="grid grid-cols-2 gap-2 pt-1">
@@ -443,7 +458,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
 
                   {attendanceNotice && (
                     <div className="p-2 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[10.5px] font-semibold text-center animate-in fade-in">
-                      Отметка передана тренеру в CRM!
+                      Отметка передана в базу данных и отправлена тренеру!
                     </div>
                   )}
                 </div>
