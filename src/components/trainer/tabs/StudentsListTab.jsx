@@ -1,22 +1,21 @@
 // src/components/trainer/tabs/StudentsListTab.jsx
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   ChevronRight, 
   MessageCircle, 
-  Calendar, 
-  Dumbbell, 
-  Eye, 
   AlertCircle, 
   Cake, 
-  FileText,
-  User,
-  Plus
+  User, 
+  Plus 
 } from 'lucide-react';
-import StudentDetailModal from '../components/StudentDetailModal';
 
-export default function StudentsListTab({ students = [], formatGoal, onOpenAddModal, onUpdate }) {
-  const [selectedStudentForModal, setSelectedStudentForModal] = useState(null);
-
+export default function StudentsListTab({ 
+  students = [], 
+  formatGoal, 
+  onOpenAddModal, 
+  onUpdate, 
+  onSelectStudent 
+}) {
   const handleWhatsAppClick = (e, phone) => {
     e.stopPropagation();
     if (!phone) {
@@ -120,7 +119,7 @@ export default function StudentsListTab({ students = [], formatGoal, onOpenAddMo
               return (
                 <div 
                   key={student.id} 
-                  onClick={() => setSelectedStudentForModal(student)}
+                  onClick={() => onSelectStudent && onSelectStudent(student)}
                   className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col gap-2.5 cursor-pointer active:scale-[0.99]"
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -174,7 +173,7 @@ export default function StudentsListTab({ students = [], formatGoal, onOpenAddMo
                     </div>
                   </div>
 
-                  {/* Нижняя строчка с бейджами и быстрым WhatsApp */}
+                  {/* Нижняя строчка */}
                   <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[10.5px]">
                     <div className="flex items-center gap-2">
                       <span className="text-slate-500 font-mono">
@@ -214,14 +213,6 @@ export default function StudentsListTab({ students = [], formatGoal, onOpenAddMo
           )}
         </div>
       </div>
-
-      {/* Полноэкранный профиль выбранного ученика */}
-      <StudentDetailModal 
-        isOpen={Boolean(selectedStudentForModal)}
-        onClose={() => setSelectedStudentForModal(null)}
-        student={selectedStudentForModal}
-        onUpdate={onUpdate}
-      />
 
     </div>
   );
