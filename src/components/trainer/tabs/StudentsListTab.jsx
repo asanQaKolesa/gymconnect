@@ -1,12 +1,14 @@
 // src/components/trainer/tabs/StudentsListTab.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   ChevronRight, 
   MessageCircle, 
   AlertCircle, 
   Cake, 
   User, 
-  Plus 
+  Plus,
+  Search,
+  Users
 } from 'lucide-react';
 
 export default function StudentsListTab({ 
@@ -16,6 +18,16 @@ export default function StudentsListTab({
   onUpdate, 
   onSelectStudent 
 }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'paused' | 'left'
+
+  // Исправленная проверка активного атлета (не отсекает атлетов с кастомными статусами)
+  const isStudentActive = (s) => {
+    if (!s) return false;
+    const st = (s.status || '').toLowerCase().trim();
+    return st !== 'left' && st !== 'archived';
+  };
+
   const handleWhatsAppClick = (e, phone) => {
     e.stopPropagation();
     if (!phone) {
@@ -33,7 +45,7 @@ export default function StudentsListTab({
   };
 
   const getLocalizedGoal = (goal) => {
-    if (!goal) return 'Не указана';
+    if (!goal) return 'Тонус и здоровье';
     const g = goal.toLowerCase().trim();
     if (g === 'tone' || g.includes('тонус') || g.includes('рекомпозиция')) return 'Тонус и рекомпозиция';
     if (g === 'mass' || g.includes('набор')) return 'Набор массы и гипертрофия';
@@ -61,12 +73,30 @@ export default function StudentsListTab({
     return false;
   };
 
+  // Ученики с остатком <= 2
   const lowBalanceStudents = students.filter(s => 
-    (s.status === 'active' || !s.status) && 
+    isStudentActive(s) && 
     (s.left_trainings !== undefined ? s.left_trainings : (s.remaining_workouts !== undefined ? s.remaining_workouts : 12)) <= 2
   );
   
   const birthdayStudents = students.filter(s => isBirthdayToday(s.birth_date));
+
+  // Фильтрация списка учеников по поиску и статусу
+  const filteredStudents = students.filter(s => {
+    const matchesSearch = 
+      `${s.first_name || ''} ${s.last_name || ''} ${s.username || ''} ${s.phone || ''} ${s.gym || ''}`
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+
+    const matchesStatus = 
+      statusFilter === 'all' 
+        ? true 
+        : statusFilter === 'active' 
+          ? (s.status === 'active' || isStudentActive(s))
+          : s.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-3.5 select-none pb-12">
@@ -89,11 +119,64 @@ export default function StudentsListTab({
         </div>
       )}
 
-      {/* 2. Шапка списка учеников */}
+      {/* 2. Поиск и фильтры по статусам */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-3.5 shadow-xs space-y-2.5">
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Поиск по имени, Telegram или клубу..."
+            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600"
+          />
+        </div>
+
+        <div className="grid grid-cols-4 gap-1 p-0.5 bg-slate-100 rounded-xl text-xs">
+          <button
+            type="button"
+            onClick={() => setStatusFilter('all')}
+            className={`py-1 rounded-lg text-[10px] font-bold transition-all ${
+              statusFilter === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
+            }`}
+          >
+            Все ({students.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('active')}
+            className={`py-1 rounded-lg text-[10px] font-bold transition-all ${
+              statusFilter === 'active' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600'
+            }`}
+          >
+            В строю
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('paused')}
+            className={`py-1 rounded-lg text-[10px] font-bold transition-all ${
+              statusFilter === 'paused' ? 'bg-white text-amber-700 shadow-2xs' : 'text-slate-600'
+            }`}
+          >
+            Пауза
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('left')}
+            className={`py-1 rounded-lg text-[10px] font-bold transition-all ${
+              statusFilter === 'left' ? 'bg-white text-rose-700 shadow-2xs' : 'text-slate-600'
+            }`}
+          >
+            Завершили
+          </button>
+        </div>
+      </div>
+
+      {/* 3. Шапка списка учеников */}
       <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs">
         <div className="p-4 border-b border-slate-100 flex justify-between items-center">
           <div>
-            <h3 className="font-bold text-sm text-slate-900">База подопечных ({students.length})</h3>
+            <h3 className="font-bold text-sm text-slate-900">База подопечных ({filteredStudents.length})</h3>
             <p className="text-[10px] text-slate-400">Нажмите на карточку для открытия полного профиля</p>
           </div>
           <button 
@@ -106,10 +189,10 @@ export default function StudentsListTab({
           </button>
         </div>
 
-        {/* 3. Список карточек учеников */}
+        {/* 4. Карточки учеников */}
         <div className="divide-y divide-slate-100">
-          {students.length > 0 ? (
-            students.map((student) => {
+          {filteredStudents.length > 0 ? (
+            filteredStudents.map((student) => {
               const leftTrainings = student.left_trainings !== undefined 
                 ? student.left_trainings 
                 : (student.remaining_workouts !== undefined ? student.remaining_workouts : 12);
@@ -173,7 +256,6 @@ export default function StudentsListTab({
                     </div>
                   </div>
 
-                  {/* Нижняя строчка */}
                   <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[10.5px]">
                     <div className="flex items-center gap-2">
                       <span className="text-slate-500 font-mono">
@@ -207,8 +289,8 @@ export default function StudentsListTab({
           ) : (
             <div className="p-10 text-center text-slate-400 text-xs">
               <User className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-              <p className="font-semibold text-slate-700">У вас пока нет учеников в базе.</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Нажмите «Добавить», чтобы зарегистрировать первого атлета.</p>
+              <p className="font-semibold text-slate-700">Ученики не найдены.</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Попробуйте изменить поисковый запрос или фильтр.</p>
             </div>
           )}
         </div>
