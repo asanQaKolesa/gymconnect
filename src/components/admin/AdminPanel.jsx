@@ -16,8 +16,10 @@ import {
   Crown, 
   Download,
   KeyRound,
-  CheckCircle2
+  CheckCircle2,
+  Send
 } from 'lucide-react';
+import AdminBroadcastTab from './tabs/AdminBroadcastTab';
 
 export default function AdminPanel({ onBack }) {
   // Доверенные ключи доступа основателя (Асанали Кусайынов)
@@ -33,7 +35,7 @@ export default function AdminPanel({ onBack }) {
 
   // 1. ХУКИ СОСТОЯНИЯ (СТРОГО НА САМОМ ВЕРХУ)
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
-    // А. Проверка сохраненной сессии на этом компьютере/устройстве
+    // А. Проверка сохраненной сессии на этом компьютере
     if (
       sessionStorage.getItem('gymconnect_admin_auth') === 'true' || 
       localStorage.getItem('gymconnect_admin_auth') === 'true'
@@ -72,7 +74,7 @@ export default function AdminPanel({ onBack }) {
   const [profiles, setProfiles] = useState([]);
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'trainers' | 'gyms' | 'broadcast'
   const [searchQuery, setSearchQuery] = useState('');
 
   const [selectedGymFilter, setSelectedGymFilter] = useState('all');
@@ -117,7 +119,7 @@ export default function AdminPanel({ onBack }) {
     if (checkIsAuthorized(inputKey)) {
       setIsAdminAuth(true);
       sessionStorage.setItem('gymconnect_admin_auth', 'true');
-      localStorage.setItem('gymconnect_admin_auth', 'true'); // Навсегда запоминаем ПК
+      localStorage.setItem('gymconnect_admin_auth', 'true');
       fetchAllData();
     } else {
       setErrorMsg('Неверный секретный ключ основателя');
@@ -186,16 +188,12 @@ export default function AdminPanel({ onBack }) {
     }
   };
 
-  // СИНХРОНИЗИРОВАННОЕ СОХРАНЕНИЕ ПРИВЯЗКИ ТРЕНЕРА
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     
-    // Очищаем ник тренера от @ и пробелов, приводим к нижнему регистру
     const rawTrainer = editingProfile.trainer_username || '';
     const cleanTrainer = rawTrainer.replace(/[@\s]/g, '').trim().toLowerCase();
 
-    // Синхронизируем оба поля: trainer_username и trainer_telegram
-    // Если поле очищено (пустое) — оба поля становятся null, и ученик полностью отвязывается
     const normalizedProfile = {
       ...editingProfile,
       trainer_username: cleanTrainer || null,
@@ -280,7 +278,7 @@ export default function AdminPanel({ onBack }) {
     document.body.removeChild(link);
   };
 
-  // ЭКРАН ВХОДА (ПОКАЗЫВАЕТСЯ ТОЛЬКО ПРИ ПЕРВОМ ВХОДЕ В БРАУЗЕРЕ НА ПК БЕЗ КЛЮЧА В URL)
+  // ЭКРАН ВХОДА (ДЛЯ ПК БЕЗ КЛЮЧА В URL)
   if (!isAdminAuth) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 select-none">
@@ -339,7 +337,7 @@ export default function AdminPanel({ onBack }) {
     );
   }
 
-  // ОСНОВНАЯ ПАНЕЛЬ CRM
+  // Фильтрация данных для таблиц
   const filteredProfiles = profiles.filter(p => {
     const matchesSearch = 
       (p.first_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
@@ -442,11 +440,11 @@ export default function AdminPanel({ onBack }) {
           </div>
         </div>
 
-        {/* Навигация (Табы) */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        {/* НАВИГАЦИЯ: 4 ТАБА (ВКЛЮЧАЯ РАССЫЛКУ В TELEGRAM) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
           <button
             onClick={() => setActiveTab('users')}
-            className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'users' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'
             }`}
           >
@@ -456,7 +454,7 @@ export default function AdminPanel({ onBack }) {
           
           <button
             onClick={() => setActiveTab('trainers')}
-            className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'trainers' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'
             }`}
           >
@@ -466,29 +464,49 @@ export default function AdminPanel({ onBack }) {
 
           <button
             onClick={() => setActiveTab('gyms')}
-            className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'gyms' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'
             }`}
           >
             <Building2 className="w-4 h-4" />
-            <span>Фитнес-залы & Клубы</span>
+            <span>Клубы</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('broadcast')}
+            className={`py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === 'broadcast' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'
+            }`}
+          >
+            <Send className="w-4 h-4" />
+            <span>📢 Рассылка в Telegram</span>
           </button>
         </div>
 
-        {/* Поиск */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
-          <input 
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Поиск по имени, Telegram или залу..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-sm"
-          />
-        </div>
+        {/* Поиск (скрывается на вкладке рассылки, так как там свой фильтр) */}
+        {activeTab !== 'broadcast' && (
+          <div className="relative mb-4">
+            <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+            <input 
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Поиск по имени, Telegram или залу..."
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-sm"
+            />
+          </div>
+        )}
 
-        {/* Вкладка 1: Клубы */}
-        {activeTab === 'gyms' ? (
+        {/* ВКЛАДКА 4: ЦЕНТР РАССЫЛОК В TELEGRAM */}
+        {activeTab === 'broadcast' && (
+          <AdminBroadcastTab 
+            profiles={profiles} 
+            trainers={trainers} 
+          />
+        )}
+
+        {/* ВКЛАДКА 1: КЛУБЫ */}
+        {activeTab === 'gyms' && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-sm font-bold text-slate-900 mb-4">Аналитика по фитнес-клубам Алматы</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -508,8 +526,10 @@ export default function AdminPanel({ onBack }) {
               })}
             </div>
           </div>
-        ) : activeTab === 'trainers' ? (
-          /* Вкладка 2: Тренеры */
+        )}
+
+        {/* ВКЛАДКА 2: ТРЕНЕРЫ */}
+        {activeTab === 'trainers' && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
@@ -583,8 +603,10 @@ export default function AdminPanel({ onBack }) {
               </table>
             </div>
           </div>
-        ) : (
-          /* Вкладка 3: Атлеты */
+        )}
+
+        {/* ВКЛАДКА 3: АТЛЕТЫ */}
+        {activeTab === 'users' && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
