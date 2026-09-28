@@ -38,27 +38,32 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
     }
   });
   const [isChangingAttendance, setIsChangingAttendance] = useState(false);
-  const [notificationStatus, setNotificationStatus] = useState(null); // { text, ok }
+  const [notificationStatus, setNotificationStatus] = useState(null);
 
   // Стейты привязки тренера
   const [linkCoachInput, setLinkCoachInput] = useState('');
   const [isLinking, setIsLinking] = useState(false);
   const [linkError, setLinkError] = useState('');
 
+  // ГЛУБОКАЯ СИНХРОНИЗАЦИЯ С SUPABASE: гарантия отображения списанных занятий
   const fetchFreshProfile = async () => {
-    const targetId = initialUser?.id || initialUser?.telegram_id || localStorage.getItem('gymconnect_telegram_id');
-    if (!targetId) return;
-
     setIsRefreshing(true);
     try {
+      const tgId = initialUser?.telegram_id || localStorage.getItem('gymconnect_telegram_id');
+      const cleanU = (initialUser?.username || '').replace(/[@\s]/g, '').trim().toLowerCase();
+
       let query = supabase.from('profiles').select('*');
+
       if (initialUser?.id) {
-        query = query.eq('id', initialUser.id);
-      } else {
-        query = query.eq('telegram_id', targetId);
+        query = query.or(`id.eq.${initialUser.id},telegram_id.eq.${tgId || '0'},username.ilike.${cleanU || 'none'}`);
+      } else if (tgId) {
+        query = query.or(`telegram_id.eq.${tgId},username.ilike.${cleanU || 'none'}`);
+      } else if (cleanU) {
+        query = query.ilike('username', cleanU);
       }
-      
-      const { data, error } = await query.maybeSingle();
+
+      const { data, error } = await query.order('updated_at', { ascending: false }).limit(1).maybeSingle();
+
       if (!error && data) {
         setAthleteData(data);
         try {
@@ -78,7 +83,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
 
   useEffect(() => {
     fetchFreshProfile();
-  }, [initialUser?.id]);
+  }, [initialUser?.id, initialUser?.telegram_id]);
 
   const trainerUsername = athleteData?.trainer_username || athleteData?.trainer_telegram || '';
   const cleanTrainerUsername = trainerUsername.replace('@', '').trim().toLowerCase();
@@ -149,7 +154,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
 
   const specializationsList = getTrainerSpecializations();
 
-  // ОТПРАВКА ЯВКИ С ПРЯМОЙ ОБРАТНОЙ СВЯЗЬЮ
+  // ОТПРАВКА ЯВКИ ТРЕНЕРУ
   const handleSetAttendance = async (status) => {
     setAttendanceToday(status);
     setIsChangingAttendance(false);
@@ -159,7 +164,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
       localStorage.setItem(`gymconnect_attendance_${athleteData?.id || 'me'}`, status);
     } catch (e) {}
 
-    // 1. Запись в базу
     if (athleteData?.id) {
       supabase
         .from('profiles')
@@ -168,16 +172,14 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
           attendance_date: todayStr
         })
         .eq('id', athleteData.id)
-        .then(() => {})
-        .catch(err => console.warn(err));
+        .then(() => {});
     }
 
-    // 2. Отправка ботом в Telegram
     const studentFullName = `${athleteData?.first_name || 'Атлет'} ${athleteData?.last_name || ''}`.trim();
     const trainingTime = athleteData?.workout_time_slot || 'Сегодня';
     const trainingGym = athleteData?.gym || trainerData?.gym || 'Зал в Алматы';
 
-    setNotificationStatus({ text: 'Отправка пуш-уведомления в Telegram тренеру...', ok: null });
+    setNotificationStatus({ text: 'Отправка пуш-уведомления тренеру...', ok: null });
 
     const result = await sendTrainerAttendanceNotification({
       trainerTelegramId: trainerData?.telegram_id,
@@ -192,7 +194,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
       setNotificationStatus({ text: '✅ Уведомление доставлено тренеру в личный Telegram!', ok: true });
     } else {
       setNotificationStatus({ 
-        text: `⚠️ Сохранено в базе, но бот не отправил сообщение (${result?.error || 'тренер не нажал /start в @gymconnect_ala_bot'})`, 
+        text: `⚠️ Статус сохранен, но бот не смог написать тренеру (${result?.error || 'тренер должен нажать /start в @gymconnect_ala_bot'})`, 
         ok: false 
       });
     }
@@ -253,19 +255,10 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
 
   const programData = athleteData?.assigned_program?.days || athleteData?.assigned_program || {
     1: {
-      title: 'День 1: Базовый тренировочный комплекс',
+      title: 'День 1: Базовый комплекс',
       exercises: [
-        { name: 'Приседания со штангой на плечах', sets: 4, reps: 10, weight: 60, notes: 'Контроль коленей', isBodyweight: false },
-        { name: 'Жим штанги лежа на горизонтальной скамье', sets: 4, reps: 8, weight: 55, notes: 'Пауза внизу 1 сек', isBodyweight: false },
-        { name: 'Подтягивания на перекладине широким хватом', sets: 3, reps: 8, weight: 0, notes: 'Свой вес', isBodyweight: true }
-      ]
-    },
-    2: {
-      title: 'День 2: Объем и функционал',
-      exercises: [
-        { name: 'Румынская становая тяга с гантелями', sets: 4, reps: 10, weight: 18, notes: 'Растяжка бедра', isBodyweight: false },
-        { name: 'Жим гантелей на наклонной скамье (30°)', sets: 4, reps: 10, weight: 20, notes: 'Верх груди', isBodyweight: false },
-        { name: 'Классическая планка на предплечьях', sets: 3, reps: 45, weight: 0, notes: 'Свой вес', isBodyweight: true }
+        { name: 'Приседания со штангой', sets: 4, reps: 10, weight: 60, notes: 'Контроль техники', isBodyweight: false },
+        { name: 'Жим штанги лежа', sets: 4, reps: 8, weight: 55, notes: 'Пауза внизу 1 сек', isBodyweight: false }
       ]
     }
   };
@@ -273,6 +266,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const programDayKeys = Object.keys(programData);
   const currentDayProgram = programData[selectedDay] || programData[programDayKeys[0]];
 
+  // ТОЧНЫЙ РАСЧЕТ ОСТАТКА ЗАНЯТИЙ (приоритет свежим данным из базы)
   const leftTrainings = athleteData?.left_trainings !== undefined 
     ? athleteData.left_trainings 
     : (athleteData?.remaining_workouts !== undefined ? athleteData.remaining_workouts : 12);
@@ -311,13 +305,15 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
               type="button"
               onClick={fetchFreshProfile}
               className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg active:scale-90 transition-all cursor-pointer"
-              title="Обновить данные"
+              title="Обновить остаток занятий"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
             </button>
 
             {hasLinkedCoach && (
-              <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 font-mono">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border font-mono ${
+                leftTrainings <= 2 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-100 text-slate-700 border-slate-200'
+              }`}>
                 {leftTrainings} зан.
               </span>
             )}
@@ -330,7 +326,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
         
         {hasLinkedCoach ? (
           <>
-            {/* Визитка наставника на сегодня */}
+            {/* Визитка наставника */}
             <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -359,7 +355,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                       target="_blank"
                       rel="noreferrer"
                       className="w-8 h-8 rounded-xl bg-[#229ED9]/10 text-[#229ED9] flex items-center justify-center border border-[#229ED9]/25 shadow-2xs active:scale-90 transition-transform"
-                      title="Telegram"
                     >
                       <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
@@ -373,7 +368,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                       target="_blank"
                       rel="noreferrer"
                       className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200/80 shadow-2xs active:scale-90 transition-transform"
-                      title="WhatsApp"
                     >
                       <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                         <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm5.78 14.07c-.24.67-1.4 1.23-1.92 1.31-.5.08-1.15.11-3.69-.94-3.25-1.34-5.32-4.66-5.48-4.88-.16-.22-1.31-1.74-1.31-3.32 0-1.58.83-2.35 1.12-2.67.3-.32.65-.4.87-.4.22 0 .44 0 .63.01.2.01.47-.08.73.57.27.67.92 2.24 1 2.4.08.16.13.35.03.57-.1.22-.16.35-.31.54-.16.19-.34.42-.48.56-.16.16-.33.33-.14.66.19.33.85 1.4 1.82 2.26 1.25 1.11 2.3 1.46 2.63 1.62.33.16.52.14.71-.08.2-.22.84-.98 1.06-1.32.22-.34.44-.28.74-.17.3.11 1.9.9 2.23 1.06.33.16.55.24.63.38.08.14.08.81-.16 1.48z"/>
@@ -436,7 +430,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                     <span className="text-[10px] text-slate-400">Статус посещения</span>
                   </div>
 
-                  {/* Статус ответа Telegram */}
                   {notificationStatus && (
                     <div className={`p-2.5 rounded-xl border text-[11px] font-semibold flex items-center gap-2 animate-in fade-in ${
                       notificationStatus.ok === true 
@@ -612,19 +605,10 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                     </span>
                   </div>
                 </div>
-
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-                  <span className="font-bold text-slate-800 text-[11px] block">Срок действия:</span>
-                  <p className="text-[11px] text-slate-600 leading-snug">
-                    {athleteData?.is_expiring === false 
-                      ? 'Несгораемый абонемент: тренировки не сгорают по времени.' 
-                      : 'Блок активен в течение 35 дней с момента первого занятия.'}
-                  </p>
-                </div>
               </div>
             )}
 
-            {/* Вкладка 3: Полный профиль тренера */}
+            {/* Вкладка 3: Профиль тренера */}
             {activeTab === 'coach' && (
               <div className="space-y-3.5 text-xs text-slate-700 animate-in fade-in">
                 <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
@@ -643,7 +627,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                       <p className="text-xs text-blue-600 font-mono mt-0.5">@{cleanTrainerUsername}</p>
                       <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
                         <Award className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                        <span>Опыт работы: <b>{trainerData?.experience_years || 3} года</b></span>
+                        <span>Опыт: <b>{trainerData?.experience_years || 3} года</b></span>
                       </p>
                     </div>
                   </div>
@@ -675,21 +659,15 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                 </div>
 
                 <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
-                  <p className="font-bold text-xs text-slate-900 border-b border-slate-100 pb-2">Локации и направления</p>
-
-                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900">
-                      <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                      <span>{trainerData?.gym || 'Зал в Алматы'}</span>
-                    </div>
-                    {trainerData?.secondary_gym && (
-                      <p className="text-[10.5px] text-slate-500 pl-5">Второй зал: {trainerData.secondary_gym}</p>
-                    )}
+                  <p className="font-bold text-xs text-slate-900 border-b border-slate-100 pb-2">Локация</p>
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-1.5 font-bold text-xs text-slate-900">
+                    <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>{trainerData?.gym || 'Зал в Алматы'}</span>
                   </div>
 
                   {specializationsList.length > 0 && (
                     <div className="space-y-1.5">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Специализации тренера:</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Специализации:</span>
                       <div className="flex flex-wrap gap-1">
                         {specializationsList.map((spec, sIdx) => (
                           <span key={sIdx} className="bg-slate-100 text-slate-800 px-2.5 py-1 rounded-xl font-semibold text-[10.5px]">
@@ -700,51 +678,10 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                     </div>
                   )}
                 </div>
-
-                {trainerData?.bio && (
-                  <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
-                    <p className="font-bold text-xs text-slate-900 border-b border-slate-100 pb-2">О тренере и методике</p>
-                    <p className="text-[11px] text-slate-600 leading-relaxed whitespace-pre-line bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                      {trainerData.bio}
-                    </p>
-                  </div>
-                )}
-
-                <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <span className="font-bold text-xs text-slate-900">График присутствия в клубе</span>
-                    <span className="text-[10px] text-slate-400">Алматы</span>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    {parsedScheduleSlots ? (
-                      Object.entries(parsedScheduleSlots).map(([dayKey, slots]) => {
-                        const dayLabels = {
-                          monday: 'Понедельник', tuesday: 'Вторник', wednesday: 'Среда',
-                          thursday: 'Четверг', friday: 'Пятница', saturday: 'Суббота', sunday: 'Воскресенье'
-                        };
-                        const hasShift = Array.isArray(slots) && slots.length > 0;
-                        return (
-                          <div key={dayKey} className="flex justify-between items-center p-2 bg-slate-50 rounded-xl text-[11px]">
-                            <span className="text-slate-700 font-medium">{dayLabels[dayKey] || dayKey}:</span>
-                            <span className={`font-mono font-bold ${hasShift ? 'text-blue-700' : 'text-slate-400'}`}>
-                              {hasShift 
-                                ? slots.filter(s => s && s.start && s.end).map(s => `${s.start} - ${s.end}`).join(', ') 
-                                : 'Выходной'}
-                            </span>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <p className="text-slate-400 text-xs italic">График уточняется у наставника.</p>
-                    )}
-                  </div>
-                </div>
               </div>
             )}
           </>
         ) : (
-          /* Сценарий Б: Без тренера */
           <div className="space-y-3.5">
             <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs text-center space-y-2">
               <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xs">
