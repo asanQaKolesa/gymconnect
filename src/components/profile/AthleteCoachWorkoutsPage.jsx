@@ -10,17 +10,13 @@ import {
   X, 
   Clock, 
   MapPin, 
-  AlertCircle, 
   Sparkles, 
   CheckCircle2, 
-  ChevronRight, 
-  MessageCircle, 
   Link as LinkIcon, 
-  ShieldCheck, 
-  Flame,
-  Search,
+  RefreshCw,
   Send,
-  RefreshCw
+  Award,
+  Edit3
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { sendTrainerAttendanceNotification } from '../../utils/telegramNotifications';
@@ -31,7 +27,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('program'); // 'program' | 'finance' | 'coach'
   const [trainerData, setTrainerData] = useState(null);
-  const [loadingTrainer, setLoadingTrainer] = useState(false);
 
   // Выбранный тренировочный день программы
   const [selectedDay, setSelectedDay] = useState(1);
@@ -44,14 +39,14 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
       return null;
     }
   });
-  const [attendanceNotice, setAttendanceNotice] = useState(false);
+  const [isChangingAttendance, setIsChangingAttendance] = useState(false);
 
   // Стейты привязки тренера для атлетов без наставника
   const [linkCoachInput, setLinkCoachInput] = useState('');
   const [isLinking, setIsLinking] = useState(false);
   const [linkError, setLinkError] = useState('');
 
-  // 2. ФОНОВАЯ ПОДТЯЖКА СВЕЖИХ ДАННЫХ АТЛЕТА ИЗ SUPABASE
+  // 2. ФОНОВАЯ ЗАГРУЗКА ДАННЫХ АТЛЕТА ИЗ SUPABASE
   const fetchFreshProfile = async () => {
     const targetId = initialUser?.id || initialUser?.telegram_id || localStorage.getItem('gymconnect_telegram_id');
     if (!targetId) return;
@@ -91,11 +86,10 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const cleanTrainerUsername = trainerUsername.replace('@', '').trim().toLowerCase();
   const hasLinkedCoach = Boolean(cleanTrainerUsername);
 
-  // 3. ЗАГРУЗКА ДАННЫХ ТРЕНЕРА И ЕГО СМЕН В ЗАЛАХ
+  // 3. ПОЛНАЯ ЗАГРУЗКА ПУБЛИЧНОГО ПРОФИЛЯ ТРЕНЕРА
   useEffect(() => {
     async function fetchTrainerInfo() {
       if (!cleanTrainerUsername) return;
-      setLoadingTrainer(true);
       try {
         const { data, error } = await supabase
           .from('trainer_profiles')
@@ -108,8 +102,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
         }
       } catch (err) {
         console.warn('Ошибка загрузки данных тренера:', err);
-      } finally {
-        setLoadingTrainer(false);
       }
     }
 
@@ -137,38 +129,32 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
 
   const coachShift = getCoachTodayShift();
 
-  // 4. СКВОЗНАЯ ОТПРАВКА ЯВКИ В SUPABASE + МГНОВЕННЫЙ ПУШ В ТЕЛЕГРАМ ТРЕНЕРУ
+  // 4. ФИКСАЦИЯ ЯВКИ И ЗАКРЫТИЕ КНОПОК
   const handleSetAttendance = async (status) => {
     setAttendanceToday(status);
+    setIsChangingAttendance(false);
     const todayStr = new Date().toISOString().split('T')[0];
 
     try {
       localStorage.setItem(`gymconnect_attendance_${athleteData?.id || 'me'}`, status);
     } catch (e) {}
 
-    setAttendanceNotice(true);
-    setTimeout(() => setAttendanceNotice(false), 3000);
-
-    // 1. Фиксируем явку в базе данных Supabase
+    // Фиксируем в базе данных
     if (athleteData?.id) {
       try {
-        const { error } = await supabase
+        await supabase
           .from('profiles')
           .update({
             attendance_today: status,
             attendance_date: todayStr
           })
           .eq('id', athleteData.id);
-
-        if (error && error.message.includes('attendance_today')) {
-          console.warn('Колонки attendance_today нет в таблице profiles, сохранено локально');
-        }
       } catch (err) {
         console.warn('Ошибка сохранения явки в Supabase:', err);
       }
     }
 
-    // 2. Мгновенно отправляем пуш-сообщение ботом в Telegram тренеру
+    // Отправка уведомления тренеру
     const studentFullName = `${athleteData?.first_name || 'Атлет'} ${athleteData?.last_name || ''}`.trim();
     const trainingTime = athleteData?.workout_time_slot || 'Сегодня';
     const trainingGym = athleteData?.gym || trainerData?.gym || 'Зал в Алматы';
@@ -180,10 +166,10 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
       timeSlot: trainingTime,
       gymName: trainingGym,
       isAttending: status === 'attending'
-    }).catch(e => console.warn('Фоновая отправка пуша в Telegram:', e));
+    }).catch(e => console.warn(e));
   };
 
-  // 5. ПРИВЯЗКА ТРЕНЕРА ПО ТЕЛЕГРАМ-НИКУ
+  // 5. ПРИВЯЗКА ТРЕНЕРА
   const handleLinkCoach = async (e) => {
     e.preventDefault();
     if (!linkCoachInput.trim()) return;
@@ -201,7 +187,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
         .maybeSingle();
 
       if (searchErr || !foundCoach) {
-        setLinkError(`Тренер @${cleanInput} пока не зарегистрирован в базе CoachOS. Проверьте правильность ника.`);
+        setLinkError(`Тренер @${cleanInput} пока не зарегистрирован в базе CoachOS.`);
         setIsLinking(false);
         return;
       }
@@ -234,7 +220,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
     }
   };
 
-  // Программа от тренера (живые данные из Supabase)
+  // Программа от тренера
   const programData = athleteData?.assigned_program?.days || athleteData?.assigned_program || {
     1: {
       title: 'День 1: Базовый тренировочный комплекс',
@@ -257,21 +243,20 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const programDayKeys = Object.keys(programData);
   const currentDayProgram = programData[selectedDay] || programData[programDayKeys[0]];
 
-  // Финансовые показатели (живые данные из Supabase)
+  // Финансы
   const leftTrainings = athleteData?.left_trainings !== undefined 
     ? athleteData.left_trainings 
     : (athleteData?.remaining_workouts !== undefined ? athleteData.remaining_workouts : 12);
   const totalTrainings = athleteData?.total_trainings || 12;
   const isPaid = athleteData?.payment_status === 'paid' || !athleteData?.payment_status;
 
-  // Очистка контактов тренера
   const coachPhone = trainerData?.phone ? String(trainerData.phone).replace(/\D/g, '') : '';
   const coachUsername = trainerData?.username ? String(trainerData.username).replace('@', '').trim() : cleanTrainerUsername;
 
   return (
     <div className="min-h-screen w-full bg-[#F2F2F7] flex flex-col select-none animate-in fade-in duration-150">
       
-      {/* 1. ВЕРХНИЙ БАР Apple HIG */}
+      {/* Верхний бар */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 shadow-xs">
         <div className="max-w-md mx-auto flex items-center justify-between gap-2">
           <button
@@ -297,13 +282,13 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
               type="button"
               onClick={fetchFreshProfile}
               className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg active:scale-90 transition-all cursor-pointer"
-              title="Обновить программу"
+              title="Обновить данные"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
             </button>
 
             {hasLinkedCoach && (
-              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100 font-mono">
+              <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 font-mono">
                 {leftTrainings} зан.
               </span>
             )}
@@ -311,10 +296,9 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
         </div>
       </header>
 
-      {/* 2. ОСНОВНОЙ КОНТЕНТ */}
+      {/* Основной контент */}
       <main className="p-3.5 space-y-3.5 max-w-md mx-auto w-full pb-20">
         
-        {/* ================= СЦЕНАРИЙ А: ТРЕНЕР ПРИВЯЗАН ================= */}
         {hasLinkedCoach ? (
           <>
             {/* Карточка-статус тренера на сегодня */}
@@ -339,7 +323,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                   </div>
                 </div>
 
-                {/* Быстрые контакты тренера */}
                 <div className="flex items-center gap-1.5 shrink-0">
                   {coachUsername && (
                     <a
@@ -347,7 +330,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                       target="_blank"
                       rel="noreferrer"
                       className="w-8 h-8 rounded-xl bg-[#229ED9]/10 text-[#229ED9] flex items-center justify-center border border-[#229ED9]/25 shadow-2xs active:scale-90 transition-transform"
-                      title="Написать тренеру в Telegram"
+                      title="Telegram"
                     >
                       <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
@@ -361,7 +344,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                       target="_blank"
                       rel="noreferrer"
                       className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200/80 shadow-2xs active:scale-90 transition-transform"
-                      title="Написать в WhatsApp"
+                      title="WhatsApp"
                     >
                       <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                         <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm5.78 14.07c-.24.67-1.4 1.23-1.92 1.31-.5.08-1.15.11-3.69-.94-3.25-1.34-5.32-4.66-5.48-4.88-.16-.22-1.31-1.74-1.31-3.32 0-1.58.83-2.35 1.12-2.67.3-.32.65-.4.87-.4.22 0 .44 0 .63.01.2.01.47-.08.73.57.27.67.92 2.24 1 2.4.08.16.13.35.03.57-.1.22-.16.35-.31.54-.16.19-.34.42-.48.56-.16.16-.33.33-.14.66.19.33.85 1.4 1.82 2.26 1.25 1.11 2.3 1.46 2.63 1.62.33.16.52.14.71-.08.2-.22.84-.98 1.06-1.32.22-.34.44-.28.74-.17.3.11 1.9.9 2.23 1.06.33.16.55.24.63.38.08.14.08.81-.16 1.48z"/>
@@ -371,7 +354,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                 </div>
               </div>
 
-              {/* Статус присутствия тренера в зале сегодня */}
+              {/* Статус тренера сегодня */}
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span className="text-slate-400 font-medium">Тренер сегодня:</span>
                 <span className={`font-bold flex items-center gap-1.5 ${
@@ -383,7 +366,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
               </div>
             </div>
 
-            {/* 3 ТАБА: Программа / Абонемент / О тренере */}
+            {/* 3 ТАБА */}
             <div className="grid grid-cols-3 gap-1 p-1 bg-slate-200/80 rounded-2xl">
               {[
                 { id: 'program', label: 'Программа', icon: Dumbbell },
@@ -414,52 +397,70 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
             {activeTab === 'program' && (
               <div className="space-y-3.5">
                 
-                {/* Интерактивная явка с отправкой пуша в Telegram тренеру */}
-                <div className="bg-white rounded-3xl p-4 border border-blue-200/80 shadow-xs space-y-2.5">
+                {/* Фиксация явки (кнопки исчезают после отметки) */}
+                <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
                       <Clock className="w-4 h-4 text-blue-600" />
                       <span>Тренировка сегодня</span>
                     </span>
-                    <span className="text-[10px] text-slate-400">Подтвердите явку</span>
+                    <span className="text-[10px] text-slate-400">Статус посещения</span>
                   </div>
 
-                  <p className="text-[11px] text-slate-500 leading-snug">
-                    Отметьте статус, чтобы тренер в своей CRM и боте Telegram заранее получил уведомление о готовности:
-                  </p>
+                  {attendanceToday && !isChangingAttendance ? (
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {attendanceToday === 'attending' ? (
+                          <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                            <Check className="w-4 h-4 stroke-[3]" />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
+                            <X className="w-4 h-4 stroke-[3]" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">
+                            {attendanceToday === 'attending' ? 'Вы подтвердили: Буду на тренировке 👍' : 'Вы отметили: Не смогу прийти ✕'}
+                          </p>
+                          <p className="text-[10px] text-slate-400">Тренер видит ваш статус в расписании</p>
+                        </div>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSetAttendance('attending')}
-                      className={`py-2.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        attendanceToday === 'attending'
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
-                      }`}
-                    >
-                      <Check className="w-4 h-4" />
-                      <span>Буду на тренировке</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSetAttendance('missed')}
-                      className={`py-2.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        attendanceToday === 'missed'
-                          ? 'bg-rose-600 text-white shadow-xs'
-                          : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200'
-                      }`}
-                    >
-                      <X className="w-4 h-4" />
-                      <span>Не смогу прийти</span>
-                    </button>
-                  </div>
-
-                  {attendanceNotice && (
-                    <div className="p-2 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[10.5px] font-semibold text-center animate-in fade-in">
-                      Отметка передана в базу данных и отправлена тренеру!
+                      <button
+                        type="button"
+                        onClick={() => setIsChangingAttendance(true)}
+                        className="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl text-[10.5px] font-semibold text-slate-700 active:scale-95 cursor-pointer shadow-2xs"
+                      >
+                        Изменить
+                      </button>
                     </div>
+                  ) : (
+                    <>
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        Отметьте статус, чтобы тренер заранее знал о вашей явке:
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleSetAttendance('attending')}
+                          className="py-2.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer active:scale-95 transition-all"
+                        >
+                          <Check className="w-4 h-4" />
+                          <span>Буду на тренировке</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSetAttendance('missed')}
+                          className="py-2.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 cursor-pointer active:scale-95 transition-all"
+                        >
+                          <X className="w-4 h-4" />
+                          <span>Не смогу прийти</span>
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
 
@@ -536,7 +537,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                   </span>
                 </div>
 
-                {/* Баланс тренировок */}
                 <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Остаток занятий</span>
@@ -549,7 +549,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                   </div>
                 </div>
 
-                {/* Финансовый расчет */}
                 <div className="grid grid-cols-2 gap-2 text-center font-mono">
                   <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-2xl">
                     <span className="text-[10px] text-slate-400 font-sans block">Стоимость блока</span>
@@ -568,7 +567,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                   </div>
                 </div>
 
-                {/* Правила сгорания */}
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
                   <span className="font-bold text-slate-800 text-[11px] block">Срок действия:</span>
                   <p className="text-[11px] text-slate-600 leading-snug">
@@ -580,70 +578,143 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
               </div>
             )}
 
-            {/* ================= ВКЛАДКА 3: О ТРЕНЕРЕ И СМЕНЫ ================= */}
+            {/* ================= ВКЛАДКА 3: ПОЛНЫЙ ПРОФАЙЛ ТРЕНЕРА ================= */}
             {activeTab === 'coach' && (
-              <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3.5 text-xs">
-                <p className="font-bold text-xs text-slate-900 border-b border-slate-100 pb-2">График тренера в залах</p>
-
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-slate-800 font-bold">
-                    <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span>{trainerData?.gym || 'Invictus Go'}</span>
+              <div className="space-y-3.5 text-xs text-slate-700">
+                
+                {/* 1. Главная визитка наставника */}
+                <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shrink-0 overflow-hidden shadow-2xs">
+                      {trainerData?.photo_url || trainerData?.avatar_url ? (
+                        <img src={trainerData.photo_url || trainerData.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{cleanTrainerUsername[0]?.toUpperCase() || 'C'}</span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 leading-tight">
+                        {trainerData?.full_name || `${trainerData?.first_name || 'Тренер'} ${trainerData?.last_name || ''}`.trim() || `@${cleanTrainerUsername}`}
+                      </h3>
+                      <p className="text-xs text-blue-600 font-mono mt-0.5">@{cleanTrainerUsername}</p>
+                      <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                        <Award className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span>Опыт работы: <b>{trainerData?.experience_years || 3} года</b></span>
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-500">
-                    Опыт работы: <b>{trainerData?.experience_years || 3} года</b>
-                  </p>
+
+                  {/* Быстрые контакты */}
+                  <div className="pt-2 border-t border-slate-100 flex gap-2">
+                    {coachPhone && (
+                      <a
+                        href={`https://wa.me/7${coachPhone.slice(-10)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl font-bold flex items-center justify-center gap-1.5 border border-emerald-200 transition-all active:scale-95"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>WhatsApp</span>
+                      </a>
+                    )}
+                    {coachUsername && (
+                      <a
+                        href={`https://t.me/${coachUsername}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 py-2 bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#229ED9] rounded-xl font-bold flex items-center justify-center gap-1.5 border border-[#229ED9]/20 transition-all active:scale-95"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Telegram</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Залы и специализации */}
+                <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
+                  <p className="font-bold text-xs text-slate-900 border-b border-slate-100 pb-2">Локации и направления</p>
+
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900">
+                      <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>{trainerData?.gym || 'Зал в Алматы'}</span>
+                    </div>
+                    {trainerData?.secondary_gym && (
+                      <p className="text-[10.5px] text-slate-500 pl-5">Второй зал: {trainerData.secondary_gym}</p>
+                    )}
+                  </div>
+
+                  {/* Специализации */}
                   {trainerData?.specializations && (
-                    <p className="text-[10.5px] text-slate-600">
-                      Специализации: {trainerData.specializations.join(', ')}
-                    </p>
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Специализации тренера:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {trainerData.specializations.map((spec, sIdx) => (
+                          <span key={sIdx} className="bg-slate-100 text-slate-800 px-2.5 py-1 rounded-xl font-semibold text-[10.5px]">
+                            {spec}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
 
-                {/* Недельное расписание присутствия тренера */}
-                <div className="space-y-1.5">
-                  <span className="font-bold text-slate-800 text-[11px] block">Часы смен в клубе на неделю:</span>
-                  
-                  {trainerData?.schedule_slots ? (
-                    Object.entries(trainerData.schedule_slots).map(([dayKey, slots]) => {
-                      const dayLabels = {
-                        monday: 'Понедельник', tuesday: 'Вторник', wednesday: 'Среда',
-                        thursday: 'Четверг', friday: 'Пятница', saturday: 'Суббота', sunday: 'Воскресенье'
-                      };
-                      return (
-                        <div key={dayKey} className="flex justify-between items-center p-2 bg-slate-50 rounded-xl text-[11px]">
-                          <span className="text-slate-700 font-medium">{dayLabels[dayKey] || dayKey}:</span>
-                          <span className="font-mono font-bold text-blue-700">
-                            {Array.isArray(slots) && slots.length > 0 
-                              ? slots.map(s => `${s.start} - ${s.end}`).join(', ') 
-                              : 'Выходной'}
-                          </span>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <p className="text-slate-400 text-xs italic">График уточняется на рецепции или в личном чате.</p>
-                  )}
+                {/* 3. О себе / Регалии / Методика */}
+                {trainerData?.bio && (
+                  <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
+                    <p className="font-bold text-xs text-slate-900 border-b border-slate-100 pb-2">О тренере и методологии</p>
+                    <p className="text-[11px] text-slate-600 leading-relaxed whitespace-pre-line bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                      {trainerData.bio}
+                    </p>
+                  </div>
+                )}
+
+                {/* 4. Расписание смен тренера */}
+                <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="font-bold text-xs text-slate-900">График присутствия в клубе</span>
+                    <span className="text-[10px] text-slate-400">Алматы</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {trainerData?.schedule_slots ? (
+                      Object.entries(trainerData.schedule_slots).map(([dayKey, slots]) => {
+                        const dayLabels = {
+                          monday: 'Понедельник', tuesday: 'Вторник', wednesday: 'Среда',
+                          thursday: 'Четверг', friday: 'Пятница', saturday: 'Суббота', sunday: 'Воскресенье'
+                        };
+                        const hasShift = Array.isArray(slots) && slots.length > 0;
+                        return (
+                          <div key={dayKey} className="flex justify-between items-center p-2 bg-slate-50 rounded-xl text-[11px]">
+                            <span className="text-slate-700 font-medium">{dayLabels[dayKey] || dayKey}:</span>
+                            <span className={`font-mono font-bold ${hasShift ? 'text-blue-700' : 'text-slate-400'}`}>
+                              {hasShift ? slots.map(s => `${s.start} - ${s.end}`).join(', ') : 'Выходной'}
+                            </span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-slate-400 text-xs italic">График уточняется у наставника.</p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
           </>
         ) : (
-          /* ================= СЦЕНАРИЙ Б: ТРЕНЕР ЕЩЕ НЕ ПРИВЯЗАН ================= */
+          /* ================= СЦЕНАРИЙ Б: ТРЕНЕР НЕ ПРИВЯЗАН ================= */
           <div className="space-y-3.5">
-            
-            {/* Приветственный баннер */}
             <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs text-center space-y-2">
               <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xs">
                 <Dumbbell className="w-6 h-6 stroke-[2]" />
               </div>
               <h2 className="text-sm font-bold text-slate-900">У вас пока не привязан тренер</h2>
               <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
-                Привяжите своего персонального наставника по его Telegram никнейму, чтобы получать персональную программу тренировок, расписание и баланс занятий.
+                Привяжите наставника по его Telegram никнейму, чтобы получать персональную программу тренировок, расписание и баланс занятий.
               </p>
             </div>
 
-            {/* Блок быстрой привязки по нику */}
             <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
               <span className="font-bold text-xs text-slate-900 block border-b border-slate-100 pb-2">
                 Привязать наставника
@@ -681,28 +752,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                 </button>
               </form>
             </div>
-
-            {/* Блок подбора тренера от комьюнити */}
-            <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-blue-600" />
-                <h3 className="font-bold text-xs text-slate-900">Ищете тренера в своем зале?</h3>
-              </div>
-              <p className="text-[11px] text-slate-500 leading-snug">
-                Куратор GymConnect бесплатно подберет проверенного наставника под ваш клуб, цель и бюджет:
-              </p>
-
-              <a
-                href="https://t.me/asanali_kk"
-                target="_blank"
-                rel="noreferrer"
-                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-98 transition-all shadow-xs"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Подобрать наставника в Telegram</span>
-              </a>
-            </div>
-
           </div>
         )}
 
