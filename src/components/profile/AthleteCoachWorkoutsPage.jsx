@@ -18,7 +18,11 @@ import {
   MessageCircle,
   AlertCircle,
   Search,
-  Sparkles
+  Sparkles,
+  Utensils,
+  Flame,
+  Droplet,
+  Pill
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { sendTrainerAttendanceNotification } from '../../utils/telegramNotifications';
@@ -27,7 +31,7 @@ import TrainersCatalogPage from '../home/TrainersCatalogPage';
 export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, onUpdate }) {
   const [athleteData, setAthleteData] = useState(initialUser || {});
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('program');
+  const [activeTab, setActiveTab] = useState('program'); // 'program' | 'nutrition' | 'finance' | 'coach'
   const [trainerData, setTrainerData] = useState(null);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
 
@@ -49,7 +53,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const [isLinking, setIsLinking] = useState(false);
   const [linkError, setLinkError] = useState('');
 
-  // Фоновый запрос к Supabase без мерцания интерфейса
+  // Фоновый запрос к Supabase без мерцания интерфейса (Silent Polling 5s)
   const fetchFreshProfile = async (isSilent = false) => {
     if (!isSilent) setIsRefreshing(true);
     try {
@@ -164,7 +168,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
 
   const specializationsList = getTrainerSpecializations();
 
-  // ОТПРАВКА ЯВКИ ТРЕНЕРУ
+  // Отметка явки тренеру
   const handleSetAttendance = async (status) => {
     setAttendanceToday(status);
     setIsChangingAttendance(false);
@@ -263,7 +267,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
     }
   };
 
-  // ПОЛНОЭКРАННЫЙ КАТАЛОГ ДЛЯ ВЫБОРА НАСТАВНИКА
   if (isCatalogOpen) {
     return (
       <TrainersCatalogPage 
@@ -288,6 +291,9 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
 
   const programDayKeys = Object.keys(programData);
   const currentDayProgram = programData[selectedDay] || programData[programDayKeys[0]];
+
+  // Данные плана питания от тренера
+  const nutritionData = athleteData?.assigned_nutrition || null;
 
   const leftTrainings = athleteData?.left_trainings !== undefined 
     ? athleteData.left_trainings 
@@ -411,10 +417,11 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
               </div>
             </div>
 
-            {/* 3 Таба */}
-            <div className="grid grid-cols-3 gap-1 p-1 bg-slate-200/80 rounded-2xl">
+            {/* 4 ТАБА В СТИЛЕ APPLE HIG: Программа • Питание • Абонемент • О тренере */}
+            <div className="grid grid-cols-4 gap-1 p-1 bg-slate-200/80 rounded-2xl">
               {[
                 { id: 'program', label: 'Программа', icon: Dumbbell },
+                { id: 'nutrition', label: 'Питание', icon: Utensils },
                 { id: 'finance', label: 'Абонемент', icon: CreditCard },
                 { id: 'coach', label: 'О тренере', icon: User }
               ].map(tab => {
@@ -425,20 +432,20 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`py-2 px-1 rounded-xl text-center flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    className={`py-2 px-1 rounded-xl text-center flex items-center justify-center gap-1 transition-all cursor-pointer ${
                       isCurrent 
                         ? 'bg-white text-blue-600 font-bold shadow-xs' 
                         : 'text-slate-600 hover:text-slate-900 font-medium'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span className="text-xs">{tab.label}</span>
+                    <Icon className="w-3.5 h-3.5 stroke-[2] shrink-0" />
+                    <span className="text-[11px] truncate">{tab.label}</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Вкладка 1: Программа и явка */}
+            {/* Вкладка 1: Программа тренировок и явка */}
             {activeTab === 'program' && (
               <div className="space-y-3.5">
                 
@@ -586,7 +593,117 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
               </div>
             )}
 
-            {/* Вкладка 2: Абонемент и касса */}
+            {/* Вкладка 2: ПИТАНИЕ И КБЖУ ОТ ТРЕНЕРА */}
+            {activeTab === 'nutrition' && (
+              <div className="space-y-3.5 text-xs text-slate-700 animate-in fade-in">
+                {nutritionData ? (
+                  <>
+                    {/* Целевые макронутриенты */}
+                    <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                          <Flame className="w-4 h-4 text-amber-500" />
+                          <span>Норма КБЖУ от наставника</span>
+                        </span>
+                        <span className="text-[10.5px] font-mono text-emerald-600 font-bold">
+                          {nutritionData.calories || 2200} ккал / день
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-2 text-center font-mono">
+                        <div className="p-2 bg-slate-50 rounded-2xl border border-slate-200">
+                          <span className="text-[9.5px] text-slate-400 font-sans block">Ккал</span>
+                          <span className="text-xs font-bold text-slate-900 mt-0.5 block">{nutritionData.calories || 2200}</span>
+                        </div>
+                        <div className="p-2 bg-blue-50/60 rounded-2xl border border-blue-200">
+                          <span className="text-[9.5px] text-blue-800 font-sans block">Белки</span>
+                          <span className="text-xs font-bold text-blue-700 mt-0.5 block">{nutritionData.protein || 160}г</span>
+                        </div>
+                        <div className="p-2 bg-amber-50/60 rounded-2xl border border-amber-200">
+                          <span className="text-[9.5px] text-amber-800 font-sans block">Жиры</span>
+                          <span className="text-xs font-bold text-amber-700 mt-0.5 block">{nutritionData.fat || 70}г</span>
+                        </div>
+                        <div className="p-2 bg-emerald-50/60 rounded-2xl border border-emerald-200">
+                          <span className="text-[9.5px] text-emerald-800 font-sans block">Углеводы</span>
+                          <span className="text-xs font-bold text-emerald-700 mt-0.5 block">{nutritionData.carbs || 230}г</span>
+                        </div>
+                      </div>
+
+                      {/* Гидратация */}
+                      <div className="p-3 bg-sky-50/60 border border-sky-200/80 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Droplet className="w-4 h-4 text-sky-600 shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-slate-900">Водный баланс</p>
+                            <p className="text-[10px] text-slate-500">Рекомендация на день</p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-bold text-sky-800 font-mono">
+                          {nutritionData.waterMl || 2500} мл
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Меню по приемам пищи */}
+                    {nutritionData.meals && Array.isArray(nutritionData.meals) && nutritionData.meals.length > 0 && (
+                      <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
+                        <span className="font-bold text-slate-900 text-xs block border-b border-slate-100 pb-2">
+                          Приемы пищи на день
+                        </span>
+
+                        <div className="space-y-2">
+                          {nutritionData.meals.map((meal, mIdx) => (
+                            <div key={meal.id || mIdx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-xs text-slate-900">{meal.name}</span>
+                                {meal.time && (
+                                  <span className="text-[9.5px] bg-white px-2 py-0.5 rounded-md font-mono text-slate-600 border border-slate-200">
+                                    {meal.time}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-600 leading-snug">{meal.desc}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Рекомендованный спортпит */}
+                    {nutritionData.supplements && Array.isArray(nutritionData.supplements) && (
+                      <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
+                        <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                          <Pill className="w-4 h-4 text-indigo-600" />
+                          <span className="text-xs font-bold text-slate-900">Спортпит и витамины от тренера</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          {nutritionData.supplements.filter(s => s.active).map((sup, sIdx) => (
+                            <div key={sIdx} className="p-2.5 rounded-2xl border border-indigo-200 bg-indigo-50/50 flex items-center justify-between">
+                              <div>
+                                <p className="text-xs font-bold text-slate-900">{sup.name}</p>
+                                <p className="text-[10px] text-indigo-700 mt-0.5">{sup.dosage}</p>
+                              </div>
+                              <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0 ml-2" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-xs text-center space-y-2">
+                    <Utensils className="w-8 h-8 mx-auto text-slate-300" />
+                    <p className="font-bold text-xs text-slate-800">Рацион составляется</p>
+                    <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                      Ваш наставник готовит персональный план КБЖУ и меню. Как только рацион будет готов, он появится здесь.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Вкладка 3: Абонемент и касса */}
             {activeTab === 'finance' && (
               <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3.5 text-xs">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -630,7 +747,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
               </div>
             )}
 
-            {/* Вкладка 3: Профиль тренера */}
+            {/* Вкладка 4: Профиль тренера */}
             {activeTab === 'coach' && (
               <div className="space-y-3.5 text-xs text-slate-700 animate-in fade-in">
                 <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
