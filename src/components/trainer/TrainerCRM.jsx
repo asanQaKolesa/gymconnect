@@ -1,5 +1,5 @@
 // src/components/trainer/TrainerCRM.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import TrainerHeader from './components/TrainerHeader';
 import OverviewTab from './tabs/OverviewTab';
@@ -26,6 +26,7 @@ import TrainerReferralModal from './components/modals/TrainerReferralModal';
 import TrainerSupportModal from './components/modals/TrainerSupportModal';
 import TrainerDeleteModal from './components/modals/TrainerDeleteModal';
 import TrainerQrModal from './components/modals/TrainerQrModal';
+import TrainerNotificationsModal from './components/modals/TrainerNotificationsModal';
 
 export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -94,17 +95,15 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     }
   };
 
-  // ПЕРВИЧНАЯ ЗАГРУЗКА + 5-СЕКУНДНЫЙ ТИХИЙ ПОЛЛИНГ БАЗЫ ДАННЫХ
+  // ПЕРВИЧНАЯ ЗАГРУЗКА + 5-СЕКУНДНЫЙ ТИХИЙ ПОЛЛИНГ
   useEffect(() => {
     if (!trainerUsername) {
       setLoading(false);
       return;
     }
 
-    // 1. Первая загрузка с лоадером
     refreshTrainerData(false);
 
-    // 2. Фоновый тихий опрос каждые 5 секунд (живой поллинг)
     const pollTimer = setInterval(() => {
       refreshTrainerData(true);
     }, 5000);
@@ -193,7 +192,18 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     );
   }
 
-  // ================= 2. ПОЛНОЭКРАННЫЕ РАЗДЕЛЫ МЕНЮ =================
+  // ================= 2. ПОЛНОЭКРАННЫЙ ЦЕНТР УВЕДОМЛЕНИЙ НА ВЕСЬ ЭКРАН =================
+  if (activeScreen === 'notifications') {
+    return (
+      <TrainerNotificationsModal 
+        isOpen={true}
+        onClose={() => setActiveScreen(null)}
+        studentsList={students}
+      />
+    );
+  }
+
+  // ================= 3. ПОЛНОЭКРАННЫЕ РАЗДЕЛЫ МЕНЮ =================
   if (activeScreen === 'subscription') {
     return <TrainerSubscriptionModal isOpen={true} onClose={handleCloseScreenToMenu} />;
   }
@@ -242,7 +252,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     return <TrainerQrModal isOpen={true} onClose={handleCloseScreenToMenu} coachName={trainerData?.full_name || trainerData?.first_name || 'Тренер'} cleanUsername={trainerData?.username || trainerUsername} />;
   }
 
-  // ================= 3. ОСНОВНОЙ ДАШБОРД CRM =================
+  // ================= 4. ОСНОВНОЙ ДАШБОРД CRM =================
   const activeStudentsCount = students.filter(s => s.status === 'active' || !s.status).length;
   const pausedStudentsCount = students.filter(s => s.status === 'paused').length;
   const leftStudentsCount = students.filter(s => s.status === 'left').length;
