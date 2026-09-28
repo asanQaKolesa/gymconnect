@@ -5,6 +5,7 @@ import TrainerHeader from './components/TrainerHeader';
 import OverviewTab from './tabs/OverviewTab';
 import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
+import TrainerNutritionTab from './tabs/TrainerNutritionTab';
 import ScheduleTab from './tabs/ScheduleTab';
 import FinanceTab from './tabs/FinanceTab';
 import NotesTab from './tabs/NotesTab';
@@ -326,6 +327,13 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
 
             {activeTab === 'workouts' && (
               <WorkoutsTab 
+                students={students} 
+                onUpdate={refreshTrainerData}
+              />
+            )}
+
+            {activeTab === 'nutrition' && (
+              <TrainerNutritionTab 
                 students={students} 
                 onUpdate={refreshTrainerData}
               />
