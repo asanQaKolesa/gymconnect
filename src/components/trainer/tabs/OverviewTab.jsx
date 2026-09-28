@@ -11,17 +11,15 @@ import {
   Dumbbell, 
   Check, 
   Eye, 
-  BarChart3, 
   ArrowUpRight, 
-  ShieldCheck, 
-  MessageCircle, 
   ChevronRight,
-  Clock,
   Users,
   Send,
   AlertTriangle,
   RotateCcw,
-  ArrowLeft
+  ArrowLeft,
+  Search,
+  MessageCircle
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { sendStudentNotification } from '../../../utils/telegramNotifications';
@@ -37,10 +35,13 @@ export default function OverviewTab({
   onSelectStudent
 }) {
   const [filterFormat, setFilterFormat] = useState('all'); // 'all' | 'gym' | 'online'
+  const [scheduleViewMode, setScheduleViewMode] = useState('scheduled'); // 'scheduled' | 'all_active'
 
   // Модальные окна
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [reminderType, setReminderType] = useState('today'); // 'today' | 'payment' | 'absence'
+  const [reminderAudience, setReminderAudience] = useState('all'); // 'scheduled' | 'all'
+  const [reminderSearchQuery, setReminderSearchQuery] = useState('');
   const [isLocalAddModalOpen, setIsLocalAddModalOpen] = useState(false);
   const [selectedStudentForWorkout, setSelectedStudentForWorkout] = useState(null);
   const [reminderFeedback, setReminderFeedback] = useState(null);
@@ -66,22 +67,44 @@ export default function OverviewTab({
   // Динамическое расписание на сегодня
   const [todaySchedule, setTodaySchedule] = useState([]);
 
+  // Вспомогательный парсер дней ученика
+  const parseStudentWorkoutDays = (s) => {
+    try {
+      const local = localStorage.getItem(`gymconnect_schedule_${s.id || s.telegram_id}`);
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed.workout_days) && parsed.workout_days.length > 0) {
+          return parsed.workout_days;
+        }
+      }
+    } catch (e) {}
+
+    if (Array.isArray(s.workout_days) && s.workout_days.length > 0) return s.workout_days;
+    if (typeof s.workout_days === 'string') {
+      try {
+        const parsed = JSON.parse(s.workout_days);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        if (s.workout_days.includes(',')) return s.workout_days.split(',').map(d => d.trim());
+      }
+    }
+    return ['Пн', 'Ср', 'Пт'];
+  };
+
+  // Исправленная проверка активного атлета (не ломается при статусах вроде «Хочу в зал 🔥»)
+  const isStudentActive = (s) => {
+    if (!s) return false;
+    const st = (s.status || '').toLowerCase().trim();
+    return st !== 'left' && st !== 'archived';
+  };
+
   useEffect(() => {
     if (!students || students.length === 0) {
       setTodaySchedule([]);
       return;
     }
 
-    const activeStudents = students.filter(s => s.status === 'active' || !s.status);
-    
-    const scheduledForToday = activeStudents.filter(s => {
-      const days = Array.isArray(s.workout_days) && s.workout_days.length > 0 
-        ? s.workout_days 
-        : ['Пн', 'Ср', 'Пт'];
-      return days.includes(todayShortName) || days.includes(todayFullName);
-    });
-
-    const targetList = scheduledForToday.length > 0 ? scheduledForToday : activeStudents;
+    const activeStudents = students.filter(isStudentActive);
 
     // Считываем сохраненные сегодня отметки о проведении
     const savedCompletedIds = (() => {
@@ -92,6 +115,20 @@ export default function OverviewTab({
         return [];
       }
     })();
+
+    // Студенты, у которых сегодня тренировочный день
+    const scheduledForToday = activeStudents.filter(s => {
+      const days = parseStudentWorkoutDays(s);
+      return days.includes(todayShortName) || days.includes(todayFullName) || days.length === 7;
+    });
+
+    // Список зависит от режима: «По графику» или «Все активные ученики»
+    let targetList;
+    if (scheduleViewMode === 'all_active') {
+      targetList = activeStudents;
+    } else {
+      targetList = scheduledForToday.length > 0 ? scheduledForToday : activeStudents;
+    }
 
     const mapped = targetList.map((st, index) => {
       const left = st.left_trainings !== undefined 
@@ -127,7 +164,7 @@ export default function OverviewTab({
     });
 
     setTodaySchedule(mapped);
-  }, [students, todayShortName, todayFullName, trainer?.gym, todayDateStr]);
+  }, [students, todayShortName, todayFullName, trainer?.gym, todayDateStr, scheduleViewMode]);
 
   // Недельный график загрузки
   const weeklyLoadStats = [
@@ -156,9 +193,7 @@ export default function OverviewTab({
         list.push(id);
         localStorage.setItem(key, JSON.stringify(list));
       }
-    } catch (err) {
-      console.warn(err);
-    }
+    } catch (err) {}
 
     setTodaySchedule(prev => prev.map(item => {
       if (item.id === id) {
@@ -175,6 +210,15 @@ export default function OverviewTab({
           remaining_workouts: newRemaining 
         })
         .eq('id', id);
+
+      // Автоматический пуш ученику в Telegram о проведенном занятии
+      sendStudentNotification({
+        studentTelegramId: targetItem.telegram_id,
+        studentUsername: targetItem.username,
+        studentId: id,
+        title: 'Тренировка проведена',
+        message: `Тренировка успешно зачтена тренером! Списано 1 занятие. Ваш текущий остаток: ${newRemaining} занятий.`
+      });
     } catch (err) {
       console.warn('Ошибка списания занятия в Supabase:', err);
     }
@@ -190,7 +234,7 @@ export default function OverviewTab({
     }));
   };
 
-  // ОТМЕНА СПИСАНИЯ (+1 ТРЕНИРОВКА ВОЗВРАЩАЕТСЯ НА БАЛАНС В SUPABASE)
+  // Возврат тренировки
   const handleRestoreCompletedSession = async (e, id) => {
     e.stopPropagation();
     const targetItem = todaySchedule.find(s => s.id === id);
@@ -198,7 +242,6 @@ export default function OverviewTab({
 
     const restoredRemaining = targetItem.remaining + 1;
 
-    // 1. Убираем ID из памяти проведенных за сегодня
     try {
       const key = `gymconnect_completed_today_${todayDateStr}`;
       const saved = localStorage.getItem(key);
@@ -208,7 +251,6 @@ export default function OverviewTab({
       }
     } catch (err) {}
 
-    // 2. Возвращаем карточку в статус «Ожидается»
     setTodaySchedule(prev => prev.map(item => {
       if (item.id === id) {
         return { ...item, status: 'pending', remaining: restoredRemaining };
@@ -216,7 +258,6 @@ export default function OverviewTab({
       return item;
     }));
 
-    // 3. Возвращаем +1 тренировку в Supabase
     try {
       await supabase
         .from('profiles')
@@ -225,24 +266,22 @@ export default function OverviewTab({
           remaining_workouts: restoredRemaining 
         })
         .eq('id', id);
-    } catch (err) {
-      console.warn('Ошибка возврата тренировки в Supabase:', err);
-    }
+    } catch (err) {}
   };
 
-  // ОТПРАВКА НАПОМИНАНИЯ ЧЕРЕЗ TELEGRAM-БОТ
+  // Отправка напоминания через бота
   const handleSendTelegramReminder = async (student, type) => {
     const studentTgId = student.telegram_id || student.rawStudent?.telegram_id;
     const studentUsername = student.username || student.rawStudent?.username;
 
     let title = 'Напоминание о тренировке';
-    let message = `Привет, ${student.first_name}! Напоминаю о нашей персональной тренировке сегодня. Жду вовремя в зале! 💪`;
+    let message = `Привет, ${student.first_name || 'атлет'}! Напоминаю о нашей персональной тренировке. Жду вовремя в зале! 💪`;
 
     if (type === 'payment') {
       title = 'Продление абонемента';
       const left = student.remaining ?? 1;
       const price = Number(student.monthly_price || 70000).toLocaleString();
-      message = `Привет, ${student.first_name}! По твоему абонементу осталось ${left} зан. Сумма за новый блок: ${price} ₸. Давай забронируем график на следующий период!`;
+      message = `Привет, ${student.first_name || 'атлет'}! По твоему абонементу осталось ${left} зан. Сумма за новый блок: ${price} ₸. Давай забронируем график на следующий период!`;
     }
 
     setReminderFeedback('Отправка через Telegram бот...');
@@ -256,10 +295,10 @@ export default function OverviewTab({
         message
       });
 
-      if (res && (res.success || res.ok)) {
-        setReminderFeedback(`✅ Сообщение успешно доставлено в Telegram атлету!`);
+      if (res && res.ok) {
+        setReminderFeedback(`✅ Уведомление доставлено в Telegram атлету!`);
       } else {
-        setReminderFeedback(`⚠️ ${res?.error || 'Не удалось отправить. Атлету нужно нажать /start в @gymconnect_ala_bot'}`);
+        setReminderFeedback(`⚠️ ${res?.error || 'Атлет должен нажать /start в @gymconnect_ala_bot'}`);
       }
     } catch (err) {
       setReminderFeedback(`⚠️ Ошибка: ${err.message}`);
@@ -269,35 +308,37 @@ export default function OverviewTab({
   };
 
   const handleSendWhatsAppReminder = (phone, text) => {
-    const cleanPhone = phone.replace(/\D/g, '');
+    const cleanPhone = (phone || '').replace(/\D/g, '');
     const encoded = encodeURIComponent(text);
     window.open(`https://wa.me/${cleanPhone.startsWith('7') ? cleanPhone : `7${cleanPhone}`}?text=${encoded}`, '_blank');
   };
 
   const handleMassAbsenceBroadcast = async () => {
-    if (todaySchedule.length === 0) {
-      alert('На сегодня нет записанных учеников для оповещения.');
+    const targetBroadcastList = reminderAudience === 'all' ? students.filter(isStudentActive) : todaySchedule;
+
+    if (targetBroadcastList.length === 0) {
+      alert('Нет учеников для отправки.');
       return;
     }
 
     setReminderFeedback('Рассылка ученикам через бота...');
     let successCount = 0;
 
-    for (const st of todaySchedule) {
+    for (const st of targetBroadcastList) {
       try {
         const res = await sendStudentNotification({
-          studentTelegramId: st.telegram_id || st.rawStudent?.telegram_id,
-          studentUsername: st.username || st.rawStudent?.username,
+          studentTelegramId: st.telegram_id,
+          studentUsername: st.username,
           studentId: st.id,
           title: 'Перенос тренировки',
-          message: `Уважаемый атлет! По техническим причинам меня сегодня не будет в зале. Ваше занятие сохраняется и переносится без сгорания. Согласуем удобное время в личных сообщениях!`
+          message: `Уважаемый атлет! По уважительной причине сегодняшнее занятие переносится без сгорания. Мы свяжемся с вами для согласования удобного времени!`
         });
-        if (res && (res.success || res.ok)) successCount++;
+        if (res && res.ok) successCount++;
       } catch (e) {}
     }
 
-    setReminderFeedback(`✅ Доставлено ${successCount} из ${todaySchedule.length} учеников в Telegram!`);
-    setTimeout(() => setReminderFeedback(null), 4500);
+    setReminderFeedback(`✅ Доставлено ${successCount} из ${targetBroadcastList.length} учеников в Telegram!`);
+    setTimeout(() => setReminderFeedback(null), 5000);
   };
 
   const handleSaveStudent = async (e) => {
@@ -318,6 +359,8 @@ export default function OverviewTab({
         left_trainings: Number(newStudentForm.totalWorkouts) || 12,
         remaining_workouts: Number(newStudentForm.totalWorkouts) || 12,
         gym: trainer?.gym || 'Алматы',
+        workout_days: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+        workout_time_slot: 'Вечер (16:00 - 21:00)',
         trainer_username: coachNick,
         trainer_telegram: coachNick,
         status: 'active',
@@ -353,6 +396,23 @@ export default function OverviewTab({
   });
 
   const completedTodayCount = todaySchedule.filter(s => s.status === 'completed').length;
+
+  // Ученики для фильтра в окне «Напомнить»
+  const reminderStudentsList = (() => {
+    let list = reminderAudience === 'all' 
+      ? students.filter(isStudentActive)
+      : todaySchedule;
+
+    if (reminderSearchQuery.trim()) {
+      const q = reminderSearchQuery.toLowerCase();
+      list = list.filter(st => {
+        const fullName = `${st.first_name || ''} ${st.last_name || ''} ${st.username || ''}`.toLowerCase();
+        return fullName.includes(q);
+      });
+    }
+
+    return list;
+  })();
 
   return (
     <div className="space-y-3.5 pb-10 select-none">
@@ -492,21 +552,43 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 4. Расписание на сегодня */}
+      {/* 4. Расписание на сегодня с переключателем режимов */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-blue-600" />
             <div>
-              <h3 className="text-xs font-bold text-slate-900">Расписание на сегодня ({todayFullName})</h3>
+              <h3 className="text-xs font-bold text-slate-900">
+                {scheduleViewMode === 'all_active' ? 'Все активные ученики' : `Расписание на сегодня (${todayFullName})`}
+              </h3>
               <p className="text-[10px] text-slate-400">
                 Проведено: {completedTodayCount} из {todaySchedule.length} занятий
               </p>
             </div>
           </div>
-          <span className="text-[10px] font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-            Сегодня
-          </span>
+
+          {/* Тумблер: По графику сегодня ↔ Все ученики */}
+          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200/70">
+            <button
+              type="button"
+              onClick={() => setScheduleViewMode('scheduled')}
+              className={`px-2 py-1 rounded-lg text-[9.5px] font-bold transition-all cursor-pointer ${
+                scheduleViewMode === 'scheduled' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600'
+              }`}
+            >
+              Сегодня
+            </button>
+            <button
+              type="button"
+              onClick={() => setScheduleViewMode('all_active')}
+              className={`px-2 py-1 rounded-lg text-[9.5px] font-bold transition-all cursor-pointer ${
+                scheduleViewMode === 'all_active' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600'
+              }`}
+              title="Показать всех учеников для тестирования списаний"
+            >
+              Все ({students.filter(isStudentActive).length})
+            </button>
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -602,7 +684,6 @@ export default function OverviewTab({
                   {/* Нижняя часть: Кнопки или статус проведения с возможностью отмены */}
                   <div className="pt-1">
                     {isCompleted ? (
-                      /* ТРЕНИРОВКА ПРОВЕДЕНА: ПОКАЗЫВАЕТСЯ ШТАМП + КНОПКА ВОЗВРАТА ЗАНЯТИЯ */
                       <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
                         <span className="font-bold text-emerald-800 flex items-center gap-1.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -621,7 +702,6 @@ export default function OverviewTab({
                             План дня
                           </button>
                           
-                          {/* Кнопка отмены списания с возвратом +1 тренировки */}
                           <button
                             type="button"
                             onClick={(e) => handleRestoreCompletedSession(e, item.id)}
@@ -634,7 +714,6 @@ export default function OverviewTab({
                         </div>
                       </div>
                     ) : isCanceled ? (
-                      /* ПРОПУСК ЗАФИКСИРОВАН */
                       <div className="p-2 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between text-xs">
                         <span className="font-bold text-rose-800 flex items-center gap-1.5">
                           <XCircle className="w-4 h-4 text-rose-600" />
@@ -650,7 +729,6 @@ export default function OverviewTab({
                         </button>
                       </div>
                     ) : (
-                      /* КНОПКИ ДЕЙСТВИЯ */
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
@@ -690,14 +768,13 @@ export default function OverviewTab({
           ) : (
             <div className="p-8 text-center text-slate-400 space-y-2 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
               <Users className="w-7 h-7 mx-auto text-slate-300" />
-              <p className="font-semibold text-xs text-slate-700">На сегодня ({todayFullName}) учеников нет</p>
+              <p className="font-semibold text-xs text-slate-700">На сегодня ({todayFullName}) запланированных тренировок нет</p>
               <button
                 type="button"
-                onClick={() => onAddStudentClick ? onAddStudentClick() : setIsLocalAddModalOpen(true)}
+                onClick={() => setScheduleViewMode('all_active')}
                 className="mt-1 px-3.5 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-1 active:scale-95 shadow-xs cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Зарегистрировать подопечного</span>
+                <span>Показать всех учеников базы</span>
               </button>
             </div>
           )}
@@ -774,11 +851,10 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* ================= ПОЛНОЭКРАННЫЙ РЕЖИМ БЫСТРЫХ НАПОМИНАНИЙ (НА ВЕСЬ ЭКРАН) ================= */}
+      {/* ================= ПОЛНОЭКРАННЫЙ РЕЖИМ БЫСТРЫХ НАПОМИНАНИЙ ================= */}
       {isReminderModalOpen && (
         <div className="fixed inset-0 z-[120] bg-[#F2F2F7] flex flex-col min-h-screen w-full overflow-y-auto select-none animate-in fade-in duration-150">
           
-          {/* Верхний бар с кнопкой возврата назад в Обзор KPI */}
           <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 shadow-xs">
             <div className="max-w-md mx-auto flex items-center justify-between gap-2">
               <button
@@ -791,7 +867,7 @@ export default function OverviewTab({
               </button>
 
               <h2 className="text-xs font-bold text-slate-900 truncate">
-                Быстрые напоминания
+                Центр напоминаний
               </h2>
 
               <div className="w-12" />
@@ -838,24 +914,67 @@ export default function OverviewTab({
               </button>
             </div>
 
+            {/* Выбор аудитории и поиск */}
+            {reminderType !== 'absence' && (
+              <div className="bg-white p-3.5 rounded-3xl border border-slate-200/80 shadow-2xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Кому отправлять:
+                  </span>
+
+                  <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200/70">
+                    <button
+                      type="button"
+                      onClick={() => setReminderAudience('scheduled')}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                        reminderAudience === 'scheduled' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600'
+                      }`}
+                    >
+                      По графику ({todaySchedule.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReminderAudience('all')}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                        reminderAudience === 'all' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600'
+                      }`}
+                    >
+                      Все ученики ({students.filter(isStudentActive).length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Поиск ученика */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={reminderSearchQuery}
+                    onChange={e => setReminderSearchQuery(e.target.value)}
+                    placeholder="Поиск по имени или Telegram..."
+                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2.5">
               
               {/* СЦЕНАРИЙ 1: О ТРЕНИРОВКЕ */}
               {reminderType === 'today' && (
                 <>
-                  <p className="text-[10px] text-slate-400 px-1 uppercase tracking-wider font-bold">
-                    Записанные на сегодня ({todayShortName}):
-                  </p>
-                  {todaySchedule.length > 0 ? (
-                    todaySchedule.map(st => (
+                  {reminderStudentsList.length > 0 ? (
+                    reminderStudentsList.map(st => (
                       <div key={st.id} className="p-4 bg-white rounded-3xl border border-slate-200/80 shadow-2xs space-y-2.5">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-xs font-bold text-slate-900">{st.name}</p>
-                            <p className="text-[10px] text-slate-400">Слот: {st.time}</p>
+                            <p className="text-xs font-bold text-slate-900">{st.name || `${st.first_name} ${st.last_name || ''}`}</p>
+                            <p className="text-[10px] text-slate-400">
+                              {st.time ? `Слот: ${st.time}` : (st.workout_time_slot || 'По договоренности')}
+                            </p>
                           </div>
                           <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-                            {st.gym}
+                            {st.gym ? st.gym.split('|')[0] : 'Алматы'}
                           </span>
                         </div>
 
@@ -871,7 +990,7 @@ export default function OverviewTab({
 
                           <button
                             type="button"
-                            onClick={() => handleSendWhatsAppReminder(st.phone, `Привет, ${st.first_name}! Напоминаю о сегодняшней тренировке в ${st.time}. Жду вовремя! 💪`)}
+                            onClick={() => handleSendWhatsAppReminder(st.phone || st.whatsapp, `Привет, ${st.first_name}! Напоминаю о тренировке. Жду вовремя! 💪`)}
                             className="flex-1 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-emerald-200 active:scale-95 transition-all cursor-pointer"
                           >
                             <MessageCircle className="w-3.5 h-3.5" />
@@ -882,7 +1001,7 @@ export default function OverviewTab({
                     ))
                   ) : (
                     <div className="p-8 text-center text-slate-400 text-xs bg-white rounded-3xl border border-slate-200">
-                      Нет запланированных тренировок на сегодня.
+                      Ученики не найдены.
                     </div>
                   )}
                 </>
@@ -891,19 +1010,18 @@ export default function OverviewTab({
               {/* СЦЕНАРИЙ 2: ОБ ОПЛАТЕ */}
               {reminderType === 'payment' && (
                 <>
-                  <p className="text-[10px] text-slate-400 px-1 uppercase tracking-wider font-bold">
-                    Ученики с остатком ≤ 1 занятий или задолженностью:
-                  </p>
-                  {students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 1 || s.payment_status === 'pending').length > 0 ? (
-                    students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 1 || s.payment_status === 'pending').map(st => {
-                      const left = st.left_trainings ?? 1;
+                  {reminderStudentsList.length > 0 ? (
+                    reminderStudentsList.map(st => {
+                      const left = st.remaining !== undefined 
+                        ? st.remaining 
+                        : (st.left_trainings !== undefined ? st.left_trainings : (st.remaining_workouts !== undefined ? st.remaining_workouts : 12));
                       const price = Number(st.monthly_price || 70000).toLocaleString();
 
                       return (
                         <div key={st.id} className="p-4 bg-white rounded-3xl border border-slate-200/80 shadow-2xs space-y-2.5">
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-xs font-bold text-slate-900">{st.first_name} {st.last_name || ''}</p>
+                              <p className="text-xs font-bold text-slate-900">{st.name || `${st.first_name} ${st.last_name || ''}`}</p>
                               <p className="text-[10px] text-amber-600 font-semibold font-mono">Остаток: {left} зан. • {price} ₸</p>
                             </div>
                             <span className="text-[9.5px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-bold">
@@ -935,7 +1053,7 @@ export default function OverviewTab({
                     })
                   ) : (
                     <div className="p-8 text-center text-slate-400 text-xs bg-white rounded-3xl border border-slate-200">
-                      У всех активных подопечных достаточный баланс занятий.
+                      Ученики не найдены.
                     </div>
                   )}
                 </>
@@ -949,8 +1067,29 @@ export default function OverviewTab({
                     <span className="text-xs">Оповещение об отмене занятий</span>
                   </div>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Бот отправит всем ученикам, записанным на сегодня ({todaySchedule.length} чел.), сообщение о переносе тренировок без сгорания.
+                    Бот отправит персональное уведомление в Telegram о переносе тренировок без сгорания.
                   </p>
+
+                  <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setReminderAudience('scheduled')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        reminderAudience === 'scheduled' ? 'bg-white text-rose-700 shadow-2xs' : 'text-slate-600'
+                      }`}
+                    >
+                      Записанным на сегодня ({todaySchedule.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReminderAudience('all')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        reminderAudience === 'all' ? 'bg-white text-rose-700 shadow-2xs' : 'text-slate-600'
+                      }`}
+                    >
+                      Всем активным ({students.filter(isStudentActive).length})
+                    </button>
+                  </div>
 
                   <button
                     type="button"
@@ -958,7 +1097,7 @@ export default function OverviewTab({
                     className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold active:scale-98 transition-all cursor-pointer shadow-xs flex items-center justify-center gap-2"
                   >
                     <Send className="w-4 h-4" />
-                    <span>Разослать всем через бота в Telegram</span>
+                    <span>Разослать через бота в Telegram</span>
                   </button>
                 </div>
               )}
