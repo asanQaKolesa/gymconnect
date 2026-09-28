@@ -1,13 +1,14 @@
 // src/components/trainer/components/modals/TrainerPublicCardModal.jsx
 import React, { useState } from 'react';
-import { ArrowLeft, CheckCircle2, MapPin, Copy, Check, Share2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, MapPin, Copy, Check, Share2, Save } from 'lucide-react';
+import { supabase } from '../../../../supabaseClient';
 
 export default function TrainerPublicCardModal({ 
   isOpen, 
   onClose, 
   onEditClick, 
   trainer, 
-  cleanUsername 
+  cleanUsername = 'coach'
 }) {
   const [isCopied, setIsCopied] = useState(false);
   const [acceptingStudents, setAcceptingStudents] = useState(
@@ -16,10 +17,12 @@ export default function TrainerPublicCardModal({
   const [showPhone, setShowPhone] = useState(
     trainer?.public_settings?.show_phone ?? true
   );
+  const [savingSettings, setSavingSettings] = useState(false);
 
   if (!isOpen) return null;
 
-  const publicCoachLink = `https://t.me/gymconnect_almaty_bot?start=coach_${cleanUsername}`;
+  // Актуальная ссылка на официального рабочего бота платформы
+  const publicCoachLink = `https://t.me/gymconnect_ala_bot?start=coach_${cleanUsername}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(publicCoachLink);
@@ -33,6 +36,32 @@ export default function TrainerPublicCardModal({
     window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
   };
 
+  // МГНОВЕННОЕ СОХРАНЕНИЕ НАСТРОЕК ВИДИМОСТИ В SUPABASE
+  const handleToggleSetting = async (field, value) => {
+    if (field === 'accepting') setAcceptingStudents(value);
+    if (field === 'phone') setShowPhone(value);
+
+    const updatedSettings = {
+      ...trainer?.public_settings,
+      accepting_new_students: field === 'accepting' ? value : acceptingStudents,
+      show_phone: field === 'phone' ? value : showPhone
+    };
+
+    setSavingSettings(true);
+    try {
+      if (cleanUsername && cleanUsername !== 'coach') {
+        await supabase
+          .from('trainer_profiles')
+          .update({ public_settings: updatedSettings })
+          .or(`username.ilike.${cleanUsername},username.ilike.@${cleanUsername}`);
+      }
+    } catch (e) {
+      console.warn('Ошибка сохранения настроек визитки:', e);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   const isApproved = trainer?.status === 'approved';
   const specializations = Array.isArray(trainer?.specializations) && trainer.specializations.length > 0
     ? trainer.specializations
@@ -44,11 +73,13 @@ export default function TrainerPublicCardModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
+      
+      {/* Шапка */}
       <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center gap-1 text-blue-600 font-semibold text-xs active:scale-95"
+          className="flex items-center gap-1 text-blue-600 font-semibold text-xs active:scale-95 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Назад в меню</span>
@@ -57,13 +88,14 @@ export default function TrainerPublicCardModal({
         <button
           type="button"
           onClick={onEditClick}
-          className="text-xs font-semibold text-blue-600 active:scale-95"
+          className="text-xs font-semibold text-blue-600 active:scale-95 cursor-pointer"
         >
           Изменить
         </button>
       </div>
 
-      <div className="p-4 space-y-4 max-w-lg mx-auto w-full pb-24">
+      <div className="p-4 space-y-4 max-w-lg mx-auto w-full pb-28">
+        
         {/* Карточка визитки */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
           <div className="flex items-center gap-3.5">
@@ -94,10 +126,10 @@ export default function TrainerPublicCardModal({
               Стаж: {trainer?.experience_years || 3} года
             </span>
             <span className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-xl">
-              {trainer?.work_format === 'hybrid' ? 'Зал + Онлайн' : trainer?.work_format === 'online' ? 'Только онлайн' : 'Оффлайн в зале'}
+              {trainer?.work_format === 'hybrid' ? 'Зал + Онлайн' : trainer?.work_format === 'online' ? 'Только онлайн' : 'В зале'}
             </span>
             <span className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-xl">
-              {trainer?.workout_duration || 60} мин / тренировка
+              {trainer?.workout_duration || 60} мин / занятие
             </span>
           </div>
 
@@ -129,21 +161,24 @@ export default function TrainerPublicCardModal({
           {trainer?.bio && (
             <div className="space-y-1 pt-2 border-t border-slate-100">
               <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">О тренере</span>
-              <p className="text-xs text-slate-600 leading-relaxed">{trainer.bio}</p>
+              <p className="text-xs text-slate-600 leading-relaxed italic">«{trainer.bio}»</p>
             </div>
           )}
         </div>
 
-        {/* Настройки видимости */}
+        {/* Настройки видимости с сохранением */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
-          <p className="text-xs font-bold text-slate-900 border-b border-slate-100 pb-2">Настройки видимости</p>
+          <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+            <p className="text-xs font-bold text-slate-900">Настройки видимости</p>
+            {savingSettings && <span className="text-[9.5px] text-blue-600 font-mono">Сохранение...</span>}
+          </div>
           
           <label className="flex items-center justify-between text-xs cursor-pointer">
             <span className="text-slate-700">Открыт к записи новых учеников</span>
             <input
               type="checkbox"
               checked={acceptingStudents}
-              onChange={e => setAcceptingStudents(e.target.checked)}
+              onChange={e => handleToggleSetting('accepting', e.target.checked)}
               className="w-4 h-4 text-blue-600 rounded"
             />
           </label>
@@ -153,39 +188,44 @@ export default function TrainerPublicCardModal({
             <input
               type="checkbox"
               checked={showPhone}
-              onChange={e => setShowPhone(e.target.checked)}
+              onChange={e => handleToggleSetting('phone', e.target.checked)}
               className="w-4 h-4 text-blue-600 rounded"
             />
           </label>
         </div>
 
-        {/* Персональная ссылка */}
+        {/* Персональная инвайт-ссылка */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Персональная ссылка в боте</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+            Инвайт-ссылка для автоматической привязки:
+          </span>
           <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
-            <span className="font-mono text-[10.5px] text-slate-600 truncate mr-2">{publicCoachLink}</span>
+            <span className="font-mono text-[10.5px] text-blue-700 truncate mr-2 font-bold">{publicCoachLink}</span>
             <button
               type="button"
               onClick={handleCopyLink}
-              className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[10.5px] font-semibold flex items-center gap-1 shrink-0"
+              className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[10.5px] font-semibold flex items-center gap-1 shrink-0 active:scale-95 transition-all cursor-pointer shadow-2xs"
             >
               {isCopied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
               <span>{isCopied ? 'Скопировано' : 'Копировать'}</span>
             </button>
           </div>
         </div>
+
       </div>
 
+      {/* Нижняя кнопка Поделиться */}
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 max-w-lg mx-auto shadow-lg">
         <button
           type="button"
           onClick={handleShare}
-          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all"
+          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer shadow-md shadow-blue-600/30"
         >
           <Share2 className="w-4 h-4" />
-          <span>Поделиться визиткой</span>
+          <span>Поделиться визиткой в Telegram</span>
         </button>
       </div>
+
     </div>
   );
 }
