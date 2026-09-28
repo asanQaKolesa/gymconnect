@@ -19,12 +19,15 @@ import {
   ShieldCheck, 
   Flame,
   Search,
-  Send
+  Send,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
-export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
+export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, onUpdate }) {
   // 1. ХУКИ СОСТОЯНИЯ (СТРОГО НА САМОМ ВЕРХУ)
+  const [athleteData, setAthleteData] = useState(initialUser || {});
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('program'); // 'program' | 'finance' | 'coach'
   const [trainerData, setTrainerData] = useState(null);
   const [loadingTrainer, setLoadingTrainer] = useState(false);
@@ -35,7 +38,7 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
   // Отметка явки на сегодня
   const [attendanceToday, setAttendanceToday] = useState(() => {
     try {
-      return localStorage.getItem(`gymconnect_attendance_${user?.id || 'me'}`) || null;
+      return localStorage.getItem(`gymconnect_attendance_${initialUser?.id || 'me'}`) || null;
     } catch {
       return null;
     }
@@ -47,11 +50,47 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
   const [isLinking, setIsLinking] = useState(false);
   const [linkError, setLinkError] = useState('');
 
-  const trainerUsername = user?.trainer_username || user?.trainer_telegram || '';
-  const cleanTrainerUsername = trainerUsername.replace('@', '').trim();
+  // 2. ФОНОВАЯ ПОДТЯЖКА СВЕЖИХ ДАННЫХ АТЛЕТА ИЗ SUPABASE
+  const fetchFreshProfile = async () => {
+    const targetId = initialUser?.id || initialUser?.telegram_id || localStorage.getItem('gymconnect_telegram_id');
+    if (!targetId) return;
+
+    setIsRefreshing(true);
+    try {
+      let query = supabase.from('profiles').select('*');
+      if (initialUser?.id) {
+        query = query.eq('id', initialUser.id);
+      } else {
+        query = query.eq('telegram_id', targetId);
+      }
+      
+      const { data, error } = await query.maybeSingle();
+      if (!error && data) {
+        setAthleteData(data);
+        try {
+          localStorage.setItem('gymconnect_user_profile', JSON.stringify(data));
+        } catch (e) {}
+
+        if (data.attendance_today) {
+          setAttendanceToday(data.attendance_today);
+        }
+      }
+    } catch (e) {
+      console.warn('Ошибка фоновой загрузки профиля атлета:', e);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFreshProfile();
+  }, [initialUser?.id]);
+
+  const trainerUsername = athleteData?.trainer_username || athleteData?.trainer_telegram || '';
+  const cleanTrainerUsername = trainerUsername.replace('@', '').trim().toLowerCase();
   const hasLinkedCoach = Boolean(cleanTrainerUsername);
 
-  // Загрузка данных тренера и его расписания смен
+  // 3. ЗАГРУЗКА ДАННЫХ ТРЕНЕРА И ЕГО СМЕН В ЗАЛАХ
   useEffect(() => {
     async function fetchTrainerInfo() {
       if (!cleanTrainerUsername) return;
@@ -60,7 +99,7 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
         const { data, error } = await supabase
           .from('trainer_profiles')
           .select('*')
-          .or(`username.eq.${cleanTrainerUsername},username.eq.@${cleanTrainerUsername}`)
+          .or(`username.ilike.${cleanTrainerUsername},username.ilike.@${cleanTrainerUsername}`)
           .maybeSingle();
 
         if (!error && data) {
@@ -97,19 +136,39 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
 
   const coachShift = getCoachTodayShift();
 
-  // Отметка явки ученика на сегодня
-  const handleSetAttendance = (status) => {
+  // 4. СКВОЗНАЯ ОТПРАВКА ЯВКИ В SUPABASE
+  const handleSetAttendance = async (status) => {
     setAttendanceToday(status);
+    const todayStr = new Date().toISOString().split('T')[0];
+
     try {
-      localStorage.setItem(`gymconnect_attendance_${user?.id || 'me'}`, status);
-    } catch (e) {
-      console.warn(e);
-    }
+      localStorage.setItem(`gymconnect_attendance_${athleteData?.id || 'me'}`, status);
+    } catch (e) {}
+
     setAttendanceNotice(true);
     setTimeout(() => setAttendanceNotice(false), 3000);
+
+    // Фиксируем явку в Supabase, чтобы тренер сразу увидел её в своем дашборде
+    if (athleteData?.id) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            attendance_today: status,
+            attendance_date: todayStr
+          })
+          .eq('id', athleteData.id);
+
+        if (error && error.message.includes('attendance_today')) {
+          console.warn('Колонки attendance_today нет в profiles, сохранено локально');
+        }
+      } catch (err) {
+        console.warn('Ошибка сохранения явки в Supabase:', err);
+      }
+    }
   };
 
-  // Привязка тренера по Telegram нику
+  // 5. ПРИВЯЗКА ТРЕНЕРА ПО ТЕЛЕГРАМ-НИКУ
   const handleLinkCoach = async (e) => {
     e.preventDefault();
     if (!linkCoachInput.trim()) return;
@@ -117,14 +176,13 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
     setIsLinking(true);
     setLinkError('');
 
-    const cleanInput = linkCoachInput.replace(/[@\s]/g, '').trim();
+    const cleanInput = linkCoachInput.replace(/[@\s]/g, '').trim().toLowerCase();
 
     try {
-      // Проверяем, существует ли такой тренер в базе
       const { data: foundCoach, error: searchErr } = await supabase
         .from('trainer_profiles')
         .select('*')
-        .or(`username.eq.${cleanInput},username.eq.@${cleanInput}`)
+        .or(`username.ilike.${cleanInput},username.ilike.@${cleanInput}`)
         .maybeSingle();
 
       if (searchErr || !foundCoach) {
@@ -133,31 +191,27 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
         return;
       }
 
-      // Обновляем профиль атлета
-      if (user?.id) {
+      if (athleteData?.id) {
         await supabase
           .from('profiles')
           .update({
             trainer_username: cleanInput,
             trainer_telegram: cleanInput
           })
-          .eq('id', user.id);
+          .eq('id', athleteData.id);
       }
 
-      // Обновляем локальный профиль
-      const savedUser = localStorage.getItem('gymconnect_user_profile');
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        localStorage.setItem('gymconnect_user_profile', JSON.stringify({
-          ...parsed,
-          trainer_username: cleanInput,
-          trainer_telegram: cleanInput
-        }));
-      }
+      const updatedProfile = {
+        ...athleteData,
+        trainer_username: cleanInput,
+        trainer_telegram: cleanInput
+      };
+      setAthleteData(updatedProfile);
+      localStorage.setItem('gymconnect_user_profile', JSON.stringify(updatedProfile));
 
       alert(`🎉 Вы успешно привязаны к тренеру ${foundCoach.first_name || ''} (@${cleanInput})!`);
       if (onUpdate) onUpdate();
-      window.location.reload();
+      fetchFreshProfile();
     } catch (err) {
       setLinkError('Ошибка привязки: ' + err.message);
     } finally {
@@ -165,22 +219,22 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
     }
   };
 
-  // Программа от тренера из профиля атлета
-  const programData = user?.assigned_program?.days || user?.assigned_program || {
+  // Программа от тренера (живые данные из Supabase)
+  const programData = athleteData?.assigned_program?.days || athleteData?.assigned_program || {
     1: {
-      title: 'День 1: Базовая тренировка от тренера',
+      title: 'День 1: Базовый тренировочный комплекс',
       exercises: [
-        { name: 'Приседания со штангой', sets: 4, reps: 10, weight: 60, notes: 'Контроль коленей', isBodyweight: false },
-        { name: 'Жим штанги лежа', sets: 4, reps: 8, weight: 55, notes: 'Пауза внизу 1 сек', isBodyweight: false },
-        { name: 'Подтягивания на перекладине', sets: 3, reps: 8, weight: 0, notes: 'Свой вес', isBodyweight: true }
+        { name: 'Приседания со штангой на плечах', sets: 4, reps: 10, weight: 60, notes: 'Контроль коленей', isBodyweight: false },
+        { name: 'Жим штанги лежа на горизонтальной скамье', sets: 4, reps: 8, weight: 55, notes: 'Пауза внизу 1 сек', isBodyweight: false },
+        { name: 'Подтягивания на перекладине широким хватом', sets: 3, reps: 8, weight: 0, notes: 'Свой вес', isBodyweight: true }
       ]
     },
     2: {
       title: 'День 2: Объем и функционал',
       exercises: [
-        { name: 'Румынская тяга с гантелями', sets: 4, reps: 10, weight: 18, notes: 'Растяжка бедра', isBodyweight: false },
-        { name: 'Жим гантелей на наклонной скамье', sets: 4, reps: 10, weight: 20, notes: 'Угол 30°', isBodyweight: false },
-        { name: 'Планка на предплечьях', sets: 3, reps: 45, weight: 0, notes: 'Свой вес', isBodyweight: true }
+        { name: 'Румынская становая тяга с гантелями', sets: 4, reps: 10, weight: 18, notes: 'Растяжка бедра', isBodyweight: false },
+        { name: 'Жим гантелей на наклонной скамье (30°)', sets: 4, reps: 10, weight: 20, notes: 'Верх груди', isBodyweight: false },
+        { name: 'Классическая планка на предплечьях', sets: 3, reps: 45, weight: 0, notes: 'Свой вес', isBodyweight: true }
       ]
     }
   };
@@ -188,12 +242,12 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
   const programDayKeys = Object.keys(programData);
   const currentDayProgram = programData[selectedDay] || programData[programDayKeys[0]];
 
-  // Финансовые показатели
-  const leftTrainings = user?.left_trainings !== undefined 
-    ? user.left_trainings 
-    : (user?.remaining_workouts !== undefined ? user.remaining_workouts : 12);
-  const totalTrainings = user?.total_trainings || 12;
-  const isPaid = user?.payment_status === 'paid' || !user?.payment_status;
+  // Финансовые показатели (живые данные из Supabase)
+  const leftTrainings = athleteData?.left_trainings !== undefined 
+    ? athleteData.left_trainings 
+    : (athleteData?.remaining_workouts !== undefined ? athleteData.remaining_workouts : 12);
+  const totalTrainings = athleteData?.total_trainings || 12;
+  const isPaid = athleteData?.payment_status === 'paid' || !athleteData?.payment_status;
 
   // Очистка контактов тренера
   const coachPhone = trainerData?.phone ? String(trainerData.phone).replace(/\D/g, '') : '';
@@ -223,7 +277,16 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
             </p>
           </div>
 
-          <div className="w-12 text-right">
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={fetchFreshProfile}
+              className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg active:scale-90 transition-all cursor-pointer"
+              title="Обновить программу"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
+            </button>
+
             {hasLinkedCoach && (
               <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100 font-mono">
                 {leftTrainings} зан.
@@ -256,7 +319,7 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
                     </h2>
                     <p className="text-[11px] text-blue-600 font-mono mt-0.5">@{cleanTrainerUsername}</p>
                     <p className="text-[10.5px] text-slate-400 mt-0.5 truncate">
-                      {trainerData?.gym ? trainerData.gym.split('|')[0] : (user?.gym ? user.gym.split('|')[0] : 'Алматы')}
+                      {trainerData?.gym ? trainerData.gym.split('|')[0] : (athleteData?.gym ? athleteData.gym.split('|')[0] : 'Алматы')}
                     </p>
                   </div>
                 </div>
@@ -305,7 +368,7 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
               </div>
             </div>
 
-            {/* 3 ТАБА: Программа / Касса / Мой тренер */}
+            {/* 3 ТАБА: Программа / Абонемент / О тренере */}
             <div className="grid grid-cols-3 gap-1 p-1 bg-slate-200/80 rounded-2xl">
               {[
                 { id: 'program', label: 'Программа', icon: Dumbbell },
@@ -336,7 +399,7 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
             {activeTab === 'program' && (
               <div className="space-y-3.5">
                 
-                {/* Интерактивная явка на сегодняшнюю тренировку */}
+                {/* Интерактивная явка с отправкой на сервер */}
                 <div className="bg-white rounded-3xl p-4 border border-blue-200/80 shadow-xs space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
@@ -380,7 +443,7 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
 
                   {attendanceNotice && (
                     <div className="p-2 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[10.5px] font-semibold text-center animate-in fade-in">
-                      Отметка передана тренеру в расписание!
+                      Отметка передана тренеру в CRM!
                     </div>
                   )}
                 </div>
@@ -476,7 +539,7 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
                   <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-2xl">
                     <span className="text-[10px] text-slate-400 font-sans block">Стоимость блока</span>
                     <span className="text-sm font-bold text-slate-900 mt-0.5 block">
-                      {user?.monthly_price ? `${Number(user.monthly_price).toLocaleString()} ₸` : '70 000 ₸'}
+                      {athleteData?.monthly_price ? `${Number(athleteData.monthly_price).toLocaleString()} ₸` : '70 000 ₸'}
                     </span>
                   </div>
 
@@ -494,7 +557,7 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
                   <span className="font-bold text-slate-800 text-[11px] block">Срок действия:</span>
                   <p className="text-[11px] text-slate-600 leading-snug">
-                    {user?.is_expiring === false 
+                    {athleteData?.is_expiring === false 
                       ? 'Несгораемый абонемент: тренировки не сгорают по времени.' 
                       : 'Блок активен в течение 35 дней с момента первого занятия.'}
                   </p>
@@ -604,7 +667,7 @@ export default function AthleteCoachWorkoutsPage({ user, onBack, onUpdate }) {
               </form>
             </div>
 
-            {/* Блок подбора проверенного тренера от комьюнити */}
+            {/* Блок подбора тренера от комьюнити */}
             <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-600" />
