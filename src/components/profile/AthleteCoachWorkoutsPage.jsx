@@ -45,9 +45,9 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const [isLinking, setIsLinking] = useState(false);
   const [linkError, setLinkError] = useState('');
 
-  // ГЛУБОКАЯ СИНХРОНИЗАЦИЯ С SUPABASE: гарантия отображения списанных занятий
-  const fetchFreshProfile = async () => {
-    setIsRefreshing(true);
+  // ФОНОВЫЙ ЗАПРОС К SUPABASE: тихий опрос без мерцания лоадера
+  const fetchFreshProfile = async (isSilent = false) => {
+    if (!isSilent) setIsRefreshing(true);
     try {
       const tgId = initialUser?.telegram_id || localStorage.getItem('gymconnect_telegram_id');
       const cleanU = (initialUser?.username || '').replace(/[@\s]/g, '').trim().toLowerCase();
@@ -75,14 +75,21 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
         }
       }
     } catch (e) {
-      console.warn('Ошибка фоновой загрузки профиля атлета:', e);
+      if (!isSilent) console.warn('Ошибка загрузки профиля атлета:', e);
     } finally {
-      setIsRefreshing(false);
+      if (!isSilent) setIsRefreshing(false);
     }
   };
 
+  // ПЕРВИЧНАЯ ЗАГРУЗКА + АВТООБНОВЛЕНИЕ КАЖДЫЕ 5 СЕКУНД (SILENT POLLING)
   useEffect(() => {
-    fetchFreshProfile();
+    fetchFreshProfile(false);
+
+    const pollTimer = setInterval(() => {
+      fetchFreshProfile(true);
+    }, 5000);
+
+    return () => clearInterval(pollTimer);
   }, [initialUser?.id, initialUser?.telegram_id]);
 
   const trainerUsername = athleteData?.trainer_username || athleteData?.trainer_telegram || '';
@@ -245,7 +252,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
 
       alert(`🎉 Вы успешно привязаны к тренеру ${foundCoach.first_name || ''} (@${cleanInput})!`);
       if (onUpdate) onUpdate();
-      fetchFreshProfile();
+      fetchFreshProfile(false);
     } catch (err) {
       setLinkError('Ошибка привязки: ' + err.message);
     } finally {
@@ -266,7 +273,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const programDayKeys = Object.keys(programData);
   const currentDayProgram = programData[selectedDay] || programData[programDayKeys[0]];
 
-  // ТОЧНЫЙ РАСЧЕТ ОСТАТКА ЗАНЯТИЙ (приоритет свежим данным из базы)
+  // Автоматически обновляемый остаток занятий (каждые 5 секунд подтягивается из базы)
   const leftTrainings = athleteData?.left_trainings !== undefined 
     ? athleteData.left_trainings 
     : (athleteData?.remaining_workouts !== undefined ? athleteData.remaining_workouts : 12);
@@ -303,9 +310,9 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
           <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
-              onClick={fetchFreshProfile}
+              onClick={() => fetchFreshProfile(false)}
               className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg active:scale-90 transition-all cursor-pointer"
-              title="Обновить остаток занятий"
+              title="Принудительно обновить остаток занятий"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
             </button>
