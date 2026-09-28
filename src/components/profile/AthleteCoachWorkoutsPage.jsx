@@ -10,13 +10,12 @@ import {
   X, 
   Clock, 
   MapPin, 
-  Sparkles, 
   CheckCircle2, 
   Link as LinkIcon, 
   RefreshCw,
   Send,
   Award,
-  Edit3
+  MessageCircle
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { sendTrainerAttendanceNotification } from '../../utils/telegramNotifications';
@@ -108,19 +107,41 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
     fetchTrainerInfo();
   }, [cleanTrainerUsername]);
 
+  // БЕЗОПАСНАЯ ОБРАБОТКА РАСПИСАНИЯ СМЕН ТРЕНЕРА (БЕЗ ПАДЕНИЙ В БЕЛЫЙ ЭКРАН)
+  const getParsedScheduleSlots = () => {
+    if (!trainerData?.schedule_slots) return null;
+    let slots = trainerData.schedule_slots;
+    if (typeof slots === 'string') {
+      try {
+        slots = JSON.parse(slots);
+      } catch (e) {
+        return null;
+      }
+    }
+    return typeof slots === 'object' ? slots : null;
+  };
+
+  const parsedScheduleSlots = getParsedScheduleSlots();
+
   // Определение смены тренера на сегодня
   const getCoachTodayShift = () => {
-    if (!trainerData?.schedule_slots) return null;
+    if (!parsedScheduleSlots) return null;
     const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const todayKey = daysMap[new Date().getDay()];
-    const todaySlots = trainerData.schedule_slots[todayKey] || [];
+    const todaySlots = parsedScheduleSlots[todayKey] || [];
     
-    if (todaySlots.length > 0) {
+    if (Array.isArray(todaySlots) && todaySlots.length > 0) {
+      const formatted = todaySlots
+        .filter(s => s && s.start && s.end)
+        .map(s => `${s.start} - ${s.end}`)
+        .join(', ');
+
       return {
         isInGym: true,
-        text: `В зале: ${todaySlots.map(s => `${s.start} - ${s.end}`).join(', ')}`
+        text: formatted ? `В зале: ${formatted}` : 'В зале по графику'
       };
     }
+
     return {
       isInGym: false,
       text: 'Сегодня выходной день'
@@ -129,7 +150,20 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
 
   const coachShift = getCoachTodayShift();
 
-  // 4. ФИКСАЦИЯ ЯВКИ И ЗАКРЫТИЕ КНОПОК
+  // БЕЗОПАСНАЯ ОБРАБОТКА СПЕЦИАЛИЗАЦИЙ ТРЕНЕРА
+  const getTrainerSpecializations = () => {
+    if (!trainerData) return [];
+    const specs = trainerData.specializations || trainerData.specialization;
+    if (Array.isArray(specs)) return specs;
+    if (typeof specs === 'string') {
+      return specs.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  const specializationsList = getTrainerSpecializations();
+
+  // 4. ФИКСАЦИЯ ЯВКИ
   const handleSetAttendance = async (status) => {
     setAttendanceToday(status);
     setIsChangingAttendance(false);
@@ -491,7 +525,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
 
                   {/* Список упражнений дня */}
                   <div className="space-y-2.5">
-                    {currentDayProgram?.exercises && currentDayProgram.exercises.length > 0 ? (
+                    {currentDayProgram?.exercises && Array.isArray(currentDayProgram.exercises) && currentDayProgram.exercises.length > 0 ? (
                       currentDayProgram.exercises.map((ex, exIdx) => (
                         <div key={exIdx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-1.5">
                           <div className="flex items-start justify-between gap-2">
@@ -578,9 +612,9 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
               </div>
             )}
 
-            {/* ================= ВКЛАДКА 3: ПОЛНЫЙ ПРОФАЙЛ ТРЕНЕРА ================= */}
+            {/* ================= ВКЛАДКА 3: БЕЗОПАСНЫЙ ПОЛНЫЙ ПРОФАЙЛ ТРЕНЕРА ================= */}
             {activeTab === 'coach' && (
-              <div className="space-y-3.5 text-xs text-slate-700">
+              <div className="space-y-3.5 text-xs text-slate-700 animate-in fade-in">
                 
                 {/* 1. Главная визитка наставника */}
                 <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
@@ -645,12 +679,12 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                     )}
                   </div>
 
-                  {/* Специализации */}
-                  {trainerData?.specializations && (
+                  {/* Безопасный вывод специализаций */}
+                  {specializationsList.length > 0 && (
                     <div className="space-y-1.5">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Специализации тренера:</span>
                       <div className="flex flex-wrap gap-1">
-                        {trainerData.specializations.map((spec, sIdx) => (
+                        {specializationsList.map((spec, sIdx) => (
                           <span key={sIdx} className="bg-slate-100 text-slate-800 px-2.5 py-1 rounded-xl font-semibold text-[10.5px]">
                             {spec}
                           </span>
@@ -660,17 +694,17 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                   )}
                 </div>
 
-                {/* 3. О себе / Регалии / Методика */}
+                {/* 3. О себе */}
                 {trainerData?.bio && (
                   <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
-                    <p className="font-bold text-xs text-slate-900 border-b border-slate-100 pb-2">О тренере и методологии</p>
+                    <p className="font-bold text-xs text-slate-900 border-b border-slate-100 pb-2">О тренере и методике</p>
                     <p className="text-[11px] text-slate-600 leading-relaxed whitespace-pre-line bg-slate-50 p-3 rounded-2xl border border-slate-100">
                       {trainerData.bio}
                     </p>
                   </div>
                 )}
 
-                {/* 4. Расписание смен тренера */}
+                {/* 4. Безопасное расписание смен тренера */}
                 <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                     <span className="font-bold text-xs text-slate-900">График присутствия в клубе</span>
@@ -678,8 +712,8 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                   </div>
 
                   <div className="space-y-1.5">
-                    {trainerData?.schedule_slots ? (
-                      Object.entries(trainerData.schedule_slots).map(([dayKey, slots]) => {
+                    {parsedScheduleSlots ? (
+                      Object.entries(parsedScheduleSlots).map(([dayKey, slots]) => {
                         const dayLabels = {
                           monday: 'Понедельник', tuesday: 'Вторник', wednesday: 'Среда',
                           thursday: 'Четверг', friday: 'Пятница', saturday: 'Суббота', sunday: 'Воскресенье'
@@ -689,7 +723,9 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                           <div key={dayKey} className="flex justify-between items-center p-2 bg-slate-50 rounded-xl text-[11px]">
                             <span className="text-slate-700 font-medium">{dayLabels[dayKey] || dayKey}:</span>
                             <span className={`font-mono font-bold ${hasShift ? 'text-blue-700' : 'text-slate-400'}`}>
-                              {hasShift ? slots.map(s => `${s.start} - ${s.end}`).join(', ') : 'Выходной'}
+                              {hasShift 
+                                ? slots.filter(s => s && s.start && s.end).map(s => `${s.start} - ${s.end}`).join(', ') 
+                                : 'Выходной'}
                             </span>
                           </div>
                         );
@@ -699,6 +735,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                     )}
                   </div>
                 </div>
+
               </div>
             )}
           </>
