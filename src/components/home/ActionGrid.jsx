@@ -12,11 +12,10 @@ import {
   Sparkles 
 } from 'lucide-react';
 
-export default function ActionGrid({ onNavigateTab }) {
+export default function ActionGrid({ onNavigateTab, onOpenCoachesCatalog }) {
   const [activeModal, setActiveModal] = useState(null); 
-  // 'coach' | 'buy_pass' | 'sell_pass' | 'specialists' | 'nutrition_shop' | 'wear_shop'
+  // 'buy_pass' | 'sell_pass' | 'specialists' | 'nutrition_shop' | 'wear_shop'
 
-  // Полностью монохромный каталог ключевых сервисов
   const services = [
     {
       id: 'coach',
@@ -56,6 +55,19 @@ export default function ActionGrid({ onNavigateTab }) {
     }
   ];
 
+  // Клик по карточке «Найти тренера» открывает каталог тренеров
+  const handleCardClick = (srvId) => {
+    if (srvId === 'coach') {
+      if (typeof onOpenCoachesCatalog === 'function') {
+        onOpenCoachesCatalog();
+      } else if (typeof onNavigateTab === 'function') {
+        onNavigateTab('profile');
+      }
+      return;
+    }
+    setActiveModal(srvId);
+  };
+
   return (
     <>
       <div className="mb-3.5 select-none">
@@ -71,10 +83,9 @@ export default function ActionGrid({ onNavigateTab }) {
               <button
                 key={srv.id}
                 type="button"
-                onClick={() => setActiveModal(srv.id)}
-                className="p-3 bg-white hover:bg-slate-50/80 border border-slate-200/80 rounded-2xl text-left shadow-xs transition-all active:scale-98 flex flex-col justify-between h-24"
+                onClick={() => handleCardClick(srv.id)}
+                className="p-3 bg-white hover:bg-slate-50/80 border border-slate-200/80 rounded-2xl text-left shadow-xs transition-all active:scale-98 flex flex-col justify-between h-24 cursor-pointer"
               >
-                {/* Монохромный аккуратный значок в стиле профиля */}
                 <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200/80 text-slate-700 flex items-center justify-center shrink-0 shadow-2xs">
                   <Icon className="w-4 h-4 stroke-[1.8]" />
                 </div>
@@ -92,7 +103,7 @@ export default function ActionGrid({ onNavigateTab }) {
         </div>
       </div>
 
-      {/* МОДАЛЬНЫЕ ОКНА СЕРВИСОВ */}
+      {/* МОДАЛЬНЫЕ ОКНА ОСТАЛЬНЫХ СЕРВИСОВ */}
       {activeModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col justify-between overflow-y-auto">
@@ -104,7 +115,6 @@ export default function ActionGrid({ onNavigateTab }) {
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-slate-900">
-                    {activeModal === 'coach' && 'Поиск персонального тренера'}
                     {activeModal === 'buy_pass' && 'Покупка абонемента в зал'}
                     {activeModal === 'sell_pass' && 'Вторичный рынок: продать абонемент'}
                     {activeModal === 'specialists' && 'Спортивные специалисты и эксперты'}
@@ -117,26 +127,16 @@ export default function ActionGrid({ onNavigateTab }) {
               <button
                 type="button"
                 onClick={() => setActiveModal(null)}
-                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-2.5 text-xs text-slate-600 leading-relaxed">
-              {activeModal === 'coach' && (
-                <div className="space-y-2">
-                  <p>В единой базе GymConnect собраны проверенные наставники из 230+ клубов Алматы с дипломами и подтвержденным стажем.</p>
-                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl text-[11px] text-slate-900 space-y-1">
-                    <p className="font-bold">Бесплатный подбор под вашу цель:</p>
-                    <p>Наш менеджер подберет наставника под ваш зал, график и бюджет.</p>
-                  </div>
-                </div>
-              )}
-
               {activeModal === 'buy_pass' && (
                 <div className="space-y-2">
-                  <p>Оформляйте клубные карты в Invictus, FitnessBlitz, 1Fit и другие залы Алматы со специальными скидками комьюнити.</p>
+                  <p>Оформляйте клубные карты в Invictus, FitnessBlitz, 1Fit и другие залы Алматы со специальными скидками комьюнити до -30%.</p>
                   <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl text-[11px] text-slate-900 space-y-1">
                     <p className="font-bold">Кэшбэк и заморозка:</p>
                     <p>Дополнительные дни бесплатной заморозки для резидентов GymConnect.</p>
@@ -182,10 +182,10 @@ export default function ActionGrid({ onNavigateTab }) {
             </div>
 
             <a
-              href="https://t.me/gymconnect_kz"
+              href="https://t.me/asanali_kk"
               target="_blank"
               rel="noreferrer"
-              className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all"
+              className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer"
             >
               <Send className="w-4 h-4" />
               <span>Перейти в Telegram-каталог</span>
