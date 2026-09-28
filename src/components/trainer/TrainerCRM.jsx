@@ -1,5 +1,5 @@
 // src/components/trainer/TrainerCRM.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import TrainerHeader from './components/TrainerHeader';
 import OverviewTab from './tabs/OverviewTab';
@@ -38,7 +38,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   const [activeScreen, setActiveScreen] = useState(null);
   const [openDrawerOnReturn, setOpenDrawerOnReturn] = useState(false);
 
-  // Состояние выбранного ученика для открытия досье на 100% весь экран
+  // Состояние выбранного ученика для открытия досье
   const [selectedStudentForDetail, setSelectedStudentForDetail] = useState(null);
   const [studentDetailOrigin, setStudentDetailOrigin] = useState('overview'); // 'overview' | 'students'
 
@@ -53,8 +53,8 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     gym: ''
   });
 
-  // Загрузка данных тренера и СТРОГАЯ ФИЛЬТРАЦИЯ его учеников
-  const refreshTrainerData = async () => {
+  // Загрузка данных тренера и его учеников (с поддержкой тихого фонового опроса)
+  const refreshTrainerData = async (isSilent = false) => {
     try {
       const cleanUsername = trainerUsername ? trainerUsername.replace('@', '').trim().toLowerCase() : '';
       if (!cleanUsername) return;
@@ -67,7 +67,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
         .maybeSingle();
 
       if (tErr) throw tErr;
-      setTrainerData(tData);
+      if (tData) setTrainerData(tData);
 
       // 2. Список учеников тренера
       const { data: sData } = await supabase
@@ -75,33 +75,41 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
         .select('*')
         .or(`trainer_username.ilike.${cleanUsername},trainer_username.ilike.@${cleanUsername},trainer_telegram.ilike.${cleanUsername},trainer_telegram.ilike.@${cleanUsername}`);
 
-      // Строгая проверка: исключаем учеников, у которых поле trainer_username указывает на другого тренера
+      // Строгая фильтрация по актуальному наставнику
       const validStudents = (sData || []).filter(student => {
         const studentTrainerU = (student.trainer_username || '').replace('@', '').trim().toLowerCase();
         const studentTrainerTg = (student.trainer_telegram || '').replace('@', '').trim().toLowerCase();
 
-        // Приоритет отдается актуальному trainer_username
         if (studentTrainerU) {
           return studentTrainerU === cleanUsername;
         }
-        // Если trainer_username пустой, проверяем trainer_telegram
         return studentTrainerTg === cleanUsername;
       });
 
       setStudents(validStudents);
     } catch (err) {
-      console.error('Ошибка загрузки данных в TrainerCRM:', err);
+      if (!isSilent) console.error('Ошибка загрузки данных в TrainerCRM:', err);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
+  // ПЕРВИЧНАЯ ЗАГРУЗКА + 5-СЕКУНДНЫЙ ТИХИЙ ПОЛЛИНГ БАЗЫ ДАННЫХ
   useEffect(() => {
-    if (trainerUsername) {
-      refreshTrainerData();
-    } else {
+    if (!trainerUsername) {
       setLoading(false);
+      return;
     }
+
+    // 1. Первая загрузка с лоадером
+    refreshTrainerData(false);
+
+    // 2. Фоновый тихий опрос каждые 5 секунд (живой поллинг)
+    const pollTimer = setInterval(() => {
+      refreshTrainerData(true);
+    }, 5000);
+
+    return () => clearInterval(pollTimer);
   }, [trainerUsername]);
 
   const handleAddStudentSubmit = async (e) => {
@@ -148,7 +156,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
         total_trainings: 12,
         gym: ''
       });
-      refreshTrainerData();
+      refreshTrainerData(false);
     } catch (err) {
       alert('Ошибка добавления ученика: ' + err.message);
     }
@@ -180,7 +188,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
         student={selectedStudentForDetail}
         backText={studentDetailOrigin === 'students' ? 'К списку учеников' : 'К расписанию'}
         onClose={() => setSelectedStudentForDetail(null)}
-        onUpdate={refreshTrainerData}
+        onUpdate={() => refreshTrainerData(false)}
       />
     );
   }
@@ -199,7 +207,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   }
 
   if (activeScreen === 'edit_profile') {
-    return <TrainerEditProfileModal isOpen={true} onClose={handleCloseScreenToMenu} trainer={trainerData} cleanUsername={trainerData?.username || trainerUsername} onSaved={refreshTrainerData} />;
+    return <TrainerEditProfileModal isOpen={true} onClose={handleCloseScreenToMenu} trainer={trainerData} cleanUsername={trainerData?.username || trainerUsername} onSaved={() => refreshTrainerData(false)} />;
   }
 
   if (activeScreen === 'client_rules') {
@@ -281,49 +289,49 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
                   setStudentDetailOrigin('students');
                 }}
                 onOpenAddModal={() => setIsAddStudentOpen(true)}
-                onUpdate={refreshTrainerData}
+                onUpdate={() => refreshTrainerData(false)}
               />
             )}
 
             {activeTab === 'workouts' && (
               <WorkoutsTab 
                 students={students} 
-                onUpdate={refreshTrainerData}
+                onUpdate={() => refreshTrainerData(false)}
               />
             )}
 
             {activeTab === 'nutrition' && (
               <TrainerNutritionTab 
                 students={students} 
-                onUpdate={refreshTrainerData}
+                onUpdate={() => refreshTrainerData(false)}
               />
             )}
 
             {activeTab === 'schedule' && (
               <ScheduleTab 
                 trainerProfile={trainerData}
-                onUpdate={refreshTrainerData}
+                onUpdate={() => refreshTrainerData(false)}
               />
             )}
 
             {activeTab === 'finance' && (
               <FinanceTab 
                 students={students} 
-                onUpdate={refreshTrainerData}
+                onUpdate={() => refreshTrainerData(false)}
               />
             )}
 
             {activeTab === 'notes' && (
               <NotesTab 
                 students={students} 
-                onUpdate={refreshTrainerData}
+                onUpdate={() => refreshTrainerData(false)}
               />
             )}
 
             {activeTab === 'analytics' && (
               <AnalyticsTab 
                 students={students} 
-                onUpdate={refreshTrainerData}
+                onUpdate={() => refreshTrainerData(false)}
               />
             )}
           </main>
