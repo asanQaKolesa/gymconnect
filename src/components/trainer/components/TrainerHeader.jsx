@@ -29,69 +29,40 @@ import {
   Settings, 
   ExternalLink 
 } from 'lucide-react';
-import { supabase } from '../../../supabaseClient';
-import TrainerSubscriptionModal from './modals/TrainerSubscriptionModal';
-import TrainerPromotionModal from './modals/TrainerPromotionModal';
-import TrainerPublicCardModal from './modals/TrainerPublicCardModal';
-import TrainerEditProfileModal from './modals/TrainerEditProfileModal';
-import TrainerClientRulesModal from './modals/TrainerClientRulesModal';
-import TrainerHealthParqModal from './modals/TrainerHealthParqModal';
-import TrainerTemplatesModal from './modals/TrainerTemplatesModal';
-import TrainerIncomeCalcModal from './modals/TrainerIncomeCalcModal';
-import TrainerReferralModal from './modals/TrainerReferralModal';
-import TrainerSupportModal from './modals/TrainerSupportModal';
-import TrainerDeleteModal from './modals/TrainerDeleteModal';
-import TrainerQrModal from './modals/TrainerQrModal';
 
-export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, onSelectTab }) {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [activeModal, setActiveModal] = useState(null);
-  const [studentsList, setStudentsList] = useState([]);
+export default function TrainerHeader({ 
+  trainer, 
+  onLogout, 
+  onBack, 
+  activeTab, 
+  onSelectTab, 
+  onOpenScreen,
+  initialDrawerOpen = false 
+}) {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(initialDrawerOpen);
+
+  useEffect(() => {
+    if (initialDrawerOpen) {
+      setIsDrawerOpen(true);
+    }
+  }, [initialDrawerOpen]);
 
   const cleanUsername = trainer?.username ? trainer.username.replace('@', '').trim() : 'coach';
   const isApproved = trainer?.status === 'approved';
   const coachFullName = trainer?.full_name || `${trainer?.first_name || 'Тренер'} ${trainer?.last_name || ''}`.trim();
 
-  useEffect(() => {
-    async function loadStudents() {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, telegram_id, first_name, last_name, phone, format, remaining_workouts, goal, health_notes')
-          .eq('trainer_username', cleanUsername);
-
-        if (!error && data && data.length > 0) {
-          setStudentsList(data);
-        } else {
-          setStudentsList([
-            { id: '1', telegram_id: '12345678', first_name: 'Данияр', last_name: 'Аскаров', phone: '+77771234567', format: 'gym', remaining_workouts: 7, goal: 'Гипертрофия', health_notes: 'Протрузия L4-L5, без осевых нагрузок' },
-            { id: '2', telegram_id: '87654321', first_name: 'Анель', last_name: 'Мусина', phone: '+77017654321', format: 'online', remaining_workouts: 3, goal: 'Похудение', health_notes: 'Без жалоб, давление в норме' },
-            { id: '3', telegram_id: '99887766', first_name: 'Ерлан', last_name: 'Сатыбалдиев', phone: '+77059998877', format: 'gym', remaining_workouts: 1, goal: 'Тонус и спина', health_notes: 'Травма правого мениска 2023г.' }
-          ]);
-        }
-      } catch (e) {
-        console.error('Ошибка загрузки учеников в TrainerHeader:', e);
-      }
-    }
-    loadStudents();
-  }, [cleanUsername]);
-
-  const openModal = (modalKey) => {
+  const handleMenuClick = (screenId) => {
     setIsDrawerOpen(false);
-    setActiveModal(modalKey);
-  };
-
-  const closeModalToDrawer = () => {
-    setActiveModal(null);
-    setIsDrawerOpen(true);
+    if (typeof onOpenScreen === 'function') {
+      onOpenScreen(screenId);
+    }
   };
 
   return (
     <>
-      {/* ================= АККУРАТНАЯ ШАПКА ================= */}
+      {/* ================= АККУРАТНАЯ ВЕРХНЯЯ ШАПКА ================= */}
       <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 sticky top-0 z-40 select-none shadow-xs">
         <div className="flex items-center justify-between gap-2 max-w-md mx-auto w-full">
-          {/* Единственная основная кнопка меню */}
           <button
             type="button"
             onClick={() => setIsDrawerOpen(true)}
@@ -114,7 +85,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
           <div className="shrink-0">
             {isApproved ? (
               <div 
-                onClick={() => openModal('public_card')}
+                onClick={() => handleMenuClick('public_card')}
                 className="flex items-center gap-1 py-1 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-xl cursor-pointer active:scale-95 transition-transform"
                 title="Профиль верифицирован GymConnect"
               >
@@ -123,7 +94,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               </div>
             ) : (
               <div 
-                onClick={() => openModal('public_card')}
+                onClick={() => handleMenuClick('public_card')}
                 className="flex items-center gap-1 py-1 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 rounded-xl cursor-pointer active:scale-95 transition-transform"
                 title="Анкета проходит проверку"
               >
@@ -135,11 +106,12 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
         </div>
       </header>
 
-      {/* ================= БОКОВОЕ МЕНЮ (SLIDE-OVER DRAWER) ================= */}
+      {/* ================= БОКОВОЕ МЕНЮ (DRAWER) ================= */}
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-start select-none animate-in fade-in duration-150">
           <div className="w-[88%] max-w-sm bg-white h-full p-4 flex flex-col justify-between shadow-2xl overflow-y-auto">
             <div className="space-y-4">
+              
               {/* Шапка тренера в меню */}
               <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
                 <div className="flex items-center gap-3 overflow-hidden">
@@ -230,7 +202,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
                 <button
                   type="button"
-                  onClick={() => openModal('subscription')}
+                  onClick={() => handleMenuClick('subscription')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
@@ -247,7 +219,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
                 <button
                   type="button"
-                  onClick={() => openModal('promotion')}
+                  onClick={() => handleMenuClick('promotion')}
                   className="w-full p-2.5 bg-blue-50/60 hover:bg-blue-100/70 border border-blue-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
@@ -269,7 +241,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
                 <button
                   type="button"
-                  onClick={() => openModal('qr_code')}
+                  onClick={() => handleMenuClick('qr_code')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
@@ -286,7 +258,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
                 <button
                   type="button"
-                  onClick={() => openModal('client_rules')}
+                  onClick={() => handleMenuClick('client_rules')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
@@ -303,7 +275,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
                 <button
                   type="button"
-                  onClick={() => openModal('health_parq')}
+                  onClick={() => handleMenuClick('health_parq')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
@@ -320,7 +292,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
                 <button
                   type="button"
-                  onClick={() => openModal('templates')}
+                  onClick={() => handleMenuClick('templates')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
@@ -337,7 +309,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
                 <button
                   type="button"
-                  onClick={() => openModal('income_calc')}
+                  onClick={() => handleMenuClick('income_calc')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
@@ -354,7 +326,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
                 <button
                   type="button"
-                  onClick={() => openModal('referral')}
+                  onClick={() => handleMenuClick('referral')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
@@ -376,7 +348,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
                 <button
                   type="button"
-                  onClick={() => openModal('edit_profile')}
+                  onClick={() => handleMenuClick('edit_profile')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
@@ -393,7 +365,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
                 <button
                   type="button"
-                  onClick={() => openModal('public_card')}
+                  onClick={() => handleMenuClick('public_card')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
@@ -415,7 +387,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
 
                 <button
                   type="button"
-                  onClick={() => openModal('support')}
+                  onClick={() => handleMenuClick('support')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
@@ -432,7 +404,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               </div>
             </div>
 
-            {/* НИЖНИЙ БЛОК: ВОЗВРАТ В АТЛЕТА И ОПАСНАЯ ЗОНА */}
+            {/* НИЖНИЙ БЛОК: ВОЗВРАТ В АТЛЕТА И ВЫХОД */}
             <div className="space-y-2 pt-4 border-t border-slate-100">
               {onBack && (
                 <button
@@ -448,7 +420,7 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
               <div className="flex items-center gap-2 pt-1">
                 <button
                   type="button"
-                  onClick={() => openModal('delete_account')}
+                  onClick={() => handleMenuClick('delete_account')}
                   className="flex-1 py-2 px-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 rounded-xl text-[11px] font-semibold border border-slate-200/80 transition-colors flex items-center justify-center gap-1 active:scale-95 cursor-pointer"
                 >
                   <Trash2 className="w-3 h-3" />
@@ -468,83 +440,6 @@ export default function TrainerHeader({ trainer, onLogout, onBack, activeTab, on
           </div>
         </div>
       )}
-
-      {/* ================= МОНТИРОВАНИЕ ДЕКОМПОЗИРОВАННЫХ МОДАЛОК ================= */}
-      <TrainerSubscriptionModal 
-        isOpen={activeModal === 'subscription'}
-        onClose={closeModalToDrawer}
-      />
-
-      <TrainerPromotionModal 
-        isOpen={activeModal === 'promotion'}
-        onClose={closeModalToDrawer}
-        gymName={trainer?.gym || 'Invictus Go'}
-      />
-
-      <TrainerPublicCardModal 
-        isOpen={activeModal === 'public_card'}
-        onClose={closeModalToDrawer}
-        onEditClick={() => setActiveModal('edit_profile')}
-        trainer={trainer}
-        cleanUsername={cleanUsername}
-      />
-
-      <TrainerEditProfileModal 
-        isOpen={activeModal === 'edit_profile'}
-        onClose={closeModalToDrawer}
-        trainer={trainer}
-        cleanUsername={cleanUsername}
-        onSaved={() => {}}
-      />
-
-      <TrainerClientRulesModal 
-        isOpen={activeModal === 'client_rules'}
-        onClose={closeModalToDrawer}
-        coachName={coachFullName}
-      />
-
-      <TrainerHealthParqModal 
-        isOpen={activeModal === 'health_parq'}
-        onClose={closeModalToDrawer}
-        studentsList={studentsList}
-      />
-
-      <TrainerTemplatesModal 
-        isOpen={activeModal === 'templates'}
-        onClose={closeModalToDrawer}
-        studentsList={studentsList}
-        gymName={trainer?.gym?.split('|')[0] || 'клуб'}
-      />
-
-      <TrainerIncomeCalcModal 
-        isOpen={activeModal === 'income_calc'}
-        onClose={closeModalToDrawer}
-      />
-
-      <TrainerReferralModal 
-        isOpen={activeModal === 'referral'}
-        onClose={closeModalToDrawer}
-        cleanUsername={cleanUsername}
-      />
-
-      <TrainerSupportModal 
-        isOpen={activeModal === 'support'}
-        onClose={closeModalToDrawer}
-      />
-
-      <TrainerDeleteModal 
-        isOpen={activeModal === 'delete_account'}
-        onClose={closeModalToDrawer}
-        cleanUsername={cleanUsername}
-        onDeleted={onBack}
-      />
-
-      <TrainerQrModal 
-        isOpen={activeModal === 'qr_code'}
-        onClose={closeModalToDrawer}
-        coachName={coachFullName}
-        cleanUsername={cleanUsername}
-      />
     </>
   );
 }
