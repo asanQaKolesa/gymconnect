@@ -89,7 +89,39 @@ export default function ProfileMenu({
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
         </button>
 
-        {/* 2. PRO-подписка */}
+        {/* 2. ТРЕНИРОВКИ С ТРЕНЕРОМ (В ЕДИНОМ МОНОХРОМНОМ СТИЛЕ) */}
+        <button
+          type="button"
+          onClick={handleWorkoutsClick}
+          className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5 text-left overflow-hidden">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center shrink-0 shadow-sm text-slate-700">
+              <Dumbbell className="w-4 h-4 stroke-[2]" />
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-xs font-bold text-slate-900 leading-tight truncate">
+                {hasCoach ? 'Тренировки с тренером' : 'Мои тренировки и наставник'}
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5 truncate font-normal">
+                {hasCoach 
+                  ? `@${cleanTrainerUsername} • Программа, касса и смены` 
+                  : `График: ${Array.isArray(user?.workout_days) && user.workout_days.length > 0 ? user.workout_days.join(', ') : 'Пн, Ср, Пт'}`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0 ml-2">
+            {hasCoach && (
+              <span className="text-[10px] font-bold text-slate-700 bg-white px-2 py-0.5 rounded-lg border border-slate-200 font-mono">
+                {leftTrainings} зан.
+              </span>
+            )}
+            <ChevronRight className="w-4 h-4 text-slate-400" />
+          </div>
+        </button>
+
+        {/* 3. PRO-подписка */}
         <button
           type="button"
           onClick={() => setActiveModal('pro')}
@@ -111,7 +143,7 @@ export default function ProfileMenu({
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
         </button>
 
-        {/* 3. Статистика посещений */}
+        {/* 4. Статистика посещений */}
         <button
           type="button"
           onClick={() => setActiveModal('stats')}
@@ -131,38 +163,6 @@ export default function ProfileMenu({
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
-        </button>
-
-        {/* 4. ТРЕНИРОВКИ С ТРЕНЕРОМ / МОИ ТРЕНИРОВКИ */}
-        <button
-          type="button"
-          onClick={handleWorkoutsClick}
-          className="w-full p-2.5 bg-blue-50/60 hover:bg-blue-100/70 border border-blue-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all cursor-pointer"
-        >
-          <div className="flex items-center gap-2.5 text-left overflow-hidden">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <Dumbbell className="w-4 h-4 stroke-[2.2]" />
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-xs font-bold text-blue-950 leading-tight truncate">
-                {hasCoach ? 'Тренировки с тренером' : 'Мои тренировки и наставник'}
-              </p>
-              <p className="text-[10px] text-blue-700 mt-0.5 truncate font-medium">
-                {hasCoach 
-                  ? `@${cleanTrainerUsername} • Программа, касса и смены` 
-                  : `График: ${Array.isArray(user?.workout_days) && user.workout_days.length > 0 ? user.workout_days.join(', ') : 'Пн, Ср, Пт'}`}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1 shrink-0 ml-2">
-            {hasCoach && (
-              <span className="text-[10px] font-bold text-blue-700 bg-white px-2 py-0.5 rounded-lg border border-blue-200 font-mono">
-                {leftTrainings} зан.
-              </span>
-            )}
-            <ChevronRight className="w-4 h-4 text-blue-400" />
-          </div>
         </button>
 
         {/* 5. Смена языка приложения */}
@@ -213,7 +213,7 @@ export default function ProfileMenu({
 
       </div>
 
-      {/* МОДАЛКА 1: Мой абонемент (ПОЛНОСТЬЮ СОХРАНЕНА) */}
+      {/* МОДАЛКА 1: Мой абонемент */}
       {activeModal === 'pass' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
@@ -263,7 +263,7 @@ export default function ProfileMenu({
         </div>
       )}
 
-      {/* МОДАЛКА 2: PRO-подписка с Kaspi Pay (ПОЛНОСТЬЮ СОХРАНЕНА) */}
+      {/* МОДАЛКА 2: PRO-подписка с Kaspi Pay */}
       {activeModal === 'pro' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
@@ -311,7 +311,7 @@ export default function ProfileMenu({
         </div>
       )}
 
-      {/* МОДАЛКА 3: Статистика посещений (ПОЛНОСТЬЮ СОХРАНЕНА) */}
+      {/* МОДАЛКА 3: Статистика посещений */}
       {activeModal === 'stats' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
@@ -344,15 +344,6 @@ export default function ProfileMenu({
               </div>
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
-              <span className="text-[10px] text-slate-400 block mb-1">Выбранный график:</span>
-              <p className="font-bold text-slate-800">
-                {Array.isArray(user?.workout_days) && user.workout_days.length > 0 
-                  ? user.workout_days.join(' • ') 
-                  : 'Пн • Ср • Пт'}
-              </p>
-            </div>
-
             <button
               type="button"
               onClick={() => setActiveModal(null)}
@@ -364,15 +355,13 @@ export default function ProfileMenu({
         </div>
       )}
 
-      {/* МОДАЛКА 4: Мои тренировки (ПОЛНОСТЬЮ СОХРАНЕНА КАК ЗАПАСНАЯ) */}
+      {/* МОДАЛКА 4: Запасная модалка тренировок */}
       {activeModal === 'workouts' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
-                  <Dumbbell className="w-4 h-4" />
-                </div>
+                <Dumbbell className="w-4 h-4" />
                 <h3 className="text-xs font-bold text-slate-900">Мои тренировки</h3>
               </div>
               <button
