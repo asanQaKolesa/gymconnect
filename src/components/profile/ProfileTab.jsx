@@ -9,6 +9,7 @@ import ProfileDocs from './ProfileDocs';
 import ProfileDangerZone from './ProfileDangerZone';
 import EditProfilePage from './EditProfilePage';
 import LegalDocsPage from './LegalDocsPage';
+import AthleteCoachWorkoutsPage from './AthleteCoachWorkoutsPage';
 
 export default function ProfileTab({ 
   user: initialUser, 
@@ -18,9 +19,11 @@ export default function ProfileTab({
   currentLang = 'ru',
   onLanguageChange
 }) {
+  // 1. ХУКИ СОСТОЯНИЯ (СТРОГО НА САМОМ ВЕРХУ ДО УСЛОВНЫХ RETURN)
   const [user, setUser] = useState(initialUser || {});
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
+  const [isCoachWorkoutsOpen, setIsCoachWorkoutsOpen] = useState(false);
 
   useEffect(() => {
     if (initialUser) {
@@ -33,7 +36,29 @@ export default function ProfileTab({
     setIsEditOpen(false);
   };
 
-  // Полноэкранный режим редактирования анкеты
+  const handleRefreshUserData = () => {
+    try {
+      const saved = localStorage.getItem('gymconnect_user_profile');
+      if (saved) {
+        setUser(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  // ПОЛНОЭКРАННЫЙ РЕЖИМ ТРЕНИРОВОК С ТРЕНЕРОМ (ПРОГРАММА, КАССА, СМЕНЫ)
+  if (isCoachWorkoutsOpen) {
+    return (
+      <AthleteCoachWorkoutsPage 
+        user={user}
+        onBack={() => setIsCoachWorkoutsOpen(false)}
+        onUpdate={handleRefreshUserData}
+      />
+    );
+  }
+
+  // ПОЛНОЭКРАННЫЙ РЕЖИМ РЕДАКТИРОВАНИЯ АНКЕТЫ АТЛЕТА
   if (isEditOpen) {
     return (
       <EditProfilePage 
@@ -44,7 +69,7 @@ export default function ProfileTab({
     );
   }
 
-  // Полноэкранный просмотр 7 юридических актов
+  // ПОЛНОЭКРАННЫЙ ПРОСМОТР ЮРИДИЧЕСКИХ ДОКУМЕНТОВ
   if (isDocsOpen) {
     return (
       <LegalDocsPage 
@@ -66,14 +91,15 @@ export default function ProfileTab({
           onOpenEdit={() => setIsEditOpen(true)} 
         />
 
-        {/* 3. Основное меню (со сменой языка, абонементом, PRO, статистикой и тренировками) */}
+        {/* 3. Основное меню (со сменой языка, абонементом, PRO, статистикой и тренировками от тренера) */}
         <ProfileMenu 
           user={user} 
           currentLang={currentLang}
           onLanguageChange={onLanguageChange}
+          onOpenCoachWorkouts={() => setIsCoachWorkoutsOpen(true)}
         />
 
-        {/* 4. Сотрудничество (B2B программа: Trainer CRM, залы, магазины, специалисты) */}
+        {/* 4. Сотрудничество (B2B программа: CoachOS CRM, залы, магазины, специалисты) */}
         <ProfilePartnership 
           onOpenTrainer={onOpenTrainer} 
         />
