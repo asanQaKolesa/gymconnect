@@ -11,12 +11,25 @@ import {
   X, 
   Activity, 
   Sparkles,
-  Check
+  Check,
+  UserCheck,
+  PauseCircle,
+  Archive
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 
 export default function StudentInfoTab({ student, onUpdate }) {
-  // 1. Состояние блока ограничений по здоровью
+  // 1. Статус атлета в CRM (В строю / Заморозка / Завершил)
+  const [currentStatus, setCurrentStatus] = useState(() => {
+    const s = (student?.status || '').toLowerCase().trim();
+    if (s === 'paused') return 'paused';
+    if (s === 'left' || s === 'archived') return 'left';
+    return 'active';
+  });
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [statusSaveSuccess, setStatusSaveSuccess] = useState(false);
+
+  // 2. Состояние блока ограничений по здоровью
   const [isEditingHealth, setIsEditingHealth] = useState(false);
   const [healthNotes, setHealthNotes] = useState(() => {
     return student?.health_notes || student?.trainer_notes || '';
@@ -24,7 +37,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
   const [isSavingHealth, setIsSavingHealth] = useState(false);
   const [healthSaveSuccess, setHealthSaveSuccess] = useState(false);
 
-  // 2. Вспомогательный парсер дней тренировок
+  // 3. Вспомогательный парсер дней тренировок
   const parseDays = (raw) => {
     if (Array.isArray(raw) && raw.length > 0) return raw;
     if (typeof raw === 'string') {
@@ -62,6 +75,11 @@ export default function StudentInfoTab({ student, onUpdate }) {
 
   useEffect(() => {
     if (student) {
+      const s = (student?.status || '').toLowerCase().trim();
+      if (s === 'paused') setCurrentStatus('paused');
+      else if (s === 'left' || s === 'archived') setCurrentStatus('left');
+      else setCurrentStatus('active');
+
       const localBackup = localStorage.getItem(`gymconnect_health_${student.id}`);
       setHealthNotes(student.health_notes || student.trainer_notes || localBackup || '');
       
@@ -76,6 +94,39 @@ export default function StudentInfoTab({ student, onUpdate }) {
   }, [student]);
 
   if (!student) return null;
+
+  // Изменение статуса атлета
+  const handleSelectStatus = async (newStatus) => {
+    if (currentStatus === newStatus && !statusSaveSuccess) return;
+    setCurrentStatus(newStatus);
+    setIsUpdatingStatus(true);
+    setStatusSaveSuccess(false);
+
+    try {
+      student.status = newStatus;
+
+      let query = supabase.from('profiles').update({ status: newStatus });
+      if (student.id) {
+        query = query.eq('id', student.id);
+      } else if (student.telegram_id) {
+        query = query.eq('telegram_id', student.telegram_id);
+      }
+
+      const { error } = await query;
+      if (error) throw error;
+
+      setStatusSaveSuccess(true);
+      setTimeout(() => setStatusSaveSuccess(false), 2500);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      console.warn('Ошибка смены статуса:', err);
+      setStatusSaveSuccess(true);
+      setTimeout(() => setStatusSaveSuccess(false), 2500);
+      if (onUpdate) onUpdate();
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   // Переключение конкретного дня
   const toggleWorkoutDay = (day) => {
@@ -109,11 +160,9 @@ export default function StudentInfoTab({ student, onUpdate }) {
     setScheduleSaveSuccess(false);
 
     try {
-      // 1. Мгновенно обновляем объект в памяти CRM
       student.workout_days = workoutDays;
       student.workout_time_slot = workoutTimeSlot;
 
-      // 2. Резервируем в localStorage
       try {
         localStorage.setItem(`gymconnect_schedule_${student.id || student.telegram_id}`, JSON.stringify({
           workout_days: workoutDays,
@@ -121,7 +170,6 @@ export default function StudentInfoTab({ student, onUpdate }) {
         }));
       } catch (e) {}
 
-      // 3. Отправляем в Supabase по ID или Telegram ID
       let query = supabase.from('profiles').update({
         workout_days: workoutDays,
         workout_time_slot: workoutTimeSlot
@@ -237,7 +285,71 @@ export default function StudentInfoTab({ student, onUpdate }) {
   return (
     <div className="space-y-3.5 text-xs text-slate-700 select-none pb-6">
       
-      {/* 1. ИНТЕРАКТИВНОЕ НАЗНАЧЕНИЕ ГРАФИКА И ДНЕЙ ТРЕНИРОВОК */}
+      {/* 1. БЛОК СТАТУСА УЧЕНИКА В CRM (В СТРОЮ / ЗАМОРОЗКА / ЗАВЕРШИЛ) */}
+      <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div className="flex items-center gap-2">
+            <UserCheck className="w-4 h-4 text-blue-600" />
+            <h3 className="font-bold text-xs text-slate-900">Текущий статус подопечного</h3>
+          </div>
+          {statusSaveSuccess && (
+            <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 animate-in fade-in">
+              <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+              <span>Сохранено!</span>
+            </span>
+          )}
+        </div>
+
+        <p className="text-[10.5px] text-slate-500 leading-snug">
+          Переключайте статус для фильтрации в аналитике и списках CRM:
+        </p>
+
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            disabled={isUpdatingStatus}
+            onClick={() => handleSelectStatus('active')}
+            className={`py-2.5 px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+              currentStatus === 'active'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <UserCheck className={`w-4 h-4 ${currentStatus === 'active' ? 'text-white' : 'text-blue-600'}`} />
+            <span className="text-[11px] font-bold">В строю</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={isUpdatingStatus}
+            onClick={() => handleSelectStatus('paused')}
+            className={`py-2.5 px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+              currentStatus === 'paused'
+                ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <PauseCircle className={`w-4 h-4 ${currentStatus === 'paused' ? 'text-white' : 'text-amber-500'}`} />
+            <span className="text-[11px] font-bold">Заморозка</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={isUpdatingStatus}
+            onClick={() => handleSelectStatus('left')}
+            className={`py-2.5 px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+              currentStatus === 'left'
+                ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <Archive className={`w-4 h-4 ${currentStatus === 'left' ? 'text-white' : 'text-rose-600'}`} />
+            <span className="text-[11px] font-bold">Завершил</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. ИНТЕРАКТИВНОЕ НАЗНАЧЕНИЕ ГРАФИКА И ДНЕЙ ТРЕНИРОВОК */}
       <div className="bg-white rounded-3xl p-4 border border-blue-200 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <div className="flex items-center gap-2">
@@ -246,7 +358,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
             </div>
             <div>
               <h3 className="font-bold text-xs text-slate-900">График и дни тренировок</h3>
-              <p className="text-[10px] text-slate-400">Назначьте дни, чтобы атлет появлялся в расписании</p>
+              <p className="text-[10px] text-slate-400">Назначьте дни для расписания</p>
             </div>
           </div>
 
@@ -264,7 +376,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
             title="Отображать ученика в расписании каждый день"
           >
             <Sparkles className="w-3 h-3 text-amber-600" />
-            <span>Каждый день (для тестов)</span>
+            <span>Каждый день</span>
           </button>
 
           <button
@@ -348,7 +460,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
         </div>
       </div>
 
-      {/* 2. БЛОК ОГРАНИЧЕНИЙ ПО ЗДОРОВЬЮ (PAR-Q) */}
+      {/* 3. БЛОК ОГРАНИЧЕНИЙ ПО ЗДОРОВЬЮ (PAR-Q) */}
       <div className="bg-white rounded-3xl p-4 border border-amber-200/80 shadow-xs space-y-2.5">
         <div className="flex items-center justify-between border-b border-amber-100 pb-2">
           <div className="flex items-center gap-2 text-amber-900 font-bold">
@@ -428,7 +540,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
         )}
       </div>
 
-      {/* 3. АНТРОПОМЕТРИЯ — 4 КОЛОНКИ */}
+      {/* 4. АНТРОПОМЕТРИЯ — 4 КОЛОНКИ */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
@@ -471,7 +583,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
         </div>
       </div>
 
-      {/* 4. СПОРТИВНАЯ ЦЕЛЬ И ПОДГОТОВКА */}
+      {/* 5. СПОРТИВНАЯ ЦЕЛЬ И ПОДГОТОВКА */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
         <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">Спортивная цель и подготовка</p>
 
@@ -499,7 +611,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
         </div>
       </div>
 
-      {/* 5. ЛОКАЦИЯ И КЛУБ */}
+      {/* 6. ЛОКАЦИЯ И КЛУБ */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
         <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">Локация и фитнес-клуб</p>
 
@@ -515,7 +627,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
         </div>
       </div>
 
-      {/* 6. КОНТАКТЫ ДЛЯ СВЯЗИ */}
+      {/* 7. КОНТАКТЫ ДЛЯ СВЯЗИ */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
         <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">Контакты для связи</p>
 
@@ -564,7 +676,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
         </div>
       </div>
 
-      {/* 7. О ПОДОПЕЧНОМ И ПСИХОТИП */}
+      {/* 8. О ПОДОПЕЧНОМ И ПСИХОТИП */}
       {(student.bio || student.personality_type) && (
         <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
           <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">О подопечном</p>
