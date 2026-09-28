@@ -20,7 +20,7 @@ html, body {
   margin: 0;
   padding: 0;
   width: 100%;
-  min-height: 100vh;
+  min-height: 100%;
   background-color: var(--bg-system);
   color: #0F172A;
   font-family: var(--apple-font);
@@ -28,11 +28,17 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.012em;
   overflow-x: hidden;
-  /* Защита от паразитного вылета Telegram Mini App при резком свайпе вниз */
-  overscroll-behavior-y: none;
+  overflow-y: auto; /* Гарантированный вертикальный скролл на всех устройствах */
 }
 
-/* ================= ШЕЛКОВИСТЫЕ НАЦИВНЫЕ АНИМАЦИИ РАСКРЫТИЯ (APPLE HIG) ================= */
+/* На мобильных в Telegram отключаем системное смахивание шторки */
+@media (max-width: 768px) {
+  html, body {
+    overscroll-behavior-y: none;
+  }
+}
+
+/* ================= АППАРАТНЫЕ АНИМАЦИИ В СТИЛЕ APPLE HIG ================= */
 @keyframes iosSmoothFadeScale {
   0% {
     opacity: 0;
@@ -55,41 +61,58 @@ html, body {
   }
 }
 
-/* Все полноэкранные страницы и модалки во всем приложении получают плавное открытие */
 .fixed.inset-0 {
   animation: iosSmoothFadeScale 0.22s var(--ease-apple-spring) forwards;
   will-change: transform, opacity;
 }
 
-/* Нижние шторки */
 .sheet-enter {
   animation: iosBottomSheet 0.26s var(--ease-apple-spring) forwards;
   will-change: transform;
 }
 
-/* ================= ГЛОБАЛЬНАЯ НАСТРОЙКА ВСЕХ ПОЛЕЙ ВВОДА ================= */
+/* ================= ГЛОБАЛЬНЫЕ СТИЛИ ПОЛЕЙ ВВОДА ================= */
 input, textarea, select {
-  caret-color: #2563EB !important; /* Яркая синяя каретка везде */
+  caret-color: #2563EB !important;
   font-family: inherit;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-/* На мобильных устройствах предотвращаем принудительный зум iOS Safari */
+/* Защита от зума в iOS */
 @media (max-width: 768px) {
   input:not([type="checkbox"]):not([type="radio"]), 
   textarea, 
   select {
-    font-size: 16px !important; /* iOS не зумит страницу, если кегль >= 16px */
+    font-size: 16px !important;
   }
 }
 
-/* Скрытие стандартного скроллбара и мягкий инерционный скролл */
-::-webkit-scrollbar {
-  display: none;
+/* Скрытие скроллбара ТОЛЬКО на мобильных устройствах. На ПК скроллбар работает штатно */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
-* {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+/* Аккуратный тонкий скроллбар для компьютеров (Windows / macOS) */
+@media (min-width: 769px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
 }
