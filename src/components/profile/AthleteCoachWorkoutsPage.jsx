@@ -16,16 +16,20 @@ import {
   Send,
   Award,
   MessageCircle,
-  AlertCircle
+  AlertCircle,
+  Search,
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { sendTrainerAttendanceNotification } from '../../utils/telegramNotifications';
+import TrainersCatalogPage from '../home/TrainersCatalogPage';
 
 export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, onUpdate }) {
   const [athleteData, setAthleteData] = useState(initialUser || {});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('program');
   const [trainerData, setTrainerData] = useState(null);
+  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
 
   const [selectedDay, setSelectedDay] = useState(1);
 
@@ -45,7 +49,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const [isLinking, setIsLinking] = useState(false);
   const [linkError, setLinkError] = useState('');
 
-  // ФОНОВЫЙ ЗАПРОС К SUPABASE: тихий опрос без мерцания лоадера
+  // Фоновый запрос к Supabase без мерцания интерфейса
   const fetchFreshProfile = async (isSilent = false) => {
     if (!isSilent) setIsRefreshing(true);
     try {
@@ -81,7 +85,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
     }
   };
 
-  // ПЕРВИЧНАЯ ЗАГРУЗКА + АВТООБНОВЛЕНИЕ КАЖДЫЕ 5 СЕКУНД (SILENT POLLING)
   useEffect(() => {
     fetchFreshProfile(false);
 
@@ -260,6 +263,19 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
     }
   };
 
+  // ПОЛНОЭКРАННЫЙ КАТАЛОГ ДЛЯ ВЫБОРА НАСТАВНИКА
+  if (isCatalogOpen) {
+    return (
+      <TrainersCatalogPage 
+        onBack={() => {
+          setIsCatalogOpen(false);
+          fetchFreshProfile(false);
+        }}
+        userProfile={athleteData}
+      />
+    );
+  }
+
   const programData = athleteData?.assigned_program?.days || athleteData?.assigned_program || {
     1: {
       title: 'День 1: Базовый комплекс',
@@ -273,7 +289,6 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const programDayKeys = Object.keys(programData);
   const currentDayProgram = programData[selectedDay] || programData[programDayKeys[0]];
 
-  // Автоматически обновляемый остаток занятий (каждые 5 секунд подтягивается из базы)
   const leftTrainings = athleteData?.left_trainings !== undefined 
     ? athleteData.left_trainings 
     : (athleteData?.remaining_workouts !== undefined ? athleteData.remaining_workouts : 12);
@@ -689,20 +704,34 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
             )}
           </>
         ) : (
-          <div className="space-y-3.5">
-            <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs text-center space-y-2">
+          /* СЦЕНАРИЙ: АТЛЕТ БЕЗ ТРЕНЕРА — С КНОПКОЙ ОТКРЫТИЯ КАТАЛОГА */
+          <div className="space-y-3.5 animate-in fade-in">
+            <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs text-center space-y-3">
               <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xs">
                 <Dumbbell className="w-6 h-6 stroke-[2]" />
               </div>
-              <h2 className="text-sm font-bold text-slate-900">У вас пока не привязан тренер</h2>
-              <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
-                Привяжите наставника по его Telegram никнейму, чтобы получать персональную программу тренировок, расписание и баланс занятий.
-              </p>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">У вас пока не привязан тренер</h2>
+                <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto mt-1">
+                  Найдите проверенного наставника в залах Алматы или привяжите своего тренера по Telegram никнейму.
+                </p>
+              </div>
+
+              {/* ГЛАВНАЯ КНОПКА: ОТКРЫТЬ КАТАЛОГ ТРЕНЕРОВ */}
+              <button
+                type="button"
+                onClick={() => setIsCatalogOpen(true)}
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/30 active:scale-98 transition-all cursor-pointer"
+              >
+                <Search className="w-4 h-4" />
+                <span>Выбрать наставника в Каталоге тренеров Алматы</span>
+              </button>
             </div>
 
+            {/* Альтернатива: привязка по никнейму вручную */}
             <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
               <span className="font-bold text-xs text-slate-900 block border-b border-slate-100 pb-2">
-                Привязать наставника
+                Либо укажите ник тренера вручную
               </span>
 
               <form onSubmit={handleLinkCoach} className="space-y-2.5">
@@ -730,10 +759,10 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                 <button
                   type="submit"
                   disabled={isLinking}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold active:scale-98 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-xs"
+                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold active:scale-98 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-xs"
                 >
                   <LinkIcon className="w-3.5 h-3.5" />
-                  <span>{isLinking ? 'Проверка...' : 'Привязать тренера к профилю'}</span>
+                  <span>{isLinking ? 'Проверка...' : 'Привязать тренера по нику'}</span>
                 </button>
               </form>
             </div>
