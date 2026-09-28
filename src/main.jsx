@@ -4,18 +4,31 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 
-// ================= ГЛОБАЛЬНЫЙ ПЕРЕХВАТЧИК ДЛЯ ВСЕХ ПОЛЕЙ ПРИЛОЖЕНИЯ =================
+// ================= ГЛОБАЛЬНЫЕ СИСТЕМНЫЕ УЛУЧШЕНИЯ ДЛЯ ВСЕГО ПРИЛОЖЕНИЯ =================
 if (typeof window !== 'undefined') {
-  // Разворачиваем Telegram Mini App на максимум
+  // 1. Разворачиваем Telegram Mini App и включаем защиту от случайного смахивания
   try {
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.expand();
+      // Предотвращает случайное закрытие шторки Telegram при скролле списков
+      window.Telegram.WebApp.enableClosingConfirmation?.();
     }
   } catch (e) {
     console.warn(e);
   }
 
-  // Единый глобальный слушатель фокуса на весь документ
+  // 2. ГЛОБАЛЬНАЯ ТАКТИЛЬНАЯ ОТДАЧА (Telegram Haptic Feedback)
+  // Каждое нажатие на кнопку или ссылку в приложении дает приятный микро-щелчок Taptic Engine
+  document.addEventListener('click', (e) => {
+    const clickable = e.target.closest('button, a, [role="button"]');
+    if (clickable) {
+      try {
+        window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+      } catch (err) {}
+    }
+  }, { passive: true });
+
+  // 3. ГЛОБАЛЬНЫЙ ПЕРЕХВАТЧИК ФОКУСА
   document.addEventListener('focusin', (e) => {
     const target = e.target;
     if (!target) return;
@@ -23,7 +36,7 @@ if (typeof window !== 'undefined') {
     const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
     if (!isInput) return;
 
-    // 1. АВТОВЫДЕЛЕНИЕ: при нажатии выделяет весь текст/число (легко заменить без бэкспейса)
+    // Автовыделение всего текста при нажатии (легко заменить число без бэкспейса)
     if (target.tagName === 'INPUT' && !['checkbox', 'radio', 'date', 'time', 'file'].includes(target.type)) {
       setTimeout(() => {
         try {
@@ -32,7 +45,7 @@ if (typeof window !== 'undefined') {
       }, 60);
     }
 
-    // 2. АВТОСКРОЛЛ: плавно подтягивает активное поле в центр экрана над клавиатурой
+    // Автоскролл над клавиатурой (подтягивает поле в центр экрана над клавиатурой)
     setTimeout(() => {
       try {
         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
