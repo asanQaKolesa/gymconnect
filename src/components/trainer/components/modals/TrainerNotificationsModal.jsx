@@ -6,11 +6,9 @@ import {
   CheckCircle2, 
   AlertTriangle, 
   CreditCard, 
-  Calendar, 
-  Check, 
   Trash2,
-  Clock,
-  UserCheck
+  Check,
+  Dumbbell
 } from 'lucide-react';
 
 export default function TrainerNotificationsModal({ 
@@ -18,9 +16,20 @@ export default function TrainerNotificationsModal({
   onClose, 
   studentsList = [] 
 }) {
+  // Список прочитанных уведомлений
   const [readNotifIds, setReadNotifIds] = useState(() => {
     try {
       const saved = localStorage.getItem('gymconnect_coach_read_notifs');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Список удаленных уведомлений (чтобы не копились)
+  const [deletedNotifIds, setDeletedNotifIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gymconnect_coach_deleted_notifs');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -62,15 +71,15 @@ export default function TrainerNotificationsModal({
         });
       }
 
-      // 2. Уведомление об остатке занятий в абонементе
-      if (left <= 1) {
+      // 2. Уведомление об остатке занятий в абонементе (≤ 2)
+      if (left <= 2) {
         notifs.push({
           id: `low_balance_${st.id}`,
           type: 'balance',
           title: 'Абонемент заканчивается',
           desc: `У ${studentName} осталось всего ${left} зан. Пора согласовать продление блока.`,
           time: 'Внимание',
-          badge: 'Остаток ≤ 1',
+          badge: `Остаток: ${left} зан.`,
           isNew: !readNotifIds.includes(`low_balance_${st.id}`)
         });
       }
@@ -89,24 +98,46 @@ export default function TrainerNotificationsModal({
       }
     });
 
-    return notifs;
+    // Фильтруем те, которые тренер удалил вручную
+    return notifs.filter(n => !deletedNotifIds.includes(n.id));
   };
 
   const notifications = generateNotifications();
   const unreadCount = notifications.filter(n => n.isNew).length;
 
+  // Отметить все прочитанными
   const handleMarkAllRead = () => {
     const allIds = notifications.map(n => n.id);
-    setReadNotifIds(allIds);
+    const updated = Array.from(new Set([...readNotifIds, ...allIds]));
+    setReadNotifIds(updated);
     try {
-      localStorage.setItem('gymconnect_coach_read_notifs', JSON.stringify(allIds));
+      localStorage.setItem('gymconnect_coach_read_notifs', JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  // Удалить конкретное уведомление (чтобы не мозолило глаза)
+  const handleDeleteSingle = (id) => {
+    const updatedDeleted = [...deletedNotifIds, id];
+    setDeletedNotifIds(updatedDeleted);
+    try {
+      localStorage.setItem('gymconnect_coach_deleted_notifs', JSON.stringify(updatedDeleted));
+    } catch (e) {}
+  };
+
+  // Очистить все уведомления разом
+  const handleClearAll = () => {
+    const allIds = notifications.map(n => n.id);
+    const updatedDeleted = Array.from(new Set([...deletedNotifIds, ...allIds]));
+    setDeletedNotifIds(updatedDeleted);
+    try {
+      localStorage.setItem('gymconnect_coach_deleted_notifs', JSON.stringify(updatedDeleted));
     } catch (e) {}
   };
 
   return (
     <div className="min-h-screen w-full bg-[#F2F2F7] flex flex-col select-none animate-in fade-in duration-150">
       
-      {/* 1. ВЕРХНИЙ БАР Apple HIG */}
+      {/* 1. ВЕРХНИЙ БАР */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 shadow-xs">
         <div className="max-w-md mx-auto flex items-center justify-between gap-2">
           
@@ -124,18 +155,31 @@ export default function TrainerNotificationsModal({
               Центр уведомлений
             </h1>
             <p className="text-[10px] text-slate-400 truncate">
-              {unreadCount > 0 ? `${unreadCount} новых событий` : 'Все прочитаны'}
+              {unreadCount > 0 ? `${unreadCount} новых` : 'Все прочитаны'}
             </p>
           </div>
 
-          <div className="shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {unreadCount > 0 && (
               <button
                 type="button"
                 onClick={handleMarkAllRead}
-                className="text-[11px] font-bold text-blue-600 hover:text-blue-700 active:scale-95 transition-transform cursor-pointer"
+                className="text-[10.5px] font-bold text-blue-600 hover:text-blue-700 active:scale-95 transition-transform cursor-pointer px-1.5 py-1"
+                title="Отметить все как прочитанные"
               >
                 Прочитано
+              </button>
+            )}
+
+            {notifications.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="text-[10.5px] font-semibold text-rose-600 hover:text-rose-700 active:scale-95 transition-transform cursor-pointer px-1.5 py-1 flex items-center gap-1"
+                title="Очистить все уведомления"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Очистить</span>
               </button>
             )}
           </div>
@@ -143,7 +187,7 @@ export default function TrainerNotificationsModal({
         </div>
       </header>
 
-      {/* 2. ОСНОВНАЯ ЛЕНТА УВЕДОМЛЕНИЙ НА ВСЮ ВЫСОТУ */}
+      {/* 2. ЛЕНТА УВЕДОМЛЕНИЙ */}
       <main className="p-3.5 space-y-3 max-w-md mx-auto w-full pb-20">
         
         {/* Информационный баннер */}
@@ -154,7 +198,7 @@ export default function TrainerNotificationsModal({
             </div>
             <div>
               <h3 className="font-bold text-xs text-slate-900">Лента событий учеников</h3>
-              <p className="text-[10px] text-slate-400">Обновляется автоматически при отметках атлетов</p>
+              <p className="text-[10px] text-slate-400">Ненужные уведомления можно удалять</p>
             </div>
           </div>
 
@@ -169,7 +213,7 @@ export default function TrainerNotificationsModal({
             notifications.map((notif) => (
               <div 
                 key={notif.id}
-                className={`p-4 rounded-3xl border transition-all space-y-2 shadow-2xs ${
+                className={`p-4 rounded-3xl border transition-all space-y-2 shadow-2xs relative ${
                   notif.type === 'attendance_yes' 
                     ? 'bg-emerald-50/60 border-emerald-200/80' 
                     : notif.type === 'attendance_no'
@@ -188,13 +232,26 @@ export default function TrainerNotificationsModal({
                     {notif.type === 'attendance_yes' && <CheckCircle2 className="w-3 h-3" />}
                     {notif.type === 'attendance_no' && <AlertTriangle className="w-3 h-3" />}
                     {notif.type === 'payment' && <CreditCard className="w-3 h-3" />}
+                    {notif.type === 'balance' && <Dumbbell className="w-3 h-3" />}
                     <span>{notif.badge}</span>
                   </span>
 
-                  <span className="text-[10px] text-slate-400 font-mono">{notif.time}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 font-mono">{notif.time}</span>
+                    
+                    {/* Кнопка быстрого удаления конкретного уведомления */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSingle(notif.id)}
+                      className="p-1 text-slate-400 hover:text-rose-600 active:scale-90 transition-all cursor-pointer"
+                      title="Удалить это уведомление"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-0.5">
+                <div className="space-y-0.5 pr-2">
                   <h4 className="font-bold text-xs text-slate-900">{notif.title}</h4>
                   <p className="text-[11px] text-slate-600 leading-relaxed font-normal">
                     {notif.desc}
@@ -204,10 +261,10 @@ export default function TrainerNotificationsModal({
             ))
           ) : (
             <div className="p-12 text-center text-slate-400 space-y-2 bg-white rounded-3xl border border-slate-200/80 shadow-xs">
-              <Bell className="w-8 h-8 mx-auto text-slate-300" />
-              <p className="font-bold text-xs text-slate-800">Новых уведомлений нет</p>
+              <Check className="w-8 h-8 mx-auto text-emerald-500 mb-1" />
+              <p className="font-bold text-xs text-slate-800">Все чисто!</p>
               <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                Когда ученики отметят явку («Буду» / «Не приду») или оплатят абонемент, события сразу появятся здесь.
+                Новые события от учеников появятся здесь автоматически при их активности.
               </p>
             </div>
           )}
