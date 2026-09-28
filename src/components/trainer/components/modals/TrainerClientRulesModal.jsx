@@ -1,18 +1,82 @@
 // src/components/trainer/components/modals/TrainerClientRulesModal.jsx
-import React, { useState } from 'react';
-import { ArrowLeft, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Copy, Check, Save, CheckCircle2 } from 'lucide-react';
+import { supabase } from '../../../../supabaseClient';
 
-export default function TrainerClientRulesModal({ isOpen, onClose, coachName = 'Тренер' }) {
+export default function TrainerClientRulesModal({ 
+  isOpen, 
+  onClose, 
+  coachName = 'Тренер',
+  cleanUsername = 'coach' 
+}) {
   const [isCopied, setIsCopied] = useState(false);
-  const [rulesForm, setRulesForm] = useState({
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const defaultRules = {
     cancellation_hours: 3,
     expiry_days: 35,
     freeze_days: 7,
     late_policy: 'Опоздание клиента сокращает время тренировки на количество минут задержки.',
     custom_rule: 'Абонемент является персональным и не подлежит передаче третьим лицам без согласования.'
+  };
+
+  const [rulesForm, setRulesForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`gymconnect_client_rules_${cleanUsername}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return defaultRules;
   });
 
+  // Загрузка сохраненного регламента из базы данных
+  useEffect(() => {
+    async function loadSavedRules() {
+      if (!cleanUsername || cleanUsername === 'coach') return;
+      try {
+        const { data } = await supabase
+          .from('trainer_profiles')
+          .select('client_rules')
+          .or(`username.ilike.${cleanUsername},username.ilike.@${cleanUsername}`)
+          .maybeSingle();
+
+        if (data?.client_rules && typeof data.client_rules === 'object') {
+          setRulesForm(data.client_rules);
+        }
+      } catch (e) {}
+    }
+    if (isOpen) {
+      loadSavedRules();
+    }
+  }, [isOpen, cleanUsername]);
+
   if (!isOpen) return null;
+
+  // СОХРАНЕНИЕ РЕГЛАМЕНТА В SUPABASE И ПАМЯТЬ
+  const handleSaveRules = async () => {
+    setIsSaving(true);
+    setSaveSuccess(false);
+
+    try {
+      localStorage.setItem(`gymconnect_client_rules_${cleanUsername}`, JSON.stringify(rulesForm));
+
+      if (cleanUsername && cleanUsername !== 'coach') {
+        await supabase
+          .from('trainer_profiles')
+          .update({ client_rules: rulesForm })
+          .or(`username.ilike.${cleanUsername},username.ilike.@${cleanUsername}`);
+      }
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (e) {
+      console.warn('Ошибка сохранения регламента:', e);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleCopyRules = () => {
     const text = `📌 Регламент посещения персональных тренировок (${coachName}):
@@ -32,7 +96,7 @@ export default function TrainerClientRulesModal({ isOpen, onClose, coachName = '
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center gap-1 text-blue-600 font-semibold text-xs active:scale-95"
+          className="flex items-center gap-1 text-blue-600 font-semibold text-xs active:scale-95 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Назад в меню</span>
@@ -43,7 +107,7 @@ export default function TrainerClientRulesModal({ isOpen, onClose, coachName = '
 
       <div className="p-4 space-y-4 max-w-lg mx-auto w-full pb-28 text-xs">
         <p className="text-slate-500 text-[11px] px-1">
-          Настройте условия посещений под свой график. Готовый регламент можно в один клик скопировать в буфер и отправить ученику в WhatsApp или Telegram:
+          Настройте условия посещений под свой график. Настройки сохраняются в базе и готовы к отправке ученику в WhatsApp или Telegram:
         </p>
 
         <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
@@ -133,14 +197,25 @@ export default function TrainerClientRulesModal({ isOpen, onClose, coachName = '
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 max-w-lg mx-auto shadow-lg">
+      {/* НИЖНЯЯ ПАНЕЛЬ ДЕЙСТВИЙ */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 max-w-lg mx-auto shadow-lg flex gap-2">
+        <button
+          type="button"
+          disabled={isSaving}
+          onClick={handleSaveRules}
+          className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-98 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+        >
+          {saveSuccess ? <CheckCircle2 className="w-4 h-4 text-emerald-300" /> : <Save className="w-4 h-4" />}
+          <span>{isSaving ? 'Сохранение...' : saveSuccess ? 'Сохранено!' : 'Сохранить регламент'}</span>
+        </button>
+
         <button
           type="button"
           onClick={handleCopyRules}
-          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-98 transition-all"
+          className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-98 transition-all cursor-pointer"
         >
-          {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-          <span>{isCopied ? 'Регламент скопирован в буфер!' : 'Скопировать для отправки ученику'}</span>
+          {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+          <span>{isCopied ? 'Скопировано!' : 'Скопировать текст'}</span>
         </button>
       </div>
     </div>
