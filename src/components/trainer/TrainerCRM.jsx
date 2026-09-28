@@ -11,12 +11,30 @@ import NotesTab from './tabs/NotesTab';
 import AnalyticsTab from './tabs/AnalyticsTab';
 import AddStudentModal from './components/AddStudentModal';
 
+// Все полноэкранные страницы меню
+import TrainerSubscriptionModal from './components/modals/TrainerSubscriptionModal';
+import TrainerPromotionModal from './components/modals/TrainerPromotionModal';
+import TrainerPublicCardModal from './components/modals/TrainerPublicCardModal';
+import TrainerEditProfileModal from './components/modals/TrainerEditProfileModal';
+import TrainerClientRulesModal from './components/modals/TrainerClientRulesModal';
+import TrainerHealthParqModal from './components/modals/TrainerHealthParqModal';
+import TrainerTemplatesModal from './components/modals/TrainerTemplatesModal';
+import TrainerIncomeCalcModal from './components/modals/TrainerIncomeCalcModal';
+import TrainerReferralModal from './components/modals/TrainerReferralModal';
+import TrainerSupportModal from './components/modals/TrainerSupportModal';
+import TrainerDeleteModal from './components/modals/TrainerDeleteModal';
+import TrainerQrModal from './components/modals/TrainerQrModal';
+
 export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [trainerData, setTrainerData] = useState(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Состояние активного полноэкранного раздела из меню
+  const [activeScreen, setActiveScreen] = useState(null);
+  const [openDrawerOnReturn, setOpenDrawerOnReturn] = useState(false);
 
   // Форма модалки добавления студента
   const [addStudentForm, setAddStudentForm] = useState({
@@ -115,15 +133,153 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     }
   };
 
+  const handleCloseScreenToMenu = () => {
+    setActiveScreen(null);
+    setOpenDrawerOnReturn(true);
+  };
+
+  const handleOpenScreenFromHeader = (screenId) => {
+    setOpenDrawerOnReturn(false);
+    setActiveScreen(screenId);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  // Расчет основных показателей
+  const cleanUsername = trainerData?.username ? trainerData.username.replace('@', '').trim() : (trainerUsername?.replace('@', '').trim() || 'coach');
+  const coachFullName = trainerData?.full_name || `${trainerData?.first_name || 'Тренер'} ${trainerData?.last_name || ''}`.trim();
+
+  // ================= ПОЛНОЭКРАННЫЕ РАЗДЕЛЫ МЕНЮ (БЕЗ ФОНА СЗАДИ) =================
+  if (activeScreen === 'subscription') {
+    return (
+      <TrainerSubscriptionModal 
+        isOpen={true}
+        onClose={handleCloseScreenToMenu}
+      />
+    );
+  }
+
+  if (activeScreen === 'promotion') {
+    return (
+      <TrainerPromotionModal 
+        isOpen={true}
+        onClose={handleCloseScreenToMenu}
+        gymName={trainerData?.gym || 'Invictus Go'}
+      />
+    );
+  }
+
+  if (activeScreen === 'public_card') {
+    return (
+      <TrainerPublicCardModal 
+        isOpen={true}
+        onClose={handleCloseScreenToMenu}
+        onEditClick={() => setActiveScreen('edit_profile')}
+        trainer={trainerData}
+        cleanUsername={cleanUsername}
+      />
+    );
+  }
+
+  if (activeScreen === 'edit_profile') {
+    return (
+      <TrainerEditProfileModal 
+        isOpen={true}
+        onClose={handleCloseScreenToMenu}
+        trainer={trainerData}
+        cleanUsername={cleanUsername}
+        onSaved={refreshTrainerData}
+      />
+    );
+  }
+
+  if (activeScreen === 'client_rules') {
+    return (
+      <TrainerClientRulesModal 
+        isOpen={true}
+        onClose={handleCloseScreenToMenu}
+        coachName={coachFullName}
+      />
+    );
+  }
+
+  if (activeScreen === 'health_parq') {
+    return (
+      <TrainerHealthParqModal 
+        isOpen={true}
+        onClose={handleCloseScreenToMenu}
+        studentsList={students}
+      />
+    );
+  }
+
+  if (activeScreen === 'templates') {
+    return (
+      <TrainerTemplatesModal 
+        isOpen={true}
+        onClose={handleCloseScreenToMenu}
+        studentsList={students}
+        gymName={trainerData?.gym?.split('|')[0] || 'клуб'}
+      />
+    );
+  }
+
+  if (activeScreen === 'income_calc') {
+    return (
+      <TrainerIncomeCalcModal 
+        isOpen={true}
+        onClose={handleCloseScreenToMenu}
+      />
+    );
+  }
+
+  if (activeScreen === 'referral') {
+    return (
+      <TrainerReferralModal 
+        isOpen={true}
+        onClose={handleCloseScreenToMenu}
+        cleanUsername={cleanUsername}
+      />
+    );
+  }
+
+  if (activeScreen === 'support') {
+    return (
+      <TrainerSupportModal 
+        isOpen={true}
+        onClose={handleCloseScreenToMenu}
+      />
+    );
+  }
+
+  if (activeScreen === 'delete_account') {
+    return (
+      <TrainerDeleteModal 
+        isOpen={true}
+        onClose={handleCloseScreenToMenu}
+        cleanUsername={cleanUsername}
+        onDeleted={onBack}
+      />
+    );
+  }
+
+  if (activeScreen === 'qr_code') {
+    return (
+      <TrainerQrModal 
+        isOpen={true}
+        onClose={handleCloseScreenToMenu}
+        coachName={coachFullName}
+        cleanUsername={cleanUsername}
+      />
+    );
+  }
+
+  // ================= ОСНОВНОЙ ДАШБОРД CRM =================
   const activeStudentsCount = students.filter(s => s.status === 'active' || !s.status).length;
   const pausedStudentsCount = students.filter(s => s.status === 'paused').length;
   const leftStudentsCount = students.filter(s => s.status === 'left').length;
@@ -133,8 +289,6 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   return (
     <div className="min-h-screen bg-[#F2F2F7] text-slate-900 flex justify-center">
       <div className="w-full max-w-md min-h-screen flex flex-col justify-between relative bg-[#F2F2F7] shadow-xl">
-        
-        {/* Шапка тренера со встроенным боковым меню */}
         <div className="flex-1 pb-10">
           <TrainerHeader 
             trainer={trainerData} 
@@ -142,6 +296,8 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
             onBack={onBack}
             activeTab={activeTab}
             onSelectTab={(tabId) => setActiveTab(tabId)}
+            onOpenScreen={handleOpenScreenFromHeader}
+            initialDrawerOpen={openDrawerOnReturn}
           />
 
           <main className="p-3.5 space-y-3.5">
@@ -164,12 +320,14 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
                 students={students} 
                 onSelectStudent={() => {}}
                 onOpenAddModal={() => setIsAddStudentOpen(true)}
+                onUpdate={refreshTrainerData}
               />
             )}
 
             {activeTab === 'workouts' && (
               <WorkoutsTab 
                 students={students} 
+                onUpdate={refreshTrainerData}
               />
             )}
 
@@ -197,12 +355,12 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
             {activeTab === 'analytics' && (
               <AnalyticsTab 
                 students={students} 
+                onUpdate={refreshTrainerData}
               />
             )}
           </main>
         </div>
 
-        {/* Автономная модалка добавления ученика */}
         <AddStudentModal 
           isOpen={isAddStudentOpen} 
           onClose={() => setIsAddStudentOpen(false)}
@@ -210,7 +368,6 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
           setForm={setAddStudentForm}
           onSubmit={handleAddStudentSubmit}
         />
-
       </div>
     </div>
   );
