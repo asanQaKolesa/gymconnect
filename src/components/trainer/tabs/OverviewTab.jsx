@@ -49,24 +49,25 @@ export default function OverviewTab({
     pricePaid: 70000
   });
 
-  // Определение сегодняшнего дня недели
+  // Определение дня недели
   const daysShort = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
   const daysFull = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
   const todayDate = new Date();
+  const todayDateStr = todayDate.toISOString().split('T')[0];
   const todayDayIdx = todayDate.getDay();
   const todayShortName = daysShort[todayDayIdx];
   const todayFullName = daysFull[todayDayIdx];
 
-  // Динамическое расписание на сегодня из реальной базы учеников
+  // Динамическое расписание на сегодня
   const [todaySchedule, setTodaySchedule] = useState([]);
 
+  // Загрузка и объединение данных учеников с защитой от сброса статуса проведенных
   useEffect(() => {
     if (!students || students.length === 0) {
       setTodaySchedule([]);
       return;
     }
 
-    // Фильтруем учеников, у которых тренировка выпадает на сегодня
     const activeStudents = students.filter(s => s.status === 'active' || !s.status);
     
     const scheduledForToday = activeStudents.filter(s => {
@@ -76,21 +77,31 @@ export default function OverviewTab({
       return days.includes(todayShortName) || days.includes(todayFullName);
     });
 
-    // Если по дням никто не совпал, показываем первых активных подопечных
     const targetList = scheduledForToday.length > 0 ? scheduledForToday : activeStudents;
+
+    // Считываем сохраненные сегодня отметки о проведении, чтобы поллинг их не сбрасывал!
+    const savedCompletedIds = (() => {
+      try {
+        const val = localStorage.getItem(`gymconnect_completed_today_${todayDateStr}`);
+        return val ? JSON.parse(val) : [];
+      } catch {
+        return [];
+      }
+    })();
 
     const mapped = targetList.map((st, index) => {
       const left = st.left_trainings !== undefined 
         ? st.left_trainings 
         : (st.remaining_workouts !== undefined ? st.remaining_workouts : 12);
 
-      // Проверяем онлайн-явку из базы или локального хранилища
       const checkin = st.attendance_today || localStorage.getItem(`gymconnect_attendance_${st.id}`) || null;
 
-      // Берем назначенную программу тренировок от тренера
       const programExercises = st.assigned_program?.days?.[1]?.exercises || [
         { name: 'Разминка и базовый комплекс', sets: '4 × 10', weight: '40' }
       ];
+
+      // Если сегодня это занятие уже помечалось проведенным — сохраняем статус!
+      const isAlreadyCompleted = savedCompletedIds.includes(st.id);
 
       return {
         id: st.id,
@@ -101,7 +112,7 @@ export default function OverviewTab({
         phone: st.phone || st.whatsapp || '',
         gym: st.gym ? st.gym.split('|')[0] : (trainer?.gym ? trainer.gym.split('|')[0] : 'Алматы'),
         format: st.format === 'online' || st.training_format === 'coach_online' ? 'online' : 'gym',
-        status: 'pending', // 'pending' | 'completed' | 'canceled'
+        status: isAlreadyCompleted ? 'completed' : 'pending',
         client_checkin: checkin,
         remaining: left,
         focus: st.goal || 'Персональное ведение',
@@ -110,9 +121,9 @@ export default function OverviewTab({
     });
 
     setTodaySchedule(mapped);
-  }, [students, todayShortName, todayFullName, trainer?.gym]);
+  }, [students, todayShortName, todayFullName, trainer?.gym, todayDateStr]);
 
-  // Недельный график загрузки с подсветкой сегодняшнего дня
+  // Недельный график загрузки
   const weeklyLoadStats = [
     { day: 'Пн', count: 6, percent: 85, isToday: todayDayIdx === 1 },
     { day: 'Вт', count: 4, percent: 55, isToday: todayDayIdx === 2 },
@@ -123,7 +134,7 @@ export default function OverviewTab({
     { day: 'Вс', count: 1, percent: 15, isToday: todayDayIdx === 0 }
   ];
 
-  // Списание тренировки с реальной записью в Supabase
+  // Списание тренировки с фиксацией в localStorage дня
   const handleMarkCompleted = async (e, id) => {
     e.stopPropagation();
     const targetItem = todaySchedule.find(s => s.id === id);
@@ -131,7 +142,20 @@ export default function OverviewTab({
 
     const newRemaining = Math.max(0, targetItem.remaining - 1);
 
-    // 1. Мгновенно обновляем интерфейс
+    // 1. Фиксируем проведение в памяти дня (чтобы автоопрос не сбросил)
+    try {
+      const key = `gymconnect_completed_today_${todayDateStr}`;
+      const saved = localStorage.getItem(key);
+      const list = saved ? JSON.parse(saved) : [];
+      if (!list.includes(id)) {
+        list.push(id);
+        localStorage.setItem(key, JSON.stringify(list));
+      }
+    } catch (err) {
+      console.warn(err);
+    }
+
+    // 2. Обновляем локальное состояние
     setTodaySchedule(prev => prev.map(item => {
       if (item.id === id) {
         return { ...item, status: 'completed', remaining: newRemaining };
@@ -139,7 +163,7 @@ export default function OverviewTab({
       return item;
     }));
 
-    // 2. Записываем списание в Supabase
+    // 3. Записываем списание в Supabase
     try {
       await supabase
         .from('profiles')
@@ -187,11 +211,9 @@ export default function OverviewTab({
         created_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
-        .insert([payload])
-        .select()
-        .single();
+        .insert([payload]);
 
       if (error) throw error;
 
@@ -205,7 +227,6 @@ export default function OverviewTab({
         pricePaid: 70000
       });
 
-      // Перезагружаем страницу для обновления списка
       window.location.reload();
     } catch (err) {
       alert('Ошибка добавления: ' + err.message);
@@ -335,36 +356,9 @@ export default function OverviewTab({
             </div>
           </div>
         </div>
-
-        {/* Недельная загрузка */}
-        <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-900">Загрузка смен по дням</span>
-            <span className="text-[10.5px] font-mono text-blue-600 font-bold">Сегодня: {todayShortName}</span>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1.5 items-end h-20 pt-2">
-            {weeklyLoadStats.map(item => (
-              <div key={item.day} className="flex flex-col items-center gap-1.5 h-full justify-end">
-                <span className="text-[9.5px] font-mono font-bold text-slate-600">{item.count}</span>
-                <div className="w-full bg-slate-100 rounded-lg h-12 flex items-end p-0.5">
-                  <div 
-                    className={`w-full rounded-md transition-all ${
-                      item.isToday ? 'bg-blue-600 shadow-xs' : 'bg-slate-300'
-                    }`}
-                    style={{ height: `${item.percent}%` }}
-                  />
-                </div>
-                <span className={`text-[10px] font-bold ${item.isToday ? 'text-blue-600' : 'text-slate-400'}`}>
-                  {item.day}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* 4. Расписание на сегодня — ПОЛНОСТЬЮ ИЗ БАЗЫ ДАННЫХ */}
+      {/* 4. Расписание на сегодня */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
           <div className="flex items-center gap-2">
@@ -377,7 +371,7 @@ export default function OverviewTab({
             </div>
           </div>
           <span className="text-[10px] font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-            {todayDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+            Сегодня
           </span>
         </div>
 
@@ -399,9 +393,9 @@ export default function OverviewTab({
                         ? 'bg-rose-50/40 border-rose-200/70'
                         : 'bg-slate-50/60 border-slate-200/90'
                   }`}
-                  title="Нажмите, чтобы открыть полный профиль ученика"
+                  title="Открыть профиль ученика"
                 >
-                  {/* Верхняя строчка */}
+                  {/* Верхняя строка */}
                   <div className="flex items-center justify-between gap-2 border-b border-slate-200/50 pb-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded-lg border border-slate-200/80">
@@ -415,7 +409,7 @@ export default function OverviewTab({
                         {item.format === 'gym' ? 'В зале' : 'Онлайн'}
                       </span>
 
-                      {/* ОНЛАЙН-ОТМЕТКА ЯВКИ ИЗ SUPABASE */}
+                      {/* Отметка явки */}
                       {checkinStatus === 'attending' && (
                         <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300 flex items-center gap-1">
                           <Check className="w-3 h-3 text-emerald-600 stroke-[3]" /> Будет 👍
@@ -472,7 +466,7 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  {/* 3 кнопки строго в 1 строку */}
+                  {/* 3 кнопки в 1 строку */}
                   <div className="flex items-center gap-1.5 pt-1">
                     <button
                       type="button"
@@ -496,7 +490,7 @@ export default function OverviewTab({
                       }`}
                     >
                       <Check className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">Проведено</span>
+                      <span className="truncate">{isCompleted ? 'Проведено' : 'Проведено'}</span>
                     </button>
 
                     <button
@@ -725,7 +719,7 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* Модалка добавления ученика */}
+      {/* Модалка быстрого добавления ученика */}
       {isLocalAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col justify-between overflow-y-auto">
