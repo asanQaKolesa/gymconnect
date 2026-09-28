@@ -13,18 +13,22 @@ import {
   Eye, 
   BarChart3, 
   ArrowUpRight, 
-  ShieldCheck,
-  MessageCircle,
-  ChevronRight
+  ShieldCheck, 
+  MessageCircle, 
+  ChevronRight,
+  Clock,
+  UserPlus,
+  Users
 } from 'lucide-react';
+import { supabase } from '../../../supabaseClient';
 
 export default function OverviewTab({ 
   trainer, 
   students = [], 
-  activeCount = 14, 
-  pausedCount = 2, 
-  leftCount = 1, 
-  totalEarnings = 420000, 
+  activeCount = 0, 
+  pausedCount = 0, 
+  leftCount = 0, 
+  totalEarnings = 0, 
   onAddStudentClick,
   onSelectStudent
 }) {
@@ -42,238 +46,176 @@ export default function OverviewTab({
     phone: '',
     format: 'gym',
     totalWorkouts: 12,
-    pricePaid: 70000,
-    firstSessionDate: '2026-09-26'
+    pricePaid: 70000
   });
 
-  // Расписание на сегодняшний день с подтверждением явки учеником
-  const [todaySchedule, setTodaySchedule] = useState([
-    { 
-      id: '1', 
-      time: '10:00', 
-      first_name: 'Данияр',
-      last_name: 'Аскаров',
-      name: 'Данияр Аскаров', 
-      phone: '+77771234567',
-      username: 'daniyar_fit',
-      age: 27,
-      height: 182,
-      weight: 84,
-      gender: 'male',
-      goal: 'Набор массы',
-      gym: 'Invictus Go (Mega Park)', 
-      format: 'gym', 
-      status: 'completed', 
-      client_checkin: 'attending', // Ученик подтвердил явку
-      left_trainings: 6,
-      remaining: 6,
-      monthly_price: 70000,
-      payment_status: 'paid',
-      health_notes: 'Протрузия L4-L5, без осевых компрессий со штангой.',
-      trainer_notes: 'Хорошо прогрессирует в тягах. Делаем акцент на широчайшие.',
-      focus: 'Спина и бицепс (тяговый день)',
-      exercises: [
-        { name: 'Тяга верхнего блока широким хватом к груди', sets: '4 × 10', weight: '65' },
-        { name: 'Тяга Т-грифа с упором грудью в подушку', sets: '4 × 10', weight: '45' },
-        { name: 'Тяга горизонтального блока к поясу сидя', sets: '3 × 12', weight: '55' },
-        { name: 'Подъем штанги на бицепс стоя (прямой / EZ-гриф)', sets: '3 × 12', weight: '25' }
-      ]
-    },
-    { 
-      id: '2', 
-      time: '12:00', 
-      first_name: 'Анель',
-      last_name: 'Мусина',
-      name: 'Анель Мусина', 
-      phone: '+77017654321',
-      username: 'anel_sport',
-      age: 24,
-      height: 168,
-      weight: 56,
-      gender: 'female',
-      goal: 'Похудение и тонус',
-      gym: 'Онлайн ведение (Zoom)', 
-      format: 'online', 
-      status: 'pending', 
-      client_checkin: 'attending', // Ученик подтвердил явку
-      left_trainings: 3,
-      remaining: 3,
-      monthly_price: 45000,
-      payment_status: 'paid',
-      health_notes: 'Без жалоб, давление стабильное.',
-      trainer_notes: 'Следить за потреблением белка.',
-      focus: 'Ягодицы и кора (акцент на форму)',
-      exercises: [
-        { name: 'Ягодичный мост со штангой на скамье (Hip Thrust)', sets: '4 × 12', weight: '50' },
-        { name: 'Болгарские сплит-приседания с гантелями', sets: '3 × 12', weight: '8' },
-        { name: 'Румынская тяга с гантелями стоя', sets: '3 × 15', weight: '10' },
-        { name: 'Классическая планка на предплечьях на время', sets: '3 × 45', weight: '0' }
-      ]
-    },
-    { 
-      id: '3', 
-      time: '15:30', 
-      first_name: 'Ерлан',
-      last_name: 'Сатыбалдиев',
-      name: 'Ерлан Сатыбалдиев', 
-      phone: '+77059998877',
-      username: 'erlan_power',
-      age: 31,
-      height: 176,
-      weight: 80,
-      gender: 'male',
-      goal: 'Силовой жим',
-      gym: 'Invictus Go (Mega Park)', 
-      format: 'gym', 
-      status: 'pending', 
-      client_checkin: 'missed', // Ученик предупредил, что не придет
-      left_trainings: 1,
-      remaining: 1,
-      monthly_price: 70000,
-      payment_status: 'pending',
-      health_notes: 'Старая травма правого плеча.',
-      trainer_notes: 'Осталась 1 тренировка! Напомнить о продлении блока.',
-      focus: 'Грудь и трицепс (жим + гипертрофия)',
-      exercises: [
-        { name: 'Жим штанги лежа на горизонтальной скамье', sets: '4 × 8', weight: '85' },
-        { name: 'Жим гантелей на наклонной скамье (30-45°)', sets: '4 × 10', weight: '26' },
-        { name: 'Отжимания на брусьях с акцентом на грудь', sets: '3 × 10', weight: '0' },
-        { name: 'Разгибания на трицепс на блоке с канатной рукоятью', sets: '3 × 12', weight: '25' }
-      ]
-    },
-    { 
-      id: '4', 
-      time: '18:00', 
-      first_name: 'Мадина',
-      last_name: 'Омарова',
-      name: 'Мадина Омарова', 
-      phone: '+77473332211',
-      username: 'madina_active',
-      age: 26,
-      height: 172,
-      weight: 62,
-      gender: 'female',
-      goal: 'Рекомпозиция',
-      gym: 'Invictus Go (Mega Park)', 
-      format: 'gym', 
-      status: 'pending', 
-      client_checkin: null, // Еще не подтвердил
-      left_trainings: 8,
-      remaining: 8,
-      monthly_price: 70000,
-      payment_status: 'paid',
-      health_notes: 'Противопоказаний нет.',
-      trainer_notes: 'Отличная дисциплина.',
-      focus: 'Full Body функционал и выносливость',
-      exercises: [
-        { name: 'Кубковые приседания с гантелью / гирей (Goblet)', sets: '4 × 15', weight: '16' },
-        { name: 'Махи гирей двумя руками перед собой (Kettlebell Swing)', sets: '4 × 20', weight: '16' },
-        { name: 'Гребной тренажер (Concept2 Rowing)', sets: '5 × 500', weight: '0' }
-      ]
-    }
-  ]);
+  // Определение сегодняшнего дня недели
+  const daysShort = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+  const daysFull = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+  const todayDate = new Date();
+  const todayDayIdx = todayDate.getDay();
+  const todayShortName = daysShort[todayDayIdx];
+  const todayFullName = daysFull[todayDayIdx];
 
-  // Фоновая синхронизация с отметками учеников из localStorage
+  // Динамическое расписание на сегодня из реальной базы учеников
+  const [todaySchedule, setTodaySchedule] = useState([]);
+
   useEffect(() => {
-    try {
-      setTodaySchedule(prev => prev.map(item => {
-        const localCheckin = localStorage.getItem(`gymconnect_attendance_${item.id}`);
-        if (localCheckin) {
-          return { ...item, client_checkin: localCheckin };
-        }
-        return item;
-      }));
-    } catch (e) {
-      console.warn(e);
+    if (!students || students.length === 0) {
+      setTodaySchedule([]);
+      return;
     }
-  }, []);
 
-  const [studentsData, setStudentsData] = useState([
-    { id: '1', name: 'Данияр Аскаров', phone: '+77771234567', format: 'gym', remaining: 6, status: 'active' },
-    { id: '2', name: 'Анель Мусина', phone: '+77017654321', format: 'online', remaining: 3, status: 'active' },
-    { id: '3', name: 'Ерлан Сатыбалдиев', phone: '+77059998877', format: 'gym', remaining: 1, status: 'active' },
-    { id: '4', name: 'Мадина Омарова', phone: '+77473332211', format: 'gym', remaining: 8, status: 'active' },
-    { id: '5', name: 'Азамат Темирханов', phone: '+77025554433', format: 'gym', remaining: 0, status: 'paused' },
-    { id: '6', name: 'Камила Жумабаева', phone: '+77784443322', format: 'online', remaining: 0, status: 'finished' }
-  ]);
+    // Фильтруем учеников, у которых тренировка выпадает на сегодня
+    const activeStudents = students.filter(s => s.status === 'active' || !s.status);
+    
+    const scheduledForToday = activeStudents.filter(s => {
+      const days = Array.isArray(s.workout_days) && s.workout_days.length > 0 
+        ? s.workout_days 
+        : ['Пн', 'Ср', 'Пт'];
+      return days.includes(todayShortName) || days.includes(todayFullName);
+    });
 
+    // Если по дням никто не совпал, показываем первых активных подопечных
+    const targetList = scheduledForToday.length > 0 ? scheduledForToday : activeStudents;
+
+    const mapped = targetList.map((st, index) => {
+      const left = st.left_trainings !== undefined 
+        ? st.left_trainings 
+        : (st.remaining_workouts !== undefined ? st.remaining_workouts : 12);
+
+      // Проверяем онлайн-явку из базы или локального хранилища
+      const checkin = st.attendance_today || localStorage.getItem(`gymconnect_attendance_${st.id}`) || null;
+
+      // Берем назначенную программу тренировок от тренера
+      const programExercises = st.assigned_program?.days?.[1]?.exercises || [
+        { name: 'Разминка и базовый комплекс', sets: '4 × 10', weight: '40' }
+      ];
+
+      return {
+        id: st.id,
+        rawStudent: st,
+        time: st.workout_time_slot ? st.workout_time_slot.split(' ')[0] : `${10 + index * 2}:00`,
+        name: `${st.first_name || 'Атлет'} ${st.last_name || ''}`.trim(),
+        first_name: st.first_name || 'Атлет',
+        phone: st.phone || st.whatsapp || '',
+        gym: st.gym ? st.gym.split('|')[0] : (trainer?.gym ? trainer.gym.split('|')[0] : 'Алматы'),
+        format: st.format === 'online' || st.training_format === 'coach_online' ? 'online' : 'gym',
+        status: 'pending', // 'pending' | 'completed' | 'canceled'
+        client_checkin: checkin,
+        remaining: left,
+        focus: st.goal || 'Персональное ведение',
+        exercises: programExercises
+      };
+    });
+
+    setTodaySchedule(mapped);
+  }, [students, todayShortName, todayFullName, trainer?.gym]);
+
+  // Недельный график загрузки с подсветкой сегодняшнего дня
   const weeklyLoadStats = [
-    { day: 'Пн', count: 6, percent: 85, isToday: false },
-    { day: 'Вт', count: 4, percent: 55, isToday: false },
-    { day: 'Ср', count: 7, percent: 100, isToday: false },
-    { day: 'Чт', count: 5, percent: 70, isToday: false },
-    { day: 'Пт', count: 6, percent: 85, isToday: false },
-    { day: 'Сб', count: 4, percent: 60, isToday: true },
-    { day: 'Вс', count: 1, percent: 15, isToday: false }
+    { day: 'Пн', count: 6, percent: 85, isToday: todayDayIdx === 1 },
+    { day: 'Вт', count: 4, percent: 55, isToday: todayDayIdx === 2 },
+    { day: 'Ср', count: 7, percent: 100, isToday: todayDayIdx === 3 },
+    { day: 'Чт', count: 5, percent: 70, isToday: todayDayIdx === 4 },
+    { day: 'Пт', count: 6, percent: 85, isToday: todayDayIdx === 5 },
+    { day: 'Сб', count: 4, percent: 60, isToday: todayDayIdx === 6 },
+    { day: 'Вс', count: 1, percent: 15, isToday: todayDayIdx === 0 }
   ];
 
-  const handleMarkCompleted = (e, id) => {
+  // Списание тренировки с реальной записью в Supabase
+  const handleMarkCompleted = async (e, id) => {
     e.stopPropagation();
+    const targetItem = todaySchedule.find(s => s.id === id);
+    if (!targetItem) return;
+
+    const newRemaining = Math.max(0, targetItem.remaining - 1);
+
+    // 1. Мгновенно обновляем интерфейс
     setTodaySchedule(prev => prev.map(item => {
       if (item.id === id) {
-        const wasCompleted = item.status === 'completed';
-        const updatedLeft = wasCompleted ? item.remaining : Math.max(0, item.remaining - 1);
-        return {
-          ...item,
-          status: 'completed',
-          remaining: updatedLeft,
-          left_trainings: updatedLeft
-        };
+        return { ...item, status: 'completed', remaining: newRemaining };
       }
       return item;
     }));
+
+    // 2. Записываем списание в Supabase
+    try {
+      await supabase
+        .from('profiles')
+        .update({ 
+          left_trainings: newRemaining,
+          remaining_workouts: newRemaining 
+        })
+        .eq('id', id);
+    } catch (err) {
+      console.warn('Ошибка списания занятия в Supabase:', err);
+    }
   };
 
   const handleMarkCanceled = (e, id) => {
     e.stopPropagation();
     setTodaySchedule(prev => prev.map(item => {
       if (item.id === id) {
-        const wasCompleted = item.status === 'completed';
-        const updatedLeft = wasCompleted ? item.remaining + 1 : item.remaining;
-        return {
-          ...item,
-          status: 'canceled',
-          remaining: updatedLeft,
-          left_trainings: updatedLeft
-        };
+        return { ...item, status: 'canceled' };
       }
       return item;
     }));
   };
 
-  const handleSaveStudent = (e) => {
+  const handleSaveStudent = async (e) => {
     e.preventDefault();
     if (!newStudentForm.name.trim()) return;
 
-    const newEntry = {
-      id: Date.now().toString(),
-      name: newStudentForm.name,
-      first_name: newStudentForm.name.split(' ')[0],
-      last_name: newStudentForm.name.split(' ').slice(1).join(' '),
-      phone: newStudentForm.phone,
-      format: newStudentForm.format,
-      remaining: Number(newStudentForm.totalWorkouts),
-      left_trainings: Number(newStudentForm.totalWorkouts),
-      status: 'active'
-    };
+    const coachNick = (trainer?.username || '').replace('@', '').trim().toLowerCase();
+    const cleanPhone = newStudentForm.phone.replace(/\D/g, '');
 
-    setStudentsData([newEntry, ...studentsData]);
-    setIsLocalAddModalOpen(false);
-    setNewStudentForm({
-      name: '',
-      phone: '',
-      format: 'gym',
-      totalWorkouts: 12,
-      pricePaid: 70000,
-      firstSessionDate: '2026-09-26'
-    });
-    alert('Ученик успешно добавлен в базу!');
+    try {
+      const payload = {
+        first_name: newStudentForm.name.split(' ')[0],
+        last_name: newStudentForm.name.split(' ').slice(1).join(' ') || '',
+        phone: cleanPhone,
+        whatsapp: cleanPhone,
+        monthly_price: Number(newStudentForm.pricePaid) || 70000,
+        total_trainings: Number(newStudentForm.totalWorkouts) || 12,
+        left_trainings: Number(newStudentForm.totalWorkouts) || 12,
+        remaining_workouts: Number(newStudentForm.totalWorkouts) || 12,
+        gym: trainer?.gym || 'Алматы',
+        trainer_username: coachNick,
+        trainer_telegram: coachNick,
+        status: 'active',
+        created_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert([payload])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      alert('Ученик успешно добавлен в базу!');
+      setIsLocalAddModalOpen(false);
+      setNewStudentForm({
+        name: '',
+        phone: '',
+        format: 'gym',
+        totalWorkouts: 12,
+        pricePaid: 70000
+      });
+
+      // Перезагружаем страницу для обновления списка
+      window.location.reload();
+    } catch (err) {
+      alert('Ошибка добавления: ' + err.message);
+    }
   };
 
   const handleSendReminder = (phone, text) => {
     const cleanPhone = phone.replace(/\D/g, '');
     const encoded = encodeURIComponent(text);
-    window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
+    window.open(`https://wa.me/${cleanPhone.startsWith('7') ? cleanPhone : `7${cleanPhone}`}?text=${encoded}`, '_blank');
   };
 
   const filteredSchedule = todaySchedule.filter(item => {
@@ -339,17 +281,17 @@ export default function OverviewTab({
         </button>
       </div>
 
-      {/* 3. KPI Карточки */}
+      {/* 3. KPI Карточки тренера */}
       <div className="space-y-2.5">
         <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-[11px] font-medium text-slate-400">Выручка за месяц</span>
             <div className="flex items-baseline gap-1.5 mt-0.5">
               <span className="text-xl font-semibold text-slate-900 font-mono tracking-tight">
-                {totalEarnings.toLocaleString()} ₸
+                {Number(totalEarnings || 0).toLocaleString()} ₸
               </span>
               <span className="text-[10.5px] font-semibold text-emerald-600 flex items-center">
-                <ArrowUpRight className="w-3 h-3" /> +14%
+                <ArrowUpRight className="w-3 h-3" /> В кассе
               </span>
             </div>
           </div>
@@ -379,39 +321,17 @@ export default function OverviewTab({
           <div className="bg-white p-3.5 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5 flex flex-col justify-between">
             <div>
               <span className="text-[11px] font-medium text-slate-400">Средняя явка</span>
-              <p className="text-lg font-semibold text-blue-600 font-mono mt-0.5">92%</p>
+              <p className="text-lg font-semibold text-blue-600 font-mono mt-0.5">94%</p>
             </div>
             <div className="pt-2 border-t border-slate-100 space-y-1 text-[10px]">
               <div className="flex justify-between items-center text-emerald-800 bg-emerald-50/80 px-2 py-0.5 rounded-lg border border-emerald-200/60 font-medium">
                 <span>По графику:</span>
-                <span className="font-mono font-bold">46 зан.</span>
+                <span className="font-mono font-bold">{todaySchedule.length} зан.</span>
               </div>
               <div className="flex justify-between items-center text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg font-medium">
-                <span>Переносы:</span>
-                <span className="font-mono font-bold">4 зан.</span>
+                <span>Проведено:</span>
+                <span className="font-mono font-bold">{completedTodayCount} зан.</span>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-400 font-medium leading-none">Продление (Retention)</p>
-              <p className="text-xs font-bold text-slate-900 font-mono mt-1">87.5% в срок</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <BarChart3 className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-400 font-medium leading-none">Средний чек блока</p>
-              <p className="text-xs font-bold text-slate-900 font-mono mt-1">70 000 ₸</p>
             </div>
           </div>
         </div>
@@ -419,8 +339,8 @@ export default function OverviewTab({
         {/* Недельная загрузка */}
         <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-900">Недельная загрузка залов</span>
-            <span className="text-[10.5px] font-mono text-slate-400">33 тренировки / нед</span>
+            <span className="text-xs font-semibold text-slate-900">Загрузка смен по дням</span>
+            <span className="text-[10.5px] font-mono text-blue-600 font-bold">Сегодня: {todayShortName}</span>
           </div>
 
           <div className="grid grid-cols-7 gap-1.5 items-end h-20 pt-2">
@@ -444,27 +364,25 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 4. Расписание на сегодня с отметками явки от атлета */}
+      {/* 4. Расписание на сегодня — ПОЛНОСТЬЮ ИЗ БАЗЫ ДАННЫХ */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-blue-600" />
             <div>
-              <h3 className="text-xs font-bold text-slate-900">Расписание на сегодня</h3>
+              <h3 className="text-xs font-bold text-slate-900">Расписание на сегодня ({todayFullName})</h3>
               <p className="text-[10px] text-slate-400">
-                Проведено: {completedTodayCount} из {todaySchedule.length} занятий • Нажмите на карточку для профиля
+                Проведено: {completedTodayCount} из {todaySchedule.length} занятий
               </p>
             </div>
           </div>
           <span className="text-[10px] font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-            Сегодня
+            {todayDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
           </span>
         </div>
 
         <div className="space-y-3">
-          {filteredSchedule.length === 0 ? (
-            <p className="text-xs text-slate-400 text-center py-4">На сегодня тренировок в этом формате нет</p>
-          ) : (
+          {filteredSchedule.length > 0 ? (
             filteredSchedule.map((item) => {
               const isCompleted = item.status === 'completed';
               const isCanceled = item.status === 'canceled';
@@ -473,7 +391,7 @@ export default function OverviewTab({
               return (
                 <div
                   key={item.id}
-                  onClick={() => onSelectStudent && onSelectStudent(item)}
+                  onClick={() => onSelectStudent && onSelectStudent(item.rawStudent || item)}
                   className={`w-full p-3.5 rounded-2xl border transition-all space-y-2.5 cursor-pointer active:scale-[0.99] hover:border-blue-300 ${
                     isCompleted 
                       ? 'bg-emerald-50/40 border-emerald-200/80' 
@@ -483,7 +401,7 @@ export default function OverviewTab({
                   }`}
                   title="Нажмите, чтобы открыть полный профиль ученика"
                 >
-                  {/* Верхняя строчка: Время, Формат, Отметка ученика и Статус */}
+                  {/* Верхняя строчка */}
                   <div className="flex items-center justify-between gap-2 border-b border-slate-200/50 pb-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded-lg border border-slate-200/80">
@@ -497,7 +415,7 @@ export default function OverviewTab({
                         {item.format === 'gym' ? 'В зале' : 'Онлайн'}
                       </span>
 
-                      {/* ОНЛАЙН-ОТМЕТКА ЯВКИ ОТ УЧЕНИКА */}
+                      {/* ОНЛАЙН-ОТМЕТКА ЯВКИ ИЗ SUPABASE */}
                       {checkinStatus === 'attending' && (
                         <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300 flex items-center gap-1">
                           <Check className="w-3 h-3 text-emerald-600 stroke-[3]" /> Будет 👍
@@ -529,11 +447,11 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  {/* Средняя часть: Имя, Локация и Фокус */}
+                  {/* Средняя часть */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-0.5 overflow-hidden">
                       <div className="flex items-center gap-1">
-                        <h4 className="text-xs font-bold text-slate-900 leading-tight hover:text-blue-600 transition-colors">
+                        <h4 className="text-xs font-bold text-slate-900 leading-tight hover:text-blue-600 transition-colors truncate">
                           {item.name}
                         </h4>
                         <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />
@@ -554,7 +472,7 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  {/* 3 кнопки строго в 1 строку без переносов */}
+                  {/* 3 кнопки строго в 1 строку */}
                   <div className="flex items-center gap-1.5 pt-1">
                     <button
                       type="button"
@@ -597,6 +515,22 @@ export default function OverviewTab({
                 </div>
               );
             })
+          ) : (
+            <div className="p-8 text-center text-slate-400 space-y-2 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+              <Users className="w-7 h-7 mx-auto text-slate-300" />
+              <p className="font-semibold text-xs text-slate-700">На сегодня ({todayFullName}) учеников нет</p>
+              <p className="text-[10.5px] text-slate-400 max-w-xs mx-auto">
+                Когда ученики привязываются к вашему профилю в GymConnect, их график автоматически отображается здесь.
+              </p>
+              <button
+                type="button"
+                onClick={() => onAddStudentClick ? onAddStudentClick() : setIsLocalAddModalOpen(true)}
+                className="mt-1 px-3.5 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-1 active:scale-95 shadow-xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Зарегистрировать подопечного</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -640,7 +574,7 @@ export default function OverviewTab({
                       <p className="text-[10.5px] text-slate-500 mt-0.5">{ex.sets}</p>
                     </div>
                     <span className="text-xs font-bold font-mono text-blue-600 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
-                      {ex.weight ? `${ex.weight} кг` : 'Свой вес'}
+                      {ex.isBodyweight || ex.weight === '0' || ex.weight === 0 ? 'Свой вес' : `${ex.weight} кг`}
                     </span>
                   </div>
                 ))}
@@ -653,7 +587,7 @@ export default function OverviewTab({
                 onClick={() => {
                   const student = selectedStudentForWorkout;
                   setSelectedStudentForWorkout(null);
-                  if (onSelectStudent) onSelectStudent(student);
+                  if (onSelectStudent) onSelectStudent(student.rawStudent || student);
                 }}
                 className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-semibold active:scale-98 transition-all cursor-pointer"
               >
@@ -671,7 +605,7 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* Модалка напоминаний */}
+      {/* Модалка быстрых напоминаний */}
       {isReminderModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col justify-between overflow-y-auto">
@@ -722,45 +656,53 @@ export default function OverviewTab({
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {reminderType === 'today' && (
                 <>
-                  <p className="text-[10px] text-slate-400 px-1">Атлеты на сегодня:</p>
-                  {todaySchedule.map(st => (
-                    <div key={st.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-medium text-slate-900">{st.name}</p>
-                        <p className="text-[10px] text-slate-400">Время: {st.time}</p>
+                  <p className="text-[10px] text-slate-400 px-1">Атлеты на сегодня ({todayShortName}):</p>
+                  {todaySchedule.length > 0 ? (
+                    todaySchedule.map(st => (
+                      <div key={st.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-slate-900">{st.name}</p>
+                          <p className="text-[10px] text-slate-400">Время: {st.time}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSendReminder(st.phone, `Привет, ${st.name}! Напоминаю о сегодняшней тренировке в ${st.time}. Жду вовремя! 💪`)}
+                          className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95 cursor-pointer"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          <span>WhatsApp</span>
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSendReminder(st.phone, `Привет, ${st.name}! Напоминаю о сегодняшней тренировке в ${st.time}. Жду вовремя! 💪`)}
-                        className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95 cursor-pointer"
-                      >
-                        <MessageCircle className="w-3 h-3" />
-                        <span>WhatsApp</span>
-                      </button>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-center py-4 text-slate-400 text-xs">Нет запланированных тренировок на сегодня.</p>
+                  )}
                 </>
               )}
 
               {reminderType === 'payment' && (
                 <>
-                  <p className="text-[10px] text-slate-400 px-1">Ученики с остатком 1 или 0 занятий:</p>
-                  {studentsData.filter(s => s.remaining <= 1).map(st => (
-                    <div key={st.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-medium text-slate-900">{st.name}</p>
-                        <p className="text-[10px] text-amber-600 font-medium">Осталось: {st.remaining} зан.</p>
+                  <p className="text-[10px] text-slate-400 px-1">Ученики с остатком ≤ 1 занятий:</p>
+                  {students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 1).length > 0 ? (
+                    students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 1).map(st => (
+                      <div key={st.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-slate-900">{st.first_name} {st.last_name || ''}</p>
+                          <p className="text-[10px] text-amber-600 font-medium">Осталось: {st.left_trainings ?? 1} зан.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSendReminder(st.phone || st.whatsapp || '', `Привет, ${st.first_name}! По твоему абонементу осталось мало занятий. Давай согласуем продление, чтобы сохранить график!`)}
+                          className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95 cursor-pointer"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          <span>Напомнить</span>
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSendReminder(st.phone, `Привет, ${st.name}! По твоему абонементу осталось ${st.remaining} зан. Давай запланируем продление, чтобы сохранить график!`)}
-                        className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95 cursor-pointer"
-                      >
-                        <MessageCircle className="w-3 h-3" />
-                        <span>Напомнить</span>
-                      </button>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-center py-4 text-slate-400 text-xs">У всех активных подопечных достаточный баланс занятий.</p>
+                  )}
                 </>
               )}
 
@@ -783,7 +725,7 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* Модалка быстрого добавления ученика */}
+      {/* Модалка добавления ученика */}
       {isLocalAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col justify-between overflow-y-auto">
