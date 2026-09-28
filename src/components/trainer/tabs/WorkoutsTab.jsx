@@ -13,26 +13,31 @@ import {
   Save, 
   ChevronRight,
   User,
-  ExternalLink
+  ExternalLink,
+  Layers
 } from 'lucide-react';
 import StudentDetailModal from '../components/StudentDetailModal';
 
-export default function WorkoutsTab({ students = [], onUpdate }) {
-  const [selectedStudentId, setSelectedStudentId] = useState(students[0]?.id || '');
+export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }) {
+  // Исправленная проверка активного атлета
+  const isStudentActive = (s) => {
+    if (!s) return false;
+    const st = (s.status || '').toLowerCase().trim();
+    return st !== 'left' && st !== 'archived';
+  };
+
+  const activeStudents = students.filter(isStudentActive);
+  const [selectedStudentId, setSelectedStudentId] = useState(activeStudents[0]?.id || '');
   const [selectedStudentForModal, setSelectedStudentForModal] = useState(null);
   
   // Параметры программы
-  const [workoutType, setWorkoutType] = useState('fullbody'); // 'fullbody' | 'split'
-  const [experienceLevel, setExperienceLevel] = useState('beginner_1');
+  const [workoutType, setWorkoutType] = useState('fullbody');
   const [frequency, setFrequency] = useState(3);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Кардио, разминка и ограничения
   const [warmup, setWarmup] = useState('Суставная разминка 10 мин');
-  const [cardioBefore, setCardioBefore] = useState('Эллипс 5-7 мин');
-  const [cardioAfter, setCardioAfter] = useState('Дорожка / шаг 10 мин');
-  const [contraindications, setContraindications] = useState('Без осевой нагрузки на поясницу');
+  const [contraindications, setContraindications] = useState('Без осевой нагрузки');
 
   // База упражнений по группам мышц
   const exerciseDatabase = {
@@ -40,24 +45,24 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
     'Спина': ['Подтягивания на перекладине', 'Тяга верхнего блока', 'Тяга штанги в наклоне', 'Горизонтальная тяга'],
     'Ноги': ['Приседания со штангой', 'Жим ногами в платформе', 'Болгарские выпады', 'Румынская тяга', 'Сгибание ног'],
     'Плечи': ['Жим штанги стоя (Армейский)', 'Махи гантелями в стороны', 'Протяжка к подбородку', 'Махи в наклоне'],
-    'Руки': ['Подъем штанги на бицепс', 'Французский жим лежа', 'Сгибание рук с гантелями (молотки)', 'Разгибания в блоке'],
+    'Руки': ['Подъем штанги на бицепс', 'Французский жим лежа', 'Сгибание рук с гантелями', 'Разгибания в блоке'],
     'Пресс': ['Скручивания на полу', 'Подъем ног в висе', 'Планка', 'Русские скручивания']
   };
 
   const [daysWorkouts, setDaysWorkouts] = useState({
-    1: { title: 'День 1: Верх тела (Грудь + Спина)', exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 10, weight: 60, exerciseType: 'Сет' }] },
-    2: { title: 'День 2: Низ тела (Ноги + Пресс)', exercises: [{ muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 10, weight: 50, exerciseType: 'Сет' }] },
-    3: { title: 'День 3: Плечи и Руки', exercises: [{ muscleGroup: 'Плечи', name: 'Жим штанги стоя (Армейский)', sets: 3, reps: 12, weight: 30, exerciseType: 'Сет' }] }
+    1: { title: 'День 1: Верх тела (Грудь + Спина)', exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 10, weight: 60 }] },
+    2: { title: 'День 2: Низ тела (Ноги + Пресс)', exercises: [{ muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 10, weight: 50 }] },
+    3: { title: 'День 3: Плечи и Руки', exercises: [{ muscleGroup: 'Плечи', name: 'Жим штанги стоя (Армейский)', sets: 3, reps: 12, weight: 30 }] }
   });
 
   const [activeDay, setActiveDay] = useState(1);
 
-  // Синхронизация при смене ученика: если у него уже была сохранена программа — загружаем её
+  // Синхронизация программы при смене ученика
   useEffect(() => {
-    if (students.length > 0 && !selectedStudentId) {
-      setSelectedStudentId(students[0].id);
+    if (activeStudents.length > 0 && !selectedStudentId) {
+      setSelectedStudentId(activeStudents[0].id);
     }
-    const current = students.find(s => s.id === selectedStudentId);
+    const current = activeStudents.find(s => s.id === selectedStudentId);
     if (current?.assigned_program && typeof current.assigned_program === 'object') {
       const prog = current.assigned_program;
       if (prog.days) setDaysWorkouts(prog.days);
@@ -67,7 +72,7 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
       if (prog.contraindications) setContraindications(prog.contraindications);
     }
     setSaveSuccess(false);
-  }, [selectedStudentId, students]);
+  }, [selectedStudentId, activeStudents]);
 
   const handleFrequencyChange = (newFreq) => {
     setFrequency(newFreq);
@@ -75,7 +80,7 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
     for (let i = 1; i <= newFreq; i++) {
       updatedDays[i] = daysWorkouts[i] || {
         title: `День ${i}: Тренировка ${i}`,
-        exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 3, reps: 10, weight: 40, exerciseType: 'Сет' }]
+        exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 3, reps: 10, weight: 40 }]
       };
     }
     setDaysWorkouts(updatedDays);
@@ -88,7 +93,7 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
       ...daysWorkouts,
       [activeDay]: {
         ...daysWorkouts[activeDay],
-        exercises: [...currentExercises, { muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 3, reps: 10, weight: 40, exerciseType: 'Сет' }]
+        exercises: [...currentExercises, { muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 3, reps: 10, weight: 40 }]
       }
     });
   };
@@ -121,41 +126,41 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
     });
   };
 
-  // Загрузка готового шаблона
+  // Шаблоны программ
   const applyPresetTemplate = (presetKey) => {
     if (presetKey === 'fullbody3') {
       setFrequency(3);
       setWorkoutType('fullbody');
       setDaysWorkouts({
         1: { title: 'День 1: Full Body (Сила A)', exercises: [
-          { muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 8, weight: 60, exerciseType: 'Сет' },
-          { muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 8, weight: 60, exerciseType: 'Сет' },
-          { muscleGroup: 'Спина', name: 'Тяга верхнего блока', sets: 4, reps: 10, weight: 50, exerciseType: 'Сет' }
+          { muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 8, weight: 60 },
+          { muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 8, weight: 60 },
+          { muscleGroup: 'Спина', name: 'Тяга верхнего блока', sets: 4, reps: 10, weight: 50 }
         ]},
         2: { title: 'День 2: Full Body (Гипертрофия B)', exercises: [
-          { muscleGroup: 'Ноги', name: 'Жим ногами в платформе', sets: 4, reps: 12, weight: 100, exerciseType: 'Сет' },
-          { muscleGroup: 'Плечи', name: 'Жим штанги стоя (Армейский)', sets: 4, reps: 10, weight: 35, exerciseType: 'Сет' },
-          { muscleGroup: 'Спина', name: 'Горизонтальная тяга', sets: 3, reps: 12, weight: 45, exerciseType: 'Сет' }
+          { muscleGroup: 'Ноги', name: 'Жим ногами в платформе', sets: 4, reps: 12, weight: 100 },
+          { muscleGroup: 'Плечи', name: 'Жим штанги стоя (Армейский)', sets: 4, reps: 10, weight: 35 },
+          { muscleGroup: 'Спина', name: 'Горизонтальная тяга', sets: 3, reps: 12, weight: 45 }
         ]},
         3: { title: 'День 3: Full Body (Объем C)', exercises: [
-          { muscleGroup: 'Ноги', name: 'Румынская тяга', sets: 4, reps: 10, weight: 55, exerciseType: 'Сет' },
-          { muscleGroup: 'Грудь', name: 'Жим гантелей на наклонной', sets: 3, reps: 12, weight: 22, exerciseType: 'Сет' },
-          { muscleGroup: 'Руки', name: 'Подъем штанги на бицепс', sets: 3, reps: 12, weight: 25, exerciseType: 'Сет' }
+          { muscleGroup: 'Ноги', name: 'Румынская тяга', sets: 4, reps: 10, weight: 55 },
+          { muscleGroup: 'Грудь', name: 'Жим гантелей на наклонной', sets: 3, reps: 12, weight: 22 },
+          { muscleGroup: 'Руки', name: 'Подъем штанги на бицепс', sets: 3, reps: 12, weight: 25 }
         ]}
       });
     } else if (presetKey === 'split_upper_lower') {
       setFrequency(4);
       setWorkoutType('split');
       setDaysWorkouts({
-        1: { title: 'День 1: Верх (Тяжелый)', exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 8, weight: 70, exerciseType: 'Сет' }] },
-        2: { title: 'День 2: Низ (Тяжелый)', exercises: [{ muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 8, weight: 70, exerciseType: 'Сет' }] },
-        3: { title: 'День 3: Верх (Многоповторный)', exercises: [{ muscleGroup: 'Спина', name: 'Тяга верхнего блока', sets: 4, reps: 12, weight: 50, exerciseType: 'Сет' }] },
-        4: { title: 'День 4: Низ (Многоповторный)', exercises: [{ muscleGroup: 'Ноги', name: 'Болгарские выпады', sets: 3, reps: 12, weight: 14, exerciseType: 'Сет' }] }
+        1: { title: 'День 1: Верх (Тяжелый)', exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 8, weight: 70 }] },
+        2: { title: 'День 2: Низ (Тяжелый)', exercises: [{ muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 8, weight: 70 }] },
+        3: { title: 'День 3: Верх (Многоповторный)', exercises: [{ muscleGroup: 'Спина', name: 'Тяга верхнего блока', sets: 4, reps: 12, weight: 50 }] },
+        4: { title: 'День 4: Низ (Многоповторный)', exercises: [{ muscleGroup: 'Ноги', name: 'Болгарские выпады', sets: 3, reps: 12, weight: 14 }] }
       });
     }
   };
 
-  // Сохранение в Supabase
+  // Сохранение программы в Supabase
   const handleSaveProgram = async () => {
     if (!selectedStudentId) {
       alert('Выберите ученика!');
@@ -167,14 +172,11 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
 
     try {
       const programPayload = {
+        days: daysWorkouts,
         frequency,
         workoutType,
-        experienceLevel,
         warmup,
-        cardioBefore,
-        cardioAfter,
         contraindications,
-        days: daysWorkouts,
         updated_at: new Date().toISOString()
       };
 
@@ -189,13 +191,13 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
       setTimeout(() => setSaveSuccess(false), 2500);
       if (onUpdate) onUpdate();
     } catch (err) {
-      alert('Ошибка при сохранении программы: ' + err.message);
+      alert('Ошибка сохранения программы: ' + err.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const currentStudent = students.find(s => s.id === selectedStudentId);
+  const currentStudent = activeStudents.find(s => s.id === selectedStudentId);
 
   return (
     <div className="space-y-3.5 select-none pb-12 text-xs">
@@ -208,8 +210,8 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
               <Dumbbell className="w-4 h-4 stroke-[2.2]" />
             </div>
             <div>
-              <h3 className="font-bold text-xs text-slate-900">Назначение программы</h3>
-              <p className="text-[10px] text-slate-400">Выберите ученика для персонального плана</p>
+              <h3 className="font-bold text-xs text-slate-900">Программа тренировок</h3>
+              <p className="text-[10px] text-slate-400">Назначение плана подопечному</p>
             </div>
           </div>
 
@@ -219,7 +221,7 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
               onClick={() => setSelectedStudentForModal(currentStudent)}
               className="text-[11px] font-semibold text-blue-600 flex items-center gap-1 active:scale-95 cursor-pointer"
             >
-              <span>Анкета</span>
+              <span>Вся анкета</span>
               <ExternalLink className="w-3 h-3" />
             </button>
           )}
@@ -232,21 +234,21 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
             onChange={(e) => setSelectedStudentId(e.target.value)}
             className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
           >
-            {students.length > 0 ? (
-              students.map(s => (
+            {activeStudents.length > 0 ? (
+              activeStudents.map(s => (
                 <option key={s.id} value={s.id}>
                   {s.first_name} {s.last_name || ''} ({s.goal || 'Тонус'}) • {s.gym ? s.gym.split('|')[0] : 'Зал'}
                 </option>
               ))
             ) : (
-              <option value="">Нет учеников в базе</option>
+              <option value="">Нет активных учеников</option>
             )}
           </select>
         </div>
 
-        {/* Быстрые пресеты */}
+        {/* Быстрые шаблоны */}
         <div className="space-y-1.5 pt-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Быстрые готовые шаблоны:</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Готовые схемы сплитов:</span>
           <div className="grid grid-cols-2 gap-1.5">
             <button
               type="button"
@@ -266,11 +268,11 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
         </div>
       </div>
 
-      {/* 2. Параметры сплита и частота */}
+      {/* 2. Параметры сплита */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-xs space-y-3">
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] font-semibold text-slate-500 block mb-1">Формат сплита</label>
+            <label className="text-[10px] font-semibold text-slate-500 block mb-1">Формат тренировок</label>
             <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-100 rounded-xl">
               <button
                 type="button"
@@ -314,7 +316,6 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
           </div>
         </div>
 
-        {/* Разминка и ограничения */}
         <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
           <div>
             <label className="text-[10px] font-semibold text-slate-500 block mb-1">Разминка</label>
@@ -327,7 +328,7 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
           </div>
 
           <div>
-            <label className="text-[10px] font-semibold text-slate-500 block mb-1">Противопоказания</label>
+            <label className="text-[10px] font-semibold text-slate-500 block mb-1">Ограничения</label>
             <input 
               type="text"
               value={contraindications}
@@ -426,7 +427,6 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
                   )}
                 </div>
 
-                {/* Подходы, Повторения и Вес */}
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="bg-white p-1.5 rounded-xl border border-slate-200">
                     <span className="text-[9px] text-slate-400 block">Подходы</span>
@@ -481,7 +481,7 @@ export default function WorkoutsTab({ students = [], onUpdate }) {
             className="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5" />
-            <span>{saving ? 'Сохранение...' : 'Сохранить программу'}</span>
+            <span>{saving ? '...' : 'Сохранить программу'}</span>
           </button>
         </div>
       </div>
