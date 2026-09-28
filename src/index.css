@@ -29,6 +29,21 @@ html, body {
   overflow-x: hidden;
 }
 
+/* ================= ГЛОБАЛЬНАЯ НАСТРОЙКА ВСЕХ ПОЛЕЙ ВВОДА ================= */
+input, textarea, select {
+  caret-color: #2563EB !important; /* Яркая синяя видимая каретка на всех полях во всем приложении */
+  font-family: inherit;
+}
+
+/* На мобильных устройствах предотвращаем принудительный зум iOS Safari при клике */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]), 
+  textarea, 
+  select {
+    font-size: 16px !important; /* В iOS если шрифт >= 16px, система НЕ зумит и НЕ сдвигает курсор */
+  }
+}
+
 /* Скрытие стандартного скроллбара для нативного ощущения мини-аппа */
 ::-webkit-scrollbar {
   display: none;
