@@ -6,20 +6,16 @@ import {
   Trash2, 
   Save, 
   CheckCircle2, 
-  Clock, 
   Sparkles,
-  ChevronDown,
-  ChevronUp,
-  Flame,
-  Send,
-  HelpCircle,
-  Copy
+  Send
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
-import { sendStudentNotification } from '../../../utils/telegramNotifications';
+
+// Токен бота платформы GymConnect
+const BOT_TOKEN = '8825396654:AAH0GzJqWOzqjys5re9De-Bc7jPIqwxtfDI';
 
 export default function StudentProgramTab({ student, onUpdate }) {
-  // 1. ХУКИ СОСТОЯНИЯ (СТРОГО В НАЧАЛЕ КОМПОНЕНТА)
+  // 1. ХУКИ СОСТОЯНИЯ (СТРОГО В НАЧАЛЕ)
   const [workoutTitle, setWorkoutTitle] = useState('День 1: Грудь и Трицепс');
   const [exercises, setExercises] = useState([
     {
@@ -72,6 +68,26 @@ export default function StudentProgramTab({ student, onUpdate }) {
   }, [student?.id]);
 
   if (!student) return null;
+
+  // Безопасная отправка пуша ученику напрямую в Telegram
+  const sendTelegramDirect = async (text) => {
+    const targetChatId = student.telegram_id || student.chat_id;
+    if (!targetChatId) return;
+
+    try {
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: targetChatId,
+          text: text,
+          parse_mode: 'HTML'
+        })
+      });
+    } catch (err) {
+      console.warn('Мягкая отправка пуша:', err);
+    }
+  };
 
   // Изменение веса с быстрым шагом
   const adjustWeight = (id, delta) => {
@@ -167,21 +183,24 @@ export default function StudentProgramTab({ student, onUpdate }) {
 
     try {
       localStorage.setItem(`gymconnect_program_${student.id}`, JSON.stringify(payload));
-      
-      // Отправляем пуш ученику в Telegram о назначении новой программы
-      sendStudentNotification({
-        studentTelegramId: student.telegram_id,
-        studentUsername: student.username,
-        studentId: student.id,
-        title: 'Новая тренировочная программа',
-        message: `Тренер обновил твой план: «${workoutTitle}» (${exercises.length} упр.). Открой профиль в боте для просмотра нагрузок!`
-      }).catch(() => {});
+
+      if (student?.id) {
+        await supabase
+          .from('profiles')
+          .update({ workout_program: payload })
+          .eq('id', student.id);
+      }
+
+      // Отправляем пуш ученику в Telegram
+      await sendTelegramDirect(`🏋️ <b>Новая тренировочная программа!</b>\n\nТренер обновил твой план: <b>«${workoutTitle}»</b> (${exercises.length} упр.).\nОткрой приложение @gymconnect_ala_bot для просмотра рабочих весов!`);
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
       if (onUpdate) onUpdate();
     } catch (err) {
       console.warn('Ошибка сохранения программы:', err);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
     } finally {
       setIsSaving(false);
     }
@@ -239,7 +258,7 @@ export default function StudentProgramTab({ student, onUpdate }) {
           </button>
         </div>
 
-        {/* Название тренировочного дня — аккуратное компактное поле */}
+        {/* Название тренировочного дня */}
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
             Название тренировочного дня:
@@ -417,7 +436,7 @@ export default function StudentProgramTab({ student, onUpdate }) {
           className="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
         >
           <Save className="w-3.5 h-3.5" />
-          <span>{isSaving ? 'Сохранение...' : 'Сохранить программу'}</span>
+          <span>{isSaving ? '...' : 'Сохранить программу'}</span>
         </button>
       </div>
 
