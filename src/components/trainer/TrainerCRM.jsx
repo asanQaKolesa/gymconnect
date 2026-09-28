@@ -11,6 +11,7 @@ import FinanceTab from './tabs/FinanceTab';
 import NotesTab from './tabs/NotesTab';
 import AnalyticsTab from './tabs/AnalyticsTab';
 import AddStudentModal from './components/AddStudentModal';
+import StudentDetailModal from './components/StudentDetailModal';
 
 // Все полноэкранные страницы меню
 import TrainerSubscriptionModal from './components/modals/TrainerSubscriptionModal';
@@ -37,7 +38,11 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   const [activeScreen, setActiveScreen] = useState(null);
   const [openDrawerOnReturn, setOpenDrawerOnReturn] = useState(false);
 
-  // Форма модалки добавления студента
+  // Состояние выбранного ученика для открытия досье на 100% весь экран
+  const [selectedStudentForDetail, setSelectedStudentForDetail] = useState(null);
+  const [studentDetailOrigin, setStudentDetailOrigin] = useState('overview'); // 'overview' | 'students'
+
+  // Форма добавления студента
   const [addStudentForm, setAddStudentForm] = useState({
     first_name: '',
     last_name: '',
@@ -48,7 +53,6 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     gym: ''
   });
 
-  // Загрузка данных тренера и его учеников
   const refreshTrainerData = async () => {
     try {
       const cleanUsername = trainerUsername ? trainerUsername.replace('@', '').trim() : '';
@@ -152,135 +156,69 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     );
   }
 
-  const cleanUsername = trainerData?.username ? trainerData.username.replace('@', '').trim() : (trainerUsername?.replace('@', '').trim() || 'coach');
-  const coachFullName = trainerData?.full_name || `${trainerData?.first_name || 'Тренер'} ${trainerData?.last_name || ''}`.trim();
-
-  // ================= ПОЛНОЭКРАННЫЕ РАЗДЕЛЫ МЕНЮ (БЕЗ ФОНА СЗАДИ) =================
-  if (activeScreen === 'subscription') {
+  // ================= 1. ПОЛНОЭКРАННОЕ ДОСЬЕ УЧЕНИКА (ШАПКА И ФОН ПОЛНОСТЬЮ СКРЫТЫ) =================
+  if (selectedStudentForDetail) {
     return (
-      <TrainerSubscriptionModal 
+      <StudentDetailModal 
         isOpen={true}
-        onClose={handleCloseScreenToMenu}
+        student={selectedStudentForDetail}
+        backText={studentDetailOrigin === 'students' ? 'К списку учеников' : 'К расписанию'}
+        onClose={() => setSelectedStudentForDetail(null)}
+        onUpdate={refreshTrainerData}
       />
     );
+  }
+
+  // ================= 2. ПОЛНОЭКРАННЫЕ РАЗДЕЛЫ МЕНЮ =================
+  if (activeScreen === 'subscription') {
+    return <TrainerSubscriptionModal isOpen={true} onClose={handleCloseScreenToMenu} />;
   }
 
   if (activeScreen === 'promotion') {
-    return (
-      <TrainerPromotionModal 
-        isOpen={true}
-        onClose={handleCloseScreenToMenu}
-        gymName={trainerData?.gym || 'Invictus Go'}
-      />
-    );
+    return <TrainerPromotionModal isOpen={true} onClose={handleCloseScreenToMenu} gymName={trainerData?.gym || 'Invictus Go'} />;
   }
 
   if (activeScreen === 'public_card') {
-    return (
-      <TrainerPublicCardModal 
-        isOpen={true}
-        onClose={handleCloseScreenToMenu}
-        onEditClick={() => setActiveScreen('edit_profile')}
-        trainer={trainerData}
-        cleanUsername={cleanUsername}
-      />
-    );
+    return <TrainerPublicCardModal isOpen={true} onClose={handleCloseScreenToMenu} onEditClick={() => setActiveScreen('edit_profile')} trainer={trainerData} cleanUsername={trainerData?.username || trainerUsername} />;
   }
 
   if (activeScreen === 'edit_profile') {
-    return (
-      <TrainerEditProfileModal 
-        isOpen={true}
-        onClose={handleCloseScreenToMenu}
-        trainer={trainerData}
-        cleanUsername={cleanUsername}
-        onSaved={refreshTrainerData}
-      />
-    );
+    return <TrainerEditProfileModal isOpen={true} onClose={handleCloseScreenToMenu} trainer={trainerData} cleanUsername={trainerData?.username || trainerUsername} onSaved={refreshTrainerData} />;
   }
 
   if (activeScreen === 'client_rules') {
-    return (
-      <TrainerClientRulesModal 
-        isOpen={true}
-        onClose={handleCloseScreenToMenu}
-        coachName={coachFullName}
-      />
-    );
+    return <TrainerClientRulesModal isOpen={true} onClose={handleCloseScreenToMenu} coachName={trainerData?.full_name || trainerData?.first_name || 'Тренер'} />;
   }
 
   if (activeScreen === 'health_parq') {
-    return (
-      <TrainerHealthParqModal 
-        isOpen={true}
-        onClose={handleCloseScreenToMenu}
-        studentsList={students}
-      />
-    );
+    return <TrainerHealthParqModal isOpen={true} onClose={handleCloseScreenToMenu} studentsList={students} />;
   }
 
   if (activeScreen === 'templates') {
-    return (
-      <TrainerTemplatesModal 
-        isOpen={true}
-        onClose={handleCloseScreenToMenu}
-        studentsList={students}
-        gymName={trainerData?.gym?.split('|')[0] || 'клуб'}
-      />
-    );
+    return <TrainerTemplatesModal isOpen={true} onClose={handleCloseScreenToMenu} studentsList={students} gymName={trainerData?.gym?.split('|')[0] || 'клуб'} />;
   }
 
   if (activeScreen === 'income_calc') {
-    return (
-      <TrainerIncomeCalcModal 
-        isOpen={true}
-        onClose={handleCloseScreenToMenu}
-      />
-    );
+    return <TrainerIncomeCalcModal isOpen={true} onClose={handleCloseScreenToMenu} />;
   }
 
   if (activeScreen === 'referral') {
-    return (
-      <TrainerReferralModal 
-        isOpen={true}
-        onClose={handleCloseScreenToMenu}
-        cleanUsername={cleanUsername}
-      />
-    );
+    return <TrainerReferralModal isOpen={true} onClose={handleCloseScreenToMenu} cleanUsername={trainerData?.username || trainerUsername} />;
   }
 
   if (activeScreen === 'support') {
-    return (
-      <TrainerSupportModal 
-        isOpen={true}
-        onClose={handleCloseScreenToMenu}
-      />
-    );
+    return <TrainerSupportModal isOpen={true} onClose={handleCloseScreenToMenu} />;
   }
 
   if (activeScreen === 'delete_account') {
-    return (
-      <TrainerDeleteModal 
-        isOpen={true}
-        onClose={handleCloseScreenToMenu}
-        cleanUsername={cleanUsername}
-        onDeleted={onBack}
-      />
-    );
+    return <TrainerDeleteModal isOpen={true} onClose={handleCloseScreenToMenu} cleanUsername={trainerData?.username || trainerUsername} onDeleted={onBack} />;
   }
 
   if (activeScreen === 'qr_code') {
-    return (
-      <TrainerQrModal 
-        isOpen={true}
-        onClose={handleCloseScreenToMenu}
-        coachName={coachFullName}
-        cleanUsername={cleanUsername}
-      />
-    );
+    return <TrainerQrModal isOpen={true} onClose={handleCloseScreenToMenu} coachName={trainerData?.full_name || trainerData?.first_name || 'Тренер'} cleanUsername={trainerData?.username || trainerUsername} />;
   }
 
-  // ================= ОСНОВНОЙ ДАШБОРД CRM =================
+  // ================= 3. ОСНОВНОЙ ДАШБОРД CRM =================
   const activeStudentsCount = students.filter(s => s.status === 'active' || !s.status).length;
   const pausedStudentsCount = students.filter(s => s.status === 'paused').length;
   const leftStudentsCount = students.filter(s => s.status === 'left').length;
@@ -311,7 +249,10 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
                 leftCount={leftStudentsCount}
                 lowBalanceCount={lowBalanceCount}
                 totalEarnings={totalEarnings}
-                onSelectStudent={() => setActiveTab('students')}
+                onSelectStudent={(st) => {
+                  setSelectedStudentForDetail(st);
+                  setStudentDetailOrigin('overview');
+                }}
                 onAddStudentClick={() => setIsAddStudentOpen(true)}
               />
             )}
@@ -319,7 +260,10 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
             {activeTab === 'students' && (
               <StudentsListTab 
                 students={students} 
-                onSelectStudent={() => {}}
+                onSelectStudent={(st) => {
+                  setSelectedStudentForDetail(st);
+                  setStudentDetailOrigin('students');
+                }}
                 onOpenAddModal={() => setIsAddStudentOpen(true)}
                 onUpdate={refreshTrainerData}
               />
@@ -348,14 +292,14 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
 
             {activeTab === 'finance' && (
               <FinanceTab 
-                students={students}
+                students={students} 
                 onUpdate={refreshTrainerData}
               />
             )}
 
             {activeTab === 'notes' && (
               <NotesTab 
-                students={students}
+                students={students} 
                 onUpdate={refreshTrainerData}
               />
             )}
