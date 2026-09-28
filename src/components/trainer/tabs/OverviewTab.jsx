@@ -17,7 +17,6 @@ import {
   MessageCircle,
   ChevronRight
 } from 'lucide-react';
-import StudentDetailModal from '../components/StudentDetailModal';
 
 export default function OverviewTab({ 
   trainer, 
@@ -26,7 +25,8 @@ export default function OverviewTab({
   pausedCount = 2, 
   leftCount = 1, 
   totalEarnings = 420000, 
-  onAddStudentClick 
+  onAddStudentClick,
+  onSelectStudent
 }) {
   const [filterFormat, setFilterFormat] = useState('all'); // 'all' | 'gym' | 'online'
 
@@ -35,9 +35,6 @@ export default function OverviewTab({
   const [reminderType, setReminderType] = useState('today'); // 'today' | 'payment' | 'absence'
   const [isLocalAddModalOpen, setIsLocalAddModalOpen] = useState(false);
   const [selectedStudentForWorkout, setSelectedStudentForWorkout] = useState(null);
-  
-  // Выбранный ученик для открытия полноценного профиля
-  const [selectedStudentForProfile, setSelectedStudentForProfile] = useState(null);
 
   // Форма добавления нового ученика
   const [newStudentForm, setNewStudentForm] = useState({
@@ -49,7 +46,7 @@ export default function OverviewTab({
     firstSessionDate: '2026-09-26'
   });
 
-  // Расписание на сегодняшний день с упражнениями и привязкой к профилю
+  // Расписание на сегодняшний день с упражнениями
   const [todaySchedule, setTodaySchedule] = useState([
     { 
       id: '1', 
@@ -75,10 +72,10 @@ export default function OverviewTab({
       trainer_notes: 'Хорошо прогрессирует в тягах. Делаем акцент на широчайшие.',
       focus: 'Спина и бицепс (тяговый день)',
       exercises: [
-        { name: 'Тяга верхнего блока широким хватом', sets: '4 × 10', weight: '65 кг' },
-        { name: 'Тяга Т-грифа с упором в грудь', sets: '4 × 10', weight: '45 кг' },
-        { name: 'Горизонтальная тяга в кроссовере', sets: '3 × 12', weight: '55 кг' },
-        { name: 'Подъем гантелей с супинацией', sets: '3 × 12', weight: '14 кг' }
+        { name: 'Тяга верхнего блока широким хватом к груди', sets: '4 × 10', weight: '65' },
+        { name: 'Тяга Т-грифа с упором грудью в подушку', sets: '4 × 10', weight: '45' },
+        { name: 'Тяга горизонтального блока к поясу сидя', sets: '3 × 12', weight: '55' },
+        { name: 'Подъем штанги на бицепс стоя (прямой / EZ-гриф)', sets: '3 × 12', weight: '25' }
       ]
     },
     { 
@@ -102,13 +99,13 @@ export default function OverviewTab({
       monthly_price: 45000,
       payment_status: 'paid',
       health_notes: 'Без жалоб, давление стабильное.',
-      trainer_notes: 'Следить за потреблением белка, часто не добирает норму.',
+      trainer_notes: 'Следить за потреблением белка.',
       focus: 'Ягодицы и кора (акцент на форму)',
       exercises: [
-        { name: 'Ягодичный мост со штангой', sets: '4 × 12', weight: '50 кг' },
-        { name: 'Болгарские выпады с гантелями', sets: '3 × 12', weight: '8 кг' },
-        { name: 'Румынская тяга на одной ноге', sets: '3 × 15', weight: '10 кг' },
-        { name: 'Планка на предплечьях', sets: '3 × 45 сек', weight: 'Свой вес' }
+        { name: 'Ягодичный мост со штангой на скамье (Hip Thrust)', sets: '4 × 12', weight: '50' },
+        { name: 'Болгарские сплит-приседания с гантелями', sets: '3 × 12', weight: '8' },
+        { name: 'Румынская тяга с гантелями стоя', sets: '3 × 15', weight: '10' },
+        { name: 'Классическая планка на предплечьях на время', sets: '3 × 45', weight: '0' }
       ]
     },
     { 
@@ -131,14 +128,14 @@ export default function OverviewTab({
       remaining: 1,
       monthly_price: 70000,
       payment_status: 'pending',
-      health_notes: 'Старая травма правого плеча, разминка на ротаторы обязательна.',
+      health_notes: 'Старая травма правого плеча.',
       trainer_notes: 'Осталась 1 тренировка! Напомнить о продлении блока.',
       focus: 'Грудь и трицепс (жим + гипертрофия)',
       exercises: [
-        { name: 'Жим штанги лежа на горизонтальной', sets: '4 × 8', weight: '85 кг' },
-        { name: 'Жим гантелей на наклонной скамье', sets: '4 × 10', weight: '26 кг' },
-        { name: 'Отжимания на брусьях с весом', sets: '3 × 10', weight: '+10 кг' },
-        { name: 'Разгибание на трицепс с канатом', sets: '3 × 12', weight: '25 кг' }
+        { name: 'Жим штанги лежа на горизонтальной скамье', sets: '4 × 8', weight: '85' },
+        { name: 'Жим гантелей на наклонной скамье (30-45°)', sets: '4 × 10', weight: '26' },
+        { name: 'Отжимания на брусьях с акцентом на грудь', sets: '3 × 10', weight: '0' },
+        { name: 'Разгибания на трицепс на блоке с канатной рукоятью', sets: '3 × 12', weight: '25' }
       ]
     },
     { 
@@ -162,13 +159,12 @@ export default function OverviewTab({
       monthly_price: 70000,
       payment_status: 'paid',
       health_notes: 'Противопоказаний нет.',
-      trainer_notes: 'Отличная дисциплина, посещает без пропусков.',
+      trainer_notes: 'Отличная дисциплина.',
       focus: 'Full Body функционал и выносливость',
       exercises: [
-        { name: 'Приседания с кубковым хватом', sets: '4 × 15', weight: '16 кг' },
-        { name: 'Тяга гантелей в планке (Renegade Row)', sets: '3 × 12', weight: '6 кг' },
-        { name: 'Махи гирей двумя руками', sets: '4 × 20', weight: '16 кг' },
-        { name: 'Интервальный гребной тренажер', sets: '5 раундов', weight: 'Макс. темп' }
+        { name: 'Кубковые приседания с гантелью / гирей (Goblet)', sets: '4 × 15', weight: '16' },
+        { name: 'Махи гирей двумя руками перед собой (Kettlebell Swing)', sets: '4 × 20', weight: '16' },
+        { name: 'Гребной тренажер (Concept2 Rowing)', sets: '5 × 500', weight: '0' }
       ]
     }
   ]);
@@ -224,10 +220,6 @@ export default function OverviewTab({
       }
       return item;
     }));
-  };
-
-  const handleOpenStudentDetail = (studentItem) => {
-    setSelectedStudentForProfile(studentItem);
   };
 
   const handleSaveStudent = (e) => {
@@ -433,7 +425,7 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 4. Расписание на сегодня — КАРТОЧКА КЛИКАБЕЛЬНА, КНОПКИ В ОДНУ СТРОКУ */}
+      {/* 4. Расписание на сегодня */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
           <div className="flex items-center gap-2">
@@ -461,7 +453,7 @@ export default function OverviewTab({
               return (
                 <div
                   key={item.id}
-                  onClick={() => handleOpenStudentDetail(item)}
+                  onClick={() => onSelectStudent && onSelectStudent(item)}
                   className={`w-full p-3.5 rounded-2xl border transition-all space-y-2.5 cursor-pointer active:scale-[0.99] hover:border-blue-300 ${
                     isCompleted 
                       ? 'bg-emerald-50/40 border-emerald-200/80' 
@@ -471,7 +463,7 @@ export default function OverviewTab({
                   }`}
                   title="Нажмите, чтобы открыть полный профиль ученика"
                 >
-                  {/* Верхняя строчка: Время, Формат и статус */}
+                  {/* Верхняя строчка */}
                   <div className="flex items-center justify-between gap-2 border-b border-slate-200/50 pb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded-lg border border-slate-200/80">
@@ -505,7 +497,7 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  {/* Средняя часть: Имя, Локация, Фокус и Остаток */}
+                  {/* Средняя часть */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-0.5 overflow-hidden">
                       <div className="flex items-center gap-1">
@@ -530,10 +522,8 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  {/* Нижняя строчка: 3 КНОПКИ СТРОГО В ОДНУ СТРОКУ БЕЗ ПЕРЕНОСОВ */}
+                  {/* 3 кнопки в 1 строку */}
                   <div className="flex items-center gap-1.5 pt-1">
-                    
-                    {/* Кнопка 1: План дня */}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -546,7 +536,6 @@ export default function OverviewTab({
                       <span className="truncate">План дня</span>
                     </button>
 
-                    {/* Кнопка 2: Проведено */}
                     <button
                       type="button"
                       onClick={(e) => handleMarkCompleted(e, item.id)}
@@ -560,7 +549,6 @@ export default function OverviewTab({
                       <span className="truncate">Проведено</span>
                     </button>
 
-                    {/* Кнопка 3: Пропуск (вместо Не проведено — строго в 1 строку!) */}
                     <button
                       type="button"
                       onClick={(e) => handleMarkCanceled(e, item.id)}
@@ -573,7 +561,6 @@ export default function OverviewTab({
                       <X className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">Пропуск</span>
                     </button>
-
                   </div>
                 </div>
               );
@@ -582,17 +569,7 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* ================= МОДАЛКА ПОЛНОГО ПРОФИЛЯ УЧЕНИКА ================= */}
-      <StudentDetailModal 
-        isOpen={Boolean(selectedStudentForProfile)}
-        onClose={() => setSelectedStudentForProfile(null)}
-        student={selectedStudentForProfile}
-        onUpdate={() => {
-          // Обновление локального стейта после правок тренера
-        }}
-      />
-
-      {/* ================= МОДАЛКА ПЛАНА ТРЕНИРОВКИ ДНЯ ================= */}
+      {/* Быстрое модальное окно плана тренировки дня */}
       {selectedStudentForWorkout && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col justify-between overflow-y-auto">
@@ -623,7 +600,7 @@ export default function OverviewTab({
               </div>
 
               <div className="space-y-2">
-                <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">Упражнения и рабочие веса:</span>
+                <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">Упражнения:</span>
                 {selectedStudentForWorkout.exercises.map((ex, idx) => (
                   <div key={idx} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
                     <div>
@@ -631,7 +608,7 @@ export default function OverviewTab({
                       <p className="text-[10.5px] text-slate-500 mt-0.5">{ex.sets}</p>
                     </div>
                     <span className="text-xs font-bold font-mono text-blue-600 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
-                      {ex.weight}
+                      {ex.weight ? `${ex.weight} кг` : 'Свой вес'}
                     </span>
                   </div>
                 ))}
@@ -644,7 +621,7 @@ export default function OverviewTab({
                 onClick={() => {
                   const student = selectedStudentForWorkout;
                   setSelectedStudentForWorkout(null);
-                  handleOpenStudentDetail(student);
+                  if (onSelectStudent) onSelectStudent(student);
                 }}
                 className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-semibold active:scale-98 transition-all cursor-pointer"
               >
@@ -662,7 +639,7 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* ================= МОДАЛКА БЫСТРЫХ НАПОМИНАНИЙ ================= */}
+      {/* Модалка напоминаний */}
       {isReminderModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col justify-between overflow-y-auto">
@@ -713,7 +690,7 @@ export default function OverviewTab({
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {reminderType === 'today' && (
                 <>
-                  <p className="text-[10px] text-slate-400 px-1">Атлеты, записанные на сегодня:</p>
+                  <p className="text-[10px] text-slate-400 px-1">Атлеты на сегодня:</p>
                   {todaySchedule.map(st => (
                     <div key={st.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
                       <div>
@@ -774,7 +751,7 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* ================= МОДАЛКА БЫСТРОГО ДОБАВЛЕНИЯ УЧЕНИКА ================= */}
+      {/* Модалка быстрого добавления ученика */}
       {isLocalAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col justify-between overflow-y-auto">
