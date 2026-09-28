@@ -1,5 +1,5 @@
 // src/components/admin/tabs/AdminBroadcastTab.jsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Send, 
   Users, 
@@ -13,11 +13,19 @@ import {
   Clock, 
   Eye, 
   Layers,
-  Search
+  Search,
+  Trash2,
+  RefreshCw,
+  ShieldCheck,
+  Check
 } from 'lucide-react';
-import { supabase } from '../../../supabaseClient';
+import { 
+  deleteBotMessage, 
+  pruneExpiredBotMessages 
+} from '../../../utils/telegramNotifications';
 
 const BOT_TOKEN = '8825396654:AAH0GzJqWOzqjys5re9De-Bc7jPIqwxtfDI';
+const STORAGE_KEY = 'gymconnect_bot_sent_messages';
 
 // Резервный реестр Chat ID для тестов основателя
 const KNOWN_CHAT_IDS = {
@@ -45,12 +53,34 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
   const [sendProgress, setSendProgress] = useState({ current: 0, total: 0, successCount: 0, failCount: 0 });
   const [broadcastResult, setBroadcastResult] = useState(null);
 
+  // Стейты закрытой админской очистки сообщений бота
+  const [isDeletingBotMessages, setIsDeletingBotMessages] = useState(false);
+  const [purgeFeedback, setPurgeFeedback] = useState(null);
+  const [manualChatId, setManualChatId] = useState('8120357675');
+  const [manualMessageId, setManualMessageId] = useState('');
+  const [trackedCount, setTrackedCount] = useState(0);
+
+  // Обновление счетчика сохраненных сообщений бота
+  const updateTrackedCount = () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      setTrackedCount(list.length);
+    } catch (e) {
+      setTrackedCount(0);
+    }
+  };
+
+  useEffect(() => {
+    updateTrackedCount();
+  }, [broadcastResult]);
+
   // Список уникальных залов из базы
   const uniqueGyms = useMemo(() => {
     return [...new Set(profiles.map(p => p.gym))].filter(Boolean);
   }, [profiles]);
 
-  // Расчет получателей рассылки в зависимости от выбранного сегмента
+  // Расчет получателей рассылки
   const recipientsList = useMemo(() => {
     let result = [];
 
@@ -71,7 +101,6 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
       if (found) result = [found];
     }
 
-    // Удаляем дубликаты по telegram_id
     const seen = new Set();
     return result.filter(item => {
       const chatId = item.telegram_id || KNOWN_CHAT_IDS[item.username?.toLowerCase()];
@@ -81,11 +110,10 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
     });
   }, [targetSegment, selectedGym, selectedUserId, profiles, trainers]);
 
-  // Отправка одного сообщения через Telegram Bot API
+  // Отправка одного сообщения через Bot API с сохранением message_id
   const sendSingleMessage = async (chatId, title, text, btnText, btnUrl) => {
     const messageHtml = `🔔 <b>GymConnect: ${title}</b>\n\n${text}`.trim();
     
-    // Если ссылка ведет на наше Mini App — используем нативный web_app, иначе обычную url-ссылку
     const isInternalApp = btnUrl.startsWith('https://asanqakolesa.github.io');
     const buttonObject = isInternalApp
       ? { text: btnText, web_app: { url: btnUrl } }
@@ -107,6 +135,22 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
         body: JSON.stringify(payload)
       });
       const data = await response.json();
+
+      // Сохраняем в реестр отправленных сообщений для возможности удаления
+      if (data.ok && data.result?.message_id) {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          const list = raw ? JSON.parse(raw) : [];
+          list.push({
+            chatId: String(chatId),
+            messageId: Number(data.result.message_id),
+            category: 'broadcast',
+            timestamp: Date.now()
+          });
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        } catch (e) {}
+      }
+
       return data.ok;
     } catch (e) {
       console.warn('Ошибка отправки:', e);
@@ -114,7 +158,7 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
     }
   };
 
-  // Запуск рассылки с защитой от спам-лимитов Telegram (умная очередь)
+  // Запуск рассылки
   const handleStartBroadcast = async () => {
     if (recipientsList.length === 0) {
       alert('В выбранном сегменте нет пользователей с известным Telegram ID.');
@@ -160,7 +204,6 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
         failCount
       });
 
-      // Задержка 50мс между сообщениями, чтобы не превысить лимиты Telegram API (30 сообщений/сек)
       await new Promise(resolve => setTimeout(resolve, 50));
     }
 
@@ -170,6 +213,71 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
       successCount,
       failCount
     });
+    updateTrackedCount();
+  };
+
+  // СЕРВИСНЫЙ ТЕСТ: СТЕРЕТЬ ВСЕ ОТПРАВЛЕННЫЕ СООБЩЕНИЯ БОТА ИЗ TELEGRAM ПРЯМО СЕЙЧАС
+  const handlePurgeAllBotMessagesNow = async () => {
+    let trackedList = [];
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      trackedList = raw ? JSON.parse(raw) : [];
+    } catch (e) {}
+
+    if (trackedList.length === 0) {
+      alert('В очереди нет зафиксированных сообщений бота для удаления.');
+      return;
+    }
+
+    const confirmPurge = window.confirm(
+      `Стереть из Telegram все ${trackedList.length} отправленных сообщений бота прямо сейчас?`
+    );
+    if (!confirmPurge) return;
+
+    setIsDeletingBotMessages(true);
+    setPurgeFeedback('Удаление сообщений через Telegram Bot API...');
+
+    let deletedOk = 0;
+    let deletedFail = 0;
+
+    for (const item of trackedList) {
+      const ok = await deleteBotMessage(item.chatId, item.messageId);
+      if (ok) deletedOk++;
+      else deletedFail++;
+      await new Promise(r => setTimeout(r, 40));
+    }
+
+    // Очищаем локальный реестр
+    localStorage.removeItem(STORAGE_KEY);
+    updateTrackedCount();
+    setIsDeletingBotMessages(false);
+
+    setPurgeFeedback(`✅ Успешно! Стёрто из Telegram: ${deletedOk} сообщений (ошибок: ${deletedFail}).`);
+    setTimeout(() => setPurgeFeedback(null), 7000);
+  };
+
+  // ТЕСТ: РУЧНОЕ УДАЛЕНИЕ КОНКРЕТНОГО СООБЩЕНИЯ ПО ID
+  const handleManualSingleDelete = async (e) => {
+    e.preventDefault();
+    if (!manualChatId.trim() || !manualMessageId.trim()) {
+      alert('Укажите Chat ID и Message ID');
+      return;
+    }
+
+    setIsDeletingBotMessages(true);
+    setPurgeFeedback('Отправка запроса deleteMessage в Telegram...');
+
+    const ok = await deleteBotMessage(manualChatId.trim(), manualMessageId.trim());
+
+    setIsDeletingBotMessages(false);
+    if (ok) {
+      setPurgeFeedback(`✅ Сообщение #${manualMessageId} успешно стёрто из чата Telegram!`);
+      setManualMessageId('');
+    } else {
+      setPurgeFeedback(`⚠️ Не удалось стереть сообщение #${manualMessageId}. Проверьте правильность ID.`);
+    }
+
+    setTimeout(() => setPurgeFeedback(null), 6000);
   };
 
   return (
@@ -226,7 +334,7 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
           })}
         </div>
 
-        {/* Дополнительные фильтры: выбор зала */}
+        {/* Фильтр: выбор зала */}
         {targetSegment === 'gym' && (
           <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5 animate-in fade-in">
             <label className="text-[10px] font-bold text-slate-500 uppercase block">
@@ -244,7 +352,7 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
           </div>
         )}
 
-        {/* Дополнительные фильтры: индивидуальный выбор */}
+        {/* Фильтр: индивидуальный выбор */}
         {targetSegment === 'individual' && (
           <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 animate-in fade-in">
             <label className="text-[10px] font-bold text-slate-500 uppercase block">
@@ -337,7 +445,7 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
           </div>
         </div>
 
-        {/* Живой предпросмотр сообщения в Telegram */}
+        {/* Предпросмотр */}
         <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
@@ -348,7 +456,6 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
               <span className="text-[10px] text-slate-400 font-mono">@gymconnect_ala_bot</span>
             </div>
 
-            {/* Пузырь сообщения Telegram */}
             <div className="p-3.5 bg-slate-100 rounded-2xl border border-slate-200 space-y-2.5 max-w-sm">
               <div className="space-y-1">
                 <p className="font-bold text-xs text-slate-900">
@@ -389,7 +496,7 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
             </div>
           )}
 
-          {/* Итог завершенной рассылки */}
+          {/* Итог */}
           {broadcastResult && (
             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs space-y-1 text-emerald-950 animate-in fade-in">
               <div className="flex items-center gap-1.5 font-bold text-emerald-800">
@@ -402,7 +509,6 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
             </div>
           )}
 
-          {/* Кнопка запуска */}
           <button
             type="button"
             disabled={isSending || recipientsList.length === 0}
@@ -414,6 +520,98 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
           </button>
         </div>
 
+      </div>
+
+      {/* ================= 3. ЗАКРЫТАЯ ПАНЕЛЬ ОСНОВАТЕЛЯ: СТИРАНИЕ СООБЩЕНИЙ БОТА В TELEGRAM ================= */}
+      <div className="bg-white rounded-3xl p-5 border border-rose-200 shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-rose-100 pb-2.5">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+              <Trash2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-slate-900">3. Управление сообщениями бота в Telegram (deleteMessage)</h3>
+              <p className="text-[10.5px] text-slate-400">Эксклюзивный доступ основателя: удаление сообщений прямо из переписки</p>
+            </div>
+          </div>
+
+          <span className="text-[10.5px] font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
+            В очереди: {trackedCount} сообщ.
+          </span>
+        </div>
+
+        {purgeFeedback && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl text-blue-900 text-xs font-semibold text-center animate-in fade-in">
+            {purgeFeedback}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          {/* Кнопка пакетного удаления всех зафиксированных сообщений бота */}
+          <div className="p-4 bg-rose-50/60 border border-rose-200/80 rounded-2xl space-y-2 flex flex-col justify-between">
+            <div className="space-y-1">
+              <span className="font-bold text-xs text-rose-900 block">
+                Стереть все зафиксированные сообщения бота
+              </span>
+              <p className="text-[11px] text-rose-800 leading-snug">
+                Бот отправит запрос <code>deleteMessage</code> в Telegram для каждого сообщения в очереди ({trackedCount} шт.). Сообщения моментально пропадут из чатов пользователей.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={isDeletingBotMessages || trackedCount === 0}
+              onClick={handlePurgeAllBotMessagesNow}
+              className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-xs disabled:opacity-40"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>{isDeletingBotMessages ? 'Удаление...' : `Стереть все сообщения (${trackedCount}) сейчас`}</span>
+            </button>
+          </div>
+
+          {/* Ручной тест удаления по Message ID */}
+          <form onSubmit={handleManualSingleDelete} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+            <span className="font-bold text-xs text-slate-900 block">
+              Ручной тест удаления одного сообщения:
+            </span>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[9.5px] font-bold text-slate-500 uppercase block mb-1">Chat ID</label>
+                <input
+                  type="text"
+                  required
+                  value={manualChatId}
+                  onChange={e => setManualChatId(e.target.value)}
+                  placeholder="8120357675"
+                  className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-[9.5px] font-bold text-slate-500 uppercase block mb-1">Message ID</label>
+                <input
+                  type="number"
+                  required
+                  value={manualMessageId}
+                  onChange={e => setManualMessageId(e.target.value)}
+                  placeholder="12345"
+                  className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isDeletingBotMessages || !manualMessageId}
+              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-40"
+            >
+              <span>Стереть это сообщение из чата</span>
+            </button>
+          </form>
+
+        </div>
       </div>
 
     </div>
