@@ -3,22 +3,22 @@ import { supabase } from '../supabaseClient';
 
 // Официальный токен бота GymConnect (@gymconnect_ala_bot)
 const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '8825396654:AAH0GzJqWOzqjys5re9De-Bc7jPIqwxtfDI';
-const BOT_USERNAME = 'gymconnect_ala_bot';
-const MINI_APP_URL = `https://t.me/${BOT_USERNAME}`;
+const APP_URL = 'https://asanqakolesa.github.io/gymconnect/';
+const CRM_WEBAPP_URL = `${APP_URL}?trainer=true`;
 
-// Реестр проверенных Telegram ID наставников (резервный авто-маппинг)
+// Реестр проверенных Telegram ID наставников для гарантированной доставки
 const KNOWN_COACH_CHAT_IDS = {
   'asanali_kk': '8120357675',
   'dattabanee': '1463087181'
 };
 
 /**
- * Отправка сообщения через Telegram Bot API с поддержкой HTML и кнопки
+ * Отправка сообщения через Telegram Bot API с нативной WebApp кнопкой
  */
-async function sendTelegramApiMessage(chatId, htmlText, buttonUrl = null, buttonText = '🏋️ Открыть CRM') {
+async function sendTelegramApiMessage(chatId, htmlText, webAppUrl = null, buttonText = '🏋️ Открыть GymConnect') {
   if (!chatId || !BOT_TOKEN) {
     console.warn('Отправка отменена: отсутствует chat_id или BOT_TOKEN', { chatId, hasToken: Boolean(BOT_TOKEN) });
-    return { ok: false, error: 'Отсутствует Chat ID тренера' };
+    return { ok: false, error: 'Отсутствует Chat ID' };
   }
 
   const payload = {
@@ -27,13 +27,16 @@ async function sendTelegramApiMessage(chatId, htmlText, buttonUrl = null, button
     parse_mode: 'HTML'
   };
 
-  if (buttonUrl) {
+  // Нативная кнопка Telegram WebApp (открывает приложение прямо внутри Telegram)
+  if (webAppUrl) {
     payload.reply_markup = {
       inline_keyboard: [
         [
           {
             text: buttonText,
-            url: buttonUrl
+            web_app: {
+              url: webAppUrl
+            }
           }
         ]
       ]
@@ -64,7 +67,7 @@ async function sendTelegramApiMessage(chatId, htmlText, buttonUrl = null, button
 }
 
 /**
- * 1. Мгновенный пуш тренеру при отметке явки ученика («Буду» / «Не приду»)
+ * 1. Мгновенный пуш тренеру в Telegram при отметке явки ученика («Буду» / «Не приду»)
  */
 export async function sendTrainerAttendanceNotification({
   trainerTelegramId,
@@ -76,10 +79,10 @@ export async function sendTrainerAttendanceNotification({
 }) {
   const cleanU = (trainerUsername || '').replace('@', '').trim().toLowerCase();
 
-  // 1. Проверяем переданный ID или известный реестр
+  // Определяем точный Chat ID тренера
   let targetChatId = trainerTelegramId || KNOWN_COACH_CHAT_IDS[cleanU] || null;
 
-  // 2. Если нет в реестре — запрашиваем из базы Supabase
+  // Если нет в реестре — запрашиваем из базы Supabase
   if (!targetChatId && cleanU) {
     try {
       const { data } = await supabase
@@ -115,21 +118,20 @@ ${statusEmoji} <b>GymConnect: ${statusTitle}</b>
 📍 <b>Зал:</b> ${gymName}
 📌 <b>Статус:</b> ${statusAction}
 
-<i>Статус зафиксирован в вашей CRM CoachOS.</i>
+<i>Статус зафиксирован в вашей CRM CoachOS. Нажмите кнопку ниже для перехода:</i>
 `.trim();
 
-  const crmUrl = `${MINI_APP_URL}?startapp=trainer`;
-
+  // Отправляем с нативной кнопкой WebApp на URL CRM
   return await sendTelegramApiMessage(
     targetChatId, 
     messageHtml, 
-    crmUrl, 
+    CRM_WEBAPP_URL, 
     '🏋️ Открыть CoachOS CRM'
   );
 }
 
 /**
- * 2. Сервисные уведомления подопечному
+ * 2. Сервисные уведомления подопечному от имени бота (напоминания, касса, замеры)
  */
 export async function sendStudentNotification({
   studentTelegramId,
@@ -143,6 +145,7 @@ export async function sendStudentNotification({
 ${message}
 `.trim();
 
+  // 1. Сохраняем уведомление в таблице notifications для истории в приложении
   if (studentId || studentTelegramId) {
     supabase.from('notifications').insert([{
       title,
@@ -155,10 +158,11 @@ ${message}
     }]).catch(() => {});
   }
 
+  // 2. Отправляем пуш в Telegram чат ученика с нативной кнопкой
   return await sendTelegramApiMessage(
     studentTelegramId, 
     messageHtml, 
-    MINI_APP_URL, 
+    APP_URL, 
     '🏋️ Открыть GymConnect'
   );
 }
