@@ -7,8 +7,11 @@ import {
   User,
   Dumbbell,
   CreditCard,
-  FileText
+  FileText,
+  ChevronDown,
+  Check
 } from 'lucide-react';
+import { supabase } from '../../../supabaseClient';
 import StudentInfoTab from '../student-detail/StudentInfoTab';
 import StudentProgramTab from '../student-detail/StudentProgramTab';
 import StudentFinanceTab from '../student-detail/StudentFinanceTab';
@@ -21,12 +24,15 @@ export default function StudentDetailModal({
   backText = 'Назад', 
   onUpdate 
 }) {
-  // 1. ХУКИ СОСТОЯНИЯ (СТРОГО НА САМОМ ВЕРХУ)
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'program' | 'finance' | 'notes'
+  const [currentStatus, setCurrentStatus] = useState(student?.status || 'active');
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && student) {
       setActiveTab('info');
+      setCurrentStatus(student.status || 'active');
     }
   }, [isOpen, student?.id]);
 
@@ -41,14 +47,38 @@ export default function StudentDetailModal({
     : (student.remaining_workouts !== undefined ? student.remaining_workouts : 12);
   const totalTrainings = student.total_trainings || 12;
 
+  // Смена статуса подопечного тренером (Активен / Заморозка / Завершил)
+  const handleChangeStatus = async (newStatus) => {
+    setCurrentStatus(newStatus);
+    setIsStatusDropdownOpen(false);
+    setIsUpdatingStatus(true);
+
+    try {
+      student.status = newStatus;
+
+      let query = supabase.from('profiles').update({ status: newStatus });
+      if (student.id) {
+        query = query.eq('id', student.id);
+      } else if (student.telegram_id) {
+        query = query.eq('telegram_id', student.telegram_id);
+      }
+
+      await query;
+      if (onUpdate) onUpdate();
+    } catch (e) {
+      console.warn('Ошибка смены статуса ученика:', e);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[150] bg-[#F2F2F7] flex flex-col min-h-screen w-full overflow-y-auto select-none animate-in fade-in duration-150">
       
-      {/* 1. ЧИСТАЯ ШАПКА ДОСЬЕ БЕЗ ПРОСВЕЧИВАНИЯ МЕНЮ */}
+      {/* 1. ШАПКА ДОСЬЕ */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 shadow-xs">
         <div className="max-w-md mx-auto flex items-center justify-between gap-2">
           
-          {/* Интеллектуальная кнопка назад */}
           <button
             type="button"
             onClick={onClose}
@@ -82,11 +112,11 @@ export default function StudentDetailModal({
       {/* 2. ОСНОВНОЙ КОНТЕНТ ДОСЬЕ */}
       <main className="p-3.5 space-y-3.5 max-w-md mx-auto w-full pb-16">
         
-        {/* Карточка атлета с аккуратным уменьшенным аватаром */}
+        {/* Карточка атлета */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-base shrink-0 overflow-hidden shadow-2xs">
+              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-base shrink-0 overflow-hidden shadow-2xs">
                 {student.photo_url || student.avatar_url ? (
                   <img src={student.photo_url || student.avatar_url} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -99,15 +129,55 @@ export default function StudentDetailModal({
                   <h2 className="text-xs sm:text-sm font-bold text-slate-900 truncate leading-tight">
                     {student.first_name} {student.last_name || ''}
                   </h2>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${
-                    student.status === 'paused' 
-                      ? 'bg-amber-100 text-amber-800' 
-                      : student.status === 'left' 
-                        ? 'bg-rose-100 text-rose-800' 
-                        : 'bg-emerald-50 text-emerald-700'
-                  }`}>
-                    {student.status === 'paused' ? 'Пауза' : student.status === 'left' ? 'Завершил' : 'Активен'}
-                  </span>
+
+                  {/* ИНТЕРАКТИВНЫЙ ПЕРЕКЛЮЧАТЕЛЬ СТАТУСА УЧЕНИКА */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                      className={`text-[9.5px] px-2 py-0.5 rounded-md font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
+                        currentStatus === 'paused' 
+                          ? 'bg-amber-100 text-amber-800 border border-amber-300' 
+                          : currentStatus === 'left' 
+                            ? 'bg-rose-100 text-rose-800 border border-rose-300' 
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      }`}
+                    >
+                      <span>
+                        {currentStatus === 'paused' ? 'Пауза (Заморозка)' : currentStatus === 'left' ? 'Завершил' : 'Активен'}
+                      </span>
+                      <ChevronDown className="w-2.5 h-2.5" />
+                    </button>
+
+                    {isStatusDropdownOpen && (
+                      <div className="absolute left-0 top-6 z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-1 w-36 space-y-0.5 animate-in fade-in duration-100">
+                        <button
+                          type="button"
+                          onClick={() => handleChangeStatus('active')}
+                          className="w-full px-2 py-1 text-left text-[10.5px] font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 rounded-lg flex items-center justify-between"
+                        >
+                          <span>Активен</span>
+                          {currentStatus === 'active' && <Check className="w-3 h-3 text-emerald-600" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleChangeStatus('paused')}
+                          className="w-full px-2 py-1 text-left text-[10.5px] font-semibold text-slate-700 hover:bg-amber-50 hover:text-amber-800 rounded-lg flex items-center justify-between"
+                        >
+                          <span>Пауза (Отпуск)</span>
+                          {currentStatus === 'paused' && <Check className="w-3 h-3 text-amber-600" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleChangeStatus('left')}
+                          className="w-full px-2 py-1 text-left text-[10.5px] font-semibold text-slate-700 hover:bg-rose-50 hover:text-rose-800 rounded-lg flex items-center justify-between"
+                        >
+                          <span>Завершил</span>
+                          {currentStatus === 'left' && <Check className="w-3 h-3 text-rose-600" />}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <p className="text-[11px] text-slate-500 truncate">
@@ -180,7 +250,7 @@ export default function StudentDetailModal({
           </div>
         </div>
 
-        {/* 3. НАВИГАЦИОННЫЕ ТАБЫ СО СТАНДАРТИЗИРОВАННЫМИ ИКОНКАМИ */}
+        {/* 3. НАВИГАЦИОННЫЕ ТАБЫ */}
         <div className="grid grid-cols-4 gap-1 p-1 bg-slate-200/80 rounded-2xl">
           {[
             { id: 'info', label: 'Анкета', icon: User },
