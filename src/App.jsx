@@ -23,7 +23,12 @@ import {
   User 
 } from 'lucide-react';
 import { translations } from './locales/translations';
-import { pruneExpiredBotMessages } from './utils/telegramNotifications';
+import { 
+  pruneExpiredBotMessages, 
+  sendStudentNotification 
+} from './utils/telegramNotifications';
+
+const BOT_TOKEN = '8825396654:AAH0GzJqWOzqjys5re9De-Bc7jPIqwxtfDI';
 
 export default function App() {
   // ================= 1. ВСЕ ХУКИ USESTATE (СТРОГО ДО УСЛОВНЫХ RETURN) =================
@@ -82,20 +87,34 @@ export default function App() {
 
   const t = translations[language] || translations.kk;
 
-  // ================= 2. ЭКСТРЕННЫЙ СБРОС СЕССИИ И АВТООЧИСТКА БОТА =================
+  // ================= 2. ОБРАБОТКА DEEP LINK ПРИГЛАШЕНИЯ ОТ ТРЕНЕРА =================
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('reset') === 'true') {
       localStorage.clear();
       window.history.replaceState({}, document.title, window.location.pathname);
       window.location.reload();
+      return;
     }
 
-    // Фоновая очистка сообщений бота в Telegram старше 24 часов
+    // Фоновая очистка сообщений бота старше 24 часов
     pruneExpiredBotMessages(24).catch(() => {});
+
+    // Перехват параметра ?start=coach_username или tgWebAppStartParam=coach_username
+    const tgWebApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : null;
+    const rawStart = tgWebApp?.initDataUnsafe?.start_param || 
+      params.get('tgWebAppStartParam') || 
+      params.get('start');
+
+    if (rawStart && rawStart.startsWith('coach_')) {
+      const invitedCoach = rawStart.replace('coach_', '').replace(/[@\s]/g, '').trim().toLowerCase();
+      if (invitedCoach) {
+        localStorage.setItem('gymconnect_pending_coach', invitedCoach);
+      }
+    }
   }, []);
 
-  // Тихая аутентификация атлета по telegram_id
+  // Тихая фоновая аутентификация атлета + автопривязка к тренеру
   useEffect(() => {
     async function authenticateAthleteWithTelegram() {
       const tgUser = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : null;
@@ -113,21 +132,71 @@ export default function App() {
           .maybeSingle();
 
         if (data && !error) {
-          setUserProfile(data);
+          let updatedData = data;
+
+          // Проверяем, перешел ли ученик по инвайт-ссылке тренера
+          const pendingCoach = localStorage.getItem('gymconnect_pending_coach');
+          if (pendingCoach && (!data.trainer_username || data.trainer_username.toLowerCase() !== pendingCoach)) {
+            // Привязываем атлета к тренеру в Supabase
+            await supabase
+              .from('profiles')
+              .update({
+                trainer_username: pendingCoach,
+                trainer_telegram: pendingCoach
+              })
+              .eq('id', data.id);
+
+            updatedData = {
+              ...data,
+              trainer_username: pendingCoach,
+              trainer_telegram: pendingCoach
+            };
+
+            // Отправляем пуш-уведомление тренеру в Telegram о новом подключенном ученике
+            try {
+              const { data: coachProfile } = await supabase
+                .from('trainer_profiles')
+                .select('telegram_id, username')
+                .or(`username.ilike.${pendingCoach},username.ilike.@${pendingCoach}`)
+                .maybeSingle();
+
+              if (coachProfile && coachProfile.telegram_id) {
+                const athleteName = `${data.first_name || 'Атлет'} ${data.last_name || ''}`.trim();
+                fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: String(coachProfile.telegram_id),
+                    text: `🎉 <b>Новый ученик в вашей CoachOS!</b>\n\nАтлет <b>${athleteName}</b> (@${data.username || 'нет ника'}) перешел по вашей ссылке-приглашению и подключился к вашему кабинету.\n\nЗайдите в CRM для назначения графика и программы.`,
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                      inline_keyboard: [[
+                        { text: '📊 Открыть CoachOS CRM', web_app: { url: 'https://asanqakolesa.github.io/gymconnect/?trainer=true' } }
+                      ]]
+                    }
+                  })
+                }).catch(() => {});
+              }
+            } catch (err) {}
+
+            localStorage.removeItem('gymconnect_pending_coach');
+          }
+
+          setUserProfile(updatedData);
           setIsRegistered(true);
 
-          if (data.legal_accepted) {
+          if (updatedData.legal_accepted) {
             setHasAcceptedLegal(true);
             localStorage.setItem('gymconnect_legal_accepted', 'true');
           }
 
-          if (data.language) {
-            setLanguage(data.language);
-            localStorage.setItem('gymconnect_language', data.language);
+          if (updatedData.language) {
+            setLanguage(updatedData.language);
+            localStorage.setItem('gymconnect_language', updatedData.language);
           }
 
           localStorage.setItem('gymconnect_profile_filled', 'true');
-          localStorage.setItem('gymconnect_user_profile', JSON.stringify(data));
+          localStorage.setItem('gymconnect_user_profile', JSON.stringify(updatedData));
         } else if (!data && !error) {
           setIsRegistered(false);
           setUserProfile(null);
