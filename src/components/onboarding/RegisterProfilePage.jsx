@@ -1,5 +1,5 @@
 // src/components/onboarding/RegisterProfilePage.jsx
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Sparkles, 
   MapPin, 
@@ -18,6 +18,7 @@ import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
 
 const GYM_LIST = GymsData.ALMATY_GYMS || GymsData.almatyGyms || GymsData.default || [];
+const BOT_TOKEN = '8825396654:AAH0GzJqWOzqjys5re9De-Bc7jPIqwxtfDI';
 
 export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) {
   const [isSaving, setIsSaving] = useState(false);
@@ -25,16 +26,17 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
   const [isGymDropdownOpen, setIsGymDropdownOpen] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Автоматические данные пользователя из Telegram Mini App
+  // Проверка приглашения тренера из ссылки
+  const pendingCoach = typeof window !== 'undefined' ? localStorage.getItem('gymconnect_pending_coach') : null;
+
+  // Данные из Telegram WebApp API
   const tgUser = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : null;
 
-  // Расчет дат для календаря
   const today = new Date();
   const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate()).toISOString().split('T')[0];
   const minDate = new Date(today.getFullYear() - 80, today.getMonth(), today.getDate()).toISOString().split('T')[0];
   const defaultBirthDate = new Date(today.getFullYear() - 24, today.getMonth(), today.getDate()).toISOString().split('T')[0];
 
-  // Стейт анкеты регистрации
   const [formData, setFormData] = useState({
     photo_url: tgUser?.photo_url || '',
     first_name: tgUser?.first_name || '',
@@ -46,8 +48,9 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
     whatsapp: '',
     instagram: '',
 
-    training_format: 'alone',
-    trainer_telegram: '',
+    // Если был переход по ссылке тренера — автоматически привязываем
+    training_format: pendingCoach ? 'coach_gym' : 'alone',
+    trainer_telegram: pendingCoach || '',
     allow_trainer_recommendations: false,
 
     city: 'Алматы',
@@ -156,7 +159,6 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Обязательные поля: Имя, Telegram, Зал, Параметры тела
     if (!formData.first_name.trim()) {
       alert(currentLang === 'kk' ? 'Атыңызды енгізіңіз' : 'Пожалуйста, укажите ваше имя.');
       return;
@@ -236,20 +238,39 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         is_pro: false
       };
 
-      // Сохраняем в базу данных Supabase
       const { data, error } = await supabase
         .from('profiles')
         .upsert([newProfilePayload], { onConflict: 'telegram_id' })
         .select()
         .single();
 
-      if (error) {
-        console.error('Ошибка сохранения в Supabase:', error);
-        alert('Ошибка сохранения в базу данных: ' + error.message);
-        return;
+      if (error) throw error;
+
+      // Если была привязка к тренеру — уведомляем тренера в Telegram
+      if (cleanTrainerTelegram) {
+        try {
+          const { data: coachData } = await supabase
+            .from('trainer_profiles')
+            .select('telegram_id')
+            .or(`username.ilike.${cleanTrainerTelegram},username.ilike.@${cleanTrainerTelegram}`)
+            .maybeSingle();
+
+          if (coachData && coachData.telegram_id) {
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: String(coachData.telegram_id),
+                text: `🎉 <b>Новый ученик в вашей CoachOS!</b>\n\nАтлет <b>${formData.first_name} ${formData.last_name || ''}</b> завершил регистрацию в GymConnect и привязан к вам.\nЗал: <b>${selectedGym}</b>`,
+                parse_mode: 'HTML'
+              })
+            }).catch(() => {});
+          }
+        } catch (e) {}
+
+        localStorage.removeItem('gymconnect_pending_coach');
       }
 
-      // Успешно сохранено: фиксируем статус регистрации
       localStorage.setItem('gymconnect_profile_filled', 'true');
       localStorage.setItem('gymconnect_telegram_id', tgId);
       localStorage.setItem('gymconnect_user_profile', JSON.stringify(data || newProfilePayload));
@@ -258,7 +279,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         onComplete(data || newProfilePayload);
       }
     } catch (err) {
-      console.error('Критическая ошибка регистрации:', err);
+      console.error('Ошибка сохранения:', err);
       alert('Ошибка при сохранении: ' + err.message);
     } finally {
       setIsSaving(false);
@@ -269,7 +290,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
     <div className="fixed inset-0 z-50 bg-[#F2F2F7] overflow-y-auto pb-24 pt-4 px-3 select-none">
       <div className="max-w-md mx-auto space-y-3.5">
         
-        {/* Приветственный блок онбординга */}
+        {/* Приветственный блок */}
         <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 text-center relative overflow-hidden">
           <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-2.5 shadow-sm">
             <Flame className="w-6 h-6 text-blue-600" />
@@ -282,11 +303,19 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               ? 'Алматы залдарынан GymBro табу және жеке жоспар құру үшін атлет сауалнамасын толтырыңыз.' 
               : 'Заполните анкету атлета, чтобы находить напарников по базе и тренироваться в залах Алматы.'}
           </p>
+
+          {/* Плашка обнаружения инвайта от тренера */}
+          {pendingCoach && (
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-2xl flex items-center gap-2 text-[11px] text-blue-900 text-left font-medium animate-in fade-in">
+              <UserCheck className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>Вы перешли по приглашению тренера <b>@{pendingCoach}</b>. Ваш аккаунт свяжется с его CRM автоматически.</span>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3 pb-8">
 
-          {/* Фото профиля */}
+          {/* Фото */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex flex-col items-center text-center">
             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
               <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-blue-500 shadow-md bg-slate-100 flex items-center justify-center relative">
@@ -472,7 +501,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 3. Формат тренировок и тренер (Не обязательно) */}
+          {/* 3. Формат тренировок и тренер */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -534,7 +563,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 4. Локация и клуб (ОБЯЗАТЕЛЬНО) */}
+          {/* 4. Локация и клуб */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -655,7 +684,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 5. Параметры тела (ОБЯЗАТЕЛЬНО) */}
+          {/* 5. Параметры тела */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3 overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -742,7 +771,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 6. Цель и график тренировок (Не обязательно) */}
+          {/* 6. Цель и график */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -827,7 +856,6 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               </span>
             </div>
 
-            {/* Главный тумблер GymBro */}
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-slate-900">Участвовать в поиске GymBro</p>
@@ -850,15 +878,6 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
             {formData.gymbro_search && (
               <div className="space-y-3 pt-1">
-                
-                {/* Бейдж обязательности при включении */}
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md font-semibold border border-amber-200">
-                    Все параметры GymBro обязательны для точного подбора
-                  </span>
-                </div>
-
-                {/* 1. Плашка авто-синхронизации графика */}
                 <div className="p-3 bg-blue-50/80 rounded-2xl border border-blue-100 flex items-start gap-2 text-[11px] text-blue-950 font-medium">
                   <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                   <div className="leading-snug">
@@ -869,13 +888,12 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                   </div>
                 </div>
 
-                {/* 2. Плашка о поиске новых знакомств */}
                 <div className="p-3 bg-indigo-50/80 rounded-2xl border border-indigo-100 flex items-start gap-2 text-[11px] text-indigo-950">
                   <Globe2 className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                   <div className="leading-snug">
                     <p className="font-bold text-indigo-900">Не только по залу, но и новые знакомства:</p>
                     <p className="text-[10px] text-indigo-800 mt-0.5">
-                      Ищите единомышленников по району или всему Алматы: находите напарников по целям, расширяйте спортивный нетворкинг и общайтесь вне тренировок.
+                      Ищите единомышленников по району или всему Алматы: находите напарников по интересам, расширяйте спортивный нетворкинг и общайтесь вне тренировок.
                     </p>
                   </div>
                 </div>
@@ -981,7 +999,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             )}
           </div>
 
-          {/* Большая финальная кнопка регистрации */}
+          {/* Финальная кнопка */}
           <div className="pt-2">
             <button
               type="submit"
