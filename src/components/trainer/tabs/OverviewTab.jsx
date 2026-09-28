@@ -64,7 +64,6 @@ export default function OverviewTab({
   // Динамическое расписание на сегодня
   const [todaySchedule, setTodaySchedule] = useState([]);
 
-  // Загрузка данных учеников с защитой от сброса статуса проведенных
   useEffect(() => {
     if (!students || students.length === 0) {
       setTodaySchedule([]);
@@ -112,6 +111,7 @@ export default function OverviewTab({
         name: `${st.first_name || 'Атлет'} ${st.last_name || ''}`.trim(),
         first_name: st.first_name || 'Атлет',
         phone: st.phone || st.whatsapp || '',
+        username: st.username || st.telegram_username || '',
         telegram_id: st.telegram_id || null,
         gym: st.gym ? st.gym.split('|')[0] : (trainer?.gym ? trainer.gym.split('|')[0] : 'Алматы'),
         format: st.format === 'online' || st.training_format === 'coach_online' ? 'online' : 'gym',
@@ -138,7 +138,7 @@ export default function OverviewTab({
     { day: 'Вс', count: 1, percent: 15, isToday: todayDayIdx === 0 }
   ];
 
-  // Списание тренировки тренером в зале
+  // Списание тренировки тренером
   const handleMarkCompleted = async (e, id) => {
     e.stopPropagation();
     const targetItem = todaySchedule.find(s => s.id === id);
@@ -146,7 +146,6 @@ export default function OverviewTab({
 
     const newRemaining = Math.max(0, targetItem.remaining - 1);
 
-    // 1. Фиксируем проведение в памяти дня
     try {
       const key = `gymconnect_completed_today_${todayDateStr}`;
       const saved = localStorage.getItem(key);
@@ -159,7 +158,6 @@ export default function OverviewTab({
       console.warn(err);
     }
 
-    // 2. Обновляем локальное состояние
     setTodaySchedule(prev => prev.map(item => {
       if (item.id === id) {
         return { ...item, status: 'completed', remaining: newRemaining };
@@ -167,7 +165,6 @@ export default function OverviewTab({
       return item;
     }));
 
-    // 3. Записываем списание в Supabase
     try {
       await supabase
         .from('profiles')
@@ -191,9 +188,11 @@ export default function OverviewTab({
     }));
   };
 
-  // ОТПРАВКА НАПОМИНАНИЯ ЧЕРЕЗ TELEGRAM-БОТ
+  // ОТПРАВКА НАПОМИНАНИЯ ЧЕРЕЗ TELEGRAM-БОТ С АВТОПОИСКОМ ID
   const handleSendTelegramReminder = async (student, type) => {
-    const studentTgId = student.telegram_id;
+    const studentTgId = student.telegram_id || student.rawStudent?.telegram_id;
+    const studentUsername = student.username || student.rawStudent?.username;
+
     let title = 'Напоминание о тренировке';
     let message = `Привет, ${student.first_name}! Напоминаю о нашей персональной тренировке сегодня. Жду вовремя в зале! 💪`;
 
@@ -204,53 +203,53 @@ export default function OverviewTab({
       message = `Привет, ${student.first_name}! По твоему абонементу осталось ${left} зан. Сумма за новый блок: ${price} ₸. Давай забронируем график на следующий период!`;
     }
 
-    setReminderFeedback('Отправка через бота...');
+    setReminderFeedback('Отправка через Telegram бот...');
 
     const res = await sendStudentNotification({
       studentTelegramId: studentTgId,
+      studentUsername: studentUsername,
       studentId: student.id,
       title,
       message
     });
 
-    if (res && res.success) {
-      setReminderFeedback(`✅ Отправлено ${student.first_name} в Telegram!`);
+    if (res && (res.success || res.ok)) {
+      setReminderFeedback(`✅ Сообщение доставлено в Telegram ${student.first_name}!`);
     } else {
-      setReminderFeedback(`⚠️ Сохранено в приложении (${student.first_name} не нажал /start)`);
+      setReminderFeedback(`⚠️ ${res?.error || 'Не удалось отправить. Убедитесь, что атлет нажал /start в @gymconnect_ala_bot'}`);
     }
 
-    setTimeout(() => setReminderFeedback(null), 3500);
+    setTimeout(() => setReminderFeedback(null), 5000);
   };
 
-  // ОТПРАВКА НАПОМИНАНИЯ В WHATSAPP
   const handleSendWhatsAppReminder = (phone, text) => {
     const cleanPhone = phone.replace(/\D/g, '');
     const encoded = encodeURIComponent(text);
     window.open(`https://wa.me/${cleanPhone.startsWith('7') ? cleanPhone : `7${cleanPhone}`}?text=${encoded}`, '_blank');
   };
 
-  // МАССОВАЯ РАССЫЛКА «НЕ БУДЕТ В ЗАЛЕ» ЧЕРЕЗ БОТА
   const handleMassAbsenceBroadcast = async () => {
     if (todaySchedule.length === 0) {
       alert('На сегодня нет записанных учеников для оповещения.');
       return;
     }
 
-    setReminderFeedback('Рассылка всем ученикам на сегодня...');
-    let count = 0;
+    setReminderFeedback('Рассылка ученикам через бота...');
+    let successCount = 0;
 
     for (const st of todaySchedule) {
-      await sendStudentNotification({
-        studentTelegramId: st.telegram_id,
+      const res = await sendStudentNotification({
+        studentTelegramId: st.telegram_id || st.rawStudent?.telegram_id,
+        studentUsername: st.username || st.rawStudent?.username,
         studentId: st.id,
         title: 'Перенос тренировки',
         message: `Уважаемый атлет! По техническим причинам меня сегодня не будет в зале. Ваше занятие сохраняется и переносится без сгорания. Согласуем удобное время в личных сообщениях!`
       });
-      count++;
+      if (res && (res.success || res.ok)) successCount++;
     }
 
-    setReminderFeedback(`✅ Разослано ${count} ученикам в Telegram!`);
-    setTimeout(() => setReminderFeedback(null), 4000);
+    setReminderFeedback(`✅ Доставлено ${successCount} из ${todaySchedule.length} учеников в Telegram!`);
+    setTimeout(() => setReminderFeedback(null), 4500);
   };
 
   const handleSaveStudent = async (e) => {
@@ -362,7 +361,7 @@ export default function OverviewTab({
         </button>
       </div>
 
-      {/* 3. KPI Карточки тренера */}
+      {/* 3. KPI Карточки */}
       <div className="space-y-2.5">
         <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
@@ -783,7 +782,7 @@ export default function OverviewTab({
                 </>
               )}
 
-              {/* СЦЕНАРИЙ 2: ОБ ОПЛАТЕ АБОНЕМЕНТА (ИНДИВИДУАЛЬНЫЕ КНОПКИ) */}
+              {/* СЦЕНАРИЙ 2: ОБ ОПЛАТЕ АБОНЕМЕНТА */}
               {reminderType === 'payment' && (
                 <>
                   <p className="text-[10px] text-slate-400 px-1">Ученики с остатком ≤ 1 занятий или долгом:</p>
@@ -832,7 +831,7 @@ export default function OverviewTab({
                 </>
               )}
 
-              {/* СЦЕНАРИЙ 3: НЕ БУДЕТ В ЗАЛЕ (МАССОВОЕ ОПОВЕЩЕНИЕ БОТОМ) */}
+              {/* СЦЕНАРИЙ 3: НЕ БУДЕТ В ЗАЛЕ */}
               {reminderType === 'absence' && (
                 <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-2xl space-y-2.5">
                   <div className="flex items-center gap-2 text-rose-800 font-bold">
