@@ -7,9 +7,13 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Plus, 
-  Minus
+  Minus,
+  Send,
+  Zap,
+  Check
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
+import { sendStudentNotification } from '../../../utils/telegramNotifications';
 
 export default function StudentFinanceTab({ student, onUpdate }) {
   // 1. ХУКИ СОСТОЯНИЯ (СТРОГО НА САМОМ ВЕРХУ)
@@ -34,6 +38,7 @@ export default function StudentFinanceTab({ student, onUpdate }) {
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [notificationFeedback, setNotificationFeedback] = useState(null);
 
   // Инициализация при открытии карточки атлета
   useEffect(() => {
@@ -55,15 +60,13 @@ export default function StudentFinanceTab({ student, onUpdate }) {
 
   if (!student) return null;
 
-  // Автоскролл поля ввода в центр экрана над мобильной клавиатурой
   const handleInputFocus = (e) => {
-    e.target.select(); // Сразу выделяем весь текст, чтобы можно было заменить число с первого нажатия
+    e.target.select();
     setTimeout(() => {
       e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 280);
   };
 
-  // Автоматический расчет дней до сгорания
   const calculateDaysLeft = () => {
     if (!isExpiring || !endDate) return null;
     const now = new Date();
@@ -78,7 +81,57 @@ export default function StudentFinanceTab({ student, onUpdate }) {
   const totalNum = Number(totalWorkouts) || 12;
   const completedCount = Math.max(0, totalNum - remainingWorkouts);
 
-  // Безопасное сохранение в Supabase
+  // МГНОВЕННОЕ СПИСАНИЕ ЗАНЯТИЯ С ПУШЕМ В TELEGRAM УЧЕНИКУ
+  const handleQuickDeductWorkout = async () => {
+    if (remainingWorkouts <= 0) {
+      alert('У ученика закончились оплаченные занятия в абонементе!');
+      return;
+    }
+
+    const newRemaining = remainingWorkouts - 1;
+    setRemainingWorkouts(newRemaining);
+    setIsSaving(true);
+    setNotificationFeedback('Списание занятия и отправка пуша в Telegram...');
+
+    try {
+      student.left_trainings = newRemaining;
+      student.remaining_workouts = newRemaining;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          left_trainings: newRemaining,
+          remaining_workouts: newRemaining
+        })
+        .eq('id', student.id);
+
+      if (error) throw error;
+
+      // Отправляем пуш ученику в Telegram
+      const sendRes = await sendStudentNotification({
+        studentTelegramId: student.telegram_id,
+        studentUsername: student.username,
+        studentId: student.id,
+        title: 'Списание тренировки',
+        message: `Тренировка успешно зачтена тренером! Списано 1 занятие. Ваш текущий остаток: ${newRemaining} из ${totalNum} зан.`
+      });
+
+      if (sendRes && sendRes.ok) {
+        setNotificationFeedback('✅ Занятие списано и пуш доставлен ученику в Telegram!');
+      } else {
+        setNotificationFeedback('✅ Занятие списано в базе! (Ученик должен нажать /start в @gymconnect_ala_bot для получения пушей)');
+      }
+
+      setTimeout(() => setNotificationFeedback(null), 5000);
+      if (onUpdate) onUpdate();
+    } catch (e) {
+      alert('Ошибка при списании: ' + e.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Сохранение параметров кассы и абонемента
   const handleSaveFinance = async () => {
     if (!student.id) return;
     setIsSaving(true);
@@ -109,9 +162,7 @@ export default function StudentFinanceTab({ student, onUpdate }) {
           updatedAt: new Date().toISOString()
         };
         localStorage.setItem(`gymconnect_finance_${student.id}`, JSON.stringify(localFinData));
-      } catch (e) {
-        console.warn(e);
-      }
+      } catch (e) {}
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
@@ -128,6 +179,13 @@ export default function StudentFinanceTab({ student, onUpdate }) {
   return (
     <div className="space-y-3.5 text-xs text-slate-700 select-none pb-72">
       
+      {/* Статус ответа отправки уведомления */}
+      {notificationFeedback && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl text-blue-900 text-xs font-semibold text-center animate-in fade-in">
+          {notificationFeedback}
+        </div>
+      )}
+
       {/* 1. БАЛАНС И ОСТАТОК ТРЕНИРОВОК */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -173,6 +231,17 @@ export default function StudentFinanceTab({ student, onUpdate }) {
             </button>
           </div>
         </div>
+
+        {/* КНОПКА БЫСТРОГО СПИСАНИЯ С УВЕДОМЛЕНИЕМ УЧЕНИКА */}
+        <button
+          type="button"
+          disabled={isSaving || remainingWorkouts <= 0}
+          onClick={handleQuickDeductWorkout}
+          className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-98 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+        >
+          <Zap className="w-3.5 h-3.5 fill-current" />
+          <span>Списать 1 занятие и отправить пуш в Telegram</span>
+        </button>
 
         {/* Прогресс-бар отработанных занятий */}
         <div className="space-y-1">
@@ -241,7 +310,6 @@ export default function StudentFinanceTab({ student, onUpdate }) {
           )}
         </div>
 
-        {/* Тумблер: Сгораемый ↔ Несгораемый */}
         <div className="flex items-center gap-1 p-0.5 bg-slate-200/70 rounded-xl w-fit">
           <button
             type="button"
@@ -302,7 +370,7 @@ export default function StudentFinanceTab({ student, onUpdate }) {
         )}
       </div>
 
-      {/* 4. КАССОВЫЙ РАСЧЕТ И СТОИМОСТЬ С ПОЛНЫМ УДАЛЕНИЕМ И АВТОВЫДЕЛЕНИЕМ */}
+      {/* 4. КАССОВЫЙ РАСЧЕТ И СТОИМОСТЬ */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
         <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">Кассовый расчет</p>
 
@@ -318,14 +386,12 @@ export default function StudentFinanceTab({ student, onUpdate }) {
               value={monthlyPrice}
               onFocus={handleInputFocus}
               onChange={e => {
-                // Разрешаем полностью стирать поле до пустоты! Ноль больше не залипает
                 const val = e.target.value.replace(/\D/g, '');
                 setMonthlyPrice(val);
               }}
               placeholder="0"
               className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-sm text-slate-900 caret-blue-600 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
             />
-            {/* Быстрые пресеты сумм в 1 клик */}
             <div className="flex gap-1 mt-1.5 flex-wrap">
               {[50000, 70000, 100000].map(val => (
                 <button
@@ -357,7 +423,6 @@ export default function StudentFinanceTab({ student, onUpdate }) {
               placeholder="12"
               className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-sm text-slate-900 text-center caret-blue-600 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
             />
-            {/* Быстрые кнопки количества занятий */}
             <div className="flex justify-center gap-1 mt-1.5">
               {[8, 12, 16].map(num => (
                 <button
