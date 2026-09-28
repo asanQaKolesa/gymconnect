@@ -41,7 +41,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
 
   // Состояние выбранного ученика для открытия досье
   const [selectedStudentForDetail, setSelectedStudentForDetail] = useState(null);
-  const [studentDetailOrigin, setStudentDetailOrigin] = useState('overview'); // 'overview' | 'students'
+  const [studentDetailOrigin, setStudentDetailOrigin] = useState('overview');
 
   // Форма добавления студента
   const [addStudentForm, setAddStudentForm] = useState({
@@ -54,7 +54,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     gym: ''
   });
 
-  // Загрузка данных тренера и его учеников (с поддержкой тихого фонового опроса)
+  // Загрузка данных тренера и его учеников с тихим опросом
   const refreshTrainerData = async (isSilent = false) => {
     try {
       const cleanUsername = trainerUsername ? trainerUsername.replace('@', '').trim().toLowerCase() : '';
@@ -76,7 +76,6 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
         .select('*')
         .or(`trainer_username.ilike.${cleanUsername},trainer_username.ilike.@${cleanUsername},trainer_telegram.ilike.${cleanUsername},trainer_telegram.ilike.@${cleanUsername}`);
 
-      // Строгая фильтрация по актуальному наставнику
       const validStudents = (sData || []).filter(student => {
         const studentTrainerU = (student.trainer_username || '').replace('@', '').trim().toLowerCase();
         const studentTrainerTg = (student.trainer_telegram || '').replace('@', '').trim().toLowerCase();
@@ -95,7 +94,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     }
   };
 
-  // ПЕРВИЧНАЯ ЗАГРУЗКА + 5-СЕКУНДНЫЙ ТИХИЙ ПОЛЛИНГ
+  // Первичная загрузка и 5-секундный тихий поллинг
   useEffect(() => {
     if (!trainerUsername) {
       setLoading(false);
@@ -111,6 +110,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     return () => clearInterval(pollTimer);
   }, [trainerUsername]);
 
+  // УМНОЕ ДОБАВЛЕНИЕ УЧЕНИКА БЕЗ ДУБЛИКАТОВ
   const handleAddStudentSubmit = async (e) => {
     e.preventDefault();
     if (!addStudentForm.first_name.trim()) {
@@ -119,32 +119,84 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     }
 
     try {
-      const cleanU = addStudentForm.username.replace('@', '').trim();
-      const currentCoachNick = (trainerData?.username || trainerUsername).replace('@', '').trim().toLowerCase();
+      const cleanU = addStudentForm.username ? addStudentForm.username.replace(/[@\s]/g, '').trim().toLowerCase() : '';
+      const cleanPhone = addStudentForm.phone ? addStudentForm.phone.replace(/\D/g, '') : '';
+      const currentCoachNick = (trainerData?.username || trainerUsername).replace(/[@\s]/g, '').trim().toLowerCase();
 
-      const payload = {
-        first_name: addStudentForm.first_name.trim(),
-        last_name: addStudentForm.last_name.trim(),
-        username: cleanU || null,
-        phone: addStudentForm.phone.replace(/\D/g, ''),
-        monthly_price: Number(addStudentForm.monthly_price) || 0,
-        total_trainings: Number(addStudentForm.total_trainings) || 12,
-        left_trainings: Number(addStudentForm.total_trainings) || 12,
-        remaining_workouts: Number(addStudentForm.total_trainings) || 12,
-        gym: addStudentForm.gym || trainerData?.gym || 'Invictus Go',
-        trainer_username: currentCoachNick,
-        trainer_telegram: currentCoachNick,
-        status: 'active',
-        created_at: new Date().toISOString()
-      };
+      const totalNum = Number(addStudentForm.total_trainings) || 12;
+      const priceNum = Number(addStudentForm.monthly_price) || 70000;
+      const gymName = addStudentForm.gym || trainerData?.gym || 'Invictus Go';
 
-      const { error } = await supabase
-        .from('profiles')
-        .insert([payload]);
+      // 1. Проверяем, существует ли уже этот пользователь в базе profiles
+      let existingProfile = null;
+      if (cleanU) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .or(`username.ilike.${cleanU},username.ilike.@${cleanU}`)
+          .maybeSingle();
+        if (data) existingProfile = data;
+      }
 
-      if (error) throw error;
+      if (!existingProfile && cleanPhone && cleanPhone.length >= 10) {
+        const last10 = cleanPhone.slice(-10);
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .or(`phone.ilike.%${last10}%,whatsapp.ilike.%${last10}%`)
+          .maybeSingle();
+        if (data) existingProfile = data;
+      }
 
-      alert('Ученик успешно зарегистрирован в базе!');
+      if (existingProfile) {
+        // УЧЕНИК УЖЕ В БАЗЕ TELEGRAM: привязываем к тренеру без дубликата!
+        const { error: updErr } = await supabase
+          .from('profiles')
+          .update({
+            trainer_username: currentCoachNick,
+            trainer_telegram: currentCoachNick,
+            monthly_price: priceNum,
+            total_trainings: totalNum,
+            left_trainings: totalNum,
+            remaining_workouts: totalNum,
+            gym: gymName,
+            status: 'active'
+          })
+          .eq('id', existingProfile.id);
+
+        if (updErr) throw updErr;
+
+        alert(`✅ Атлет ${existingProfile.first_name || ''} найден в Telegram и успешно привязан к вам без создания дублей!`);
+      } else {
+        // НОВЫЙ УЧЕНИК: создаем новую запись
+        const payload = {
+          first_name: addStudentForm.first_name.trim(),
+          last_name: addStudentForm.last_name.trim(),
+          username: cleanU || null,
+          phone: cleanPhone,
+          whatsapp: cleanPhone,
+          monthly_price: priceNum,
+          total_trainings: totalNum,
+          left_trainings: totalNum,
+          remaining_workouts: totalNum,
+          gym: gymName,
+          trainer_username: currentCoachNick,
+          trainer_telegram: currentCoachNick,
+          status: 'active',
+          workout_days: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+          workout_time_slot: 'Вечер (16:00 - 21:00)',
+          created_at: new Date().toISOString()
+        };
+
+        const { error: insErr } = await supabase
+          .from('profiles')
+          .insert([payload]);
+
+        if (insErr) throw insErr;
+
+        alert('Ученик успешно зарегистрирован в базе CRM!');
+      }
+
       setIsAddStudentOpen(false);
       setAddStudentForm({
         first_name: '',
@@ -263,8 +315,11 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     <div className="min-h-screen bg-[#F2F2F7] text-slate-900 flex justify-center">
       <div className="w-full max-w-md min-h-screen flex flex-col justify-between relative bg-[#F2F2F7] shadow-xl">
         <div className="flex-1 pb-10">
+          
+          {/* Передаем живой массив students={students} для реактивной работы колокольчика */}
           <TrainerHeader 
             trainer={trainerData} 
+            students={students}
             onLogout={onLogout} 
             onBack={onBack}
             activeTab={activeTab}
@@ -353,6 +408,8 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
           form={addStudentForm}
           setForm={setAddStudentForm}
           onSubmit={handleAddStudentSubmit}
+          coachUsername={trainerData?.username || trainerUsername}
+          coachGym={trainerData?.gym}
         />
       </div>
     </div>
