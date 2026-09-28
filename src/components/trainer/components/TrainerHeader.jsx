@@ -34,6 +34,7 @@ import { supabase } from '../../../supabaseClient';
 
 export default function TrainerHeader({ 
   trainer, 
+  students = [], 
   onLogout, 
   onBack, 
   activeTab, 
@@ -41,16 +42,25 @@ export default function TrainerHeader({
   onOpenScreen,
   initialDrawerOpen = false 
 }) {
-  // 1. ХУКИ СОСТОЯНИЯ (СТРОГО НА САМОМ ВЕРХУ ДО УСЛОВНЫХ RETURN)
   const [isDrawerOpen, setIsDrawerOpen] = useState(initialDrawerOpen);
   const [studentsList, setStudentsList] = useState([]);
 
-  const [readNotifIds] = useState(() => {
+  // Чтение прочитанных и удаленных уведомлений из памяти
+  const [readNotifIds, setReadNotifIds] = useState(() => {
     try {
       const saved = localStorage.getItem('gymconnect_coach_read_notifs');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
+    }
+  });
+
+  const [deletedMap, setDeletedMap] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gymconnect_coach_deleted_map');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
     }
   });
 
@@ -64,24 +74,25 @@ export default function TrainerHeader({
   const isApproved = trainer?.status === 'approved';
   const coachFullName = trainer?.full_name || `${trainer?.first_name || 'Тренер'} ${trainer?.last_name || ''}`.trim();
 
-  // Загрузка подопечных для подсчета счетчика непрочитанных событий
+  // Резервная загрузка на случай, если родительский компонент еще загружает данные
   useEffect(() => {
-    async function loadStudents() {
+    async function loadBackupStudents() {
+      if (students && students.length > 0) return;
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, attendance_today, left_trainings, remaining_workouts, payment_status')
+          .select('id, attendance_today, left_trainings, remaining_workouts, payment_status, status')
           .or(`trainer_username.ilike.${cleanUsername},trainer_username.ilike.@${cleanUsername},trainer_telegram.ilike.${cleanUsername},trainer_telegram.ilike.@${cleanUsername}`);
 
         if (!error && data) {
           setStudentsList(data);
         }
       } catch (e) {
-        console.warn('Ошибка загрузки счетчика уведомлений в TrainerHeader:', e);
+        console.warn('Ошибка загрузки подопечных в шапку:', e);
       }
     }
-    loadStudents();
-  }, [cleanUsername]);
+    loadBackupStudents();
+  }, [cleanUsername, students.length]);
 
   const handleMenuClick = (screenId) => {
     setIsDrawerOpen(false);
@@ -90,16 +101,40 @@ export default function TrainerHeader({
     }
   };
 
-  // Подсчет счетчика событий для бейджа колокольчика
+  // ЖИВОЙ РАСЧЕТ НЕПРОЧИТАННЫХ СОБЫТИЙ ДЛЯ КРАСНОГО ИНДИКАТОРА
+  const effectiveList = students && students.length > 0 ? students : studentsList;
+
   const calculateUnreadCount = () => {
     let count = 0;
-    studentsList.forEach(st => {
+    const now = Date.now();
+    const TTL_48 = 48 * 60 * 60 * 1000;
+
+    effectiveList.forEach(st => {
       const left = st.left_trainings !== undefined ? st.left_trainings : (st.remaining_workouts !== undefined ? st.remaining_workouts : 12);
-      if (st.attendance_today === 'attending' && !readNotifIds.includes(`checkin_yes_${st.id}`)) count++;
-      if (st.attendance_today === 'missed' && !readNotifIds.includes(`checkin_no_${st.id}`)) count++;
-      if (left <= 1 && !readNotifIds.includes(`low_balance_${st.id}`)) count++;
-      if (st.payment_status === 'pending' && !readNotifIds.includes(`pending_pay_${st.id}`)) count++;
+      
+      const checkinYesId = `checkin_yes_${st.id}`;
+      const checkinNoId = `checkin_no_${st.id}`;
+      const lowBalId = `low_balance_${st.id}`;
+      const debtId = `pending_pay_${st.id}`;
+
+      // 1. Явка «Буду»
+      if (st.attendance_today === 'attending' && !readNotifIds.includes(checkinYesId) && !deletedMap[checkinYesId]) {
+        count++;
+      }
+      // 2. Пропуск «Не смогу»
+      if (st.attendance_today === 'missed' && !readNotifIds.includes(checkinNoId) && !deletedMap[checkinNoId]) {
+        count++;
+      }
+      // 3. Заканчивается абонемент (≤ 2 зан.)
+      if (left <= 2 && !readNotifIds.includes(lowBalId) && !deletedMap[lowBalId]) {
+        count++;
+      }
+      // 4. Ожидает оплаты (долг)
+      if (st.payment_status === 'pending' && !readNotifIds.includes(debtId) && !deletedMap[debtId]) {
+        count++;
+      }
     });
+
     return count;
   };
 
@@ -122,7 +157,7 @@ export default function TrainerHeader({
             <span className="text-xs font-bold tracking-tight">Меню</span>
           </button>
 
-          {/* Центр: Полное название CoachOS CRM — теперь ничем не закрыто */}
+          {/* Центр: Полное название CoachOS CRM */}
           <div className="flex items-center gap-1.5">
             <div className="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
               <Dumbbell className="w-3.5 h-3.5 stroke-[2.2]" />
@@ -132,16 +167,21 @@ export default function TrainerHeader({
             </h1>
           </div>
 
-          {/* Правая часть: колокольчик с красным кружочком уведомлений (+1, +2) */}
+          {/* Правая часть: колокольчик с КРАСНЫМ КРУЖОЧКОМ (+1, +2) */}
           <button
             type="button"
             onClick={() => handleMenuClick('notifications')}
-            className="relative w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center border border-slate-200/80 active:scale-90 transition-transform cursor-pointer shrink-0"
-            title="Открыть Центр уведомлений на полный экран"
+            className={`relative w-9 h-9 rounded-xl flex items-center justify-center border active:scale-90 transition-all cursor-pointer shrink-0 ${
+              unreadCount > 0 
+                ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-xs' 
+                : 'bg-slate-100 hover:bg-slate-200 border-slate-200/80 text-slate-700'
+            }`}
+            title="Открыть Центр уведомлений"
           >
-            <Bell className="w-4 h-4 stroke-[2]" />
+            <Bell className={`w-4 h-4 stroke-[2.2] ${unreadCount > 0 ? 'text-rose-600 animate-bounce' : 'text-slate-700'}`} />
+            
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white font-black text-[9.5px] flex items-center justify-center font-mono shadow-xs animate-pulse border-2 border-white">
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white font-black text-[9.5px] flex items-center justify-center font-mono shadow-md border-2 border-white animate-pulse">
                 +{unreadCount}
               </span>
             )}
@@ -279,7 +319,7 @@ export default function TrainerHeader({
                 </button>
               </div>
 
-              {/* 3. ИНСТРУМЕНТЫ РАБОТЫ С КЛИЕНТАМИ */}
+              {/* 3. ИНСТРУМЕНТЫ ТРЕНЕРА */}
               <div className="space-y-1.5 pt-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Инструменты тренера</p>
 
