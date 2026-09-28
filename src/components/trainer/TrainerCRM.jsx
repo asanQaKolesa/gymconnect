@@ -53,16 +53,17 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     gym: ''
   });
 
+  // Загрузка данных тренера и СТРОГАЯ ФИЛЬТРАЦИЯ его учеников
   const refreshTrainerData = async () => {
     try {
-      const cleanUsername = trainerUsername ? trainerUsername.replace('@', '').trim() : '';
+      const cleanUsername = trainerUsername ? trainerUsername.replace('@', '').trim().toLowerCase() : '';
       if (!cleanUsername) return;
 
       // 1. Профиль тренера
       const { data: tData, error: tErr } = await supabase
         .from('trainer_profiles')
         .select('*')
-        .or(`username.eq.@${cleanUsername},username.eq.${cleanUsername}`)
+        .or(`username.ilike.${cleanUsername},username.ilike.@${cleanUsername}`)
         .maybeSingle();
 
       if (tErr) throw tErr;
@@ -72,9 +73,22 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
       const { data: sData } = await supabase
         .from('profiles')
         .select('*')
-        .or(`trainer_username.eq.${cleanUsername},trainer_username.eq.@${cleanUsername},trainer_telegram.eq.${cleanUsername},trainer_telegram.eq.@${cleanUsername}`);
+        .or(`trainer_username.ilike.${cleanUsername},trainer_username.ilike.@${cleanUsername},trainer_telegram.ilike.${cleanUsername},trainer_telegram.ilike.@${cleanUsername}`);
 
-      setStudents(sData || []);
+      // Строгая проверка: исключаем учеников, у которых поле trainer_username указывает на другого тренера
+      const validStudents = (sData || []).filter(student => {
+        const studentTrainerU = (student.trainer_username || '').replace('@', '').trim().toLowerCase();
+        const studentTrainerTg = (student.trainer_telegram || '').replace('@', '').trim().toLowerCase();
+
+        // Приоритет отдается актуальному trainer_username
+        if (studentTrainerU) {
+          return studentTrainerU === cleanUsername;
+        }
+        // Если trainer_username пустой, проверяем trainer_telegram
+        return studentTrainerTg === cleanUsername;
+      });
+
+      setStudents(validStudents);
     } catch (err) {
       console.error('Ошибка загрузки данных в TrainerCRM:', err);
     } finally {
@@ -99,6 +113,8 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
 
     try {
       const cleanU = addStudentForm.username.replace('@', '').trim();
+      const currentCoachNick = (trainerData?.username || trainerUsername).replace('@', '').trim().toLowerCase();
+
       const payload = {
         first_name: addStudentForm.first_name.trim(),
         last_name: addStudentForm.last_name.trim(),
@@ -109,8 +125,8 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
         left_trainings: Number(addStudentForm.total_trainings) || 12,
         remaining_workouts: Number(addStudentForm.total_trainings) || 12,
         gym: addStudentForm.gym || trainerData?.gym || 'Invictus Go',
-        trainer_username: trainerData?.username?.replace('@', '') || trainerUsername.replace('@', ''),
-        trainer_telegram: trainerData?.username?.replace('@', '') || trainerUsername.replace('@', ''),
+        trainer_username: currentCoachNick,
+        trainer_telegram: currentCoachNick,
         status: 'active',
         created_at: new Date().toISOString()
       };
@@ -156,7 +172,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     );
   }
 
-  // ================= 1. ПОЛНОЭКРАННОЕ ДОСЬЕ УЧЕНИКА (ШАПКА И ФОН ПОЛНОСТЬЮ СКРЫТЫ) =================
+  // ================= 1. ПОЛНОЭКРАННОЕ ДОСЬЕ УЧЕНИКА =================
   if (selectedStudentForDetail) {
     return (
       <StudentDetailModal 
