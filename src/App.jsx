@@ -23,6 +23,7 @@ import {
   User 
 } from 'lucide-react';
 import { translations } from './locales/translations';
+import { pruneExpiredBotMessages } from './utils/telegramNotifications';
 
 export default function App() {
   // ================= 1. ВСЕ ХУКИ USESTATE (СТРОГО ДО УСЛОВНЫХ RETURN) =================
@@ -46,7 +47,7 @@ export default function App() {
     }
   });
 
-  // Флаг регистрации: первично берется из кэша, но проверяется в фоне через Telegram ID
+  // Флаг регистрации
   const [isRegistered, setIsRegistered] = useState(() => {
     return localStorage.getItem('gymconnect_profile_filled') === 'true';
   });
@@ -61,7 +62,7 @@ export default function App() {
     return localStorage.getItem('gymconnect_language') || null;
   });
 
-  // Активная вкладка (по умолчанию Главная или Профиль)
+  // Активная вкладка
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('tab')) return params.get('tab');
@@ -77,14 +78,11 @@ export default function App() {
     return localStorage.getItem('gymconnect_admin_mode') === 'true';
   });
 
-  // Заставка запускается всегда при старте
   const [isLoading, setIsLoading] = useState(true);
 
   const t = translations[language] || translations.kk;
 
-  // ================= 2. БЕЗОПАСНАЯ ФОНОВАЯ АВТОРИЗАЦИЯ В TELEGRAM =================
-  
-  // Экстренный сброс сессии через URL (?reset=true)
+  // ================= 2. ЭКСТРЕННЫЙ СБРОС СЕССИИ И АВТООЧИСТКА БОТА =================
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('reset') === 'true') {
@@ -92,12 +90,14 @@ export default function App() {
       window.history.replaceState({}, document.title, window.location.pathname);
       window.location.reload();
     }
+
+    // Фоновая очистка сообщений бота в Telegram старше 24 часов
+    pruneExpiredBotMessages(24).catch(() => {});
   }, []);
 
-  // Тихая аутентификация атлета по telegram_id во время заставки
+  // Тихая аутентификация атлета по telegram_id
   useEffect(() => {
     async function authenticateAthleteWithTelegram() {
-      // Получаем аппаратный Telegram ID текущего пользователя
       const tgUser = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : null;
       let targetTelegramId = tgUser?.id ? String(tgUser.id) : localStorage.getItem('gymconnect_telegram_id');
 
@@ -106,7 +106,6 @@ export default function App() {
       try {
         localStorage.setItem('gymconnect_telegram_id', targetTelegramId);
 
-        // Запрашиваем профиль из Supabase по уникальному Telegram ID
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -114,7 +113,6 @@ export default function App() {
           .maybeSingle();
 
         if (data && !error) {
-          // АТЛЕТ НАЙДЕН: Полная авторизация без паролей и логинов
           setUserProfile(data);
           setIsRegistered(true);
 
@@ -131,7 +129,6 @@ export default function App() {
           localStorage.setItem('gymconnect_profile_filled', 'true');
           localStorage.setItem('gymconnect_user_profile', JSON.stringify(data));
         } else if (!data && !error) {
-          // НОВЫЙ АТЛЕТ: Профиля еще нет в базе, переводим на онбординг
           setIsRegistered(false);
           setUserProfile(null);
           setHasAcceptedLegal(false);
@@ -139,7 +136,7 @@ export default function App() {
           localStorage.removeItem('gymconnect_user_profile');
         }
       } catch (e) {
-        console.warn('Фоновая аутентификация Telegram: работаем из локального кэша', e);
+        console.warn('Фоновая аутентификация Telegram: работаем из кэша', e);
       }
     }
 
@@ -191,7 +188,6 @@ export default function App() {
     setLanguage(lang);
     localStorage.setItem('gymconnect_language', lang);
 
-    // Если профиль уже существует, сохраняем выбор языка и в базу
     if (userProfile?.telegram_id) {
       await supabase
         .from('profiles')
@@ -200,7 +196,6 @@ export default function App() {
     }
   };
 
-  // Успешная регистрация нового атлета
   const handleRegistrationComplete = (newProfile) => {
     setIsRegistered(true);
     setUserProfile(newProfile);
@@ -211,14 +206,12 @@ export default function App() {
     }
   };
 
-  // Фиксация принятия правовых документов
   const handleLegalAccepted = () => {
     setHasAcceptedLegal(true);
     localStorage.setItem('gymconnect_legal_accepted', 'true');
     setActiveTab('profile');
   };
 
-  // Выход из профиля
   const handleLogout = () => {
     if (window.confirm('Вы действительно хотите выйти из своего профиля?')) {
       localStorage.clear();
@@ -230,7 +223,6 @@ export default function App() {
     }
   };
 
-  // Удаление аккаунта
   const handleDeleteAccount = async () => {
     if (window.confirm('Вы уверены, что хотите безвозвратно удалить свой профиль?')) {
       if (userProfile?.id) {
@@ -306,17 +298,17 @@ export default function App() {
     );
   }
 
-  // 4.3. ЭКРАН ЗАСТАВКИ (Пока идет анимация — в фоне завершается тихая авторизация)
+  // 4.3. ЭКРАН ЗАСТАВКИ
   if (isLoading) {
     return <SplashLoader onFinish={handleSplashFinish} />;
   }
 
-  // 4.4. ВЫБОР ЯЗЫКА (Показывается ТОЛЬКО новым пользователям при первом входе)
+  // 4.4. ВЫБОР ЯЗЫКА (для новых пользователей)
   if (!language && !isRegistered) {
     return <LanguageSelector currentLang="kk" onSelectLanguage={handleSelectLanguage} />;
   }
 
-  // 4.5. АНКЕТА ПЕРВИЧНОЙ РЕГИСТРАЦИИ (ТОЛЬКО для новых атлетов)
+  // 4.5. АНКЕТА ПЕРВИЧНОЙ РЕГИСТРАЦИИ
   if (!isRegistered) {
     return (
       <RegisterProfilePage 
@@ -326,7 +318,7 @@ export default function App() {
     );
   }
 
-  // 4.6. ОБЯЗАТЕЛЬНЫЙ ЮРИДИЧЕСКИЙ БАРЬЕР (7 документов при первом входе)
+  // 4.6. ОБЯЗАТЕЛЬНЫЙ ЮРИДИЧЕСКИЙ БАРЬЕР
   if (!hasAcceptedLegal) {
     return (
       <LegalDocsPage 
@@ -336,7 +328,7 @@ export default function App() {
     );
   }
 
-  // 4.7. ОСНОВНОЕ ПРИЛОЖЕНИЕ (Для авторизованного атлета открывается мгновенно)
+  // 4.7. ОСНОВНОЕ ПРИЛОЖЕНИЕ
   const navigationTabs = [
     { id: 'home', label: t.nav.home, icon: Home },
     { id: 'gymbro', label: t.nav.gymbro, icon: Users },
