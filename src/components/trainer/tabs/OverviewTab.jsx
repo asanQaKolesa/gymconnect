@@ -20,7 +20,8 @@ import {
   Users,
   Send,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  ArrowLeft
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { sendStudentNotification } from '../../../utils/telegramNotifications';
@@ -139,7 +140,7 @@ export default function OverviewTab({
     { day: 'Вс', count: 1, percent: 15, isToday: todayDayIdx === 0 }
   ];
 
-  // Списание тренировки: статус фиксируется и кнопки скрываются
+  // Списание тренировки тренером
   const handleMarkCompleted = async (e, id) => {
     e.stopPropagation();
     const targetItem = todaySchedule.find(s => s.id === id);
@@ -147,7 +148,6 @@ export default function OverviewTab({
 
     const newRemaining = Math.max(0, targetItem.remaining - 1);
 
-    // 1. Фиксируем проведение в памяти дня
     try {
       const key = `gymconnect_completed_today_${todayDateStr}`;
       const saved = localStorage.getItem(key);
@@ -160,7 +160,6 @@ export default function OverviewTab({
       console.warn(err);
     }
 
-    // 2. Обновляем статус на «проведено»
     setTodaySchedule(prev => prev.map(item => {
       if (item.id === id) {
         return { ...item, status: 'completed', remaining: newRemaining };
@@ -168,7 +167,6 @@ export default function OverviewTab({
       return item;
     }));
 
-    // 3. Списываем занятие в Supabase
     try {
       await supabase
         .from('profiles')
@@ -182,7 +180,6 @@ export default function OverviewTab({
     }
   };
 
-  // Фиксация пропуска занятия
   const handleMarkCanceled = (e, id) => {
     e.stopPropagation();
     setTodaySchedule(prev => prev.map(item => {
@@ -193,9 +190,15 @@ export default function OverviewTab({
     }));
   };
 
-  // Возможность отменить отметку, если нажали случайно
-  const handleResetStatus = (e, id) => {
+  // ОТМЕНА СПИСАНИЯ (+1 ТРЕНИРОВКА ВОЗВРАЩАЕТСЯ НА БАЛАНС В SUPABASE)
+  const handleRestoreCompletedSession = async (e, id) => {
     e.stopPropagation();
+    const targetItem = todaySchedule.find(s => s.id === id);
+    if (!targetItem) return;
+
+    const restoredRemaining = targetItem.remaining + 1;
+
+    // 1. Убираем ID из памяти проведенных за сегодня
     try {
       const key = `gymconnect_completed_today_${todayDateStr}`;
       const saved = localStorage.getItem(key);
@@ -205,15 +208,29 @@ export default function OverviewTab({
       }
     } catch (err) {}
 
+    // 2. Возвращаем карточку в статус «Ожидается»
     setTodaySchedule(prev => prev.map(item => {
       if (item.id === id) {
-        return { ...item, status: 'pending' };
+        return { ...item, status: 'pending', remaining: restoredRemaining };
       }
       return item;
     }));
+
+    // 3. Возвращаем +1 тренировку в Supabase
+    try {
+      await supabase
+        .from('profiles')
+        .update({ 
+          left_trainings: restoredRemaining,
+          remaining_workouts: restoredRemaining 
+        })
+        .eq('id', id);
+    } catch (err) {
+      console.warn('Ошибка возврата тренировки в Supabase:', err);
+    }
   };
 
-  // ОТПРАВКА НАПОМИНАНИЯ В TELEGRAM УЧЕНИКУ
+  // ОТПРАВКА НАПОМИНАНИЯ ЧЕРЕЗ TELEGRAM-БОТ
   const handleSendTelegramReminder = async (student, type) => {
     const studentTgId = student.telegram_id || student.rawStudent?.telegram_id;
     const studentUsername = student.username || student.rawStudent?.username;
@@ -230,18 +247,22 @@ export default function OverviewTab({
 
     setReminderFeedback('Отправка через Telegram бот...');
 
-    const res = await sendStudentNotification({
-      studentTelegramId: studentTgId,
-      studentUsername: studentUsername,
-      studentId: student.id,
-      title,
-      message
-    });
+    try {
+      const res = await sendStudentNotification({
+        studentTelegramId: studentTgId,
+        studentUsername: studentUsername,
+        studentId: student.id,
+        title,
+        message
+      });
 
-    if (res && (res.success || res.ok)) {
-      setReminderFeedback(`✅ Сообщение доставлено в Telegram ${student.first_name}!`);
-    } else {
-      setReminderFeedback(`⚠️ ${res?.error || 'Не удалось отправить. Проверьте /start в боте.'}`);
+      if (res && (res.success || res.ok)) {
+        setReminderFeedback(`✅ Сообщение успешно доставлено в Telegram атлету!`);
+      } else {
+        setReminderFeedback(`⚠️ ${res?.error || 'Не удалось отправить. Атлету нужно нажать /start в @gymconnect_ala_bot'}`);
+      }
+    } catch (err) {
+      setReminderFeedback(`⚠️ Ошибка: ${err.message}`);
     }
 
     setTimeout(() => setReminderFeedback(null), 5000);
@@ -263,14 +284,16 @@ export default function OverviewTab({
     let successCount = 0;
 
     for (const st of todaySchedule) {
-      const res = await sendStudentNotification({
-        studentTelegramId: st.telegram_id || st.rawStudent?.telegram_id,
-        studentUsername: st.username || st.rawStudent?.username,
-        studentId: st.id,
-        title: 'Перенос тренировки',
-        message: `Уважаемый атлет! По техническим причинам меня сегодня не будет в зале. Ваше занятие сохраняется и переносится без сгорания. Согласуем удобное время в личных сообщениях!`
-      });
-      if (res && (res.success || res.ok)) successCount++;
+      try {
+        const res = await sendStudentNotification({
+          studentTelegramId: st.telegram_id || st.rawStudent?.telegram_id,
+          studentUsername: st.username || st.rawStudent?.username,
+          studentId: st.id,
+          title: 'Перенос тренировки',
+          message: `Уважаемый атлет! По техническим причинам меня сегодня не будет в зале. Ваше занятие сохраняется и переносится без сгорания. Согласуем удобное время в личных сообщениях!`
+        });
+        if (res && (res.success || res.ok)) successCount++;
+      } catch (e) {}
     }
 
     setReminderFeedback(`✅ Доставлено ${successCount} из ${todaySchedule.length} учеников в Telegram!`);
@@ -506,14 +529,13 @@ export default function OverviewTab({
                   }`}
                   title="Открыть профиль ученика"
                 >
-                  {/* Верхняя строка: Время, Онлайн (если не в зале), Отметка явки ученика */}
+                  {/* Верхняя строка */}
                   <div className="flex items-center justify-between gap-2 border-b border-slate-200/50 pb-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded-lg border border-slate-200/80">
                         {item.time}
                       </span>
 
-                      {/* Плашка выводится ТОЛЬКО если тренировка онлайн */}
                       {item.format === 'online' && (
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/60">
                           Онлайн 🌐
@@ -533,7 +555,6 @@ export default function OverviewTab({
                       )}
                     </div>
 
-                    {/* Статус в углу карточки */}
                     <div className="flex items-center gap-1 shrink-0">
                       {isCompleted && (
                         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
@@ -553,7 +574,7 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  {/* Средняя часть: Имя, Локация, Фокус */}
+                  {/* Средняя часть */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-0.5 overflow-hidden">
                       <div className="flex items-center gap-1">
@@ -578,54 +599,58 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  {/* Нижняя часть: Кнопки скрываются после проведения! */}
+                  {/* Нижняя часть: Кнопки или статус проведения с возможностью отмены */}
                   <div className="pt-1">
                     {isCompleted ? (
-                      /* ЕСЛИ ТРЕНИРОВКА ПРОВЕДЕНА: ПОКАЗЫВАЕТСЯ ЗАФИКСИРОВАННЫЙ ШТАМП */
+                      /* ТРЕНИРОВКА ПРОВЕДЕНА: ПОКАЗЫВАЕТСЯ ШТАМП + КНОПКА ВОЗВРАТА ЗАНЯТИЯ */
                       <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
                         <span className="font-bold text-emerald-800 flex items-center gap-1.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                          <span>Тренировка проведена и списана</span>
+                          <span>Занятие списано</span>
                         </span>
-                        <div className="flex items-center gap-2">
+                        
+                        <div className="flex items-center gap-1.5">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedStudentForWorkout(item);
                             }}
-                            className="text-[10.5px] font-semibold text-blue-600 hover:underline"
+                            className="text-[10px] font-semibold text-blue-600 hover:underline px-1.5 py-0.5"
                           >
                             План дня
                           </button>
+                          
+                          {/* Кнопка отмены списания с возвратом +1 тренировки */}
                           <button
                             type="button"
-                            onClick={(e) => handleResetStatus(e, item.id)}
-                            className="text-[10.5px] text-slate-400 hover:text-rose-600 transition-colors p-1"
-                            title="Отменить проведение"
+                            onClick={(e) => handleRestoreCompletedSession(e, item.id)}
+                            className="px-2 py-1 bg-white border border-rose-200 text-rose-700 hover:bg-rose-50 rounded-lg text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-all"
+                            title="Вернуть тренировку на баланс ученика"
                           >
-                            <RotateCcw className="w-3.5 h-3.5" />
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Вернуть (+1)</span>
                           </button>
                         </div>
                       </div>
                     ) : isCanceled ? (
-                      /* ЕСЛИ ЗАФИКСИРОВАН ПРОПУСК */
+                      /* ПРОПУСК ЗАФИКСИРОВАН */
                       <div className="p-2 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between text-xs">
                         <span className="font-bold text-rose-800 flex items-center gap-1.5">
                           <XCircle className="w-4 h-4 text-rose-600" />
-                          <span>Пропуск занятия зафиксирован</span>
+                          <span>Пропуск занятия</span>
                         </span>
                         <button
                           type="button"
-                          onClick={(e) => handleResetStatus(e, item.id)}
-                          className="text-[10.5px] text-slate-400 hover:text-slate-600 p-1"
-                          title="Сбросить статус"
+                          onClick={(e) => handleRestoreCompletedSession(e, item.id)}
+                          className="px-2 py-1 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-lg text-[10px] font-bold flex items-center gap-1"
                         >
-                          <RotateCcw className="w-3.5 h-3.5" />
+                          <RotateCcw className="w-3 h-3" />
+                          <span>Сбросить</span>
                         </button>
                       </div>
                     ) : (
-                      /* ЕСЛИ ЕЩЕ НЕ ПРОВЕДЕНО: АКТИВНЫЕ КНОПКИ В ОДНУ СТРОКУ */
+                      /* КНОПКИ ДЕЙСТВИЯ */
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
@@ -666,9 +691,6 @@ export default function OverviewTab({
             <div className="p-8 text-center text-slate-400 space-y-2 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
               <Users className="w-7 h-7 mx-auto text-slate-300" />
               <p className="font-semibold text-xs text-slate-700">На сегодня ({todayFullName}) учеников нет</p>
-              <p className="text-[10.5px] text-slate-400 max-w-xs mx-auto">
-                Когда ученики привязываются к вашему профилю в GymConnect, их график автоматически отображается здесь.
-              </p>
               <button
                 type="button"
                 onClick={() => onAddStudentClick ? onAddStudentClick() : setIsLocalAddModalOpen(true)}
@@ -752,36 +774,46 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* ================= МОДАЛКА БЫСТРЫХ НАПОМИНАНИЙ ================= */}
+      {/* ================= ПОЛНОЭКРАННЫЙ РЕЖИМ БЫСТРЫХ НАПОМИНАНИЙ (НА ВЕСЬ ЭКРАН) ================= */}
       {isReminderModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col justify-between overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <BellRing className="w-4 h-4 text-blue-600" />
-                <h3 className="text-xs font-semibold text-slate-900">Быстрые напоминания</h3>
-              </div>
+        <div className="fixed inset-0 z-[120] bg-[#F2F2F7] flex flex-col min-h-screen w-full overflow-y-auto select-none animate-in fade-in duration-150">
+          
+          {/* Верхний бар с кнопкой возврата назад в Обзор KPI */}
+          <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 shadow-xs">
+            <div className="max-w-md mx-auto flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => setIsReminderModalOpen(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 cursor-pointer"
+                className="flex items-center gap-1.5 py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold active:scale-95 transition-all cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <ArrowLeft className="w-4 h-4 text-slate-600" />
+                <span>Назад в Обзор KPI</span>
               </button>
-            </div>
 
+              <h2 className="text-xs font-bold text-slate-900 truncate">
+                Быстрые напоминания
+              </h2>
+
+              <div className="w-12" />
+            </div>
+          </header>
+
+          <main className="p-3.5 space-y-3.5 max-w-md mx-auto w-full pb-20">
+            
+            {/* Статус ответа отправки через Telegram Bot API */}
             {reminderFeedback && (
-              <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[11px] font-semibold text-center animate-in fade-in">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl text-blue-900 text-xs font-semibold text-center animate-in fade-in">
                 {reminderFeedback}
               </div>
             )}
 
-            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl">
+            {/* 3 Сценария */}
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/80 rounded-2xl">
               <button
                 type="button"
                 onClick={() => setReminderType('today')}
-                className={`py-2 text-[10.5px] font-medium rounded-xl text-center transition-all cursor-pointer ${
-                  reminderType === 'today' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600'
+                className={`py-2 text-[10.5px] font-bold rounded-xl text-center transition-all cursor-pointer ${
+                  reminderType === 'today' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
                 }`}
               >
                 О тренировке
@@ -789,8 +821,8 @@ export default function OverviewTab({
               <button
                 type="button"
                 onClick={() => setReminderType('payment')}
-                className={`py-2 text-[10.5px] font-medium rounded-xl text-center transition-all cursor-pointer ${
-                  reminderType === 'payment' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600'
+                className={`py-2 text-[10.5px] font-bold rounded-xl text-center transition-all cursor-pointer ${
+                  reminderType === 'payment' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
                 }`}
               >
                 Об оплате
@@ -798,65 +830,77 @@ export default function OverviewTab({
               <button
                 type="button"
                 onClick={() => setReminderType('absence')}
-                className={`py-2 text-[10.5px] font-medium rounded-xl text-center transition-all cursor-pointer ${
-                  reminderType === 'absence' ? 'bg-white text-rose-600 shadow-xs font-semibold' : 'text-slate-600'
+                className={`py-2 text-[10.5px] font-bold rounded-xl text-center transition-all cursor-pointer ${
+                  reminderType === 'absence' ? 'bg-white text-rose-600 shadow-xs' : 'text-slate-600'
                 }`}
               >
                 Не будет в зале
               </button>
             </div>
 
-            <div className="space-y-2 max-h-60 overflow-y-auto">
+            <div className="space-y-2.5">
+              
               {/* СЦЕНАРИЙ 1: О ТРЕНИРОВКЕ */}
               {reminderType === 'today' && (
                 <>
-                  <p className="text-[10px] text-slate-400 px-1">Записанные на сегодня ({todayShortName}):</p>
+                  <p className="text-[10px] text-slate-400 px-1 uppercase tracking-wider font-bold">
+                    Записанные на сегодня ({todayShortName}):
+                  </p>
                   {todaySchedule.length > 0 ? (
                     todaySchedule.map(st => (
-                      <div key={st.id} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                      <div key={st.id} className="p-4 bg-white rounded-3xl border border-slate-200/80 shadow-2xs space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold text-slate-900">{st.name}</p>
-                          <span className="text-[10.5px] font-mono text-slate-500">{st.time}</span>
+                          <div>
+                            <p className="text-xs font-bold text-slate-900">{st.name}</p>
+                            <p className="text-[10px] text-slate-400">Слот: {st.time}</p>
+                          </div>
+                          <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+                            {st.gym}
+                          </span>
                         </div>
 
-                        <div className="flex gap-1.5 pt-0.5">
+                        <div className="flex gap-2 pt-1 border-t border-slate-100">
                           <button
                             type="button"
                             onClick={() => handleSendTelegramReminder(st, 'workout')}
-                            className="flex-1 py-1.5 bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#229ED9] rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1 border border-[#229ED9]/20 active:scale-95 transition-all cursor-pointer"
+                            className="flex-1 py-2 bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#229ED9] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-[#229ED9]/20 active:scale-95 transition-all cursor-pointer"
                           >
-                            <Send className="w-3 h-3" />
-                            <span>Telegram</span>
+                            <Send className="w-3.5 h-3.5" />
+                            <span>В Telegram</span>
                           </button>
 
                           <button
                             type="button"
-                            onClick={() => handleSendWhatsAppReminder(st.phone, `Привет, ${st.name}! Напоминаю о сегодняшней тренировке в ${st.time}. Жду вовремя! 💪`)}
-                            className="flex-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1 border border-emerald-200 active:scale-95 transition-all cursor-pointer"
+                            onClick={() => handleSendWhatsAppReminder(st.phone, `Привет, ${st.first_name}! Напоминаю о сегодняшней тренировке в ${st.time}. Жду вовремя! 💪`)}
+                            className="flex-1 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-emerald-200 active:scale-95 transition-all cursor-pointer"
                           >
-                            <MessageCircle className="w-3 h-3" />
-                            <span>WhatsApp</span>
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>В WhatsApp</span>
                           </button>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-center py-4 text-slate-400 text-xs">Нет тренировок на сегодня.</p>
+                    <div className="p-8 text-center text-slate-400 text-xs bg-white rounded-3xl border border-slate-200">
+                      Нет запланированных тренировок на сегодня.
+                    </div>
                   )}
                 </>
               )}
 
-              {/* СЦЕНАРИЙ 2: ОБ ОПЛАТЕ АБОНЕМЕНТА */}
+              {/* СЦЕНАРИЙ 2: ОБ ОПЛАТЕ */}
               {reminderType === 'payment' && (
                 <>
-                  <p className="text-[10px] text-slate-400 px-1">Ученики с остатком ≤ 1 занятий или долгом:</p>
+                  <p className="text-[10px] text-slate-400 px-1 uppercase tracking-wider font-bold">
+                    Ученики с остатком ≤ 1 занятий или задолженностью:
+                  </p>
                   {students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 1 || s.payment_status === 'pending').length > 0 ? (
                     students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 1 || s.payment_status === 'pending').map(st => {
                       const left = st.left_trainings ?? 1;
                       const price = Number(st.monthly_price || 70000).toLocaleString();
 
                       return (
-                        <div key={st.id} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                        <div key={st.id} className="p-4 bg-white rounded-3xl border border-slate-200/80 shadow-2xs space-y-2.5">
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-xs font-bold text-slate-900">{st.first_name} {st.last_name || ''}</p>
@@ -867,57 +911,60 @@ export default function OverviewTab({
                             </span>
                           </div>
 
-                          <div className="flex gap-1.5 pt-0.5">
+                          <div className="flex gap-2 pt-1 border-t border-slate-100">
                             <button
                               type="button"
                               onClick={() => handleSendTelegramReminder({ ...st, remaining: left }, 'payment')}
-                              className="flex-1 py-1.5 bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#229ED9] rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1 border border-[#229ED9]/20 active:scale-95 transition-all cursor-pointer"
+                              className="flex-1 py-2 bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#229ED9] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-[#229ED9]/20 active:scale-95 transition-all cursor-pointer"
                             >
-                              <Send className="w-3 h-3" />
-                              <span>Telegram</span>
+                              <Send className="w-3.5 h-3.5" />
+                              <span>В Telegram</span>
                             </button>
 
                             <button
                               type="button"
                               onClick={() => handleSendWhatsAppReminder(st.phone || st.whatsapp || '', `Привет, ${st.first_name}! По твоему абонементу осталось ${left} зан. Сумма к оплате за новый блок: ${price} ₸. Давай забронируем график на следующий период!`)}
-                              className="flex-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1 border border-emerald-200 active:scale-95 transition-all cursor-pointer"
+                              className="flex-1 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-emerald-200 active:scale-95 transition-all cursor-pointer"
                             >
-                              <MessageCircle className="w-3 h-3" />
-                              <span>WhatsApp</span>
+                              <MessageCircle className="w-3.5 h-3.5" />
+                              <span>В WhatsApp</span>
                             </button>
                           </div>
                         </div>
                       );
                     })
                   ) : (
-                    <p className="text-center py-4 text-slate-400 text-xs">У всех активных подопечных достаточный баланс занятий.</p>
+                    <div className="p-8 text-center text-slate-400 text-xs bg-white rounded-3xl border border-slate-200">
+                      У всех активных подопечных достаточный баланс занятий.
+                    </div>
                   )}
                 </>
               )}
 
               {/* СЦЕНАРИЙ 3: НЕ БУДЕТ В ЗАЛЕ */}
               {reminderType === 'absence' && (
-                <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-2xl space-y-2.5">
+                <div className="p-4 bg-white rounded-3xl border border-rose-200 shadow-2xs space-y-3">
                   <div className="flex items-center gap-2 text-rose-800 font-bold">
                     <AlertTriangle className="w-4 h-4 text-rose-600" />
-                    <span>Оповещение об отмене занятий</span>
+                    <span className="text-xs">Оповещение об отмене занятий</span>
                   </div>
-                  <p className="text-[11px] text-rose-900 leading-relaxed">
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
                     Бот отправит всем ученикам, записанным на сегодня ({todaySchedule.length} чел.), сообщение о переносе тренировок без сгорания.
                   </p>
 
                   <button
                     type="button"
                     onClick={handleMassAbsenceBroadcast}
-                    className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold active:scale-98 transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                    className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold active:scale-98 transition-all cursor-pointer shadow-xs flex items-center justify-center gap-2"
                   >
-                    <Send className="w-3.5 h-3.5" />
+                    <Send className="w-4 h-4" />
                     <span>Разослать всем через бота в Telegram</span>
                   </button>
                 </div>
               )}
             </div>
-          </div>
+
+          </main>
         </div>
       )}
 
