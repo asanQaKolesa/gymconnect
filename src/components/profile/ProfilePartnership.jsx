@@ -24,7 +24,7 @@ export default function ProfilePartnership({ onOpenTrainer }) {
   return (
     <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-2.5 select-none">
       
-      {/* Заголовок строго в одну строку */}
+      {/* Заголовок блока сотрудничества */}
       <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-100 whitespace-nowrap">
         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
           Сотрудничество
@@ -36,11 +36,11 @@ export default function ProfilePartnership({ onOpenTrainer }) {
 
       <div className="space-y-1.5 pt-1">
         
-        {/* 1. Для тренеров (Trainer CRM) — гарантированный переход */}
+        {/* 1. Вход в CoachOS CRM для тренеров */}
         <button
           type="button"
           onClick={handleOpenTrainerPortal}
-          className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all"
+          className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all cursor-pointer"
         >
           <div className="flex items-center gap-2.5 text-left">
             <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center shrink-0 shadow-sm text-slate-700">
@@ -48,10 +48,10 @@ export default function ProfilePartnership({ onOpenTrainer }) {
             </div>
             <div>
               <p className="text-xs font-bold text-slate-900 leading-tight">
-                Для тренеров (Trainer CRM)
+                Для тренеров (CoachOS CRM)
               </p>
               <p className="text-[10px] text-slate-500 mt-0.5">
-                Личный кабинет, расписание тренировок и база подопечных
+                Личный кабинет наставника, расписание и база подопечных
               </p>
             </div>
           </div>
@@ -62,7 +62,7 @@ export default function ProfilePartnership({ onOpenTrainer }) {
         <button
           type="button"
           onClick={() => setPartnerModal('gyms')}
-          className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all"
+          className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all cursor-pointer"
         >
           <div className="flex items-center gap-2.5 text-left">
             <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center shrink-0 shadow-sm text-slate-700">
@@ -84,7 +84,7 @@ export default function ProfilePartnership({ onOpenTrainer }) {
         <button
           type="button"
           onClick={() => setPartnerModal('shops')}
-          className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all"
+          className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all cursor-pointer"
         >
           <div className="flex items-center gap-2.5 text-left">
             <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center shrink-0 shadow-sm text-slate-700">
@@ -106,7 +106,7 @@ export default function ProfilePartnership({ onOpenTrainer }) {
         <button
           type="button"
           onClick={() => setPartnerModal('specialists')}
-          className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all"
+          className="w-full p-2.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl flex items-center justify-between text-slate-800 active:scale-98 transition-all cursor-pointer"
         >
           <div className="flex items-center gap-2.5 text-left">
             <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center shrink-0 shadow-sm text-slate-700">
@@ -146,7 +146,7 @@ export default function ProfilePartnership({ onOpenTrainer }) {
               <button
                 type="button"
                 onClick={() => setPartnerModal(null)}
-                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -166,13 +166,13 @@ export default function ProfilePartnership({ onOpenTrainer }) {
             </div>
 
             <a
-              href="https://t.me/gymconnect_kz"
+              href="https://t.me/asanali_kk"
               target="_blank"
               rel="noreferrer"
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 active:scale-98"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 active:scale-98 cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              <span>Обсудить условия в Telegram</span>
+              <span>Обсудить условия с куратором</span>
             </a>
           </div>
         </div>
