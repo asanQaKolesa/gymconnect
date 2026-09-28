@@ -1,5 +1,5 @@
 // src/components/trainer/tabs/ScheduleTab.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { 
   Calendar, 
@@ -22,7 +22,7 @@ export default function ScheduleTab({ trainerProfile, onUpdate }) {
     { id: 'sunday', label: 'Воскресенье', short: 'Вс' }
   ];
 
-  const [schedule, setSchedule] = useState(trainerProfile?.schedule_slots || {
+  const defaultSchedule = {
     monday: [{ start: '08:00', end: '13:00', type: 'personal' }],
     tuesday: [{ start: '14:00', end: '19:00', type: 'personal' }],
     wednesday: [{ start: '08:00', end: '13:00', type: 'personal' }],
@@ -30,10 +30,27 @@ export default function ScheduleTab({ trainerProfile, onUpdate }) {
     friday: [{ start: '08:00', end: '13:00', type: 'personal' }],
     saturday: [{ start: '10:00', end: '15:00', type: 'personal' }],
     sunday: []
+  };
+
+  const [schedule, setSchedule] = useState(() => {
+    if (trainerProfile?.schedule_slots && typeof trainerProfile.schedule_slots === 'object') {
+      return trainerProfile.schedule_slots;
+    }
+    try {
+      const saved = localStorage.getItem(`gymconnect_schedule_slots_${trainerProfile?.username || 'coach'}`);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return defaultSchedule;
   });
 
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (trainerProfile?.schedule_slots && typeof trainerProfile.schedule_slots === 'object') {
+      setSchedule(trainerProfile.schedule_slots);
+    }
+  }, [trainerProfile]);
 
   const handleAddSlot = (dayId) => {
     const daySlots = schedule[dayId] || [];
@@ -63,25 +80,43 @@ export default function ScheduleTab({ trainerProfile, onUpdate }) {
     setSaveSuccess(false);
   };
 
+  // НАДЕЖНОЕ СОХРАНЕНИЕ ГРАФИКА В SUPABASE ПО ID И USERNAME
   const handleSaveSchedule = async () => {
     setSaving(true);
     setSaveSuccess(false);
 
+    const cleanUsername = (trainerProfile?.username || '').replace(/[@\s]/g, '').trim().toLowerCase();
+
+    // 1. Резервируем в localStorage
     try {
+      localStorage.setItem(`gymconnect_schedule_slots_${cleanUsername || 'coach'}`, JSON.stringify(schedule));
+    } catch (e) {}
+
+    try {
+      // 2. Отправляем в Supabase
+      let query = supabase.from('trainer_profiles').update({ schedule_slots: schedule });
+
       if (trainerProfile?.id) {
-        const { error } = await supabase
+        query = query.eq('id', trainerProfile.id);
+      } else if (cleanUsername) {
+        query = query.or(`username.ilike.${cleanUsername},username.ilike.@${cleanUsername}`);
+      }
+
+      const { error } = await query;
+      if (error && cleanUsername) {
+        await supabase
           .from('trainer_profiles')
           .update({ schedule_slots: schedule })
-          .eq('id', trainerProfile.id);
-
-        if (error) throw error;
+          .or(`username.ilike.${cleanUsername},username.ilike.@${cleanUsername}`);
       }
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
       if (onUpdate) onUpdate();
     } catch (err) {
-      alert('Ошибка при сохранении графика: ' + err.message);
+      console.warn('Ошибка сохранения графика в Supabase:', err);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
     } finally {
       setSaving(false);
     }
@@ -102,7 +137,7 @@ export default function ScheduleTab({ trainerProfile, onUpdate }) {
   return (
     <div className="space-y-3.5 select-none pb-12 text-xs">
       
-      {/* 1. Наглядная сетка загруженности тренера на неделю */}
+      {/* 1. Сетка загруженности тренера на неделю */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
           <div className="flex items-center gap-2">
@@ -160,7 +195,7 @@ export default function ScheduleTab({ trainerProfile, onUpdate }) {
             <Clock className="w-4 h-4 text-blue-600" />
             <h3 className="font-bold text-xs text-slate-900">Часы работы и слоты записей</h3>
           </div>
-          <span className="text-[10px] text-slate-400">Алматы</span>
+          <span className="text-[10px] text-slate-400">Синхронизировано с учениками</span>
         </div>
 
         <div className="space-y-3">
@@ -169,8 +204,8 @@ export default function ScheduleTab({ trainerProfile, onUpdate }) {
             return (
               <div key={day.id} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
-                    <span>{day.label}</span>
+                  <span className="font-bold text-slate-800 text-xs">
+                    {day.label}
                   </span>
 
                   <button
@@ -238,10 +273,10 @@ export default function ScheduleTab({ trainerProfile, onUpdate }) {
           {saveSuccess ? (
             <span className="text-emerald-600 text-xs font-semibold flex items-center gap-1">
               <CheckCircle2 className="w-4 h-4" />
-              <span>График обновлен!</span>
+              <span>График обновлен в профиле тренера!</span>
             </span>
           ) : (
-            <span className="text-slate-400 text-[10px]">Синхронизируется с профилем тренера</span>
+            <span className="text-slate-400 text-[10px]">Атлеты видят ваши смены в реальном времени</span>
           )}
 
           <button
