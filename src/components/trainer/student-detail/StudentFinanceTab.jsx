@@ -40,21 +40,36 @@ export default function StudentFinanceTab({ student, onUpdate }) {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [notificationFeedback, setNotificationFeedback] = useState(null);
 
-  // Инициализация при открытии карточки атлета
+  // Инициализация при открытии карточки атлета с защитой от null / "null"
   useEffect(() => {
     if (student) {
-      const left = student.left_trainings !== undefined 
+      const rawLeft = student.left_trainings !== undefined && student.left_trainings !== null
         ? student.left_trainings 
-        : (student.remaining_workouts !== undefined ? student.remaining_workouts : 12);
-      setRemainingWorkouts(Number(left));
-      setTotalWorkouts(String(student.total_trainings || 12));
-      setMonthlyPrice(String(student.monthly_price !== undefined ? student.monthly_price : 70000));
+        : (student.remaining_workouts !== undefined && student.remaining_workouts !== null ? student.remaining_workouts : 12);
+      
+      const parsedLeft = Number(rawLeft);
+      setRemainingWorkouts(Number.isFinite(parsedLeft) ? parsedLeft : 12);
+
+      const rawTotal = student.total_trainings !== undefined && student.total_trainings !== null && student.total_trainings !== ''
+        ? String(student.total_trainings)
+        : '12';
+      setTotalWorkouts(rawTotal === 'null' ? '12' : rawTotal);
+
+      // Полная защита от отображения строки "null"
+      let cleanPrice = '70000';
+      if (student.monthly_price !== undefined && student.monthly_price !== null && String(student.monthly_price).trim() !== '' && String(student.monthly_price).trim() !== 'null') {
+        cleanPrice = String(student.monthly_price).replace(/\D/g, '');
+      }
+      setMonthlyPrice(cleanPrice || '70000');
+
       setPaymentStatus(student.payment_status || 'paid');
       setPackageType(student.package_type || 'personal');
       
       if (student.start_date) setStartDate(student.start_date);
       if (student.end_date) setEndDate(student.end_date);
-      if (student.is_expiring !== undefined) setIsExpiring(Boolean(student.is_expiring));
+      if (student.is_expiring !== undefined && student.is_expiring !== null) {
+        setIsExpiring(Boolean(student.is_expiring));
+      }
     }
   }, [student]);
 
@@ -138,11 +153,14 @@ export default function StudentFinanceTab({ student, onUpdate }) {
     setSaveSuccess(false);
 
     try {
+      const parsedPrice = Number(monthlyPrice);
+      const safePrice = Number.isFinite(parsedPrice) ? parsedPrice : 70000;
+
       const payload = {
         left_trainings: Number(remainingWorkouts) || 0,
         remaining_workouts: Number(remainingWorkouts) || 0,
         total_trainings: Number(totalWorkouts) || 12,
-        monthly_price: Number(monthlyPrice) || 0,
+        monthly_price: safePrice,
         payment_status: paymentStatus
       };
 
@@ -292,7 +310,7 @@ export default function StudentFinanceTab({ student, onUpdate }) {
         </div>
       </div>
 
-      {/* 3. СГОРАЕМОСТЬ И СРОКИ ДЕЙСТВИЯ */}
+      {/* 3. СГОРАЕМОСТЬ И СРОКИ ДЕЙСТВИЯ (АДАПТИВНАЯ КОМПОНОВКА БЕЗ НАЛОЖЕНИЯ) */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <span className="font-bold text-slate-900 text-xs">Правила сгорания и срок</span>
@@ -310,57 +328,62 @@ export default function StudentFinanceTab({ student, onUpdate }) {
           )}
         </div>
 
-        <div className="flex items-center gap-1 p-0.5 bg-slate-200/70 rounded-xl w-fit">
+        <div className="flex items-center gap-1 p-0.5 bg-slate-200/70 rounded-xl w-full">
           <button
             type="button"
             onClick={() => setIsExpiring(true)}
-            className={`px-3 py-1.5 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer ${
+            className={`flex-1 py-1.5 px-2 rounded-lg text-[10.5px] font-bold text-center transition-all cursor-pointer truncate ${
               isExpiring 
                 ? 'bg-white text-blue-700 shadow-2xs' 
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Сгораемый блок (со сроком)
+            Сгораемый блок
           </button>
           <button
             type="button"
             onClick={() => setIsExpiring(false)}
-            className={`px-3 py-1.5 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer ${
+            className={`flex-1 py-1.5 px-2 rounded-lg text-[10.5px] font-bold text-center transition-all cursor-pointer truncate ${
               !isExpiring 
                 ? 'bg-white text-blue-700 shadow-2xs' 
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Без сгорания (бессрочный)
+            Бессрочный
           </button>
         </div>
 
+        {/* Адаптивный блок ввода дат — поля расположены вертикально, чтобы date-picker не распирал карточку */}
         {isExpiring ? (
-          <div className="grid grid-cols-2 gap-2 pt-1 animate-in fade-in">
-            <div>
-              <label className="text-[10px] font-semibold text-slate-500 block mb-1">
+          <div className="space-y-2.5 pt-1 animate-in fade-in">
+            <div className="w-full">
+              <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">
                 Дата старта блока
               </label>
-              <input
-                type="date"
-                value={startDate}
-                onFocus={handleInputFocus}
-                onChange={e => setStartDate(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-900 caret-blue-600 focus:outline-none focus:border-blue-600 focus:bg-white"
-              />
+              <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 focus-within:border-blue-600 focus-within:bg-white transition-all">
+                <input
+                  type="date"
+                  value={startDate}
+                  onFocus={handleInputFocus}
+                  onChange={e => setStartDate(e.target.value)}
+                  className="w-full min-w-0 max-w-full box-border px-3 py-2 text-xs font-mono font-medium text-slate-900 outline-none bg-transparent"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="text-[10px] font-semibold text-slate-500 block mb-1">
+            <div className="w-full">
+              <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">
                 Дата сгорания (конец)
               </label>
-              <input
-                type="date"
-                value={endDate}
-                onFocus={handleInputFocus}
-                onChange={e => setEndDate(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-rose-700 caret-blue-600 focus:outline-none focus:border-blue-600 focus:bg-white"
-              />
+              <div className="relative w-full overflow-hidden rounded-xl border border-rose-200 bg-rose-50/40 focus-within:border-rose-500 focus-within:bg-white transition-all">
+                <input
+                  type="date"
+                  value={endDate}
+                  onFocus={handleInputFocus}
+                  onChange={e => setEndDate(e.target.value)}
+                  className="w-full min-w-0 max-w-full box-border px-3 py-2 text-xs font-mono font-bold text-rose-700 outline-none bg-transparent"
+                />
+              </div>
             </div>
           </div>
         ) : (
@@ -370,7 +393,7 @@ export default function StudentFinanceTab({ student, onUpdate }) {
         )}
       </div>
 
-      {/* 4. КАССОВЫЙ РАСЧЕТ И СТОИМОСТЬ */}
+      {/* 4. КАССОВЫЙ РАСЧЕТ И СТОИМОСТЬ (С ЗАЩИТОЙ ОТ NULL) */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
         <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">Кассовый расчет</p>
 
@@ -389,7 +412,7 @@ export default function StudentFinanceTab({ student, onUpdate }) {
                 const val = e.target.value.replace(/\D/g, '');
                 setMonthlyPrice(val);
               }}
-              placeholder="0"
+              placeholder="70000"
               className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-sm text-slate-900 caret-blue-600 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
             />
             <div className="flex gap-1 mt-1.5 flex-wrap">
