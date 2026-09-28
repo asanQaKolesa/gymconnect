@@ -8,7 +8,8 @@ import {
   ChevronRight, 
   AlertCircle,
   Calendar,
-  Wallet
+  Wallet,
+  MessageCircle
 } from 'lucide-react';
 import StudentDetailModal from '../components/StudentDetailModal';
 
@@ -16,8 +17,14 @@ export default function FinanceTab({ students = [], onUpdate }) {
   const [updatingId, setUpdatingId] = useState(null);
   const [selectedStudentForModal, setSelectedStudentForModal] = useState(null);
 
-  // Фильтрация и финансовые метрики
-  const activeStudents = students.filter(s => s.status === 'active' || !s.status);
+  // Корректная фильтрация: не отсекает атлетов с кастомными статусами
+  const isStudentActive = (s) => {
+    if (!s) return false;
+    const st = (s.status || '').toLowerCase().trim();
+    return st !== 'left' && st !== 'archived';
+  };
+
+  const activeStudents = students.filter(isStudentActive);
   
   // Общий потенциальный доход
   const totalPotential = activeStudents.reduce((sum, s) => sum + (Number(s.monthly_price) || 0), 0);
@@ -58,6 +65,20 @@ export default function FinanceTab({ students = [], onUpdate }) {
     }
   };
 
+  const handleRemindDebtWhatsApp = (e, student) => {
+    e.stopPropagation();
+    const phone = (student.phone || student.whatsapp || '').replace(/\D/g, '');
+    if (!phone) {
+      alert('У ученика не указан номер телефона');
+      return;
+    }
+    const price = Number(student.monthly_price || 70000).toLocaleString();
+    const text = encodeURIComponent(
+      `Привет, ${student.first_name}! Напоминаю об оплате тренировочного абонемента на сумму ${price} ₸. Выставить счет в Kaspi или скинуть реквизиты?`
+    );
+    window.open(`https://wa.me/7${phone.startsWith('7') ? phone.slice(1) : phone}?text=${text}`, '_blank');
+  };
+
   return (
     <div className="space-y-3.5 select-none pb-12 text-xs">
       
@@ -68,7 +89,7 @@ export default function FinanceTab({ students = [], onUpdate }) {
           <p className="text-lg font-bold text-emerald-600 font-mono">
             {paidEarnings.toLocaleString()} ₸
           </p>
-          <span className="text-[10px] text-slate-400 block">
+          <span className="text-[10px] text-slate-400 block font-normal">
             {activeStudents.filter(s => s.payment_status === 'paid' || !s.payment_status).length} учеников оплатили
           </span>
         </div>
@@ -78,7 +99,7 @@ export default function FinanceTab({ students = [], onUpdate }) {
           <p className="text-lg font-bold text-amber-600 font-mono">
             {pendingEarnings.toLocaleString()} ₸
           </p>
-          <span className="text-[10px] text-slate-400 block">
+          <span className="text-[10px] text-slate-400 block font-normal">
             {activeStudents.filter(s => s.payment_status === 'pending').length} задолженностей
           </span>
         </div>
@@ -89,7 +110,7 @@ export default function FinanceTab({ students = [], onUpdate }) {
         <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-center gap-2.5 text-amber-900 text-[11px]">
           <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
           <span>
-            У <b>{lowBalanceStudents.length}</b> учеников осталось ≤ 2 занятий. Пора предложить продление на новый месяц.
+            У <b>{lowBalanceStudents.length}</b> учеников осталось ≤ 2 занятий. Пора согласовать продление на новый месяц.
           </span>
         </div>
       )}
@@ -107,8 +128,8 @@ export default function FinanceTab({ students = [], onUpdate }) {
         </div>
 
         <div className="divide-y divide-slate-100">
-          {students.length > 0 ? (
-            students.map((student) => {
+          {activeStudents.length > 0 ? (
+            activeStudents.map((student) => {
               const left = student.left_trainings !== undefined 
                 ? student.left_trainings 
                 : (student.remaining_workouts !== undefined ? student.remaining_workouts : 12);
@@ -128,9 +149,9 @@ export default function FinanceTab({ students = [], onUpdate }) {
                           {student.first_name} {student.last_name || ''}
                         </h4>
                         <span className={`text-[9.5px] px-1.5 py-0.5 rounded-md font-semibold ${
-                          isPaid ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                          isPaid ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-100 text-amber-800'
                         }`}>
-                          {isPaid ? 'Оплачено' : 'Ожидает'}
+                          {isPaid ? 'Оплачено' : 'Долг'}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400">
@@ -150,27 +171,40 @@ export default function FinanceTab({ students = [], onUpdate }) {
                     </div>
                   </div>
 
-                  {/* Кнопка смены статуса оплаты */}
+                  {/* Кнопка смены статуса оплаты и кнопка напоминания */}
                   <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                     <span className="text-[10.5px] text-slate-400 flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       <span>Блок на {total} занятий</span>
                     </span>
 
-                    <button
-                      type="button"
-                      disabled={updatingId === student.id}
-                      onClick={(e) => handleTogglePaymentStatus(e, student)}
-                      className={`py-1 px-2.5 rounded-lg text-[10.5px] font-semibold transition-all border cursor-pointer active:scale-95 ${
-                        isPaid
-                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
-                          : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
-                      }`}
-                    >
-                      {updatingId === student.id 
-                        ? 'Сохранение...' 
-                        : isPaid ? 'Отменить оплату' : 'Отметить оплаченным'}
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      {!isPaid && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleRemindDebtWhatsApp(e, student)}
+                          className="py-1 px-2 rounded-lg text-[10.5px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          <span>Напомнить</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        disabled={updatingId === student.id}
+                        onClick={(e) => handleTogglePaymentStatus(e, student)}
+                        className={`py-1 px-2.5 rounded-lg text-[10.5px] font-semibold transition-all border cursor-pointer active:scale-95 ${
+                          isPaid
+                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
+                        }`}
+                      >
+                        {updatingId === student.id 
+                          ? '...' 
+                          : isPaid ? 'Отменить оплату' : 'Отметить оплаченным'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
