@@ -79,7 +79,7 @@ export default function ProfileTab({
   }
 
   return (
-    <div className="min-h-screen bg-[#F2F2F7] pb-24 pt-2.5 px-4 select-none">
+    <div className="w-full bg-[#F2F2F7] pb-36 pt-2.5 px-4 select-none overflow-y-visible">
       <div className="max-w-md mx-auto space-y-3">
         
         {/* 1. Шапка: Личный кабинет */}
