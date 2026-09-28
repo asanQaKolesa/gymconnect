@@ -17,10 +17,12 @@ import {
   MessageCircle, 
   ChevronRight,
   Clock,
-  UserPlus,
-  Users
+  Users,
+  Send,
+  AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
+import { sendStudentNotification } from '../../../utils/telegramNotifications';
 
 export default function OverviewTab({ 
   trainer, 
@@ -39,6 +41,7 @@ export default function OverviewTab({
   const [reminderType, setReminderType] = useState('today'); // 'today' | 'payment' | 'absence'
   const [isLocalAddModalOpen, setIsLocalAddModalOpen] = useState(false);
   const [selectedStudentForWorkout, setSelectedStudentForWorkout] = useState(null);
+  const [reminderFeedback, setReminderFeedback] = useState(null);
 
   // Форма добавления нового ученика
   const [newStudentForm, setNewStudentForm] = useState({
@@ -61,7 +64,7 @@ export default function OverviewTab({
   // Динамическое расписание на сегодня
   const [todaySchedule, setTodaySchedule] = useState([]);
 
-  // Загрузка и объединение данных учеников с защитой от сброса статуса проведенных
+  // Загрузка данных учеников с защитой от сброса статуса проведенных
   useEffect(() => {
     if (!students || students.length === 0) {
       setTodaySchedule([]);
@@ -79,7 +82,7 @@ export default function OverviewTab({
 
     const targetList = scheduledForToday.length > 0 ? scheduledForToday : activeStudents;
 
-    // Считываем сохраненные сегодня отметки о проведении, чтобы поллинг их не сбрасывал!
+    // Считываем сохраненные сегодня отметки о проведении
     const savedCompletedIds = (() => {
       try {
         const val = localStorage.getItem(`gymconnect_completed_today_${todayDateStr}`);
@@ -100,7 +103,6 @@ export default function OverviewTab({
         { name: 'Разминка и базовый комплекс', sets: '4 × 10', weight: '40' }
       ];
 
-      // Если сегодня это занятие уже помечалось проведенным — сохраняем статус!
       const isAlreadyCompleted = savedCompletedIds.includes(st.id);
 
       return {
@@ -110,11 +112,13 @@ export default function OverviewTab({
         name: `${st.first_name || 'Атлет'} ${st.last_name || ''}`.trim(),
         first_name: st.first_name || 'Атлет',
         phone: st.phone || st.whatsapp || '',
+        telegram_id: st.telegram_id || null,
         gym: st.gym ? st.gym.split('|')[0] : (trainer?.gym ? trainer.gym.split('|')[0] : 'Алматы'),
         format: st.format === 'online' || st.training_format === 'coach_online' ? 'online' : 'gym',
         status: isAlreadyCompleted ? 'completed' : 'pending',
         client_checkin: checkin,
         remaining: left,
+        monthly_price: st.monthly_price || 70000,
         focus: st.goal || 'Персональное ведение',
         exercises: programExercises
       };
@@ -134,7 +138,7 @@ export default function OverviewTab({
     { day: 'Вс', count: 1, percent: 15, isToday: todayDayIdx === 0 }
   ];
 
-  // Списание тренировки с фиксацией в localStorage дня
+  // Списание тренировки тренером в зале
   const handleMarkCompleted = async (e, id) => {
     e.stopPropagation();
     const targetItem = todaySchedule.find(s => s.id === id);
@@ -142,7 +146,7 @@ export default function OverviewTab({
 
     const newRemaining = Math.max(0, targetItem.remaining - 1);
 
-    // 1. Фиксируем проведение в памяти дня (чтобы автоопрос не сбросил)
+    // 1. Фиксируем проведение в памяти дня
     try {
       const key = `gymconnect_completed_today_${todayDateStr}`;
       const saved = localStorage.getItem(key);
@@ -185,6 +189,68 @@ export default function OverviewTab({
       }
       return item;
     }));
+  };
+
+  // ОТПРАВКА НАПОМИНАНИЯ ЧЕРЕЗ TELEGRAM-БОТ
+  const handleSendTelegramReminder = async (student, type) => {
+    const studentTgId = student.telegram_id;
+    let title = 'Напоминание о тренировке';
+    let message = `Привет, ${student.first_name}! Напоминаю о нашей персональной тренировке сегодня. Жду вовремя в зале! 💪`;
+
+    if (type === 'payment') {
+      title = 'Продление абонемента';
+      const left = student.remaining ?? 1;
+      const price = Number(student.monthly_price || 70000).toLocaleString();
+      message = `Привет, ${student.first_name}! По твоему абонементу осталось ${left} зан. Сумма за новый блок: ${price} ₸. Давай забронируем график на следующий период!`;
+    }
+
+    setReminderFeedback('Отправка через бота...');
+
+    const res = await sendStudentNotification({
+      studentTelegramId: studentTgId,
+      studentId: student.id,
+      title,
+      message
+    });
+
+    if (res && res.success) {
+      setReminderFeedback(`✅ Отправлено ${student.first_name} в Telegram!`);
+    } else {
+      setReminderFeedback(`⚠️ Сохранено в приложении (${student.first_name} не нажал /start)`);
+    }
+
+    setTimeout(() => setReminderFeedback(null), 3500);
+  };
+
+  // ОТПРАВКА НАПОМИНАНИЯ В WHATSAPP
+  const handleSendWhatsAppReminder = (phone, text) => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const encoded = encodeURIComponent(text);
+    window.open(`https://wa.me/${cleanPhone.startsWith('7') ? cleanPhone : `7${cleanPhone}`}?text=${encoded}`, '_blank');
+  };
+
+  // МАССОВАЯ РАССЫЛКА «НЕ БУДЕТ В ЗАЛЕ» ЧЕРЕЗ БОТА
+  const handleMassAbsenceBroadcast = async () => {
+    if (todaySchedule.length === 0) {
+      alert('На сегодня нет записанных учеников для оповещения.');
+      return;
+    }
+
+    setReminderFeedback('Рассылка всем ученикам на сегодня...');
+    let count = 0;
+
+    for (const st of todaySchedule) {
+      await sendStudentNotification({
+        studentTelegramId: st.telegram_id,
+        studentId: st.id,
+        title: 'Перенос тренировки',
+        message: `Уважаемый атлет! По техническим причинам меня сегодня не будет в зале. Ваше занятие сохраняется и переносится без сгорания. Согласуем удобное время в личных сообщениях!`
+      });
+      count++;
+    }
+
+    setReminderFeedback(`✅ Разослано ${count} ученикам в Telegram!`);
+    setTimeout(() => setReminderFeedback(null), 4000);
   };
 
   const handleSaveStudent = async (e) => {
@@ -231,12 +297,6 @@ export default function OverviewTab({
     } catch (err) {
       alert('Ошибка добавления: ' + err.message);
     }
-  };
-
-  const handleSendReminder = (phone, text) => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    const encoded = encodeURIComponent(text);
-    window.open(`https://wa.me/${cleanPhone.startsWith('7') ? cleanPhone : `7${cleanPhone}`}?text=${encoded}`, '_blank');
   };
 
   const filteredSchedule = todaySchedule.filter(item => {
@@ -356,6 +416,33 @@ export default function OverviewTab({
             </div>
           </div>
         </div>
+
+        {/* Недельная загрузка */}
+        <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-900">Загрузка смен по дням</span>
+            <span className="text-[10.5px] font-mono text-blue-600 font-bold">Сегодня: {todayShortName}</span>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1.5 items-end h-20 pt-2">
+            {weeklyLoadStats.map(item => (
+              <div key={item.day} className="flex flex-col items-center gap-1.5 h-full justify-end">
+                <span className="text-[9.5px] font-mono font-bold text-slate-600">{item.count}</span>
+                <div className="w-full bg-slate-100 rounded-lg h-12 flex items-end p-0.5">
+                  <div 
+                    className={`w-full rounded-md transition-all ${
+                      item.isToday ? 'bg-blue-600 shadow-xs' : 'bg-slate-300'
+                    }`}
+                    style={{ height: `${item.percent}%` }}
+                  />
+                </div>
+                <span className={`text-[10px] font-bold ${item.isToday ? 'text-blue-600' : 'text-slate-400'}`}>
+                  {item.day}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* 4. Расписание на сегодня */}
@@ -409,7 +496,7 @@ export default function OverviewTab({
                         {item.format === 'gym' ? 'В зале' : 'Онлайн'}
                       </span>
 
-                      {/* Отметка явки */}
+                      {/* Отметка явки учеником */}
                       {checkinStatus === 'attending' && (
                         <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300 flex items-center gap-1">
                           <Check className="w-3 h-3 text-emerald-600 stroke-[3]" /> Будет 👍
@@ -599,7 +686,7 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* Модалка быстрых напоминаний */}
+      {/* ================= МОДАЛКА БЫСТРЫХ НАПОМИНАНИЙ (TELEGRAM + WHATSAPP) ================= */}
       {isReminderModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col justify-between overflow-y-auto">
@@ -617,6 +704,14 @@ export default function OverviewTab({
               </button>
             </div>
 
+            {/* Статус обратной связи при отправке через бота */}
+            {reminderFeedback && (
+              <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[11px] font-semibold text-center animate-in fade-in">
+                {reminderFeedback}
+              </div>
+            )}
+
+            {/* 3 сценария напоминаний */}
             <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl">
               <button
                 type="button"
@@ -648,69 +743,113 @@ export default function OverviewTab({
             </div>
 
             <div className="space-y-2 max-h-60 overflow-y-auto">
+              
+              {/* СЦЕНАРИЙ 1: О ТРЕНИРОВКЕ (TELEGRAM И WHATSAPP) */}
               {reminderType === 'today' && (
                 <>
-                  <p className="text-[10px] text-slate-400 px-1">Атлеты на сегодня ({todayShortName}):</p>
+                  <p className="text-[10px] text-slate-400 px-1">Записанные на сегодня ({todayShortName}):</p>
                   {todaySchedule.length > 0 ? (
                     todaySchedule.map(st => (
-                      <div key={st.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-medium text-slate-900">{st.name}</p>
-                          <p className="text-[10px] text-slate-400">Время: {st.time}</p>
+                      <div key={st.id} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-bold text-slate-900">{st.name}</p>
+                          <span className="text-[10.5px] font-mono text-slate-500">{st.time}</span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleSendReminder(st.phone, `Привет, ${st.name}! Напоминаю о сегодняшней тренировке в ${st.time}. Жду вовремя! 💪`)}
-                          className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95 cursor-pointer"
-                        >
-                          <MessageCircle className="w-3 h-3" />
-                          <span>WhatsApp</span>
-                        </button>
+
+                        <div className="flex gap-1.5 pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleSendTelegramReminder(st, 'workout')}
+                            className="flex-1 py-1.5 bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#229ED9] rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1 border border-[#229ED9]/20 active:scale-95 transition-all cursor-pointer"
+                          >
+                            <Send className="w-3 h-3" />
+                            <span>Telegram</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSendWhatsAppReminder(st.phone, `Привет, ${st.name}! Напоминаю о сегодняшней тренировке в ${st.time}. Жду вовремя! 💪`)}
+                            className="flex-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1 border border-emerald-200 active:scale-95 transition-all cursor-pointer"
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                            <span>WhatsApp</span>
+                          </button>
+                        </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-center py-4 text-slate-400 text-xs">Нет запланированных тренировок на сегодня.</p>
+                    <p className="text-center py-4 text-slate-400 text-xs">Нет тренировок на сегодня.</p>
                   )}
                 </>
               )}
 
+              {/* СЦЕНАРИЙ 2: ОБ ОПЛАТЕ АБОНЕМЕНТА (ИНДИВИДУАЛЬНЫЕ КНОПКИ) */}
               {reminderType === 'payment' && (
                 <>
-                  <p className="text-[10px] text-slate-400 px-1">Ученики с остатком ≤ 1 занятий:</p>
-                  {students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 1).length > 0 ? (
-                    students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 1).map(st => (
-                      <div key={st.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-medium text-slate-900">{st.first_name} {st.last_name || ''}</p>
-                          <p className="text-[10px] text-amber-600 font-medium">Осталось: {st.left_trainings ?? 1} зан.</p>
+                  <p className="text-[10px] text-slate-400 px-1">Ученики с остатком ≤ 1 занятий или долгом:</p>
+                  {students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 1 || s.payment_status === 'pending').length > 0 ? (
+                    students.filter(s => (s.left_trainings !== undefined ? s.left_trainings : 12) <= 1 || s.payment_status === 'pending').map(st => {
+                      const left = st.left_trainings ?? 1;
+                      const price = Number(st.monthly_price || 70000).toLocaleString();
+
+                      return (
+                        <div key={st.id} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-xs font-bold text-slate-900">{st.first_name} {st.last_name || ''}</p>
+                              <p className="text-[10px] text-amber-600 font-semibold font-mono">Остаток: {left} зан. • {price} ₸</p>
+                            </div>
+                            <span className="text-[9.5px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-bold">
+                              К оплате
+                            </span>
+                          </div>
+
+                          <div className="flex gap-1.5 pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleSendTelegramReminder({ ...st, remaining: left }, 'payment')}
+                              className="flex-1 py-1.5 bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#229ED9] rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1 border border-[#229ED9]/20 active:scale-95 transition-all cursor-pointer"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>Telegram</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleSendWhatsAppReminder(st.phone || st.whatsapp || '', `Привет, ${st.first_name}! По твоему абонементу осталось ${left} зан. Сумма к оплате за новый блок: ${price} ₸. Давай забронируем график на следующий период!`)}
+                              className="flex-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1 border border-emerald-200 active:scale-95 transition-all cursor-pointer"
+                            >
+                              <MessageCircle className="w-3 h-3" />
+                              <span>WhatsApp</span>
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleSendReminder(st.phone || st.whatsapp || '', `Привет, ${st.first_name}! По твоему абонементу осталось мало занятий. Давай согласуем продление, чтобы сохранить график!`)}
-                          className="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg text-[10px] font-semibold flex items-center gap-1 active:scale-95 cursor-pointer"
-                        >
-                          <MessageCircle className="w-3 h-3" />
-                          <span>Напомнить</span>
-                        </button>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <p className="text-center py-4 text-slate-400 text-xs">У всех активных подопечных достаточный баланс занятий.</p>
                   )}
                 </>
               )}
 
+              {/* СЦЕНАРИЙ 3: НЕ БУДЕТ В ЗАЛЕ (МАССОВОЕ ОПОВЕЩЕНИЕ БОТОМ) */}
               {reminderType === 'absence' && (
-                <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-2xl space-y-2">
+                <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-2xl space-y-2.5">
+                  <div className="flex items-center gap-2 text-rose-800 font-bold">
+                    <AlertTriangle className="w-4 h-4 text-rose-600" />
+                    <span>Оповещение об отмене занятий</span>
+                  </div>
                   <p className="text-[11px] text-rose-900 leading-relaxed">
-                    Отправить всем ученикам на сегодня: «Уважаемые атлеты, по техническим причинам меня сегодня не будет в зале. Все занятия переносятся без сгорания».
+                    Бот отправит всем ученикам, записанным на сегодня ({todaySchedule.length} чел.), сообщение о переносе тренировок без сгорания.
                   </p>
+
                   <button
                     type="button"
-                    onClick={() => alert('Уведомление отправлено всем подопечным на сегодня!')}
-                    className="w-full py-2 bg-rose-600 text-white rounded-xl text-xs font-semibold active:scale-98 cursor-pointer"
+                    onClick={handleMassAbsenceBroadcast}
+                    className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold active:scale-98 transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
                   >
-                    Разослать всем на сегодня
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Разослать всем через бота в Telegram</span>
                   </button>
                 </div>
               )}
@@ -719,7 +858,7 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* Модалка быстрого добавления ученика */}
+      {/* Модалка добавления ученика */}
       {isLocalAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col justify-between overflow-y-auto">
