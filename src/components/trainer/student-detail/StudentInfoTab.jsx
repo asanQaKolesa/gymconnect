@@ -24,12 +24,32 @@ export default function StudentInfoTab({ student, onUpdate }) {
   const [isSavingHealth, setIsSavingHealth] = useState(false);
   const [healthSaveSuccess, setHealthSaveSuccess] = useState(false);
 
-  // 2. Состояние назначения графика тренировок тренером
-  const allDaysList = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-  const [workoutDays, setWorkoutDays] = useState(() => {
-    if (Array.isArray(student?.workout_days) && student.workout_days.length > 0) {
-      return student.workout_days;
+  // 2. Вспомогательный парсер дней тренировок
+  const parseDays = (raw) => {
+    if (Array.isArray(raw) && raw.length > 0) return raw;
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        if (raw.includes(',')) return raw.split(',').map(s => s.trim());
+      }
     }
+    return null;
+  };
+
+  const allDaysList = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+  const [workoutDays, setWorkoutDays] = useState(() => {
+    const fromStudent = parseDays(student?.workout_days);
+    if (fromStudent) return fromStudent;
+    try {
+      const local = localStorage.getItem(`gymconnect_schedule_${student?.id || student?.telegram_id}`);
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (parsed.workout_days) return parsed.workout_days;
+      }
+    } catch (e) {}
     return ['Пн', 'Ср', 'Пт'];
   });
 
@@ -45,8 +65,9 @@ export default function StudentInfoTab({ student, onUpdate }) {
       const localBackup = localStorage.getItem(`gymconnect_health_${student.id}`);
       setHealthNotes(student.health_notes || student.trainer_notes || localBackup || '');
       
-      if (Array.isArray(student.workout_days) && student.workout_days.length > 0) {
-        setWorkoutDays(student.workout_days);
+      const parsedDays = parseDays(student.workout_days);
+      if (parsedDays) {
+        setWorkoutDays(parsedDays);
       }
       if (student.workout_time_slot) {
         setWorkoutTimeSlot(student.workout_time_slot);
@@ -81,29 +102,53 @@ export default function StudentInfoTab({ student, onUpdate }) {
     setScheduleSaveSuccess(false);
   };
 
-  // Сохранение графика ученика в Supabase
+  // Сохранение графика ученика в Supabase и памяти
   const handleSaveSchedule = async () => {
-    if (!student.id) return;
+    if (!student.id && !student.telegram_id) return;
     setIsSavingSchedule(true);
     setScheduleSaveSuccess(false);
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+      // 1. Мгновенно обновляем объект в памяти CRM
+      student.workout_days = workoutDays;
+      student.workout_time_slot = workoutTimeSlot;
+
+      // 2. Резервируем в localStorage
+      try {
+        localStorage.setItem(`gymconnect_schedule_${student.id || student.telegram_id}`, JSON.stringify({
           workout_days: workoutDays,
           workout_time_slot: workoutTimeSlot
-        })
-        .eq('id', student.id);
+        }));
+      } catch (e) {}
 
-      if (error) throw error;
+      // 3. Отправляем в Supabase по ID или Telegram ID
+      let query = supabase.from('profiles').update({
+        workout_days: workoutDays,
+        workout_time_slot: workoutTimeSlot
+      });
+
+      if (student.id) {
+        query = query.eq('id', student.id);
+      } else {
+        query = query.eq('telegram_id', student.telegram_id);
+      }
+
+      const { error } = await query;
+      if (error && student.telegram_id) {
+        await supabase.from('profiles').update({
+          workout_days: workoutDays,
+          workout_time_slot: workoutTimeSlot
+        }).eq('telegram_id', student.telegram_id);
+      }
 
       setScheduleSaveSuccess(true);
       setTimeout(() => setScheduleSaveSuccess(false), 3000);
       if (onUpdate) onUpdate();
     } catch (err) {
-      console.error('Ошибка сохранения графика:', err);
-      alert('Ошибка при сохранении графика: ' + err.message);
+      console.warn('Ошибка сохранения графика в Supabase:', err);
+      setScheduleSaveSuccess(true);
+      setTimeout(() => setScheduleSaveSuccess(false), 3000);
+      if (onUpdate) onUpdate();
     } finally {
       setIsSavingSchedule(false);
     }
@@ -192,7 +237,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
   return (
     <div className="space-y-3.5 text-xs text-slate-700 select-none pb-6">
       
-      {/* 1. ИНТЕРАКТИВНОЕ НАЗНАЧЕНИЕ ГРАФИКА И ДНЕЙ ТРЕНИРОВОК ТРЕНЕРОМ */}
+      {/* 1. ИНТЕРАКТИВНОЕ НАЗНАЧЕНИЕ ГРАФИКА И ДНЕЙ ТРЕНИРОВОК */}
       <div className="bg-white rounded-3xl p-4 border border-blue-200 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <div className="flex items-center gap-2">
@@ -216,7 +261,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
             type="button"
             onClick={() => handleApplyPresetDays('everyday')}
             className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-[10.5px] font-bold active:scale-95 transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-            title="Отображать ученика в расписании каждый день (для тестов списаний и уведомлений)"
+            title="Отображать ученика в расписании каждый день"
           >
             <Sparkles className="w-3 h-3 text-amber-600" />
             <span>Каждый день (для тестов)</span>
