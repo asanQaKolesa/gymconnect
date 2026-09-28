@@ -107,68 +107,46 @@ export default function TrainerHeader({
 
   return (
     <>
-      {/* ================= АККУРАТНАЯ ВЕРХНЯЯ ШАПКА ================= */}
+      {/* ================= АККУРАТНАЯ СИММЕТРИЧНАЯ ШАПКА ================= */}
       <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 sticky top-0 z-40 select-none shadow-xs">
-        <div className="flex items-center justify-between gap-2 max-w-md mx-auto w-full">
+        <div className="flex items-center justify-between max-w-md mx-auto w-full">
           
-          <div className="flex items-center gap-2">
-            {/* Кнопка открытия меню */}
-            <button
-              type="button"
-              onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-1.5 py-1.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
-              title="Открыть меню тренера"
-            >
-              <Menu className="w-4 h-4 text-white stroke-[2.2]" />
-              <span className="text-xs font-bold tracking-tight">Меню</span>
-            </button>
+          {/* Левая часть: кнопка вызова меню */}
+          <button
+            type="button"
+            onClick={() => setIsDrawerOpen(true)}
+            className="flex items-center gap-1.5 py-1.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
+            title="Открыть меню тренера"
+          >
+            <Menu className="w-4 h-4 text-white stroke-[2.2]" />
+            <span className="text-xs font-bold tracking-tight">Меню</span>
+          </button>
 
-            {/* КОЛОКОЛЬЧИК (ОТКРЫВАЕТ ПОЛНОЦЕННУЮ СТРАНИЦУ УВЕДОМЛЕНИЙ) */}
-            <button
-              type="button"
-              onClick={() => handleMenuClick('notifications')}
-              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center relative active:scale-90 transition-transform cursor-pointer border border-slate-200/80 shrink-0"
-              title="Открыть Центр уведомлений на полный экран"
-            >
-              <Bell className="w-4 h-4 stroke-[2]" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center font-mono shadow-xs animate-pulse">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1.5 overflow-hidden">
+          {/* Центр: Полное название CoachOS CRM — теперь ничем не закрыто */}
+          <div className="flex items-center gap-1.5">
             <div className="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
               <Dumbbell className="w-3.5 h-3.5 stroke-[2.2]" />
             </div>
-            <h1 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight truncate">
+            <h1 className="text-sm font-black text-slate-900 tracking-tight">
               CoachOS CRM
             </h1>
           </div>
 
-          <div className="shrink-0">
-            {isApproved ? (
-              <div 
-                onClick={() => handleMenuClick('public_card')}
-                className="flex items-center gap-1 py-1 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-xl cursor-pointer active:scale-95 transition-transform"
-                title="Профиль верифицирован GymConnect"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
-                <span className="text-[10px] font-bold">Верифицирован</span>
-              </div>
-            ) : (
-              <div 
-                onClick={() => handleMenuClick('public_card')}
-                className="flex items-center gap-1 py-1 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 rounded-xl cursor-pointer active:scale-95 transition-transform"
-                title="Анкета проходит проверку"
-              >
-                <Clock className="w-3.5 h-3.5 text-amber-600" />
-                <span className="text-[10px] font-bold">На проверке</span>
-              </div>
+          {/* Правая часть: колокольчик с красным кружочком уведомлений (+1, +2) */}
+          <button
+            type="button"
+            onClick={() => handleMenuClick('notifications')}
+            className="relative w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center border border-slate-200/80 active:scale-90 transition-transform cursor-pointer shrink-0"
+            title="Открыть Центр уведомлений на полный экран"
+          >
+            <Bell className="w-4 h-4 stroke-[2]" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white font-black text-[9.5px] flex items-center justify-center font-mono shadow-xs animate-pulse border-2 border-white">
+                +{unreadCount}
+              </span>
             )}
-          </div>
+          </button>
+
         </div>
       </header>
 
@@ -178,7 +156,7 @@ export default function TrainerHeader({
           <div className="w-[88%] max-w-sm bg-white h-full p-4 flex flex-col justify-between shadow-2xl overflow-y-auto">
             <div className="space-y-4">
               
-              {/* Шапка тренера в меню */}
+              {/* Шапка тренера в меню со статусом верификации */}
               <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
                 <div className="flex items-center gap-3 overflow-hidden">
                   <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs overflow-hidden">
