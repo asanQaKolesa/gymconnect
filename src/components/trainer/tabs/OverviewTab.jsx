@@ -19,7 +19,8 @@ import {
   Clock,
   Users,
   Send,
-  AlertTriangle
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { sendStudentNotification } from '../../../utils/telegramNotifications';
@@ -138,7 +139,7 @@ export default function OverviewTab({
     { day: 'Вс', count: 1, percent: 15, isToday: todayDayIdx === 0 }
   ];
 
-  // Списание тренировки тренером
+  // Списание тренировки: статус фиксируется и кнопки скрываются
   const handleMarkCompleted = async (e, id) => {
     e.stopPropagation();
     const targetItem = todaySchedule.find(s => s.id === id);
@@ -146,6 +147,7 @@ export default function OverviewTab({
 
     const newRemaining = Math.max(0, targetItem.remaining - 1);
 
+    // 1. Фиксируем проведение в памяти дня
     try {
       const key = `gymconnect_completed_today_${todayDateStr}`;
       const saved = localStorage.getItem(key);
@@ -158,6 +160,7 @@ export default function OverviewTab({
       console.warn(err);
     }
 
+    // 2. Обновляем статус на «проведено»
     setTodaySchedule(prev => prev.map(item => {
       if (item.id === id) {
         return { ...item, status: 'completed', remaining: newRemaining };
@@ -165,6 +168,7 @@ export default function OverviewTab({
       return item;
     }));
 
+    // 3. Списываем занятие в Supabase
     try {
       await supabase
         .from('profiles')
@@ -178,6 +182,7 @@ export default function OverviewTab({
     }
   };
 
+  // Фиксация пропуска занятия
   const handleMarkCanceled = (e, id) => {
     e.stopPropagation();
     setTodaySchedule(prev => prev.map(item => {
@@ -188,7 +193,27 @@ export default function OverviewTab({
     }));
   };
 
-  // ОТПРАВКА НАПОМИНАНИЯ ЧЕРЕЗ TELEGRAM-БОТ С АВТОПОИСКОМ ID
+  // Возможность отменить отметку, если нажали случайно
+  const handleResetStatus = (e, id) => {
+    e.stopPropagation();
+    try {
+      const key = `gymconnect_completed_today_${todayDateStr}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const list = JSON.parse(saved).filter(itemId => itemId !== id);
+        localStorage.setItem(key, JSON.stringify(list));
+      }
+    } catch (err) {}
+
+    setTodaySchedule(prev => prev.map(item => {
+      if (item.id === id) {
+        return { ...item, status: 'pending' };
+      }
+      return item;
+    }));
+  };
+
+  // ОТПРАВКА НАПОМИНАНИЯ В TELEGRAM УЧЕНИКУ
   const handleSendTelegramReminder = async (student, type) => {
     const studentTgId = student.telegram_id || student.rawStudent?.telegram_id;
     const studentUsername = student.username || student.rawStudent?.username;
@@ -216,7 +241,7 @@ export default function OverviewTab({
     if (res && (res.success || res.ok)) {
       setReminderFeedback(`✅ Сообщение доставлено в Telegram ${student.first_name}!`);
     } else {
-      setReminderFeedback(`⚠️ ${res?.error || 'Не удалось отправить. Убедитесь, что атлет нажал /start в @gymconnect_ala_bot'}`);
+      setReminderFeedback(`⚠️ ${res?.error || 'Не удалось отправить. Проверьте /start в боте.'}`);
     }
 
     setTimeout(() => setReminderFeedback(null), 5000);
@@ -481,19 +506,19 @@ export default function OverviewTab({
                   }`}
                   title="Открыть профиль ученика"
                 >
-                  {/* Верхняя строка */}
+                  {/* Верхняя строка: Время, Онлайн (если не в зале), Отметка явки ученика */}
                   <div className="flex items-center justify-between gap-2 border-b border-slate-200/50 pb-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded-lg border border-slate-200/80">
                         {item.time}
                       </span>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${
-                        item.format === 'gym' 
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200/60' 
-                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-                      }`}>
-                        {item.format === 'gym' ? 'В зале' : 'Онлайн'}
-                      </span>
+
+                      {/* Плашка выводится ТОЛЬКО если тренировка онлайн */}
+                      {item.format === 'online' && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                          Онлайн 🌐
+                        </span>
+                      )}
 
                       {/* Отметка явки учеником */}
                       {checkinStatus === 'attending' && (
@@ -508,10 +533,11 @@ export default function OverviewTab({
                       )}
                     </div>
 
+                    {/* Статус в углу карточки */}
                     <div className="flex items-center gap-1 shrink-0">
                       {isCompleted && (
                         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Проведено
+                          <CheckCircle2 className="w-3 h-3" /> Списано
                         </span>
                       )}
                       {isCanceled && (
@@ -527,7 +553,7 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  {/* Средняя часть */}
+                  {/* Средняя часть: Имя, Локация, Фокус */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-0.5 overflow-hidden">
                       <div className="flex items-center gap-1">
@@ -552,45 +578,86 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  {/* 3 кнопки в 1 строку */}
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedStudentForWorkout(item);
-                      }}
-                      className="flex-1 min-w-0 py-2 px-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl text-[10.5px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs whitespace-nowrap overflow-hidden cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                      <span className="truncate">План дня</span>
-                    </button>
+                  {/* Нижняя часть: Кнопки скрываются после проведения! */}
+                  <div className="pt-1">
+                    {isCompleted ? (
+                      /* ЕСЛИ ТРЕНИРОВКА ПРОВЕДЕНА: ПОКАЗЫВАЕТСЯ ЗАФИКСИРОВАННЫЙ ШТАМП */
+                      <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
+                        <span className="font-bold text-emerald-800 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <span>Тренировка проведена и списана</span>
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedStudentForWorkout(item);
+                            }}
+                            className="text-[10.5px] font-semibold text-blue-600 hover:underline"
+                          >
+                            План дня
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleResetStatus(e, item.id)}
+                            className="text-[10.5px] text-slate-400 hover:text-rose-600 transition-colors p-1"
+                            title="Отменить проведение"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : isCanceled ? (
+                      /* ЕСЛИ ЗАФИКСИРОВАН ПРОПУСК */
+                      <div className="p-2 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between text-xs">
+                        <span className="font-bold text-rose-800 flex items-center gap-1.5">
+                          <XCircle className="w-4 h-4 text-rose-600" />
+                          <span>Пропуск занятия зафиксирован</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleResetStatus(e, item.id)}
+                          className="text-[10.5px] text-slate-400 hover:text-slate-600 p-1"
+                          title="Сбросить статус"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      /* ЕСЛИ ЕЩЕ НЕ ПРОВЕДЕНО: АКТИВНЫЕ КНОПКИ В ОДНУ СТРОКУ */
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedStudentForWorkout(item);
+                          }}
+                          className="flex-1 min-w-0 py-2 px-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl text-[10.5px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs whitespace-nowrap overflow-hidden cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          <span className="truncate">План дня</span>
+                        </button>
 
-                    <button
-                      type="button"
-                      onClick={(e) => handleMarkCompleted(e, item.id)}
-                      className={`flex-1 min-w-0 py-2 px-1.5 rounded-xl text-[10.5px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs whitespace-nowrap overflow-hidden cursor-pointer ${
-                        isCompleted 
-                          ? 'bg-emerald-600 text-white font-bold' 
-                          : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80'
-                      }`}
-                    >
-                      <Check className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{isCompleted ? 'Проведено' : 'Проведено'}</span>
-                    </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleMarkCompleted(e, item.id)}
+                          className="flex-1 min-w-0 py-2 px-1.5 rounded-xl text-[10.5px] font-bold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs whitespace-nowrap overflow-hidden cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          <Check className="w-3.5 h-3.5 shrink-0 stroke-[2.5]" />
+                          <span className="truncate">Проведено</span>
+                        </button>
 
-                    <button
-                      type="button"
-                      onClick={(e) => handleMarkCanceled(e, item.id)}
-                      className={`flex-1 min-w-0 py-2 px-1.5 rounded-xl text-[10.5px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs whitespace-nowrap overflow-hidden cursor-pointer ${
-                        isCanceled 
-                          ? 'bg-rose-600 text-white font-bold' 
-                          : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80'
-                      }`}
-                    >
-                      <X className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">Пропуск</span>
-                    </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleMarkCanceled(e, item.id)}
+                          className="flex-1 min-w-0 py-2 px-1.5 rounded-xl text-[10.5px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-2xs whitespace-nowrap overflow-hidden cursor-pointer bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80"
+                        >
+                          <X className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">Пропуск</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -685,7 +752,7 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* ================= МОДАЛКА БЫСТРЫХ НАПОМИНАНИЙ (TELEGRAM + WHATSAPP) ================= */}
+      {/* ================= МОДАЛКА БЫСТРЫХ НАПОМИНАНИЙ ================= */}
       {isReminderModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col justify-between overflow-y-auto">
@@ -703,14 +770,12 @@ export default function OverviewTab({
               </button>
             </div>
 
-            {/* Статус обратной связи при отправке через бота */}
             {reminderFeedback && (
               <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[11px] font-semibold text-center animate-in fade-in">
                 {reminderFeedback}
               </div>
             )}
 
-            {/* 3 сценария напоминаний */}
             <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl">
               <button
                 type="button"
@@ -742,8 +807,7 @@ export default function OverviewTab({
             </div>
 
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              
-              {/* СЦЕНАРИЙ 1: О ТРЕНИРОВКЕ (TELEGRAM И WHATSAPP) */}
+              {/* СЦЕНАРИЙ 1: О ТРЕНИРОВКЕ */}
               {reminderType === 'today' && (
                 <>
                   <p className="text-[10px] text-slate-400 px-1">Записанные на сегодня ({todayShortName}):</p>
