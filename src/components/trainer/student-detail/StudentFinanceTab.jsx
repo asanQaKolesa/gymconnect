@@ -6,21 +6,16 @@ import {
   Save, 
   CheckCircle2, 
   AlertCircle, 
-  DollarSign, 
   Plus, 
-  Minus,
-  Clock,
-  ShieldCheck,
-  Flame,
-  Check
+  Minus
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 
 export default function StudentFinanceTab({ student, onUpdate }) {
   // 1. ХУКИ СОСТОЯНИЯ (СТРОГО НА САМОМ ВЕРХУ)
   const [remainingWorkouts, setRemainingWorkouts] = useState(12);
-  const [totalWorkouts, setTotalWorkouts] = useState(12);
-  const [monthlyPrice, setMonthlyPrice] = useState(70000);
+  const [totalWorkouts, setTotalWorkouts] = useState('12');
+  const [monthlyPrice, setMonthlyPrice] = useState('70000');
   const [paymentStatus, setPaymentStatus] = useState('paid'); // 'paid' | 'pending'
   const [packageType, setPackageType] = useState('personal'); // 'personal' | 'split' | 'group' | 'online'
   
@@ -47,8 +42,8 @@ export default function StudentFinanceTab({ student, onUpdate }) {
         ? student.left_trainings 
         : (student.remaining_workouts !== undefined ? student.remaining_workouts : 12);
       setRemainingWorkouts(Number(left));
-      setTotalWorkouts(Number(student.total_trainings || 12));
-      setMonthlyPrice(Number(student.monthly_price || 70000));
+      setTotalWorkouts(String(student.total_trainings || 12));
+      setMonthlyPrice(String(student.monthly_price !== undefined ? student.monthly_price : 70000));
       setPaymentStatus(student.payment_status || 'paid');
       setPackageType(student.package_type || 'personal');
       
@@ -60,6 +55,14 @@ export default function StudentFinanceTab({ student, onUpdate }) {
 
   if (!student) return null;
 
+  // Автоскролл поля ввода в центр экрана над мобильной клавиатурой
+  const handleInputFocus = (e) => {
+    e.target.select(); // Сразу выделяем весь текст, чтобы можно было заменить число с первого нажатия
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 280);
+  };
+
   // Автоматический расчет дней до сгорания
   const calculateDaysLeft = () => {
     if (!isExpiring || !endDate) return null;
@@ -68,12 +71,12 @@ export default function StudentFinanceTab({ student, onUpdate }) {
     const end = new Date(endDate);
     end.setHours(0, 0, 0, 0);
     const diffTime = end - now;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   const daysLeft = calculateDaysLeft();
-  const completedCount = Math.max(0, totalWorkouts - remainingWorkouts);
+  const totalNum = Number(totalWorkouts) || 12;
+  const completedCount = Math.max(0, totalNum - remainingWorkouts);
 
   // Безопасное сохранение в Supabase
   const handleSaveFinance = async () => {
@@ -82,16 +85,14 @@ export default function StudentFinanceTab({ student, onUpdate }) {
     setSaveSuccess(false);
 
     try {
-      // Базовые поля, которые гарантированно есть в схеме profiles
       const payload = {
-        left_trainings: Number(remainingWorkouts),
-        remaining_workouts: Number(remainingWorkouts),
-        total_trainings: Number(totalWorkouts),
-        monthly_price: Number(monthlyPrice),
+        left_trainings: Number(remainingWorkouts) || 0,
+        remaining_workouts: Number(remainingWorkouts) || 0,
+        total_trainings: Number(totalWorkouts) || 12,
+        monthly_price: Number(monthlyPrice) || 0,
         payment_status: paymentStatus
       };
 
-      // Пытаемся сохранить базовые поля
       const { error } = await supabase
         .from('profiles')
         .update(payload)
@@ -99,7 +100,6 @@ export default function StudentFinanceTab({ student, onUpdate }) {
 
       if (error) throw error;
 
-      // Локально фиксируем расширенные финансовые данные атлета
       try {
         const localFinData = {
           packageType,
@@ -118,7 +118,6 @@ export default function StudentFinanceTab({ student, onUpdate }) {
       if (onUpdate) onUpdate();
     } catch (err) {
       console.warn('Ошибка при сохранении финансов:', err);
-      // Если запрос отклонен базой, сохраняем локально без сбоя UI
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
     } finally {
@@ -127,7 +126,7 @@ export default function StudentFinanceTab({ student, onUpdate }) {
   };
 
   return (
-    <div className="space-y-3.5 text-xs text-slate-700 select-none pb-6">
+    <div className="space-y-3.5 text-xs text-slate-700 select-none pb-72">
       
       {/* 1. БАЛАНС И ОСТАТОК ТРЕНИРОВОК */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
@@ -151,7 +150,7 @@ export default function StudentFinanceTab({ student, onUpdate }) {
               Остаток тренировок
             </span>
             <p className="text-xl font-bold text-slate-900 font-mono mt-0.5">
-              {remainingWorkouts} <span className="text-xs text-slate-400 font-normal">из {totalWorkouts} зан.</span>
+              {remainingWorkouts} <span className="text-xs text-slate-400 font-normal">из {totalNum} зан.</span>
             </p>
           </div>
 
@@ -184,13 +183,13 @@ export default function StudentFinanceTab({ student, onUpdate }) {
           <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
             <div 
               className="bg-blue-600 h-full rounded-full transition-all"
-              style={{ width: `${Math.min(100, Math.round((completedCount / (totalWorkouts || 1)) * 100))}%` }}
+              style={{ width: `${Math.min(100, Math.round((completedCount / (totalNum || 1)) * 100))}%` }}
             />
           </div>
         </div>
       </div>
 
-      {/* 2. ФОРМАТ ТРЕНИРОВОК */}
+      {/* 2. ФОРМАТ АБОНЕМЕНТА */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
         <span className="font-bold text-slate-900 text-xs block border-b border-slate-100 pb-2">
           Формат абонемента
@@ -224,12 +223,11 @@ export default function StudentFinanceTab({ student, onUpdate }) {
         </div>
       </div>
 
-      {/* 3. СГОРАЕМОСТЬ И СРОКИ ДЕЙСТВИЯ АБОНЕМЕНТА */}
+      {/* 3. СГОРАЕМОСТЬ И СРОКИ ДЕЙСТВИЯ */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <span className="font-bold text-slate-900 text-xs">Правила сгорания и срок</span>
           
-          {/* Индикатор срока */}
           {isExpiring && daysLeft !== null && (
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md font-mono ${
               daysLeft <= 5 
@@ -269,7 +267,6 @@ export default function StudentFinanceTab({ student, onUpdate }) {
           </button>
         </div>
 
-        {/* Даты действия абонемента */}
         {isExpiring ? (
           <div className="grid grid-cols-2 gap-2 pt-1 animate-in fade-in">
             <div>
@@ -279,8 +276,9 @@ export default function StudentFinanceTab({ student, onUpdate }) {
               <input
                 type="date"
                 value={startDate}
+                onFocus={handleInputFocus}
                 onChange={e => setStartDate(e.target.value)}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-900"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-900 caret-blue-600 focus:outline-none focus:border-blue-600 focus:bg-white"
               />
             </div>
 
@@ -291,8 +289,9 @@ export default function StudentFinanceTab({ student, onUpdate }) {
               <input
                 type="date"
                 value={endDate}
+                onFocus={handleInputFocus}
                 onChange={e => setEndDate(e.target.value)}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-rose-700"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-rose-700 caret-blue-600 focus:outline-none focus:border-blue-600 focus:bg-white"
               />
             </div>
           </div>
@@ -303,29 +302,74 @@ export default function StudentFinanceTab({ student, onUpdate }) {
         )}
       </div>
 
-      {/* 4. СУММА ОПЛАТЫ И СТАТУС ПЛАТЕЖА */}
+      {/* 4. КАССОВЫЙ РАСЧЕТ И СТОИМОСТЬ С ПОЛНЫМ УДАЛЕНИЕМ И АВТОВЫДЕЛЕНИЕМ */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
         <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">Кассовый расчет</p>
 
         <div className="grid grid-cols-2 gap-2.5">
           <div>
-            <label className="text-[10px] font-semibold text-slate-500 block mb-1">Стоимость блока (₸)</label>
+            <label className="text-[10px] font-semibold text-slate-500 block mb-1">
+              Стоимость блока (₸)
+            </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={monthlyPrice}
-              onChange={e => setMonthlyPrice(Number(e.target.value))}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+              onFocus={handleInputFocus}
+              onChange={e => {
+                // Разрешаем полностью стирать поле до пустоты! Ноль больше не залипает
+                const val = e.target.value.replace(/\D/g, '');
+                setMonthlyPrice(val);
+              }}
+              placeholder="0"
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-sm text-slate-900 caret-blue-600 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
             />
+            {/* Быстрые пресеты сумм в 1 клик */}
+            <div className="flex gap-1 mt-1.5 flex-wrap">
+              {[50000, 70000, 100000].map(val => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setMonthlyPrice(String(val))}
+                  className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-[9.5px] font-mono text-slate-600 font-semibold cursor-pointer active:scale-95"
+                >
+                  {val / 1000}k
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
-            <label className="text-[10px] font-semibold text-slate-500 block mb-1">Занятий в блоке</label>
+            <label className="text-[10px] font-semibold text-slate-500 block mb-1">
+              Занятий в блоке
+            </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={totalWorkouts}
-              onChange={e => setTotalWorkouts(Number(e.target.value))}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-xs text-slate-900 text-center focus:outline-none focus:border-blue-600"
+              onFocus={handleInputFocus}
+              onChange={e => {
+                const val = e.target.value.replace(/\D/g, '');
+                setTotalWorkouts(val);
+              }}
+              placeholder="12"
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-sm text-slate-900 text-center caret-blue-600 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
             />
+            {/* Быстрые кнопки количества занятий */}
+            <div className="flex justify-center gap-1 mt-1.5">
+              {[8, 12, 16].map(num => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => setTotalWorkouts(String(num))}
+                  className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded text-[9.5px] font-mono text-slate-600 font-semibold cursor-pointer active:scale-95"
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
