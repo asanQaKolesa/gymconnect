@@ -15,9 +15,15 @@ import StudentDetailModal from '../components/StudentDetailModal';
 export default function AnalyticsTab({ students = [], onUpdate }) {
   const [selectedStudentForModal, setSelectedStudentForModal] = useState(null);
 
-  // Расчет ключевых аналитических показателей
+  // Исправленная проверка активного атлета (без отсечения по кастомным статусам)
+  const isStudentActive = (s) => {
+    if (!s) return false;
+    const st = (s.status || '').toLowerCase().trim();
+    return st !== 'left' && st !== 'archived';
+  };
+
   const totalStudents = students.length;
-  const activeStudents = students.filter(s => s.status === 'active' || !s.status);
+  const activeStudents = students.filter(isStudentActive);
   const pausedStudents = students.filter(s => s.status === 'paused');
   const leftStudents = students.filter(s => s.status === 'left');
 
@@ -128,7 +134,7 @@ export default function AnalyticsTab({ students = [], onUpdate }) {
         </div>
       </div>
 
-      {/* 3. Список учеников, требующих продления (Зона риска) */}
+      {/* 3. Список учеников «Зоны риска» */}
       <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
