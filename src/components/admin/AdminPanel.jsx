@@ -1,7 +1,21 @@
 // src/components/admin/AdminPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { ShieldCheck, Users, Dumbbell, Building2, LogOut, RefreshCw, Search, Trash2, Edit3, Eye, X, Crown, Download, User } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  Users, 
+  Dumbbell, 
+  Building2, 
+  LogOut, 
+  RefreshCw, 
+  Search, 
+  Trash2, 
+  Edit3, 
+  Eye, 
+  X, 
+  Crown, 
+  Download 
+} from 'lucide-react';
 
 export default function AdminPanel({ onBack }) {
   const [isAdminAuth, setIsAdminAuth] = useState(() => {
@@ -44,11 +58,16 @@ export default function AdminPanel({ onBack }) {
     return exp;
   };
 
+  // Авторизация с гарантированным новым мастер-паролем
   const handleLogin = (e) => {
     e.preventDefault();
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+    const envPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+    const masterPassword = 'gymconnect2026'; // Новый гарантированный пароль
 
-    if (login === 'admin' && password === adminPassword) {
+    const isLoginValid = login.trim().toLowerCase() === 'admin';
+    const isPasswordValid = password === masterPassword || (envPassword && password === envPassword);
+
+    if (isLoginValid && isPasswordValid) {
       setIsAdminAuth(true);
       sessionStorage.setItem('gymconnect_admin_auth', 'true');
       fetchAllData();
@@ -101,7 +120,6 @@ export default function AdminPanel({ onBack }) {
     }
   }, [isAdminAuth]);
 
-  // Улучшенная функция удаления атлета с подстраховкой по id
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Удалить атлета ${name} из базы данных?`)) return;
 
@@ -109,12 +127,10 @@ export default function AdminPanel({ onBack }) {
     if (error) {
       alert('Ошибка удаления: ' + error.message);
     } else {
-      // Сразу убираем из локального стейта, чтобы строка исчезла в админке
       setProfiles(prev => prev.filter(p => p.id !== id));
     }
   };
 
-  // Улучшенная функция удаления тренера
   const handleDeleteTrainer = async (id, name) => {
     if (!window.confirm(`Удалить тренера ${name} из базы партнёров?`)) return;
 
@@ -241,7 +257,7 @@ export default function AdminPanel({ onBack }) {
             </div>
             <button
               type="submit"
-              className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/30 transition-all"
+              className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/30 transition-all cursor-pointer active:scale-98"
             >
               Войти в CRM
             </button>
@@ -249,7 +265,7 @@ export default function AdminPanel({ onBack }) {
               <button
                 type="button"
                 onClick={onBack}
-                className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-medium transition-all"
+                className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-medium transition-all cursor-pointer"
               >
                 Вернуться в приложение
               </button>
@@ -283,7 +299,7 @@ export default function AdminPanel({ onBack }) {
   const proCount = profiles.filter(p => p.is_pro).length;
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 pb-20">
+    <div className="min-h-screen bg-slate-100 p-4 pb-20 select-none">
       <div className="max-w-6xl mx-auto">
         
         {/* Шапка админки */}
@@ -300,21 +316,21 @@ export default function AdminPanel({ onBack }) {
           <div className="flex items-center gap-2 flex-wrap">
             <button 
               onClick={exportToCSV}
-              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Экспорт Excel</span>
             </button>
             <button 
               onClick={fetchAllData}
-              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors"
+              className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors cursor-pointer active:scale-95"
               title="Обновить"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button 
               onClick={handleLogout}
-              className="p-2 bg-rose-50 hover:bg-rose-100 rounded-xl text-rose-600 transition-colors"
+              className="p-2 bg-rose-50 hover:bg-rose-100 rounded-xl text-rose-600 transition-colors cursor-pointer active:scale-95"
               title="Выйти"
             >
               <LogOut className="w-4 h-4" />
@@ -359,7 +375,7 @@ export default function AdminPanel({ onBack }) {
         <div className="grid grid-cols-3 gap-2 mb-4">
           <button
             onClick={() => setActiveTab('users')}
-            className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+            className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
               activeTab === 'users' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'
             }`}
           >
@@ -369,7 +385,7 @@ export default function AdminPanel({ onBack }) {
           
           <button
             onClick={() => setActiveTab('trainers')}
-            className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+            className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
               activeTab === 'trainers' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'
             }`}
           >
@@ -379,7 +395,7 @@ export default function AdminPanel({ onBack }) {
 
           <button
             onClick={() => setActiveTab('gyms')}
-            className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+            className={`py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
               activeTab === 'gyms' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'
             }`}
           >
@@ -471,12 +487,12 @@ export default function AdminPanel({ onBack }) {
                           </div>
                         </td>
                         <td className="p-3 max-w-[160px] truncate" title={(t.gyms || []).join(', ')}>
-                          {(t.gyms || []).join(', ') || '—'}
+                          {(t.gyms || []).join(', ') || t.gym || '—'}
                         </td>
                         <td className="p-3 text-right">
                           <button 
                             onClick={() => handleDeleteTrainer(t.id, `${t.first_name} ${t.last_name}`)}
-                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors inline-flex items-center"
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors inline-flex items-center cursor-pointer"
                             title="Удалить тренера"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -553,21 +569,21 @@ export default function AdminPanel({ onBack }) {
                         <td className="p-3 text-right space-x-1">
                           <button 
                             onClick={() => setViewingProfile(p)}
-                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors inline-flex items-center"
+                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors inline-flex items-center cursor-pointer"
                             title="Просмотреть данные атлета"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
                           <button 
                             onClick={() => setEditingProfile(p)}
-                            className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors inline-flex items-center"
+                            className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors inline-flex items-center cursor-pointer"
                             title="Редактировать и Pro"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button 
                             onClick={() => handleDelete(p.id, `${p.first_name} ${p.last_name}`)}
-                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors inline-flex items-center"
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors inline-flex items-center cursor-pointer"
                             title="Удалить"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -606,7 +622,7 @@ export default function AdminPanel({ onBack }) {
                     <p className="text-[11px] text-slate-500 font-mono">@{viewingProfile.username || 'не указан'}</p>
                   </div>
                 </div>
-                <button onClick={() => setViewingProfile(null)} className="text-slate-400 hover:text-slate-600">
+                <button onClick={() => setViewingProfile(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -651,7 +667,7 @@ export default function AdminPanel({ onBack }) {
               </div>
 
               <div className="flex justify-end pt-4">
-                <button onClick={() => setViewingProfile(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium text-xs">Закрыть</button>
+                <button onClick={() => setViewingProfile(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium text-xs cursor-pointer">Закрыть</button>
               </div>
             </div>
           </div>
@@ -663,7 +679,7 @@ export default function AdminPanel({ onBack }) {
             <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-base font-bold text-slate-900">Редактирование & Pro</h3>
-                <button onClick={() => setEditingProfile(null)} className="text-slate-400 hover:text-slate-600">
+                <button onClick={() => setEditingProfile(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -692,7 +708,7 @@ export default function AdminPanel({ onBack }) {
                   <button
                     type="button"
                     onClick={() => handleGrantPro(proMonths)}
-                    className="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm"
+                    className="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm cursor-pointer"
                   >
                     Активировать Pro
                   </button>
@@ -700,7 +716,7 @@ export default function AdminPanel({ onBack }) {
                     <button
                       type="button"
                       onClick={handleRevokePro}
-                      className="py-2 px-3 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl text-xs font-bold"
+                      className="py-2 px-3 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl text-xs font-bold cursor-pointer"
                     >
                       Снять
                     </button>
@@ -762,8 +778,8 @@ export default function AdminPanel({ onBack }) {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-3">
-                  <button type="button" onClick={() => setEditingProfile(null)} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-medium">Отмена</button>
-                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold shadow-md">Сохранить</button>
+                  <button type="button" onClick={() => setEditingProfile(null)} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-medium cursor-pointer">Отмена</button>
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold shadow-md cursor-pointer">Сохранить</button>
                 </div>
               </form>
             </div>
