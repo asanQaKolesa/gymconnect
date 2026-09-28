@@ -15,7 +15,7 @@ import {
   Star 
 } from 'lucide-react';
 
-// Встроенная баннер-карусель
+// Баннер-карусель
 function HomePromoCarousel({ onOpenSub, onNavigateTab, onOpenCoaches }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const touchStartX = useRef(0);
@@ -151,7 +151,7 @@ export default function HomeTab({ userProfile, onOpenSub, onNavigateTab }) {
     }
   };
 
-  // ПОЛНОЭКРАННЫЙ КАТАЛОГ ТРЕНЕРОВ
+  // ПОЛНОЭКРАННЫЙ РЕЖИМ КАТАЛОГА ТРЕНЕРОВ
   if (isTrainersCatalogOpen) {
     return (
       <TrainersCatalogPage 
@@ -176,7 +176,7 @@ export default function HomeTab({ userProfile, onOpenSub, onNavigateTab }) {
         onOpenCoaches={() => setIsTrainersCatalogOpen(true)}
       />
 
-      {/* 3. Сервисы GymConnect (кликая «Найти тренера», открываем каталог) */}
+      {/* 3. Монохромные сервисы: клик по «Найти тренера» открывает каталог наставников */}
       <ActionGrid 
         onNavigateTab={onNavigateTab}
         onOpenCoachesCatalog={() => setIsTrainersCatalogOpen(true)}
@@ -191,7 +191,7 @@ export default function HomeTab({ userProfile, onOpenSub, onNavigateTab }) {
       {/* 6. Полезные статьи и база знаний */}
       <HomeArticles />
 
-      {/* МОДАЛКА ОФОРМЛЕНИЯ ПОДПИСКИ PRO */}
+      {/* МОДАЛКА ПОДПИСКИ PRO */}
       {isProModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-4 shadow-2xl">
@@ -208,7 +208,7 @@ export default function HomeTab({ userProfile, onOpenSub, onNavigateTab }) {
               <button
                 type="button"
                 onClick={() => setIsProModalOpen(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -235,7 +235,7 @@ export default function HomeTab({ userProfile, onOpenSub, onNavigateTab }) {
               href="https://pay.kaspi.kz/pay/sblxzk95"
               target="_blank"
               rel="noreferrer"
-              className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all shadow-md"
+              className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all shadow-md cursor-pointer"
             >
               <span>Оформить через Kaspi Pay</span>
             </a>
