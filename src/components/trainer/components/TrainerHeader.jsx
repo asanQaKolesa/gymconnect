@@ -27,8 +27,12 @@ import {
   Scale, 
   Headphones, 
   Settings, 
-  ExternalLink 
+  ExternalLink,
+  Bell,
+  Check,
+  AlertTriangle
 } from 'lucide-react';
+import { supabase } from '../../../supabaseClient';
 
 export default function TrainerHeader({ 
   trainer, 
@@ -39,7 +43,18 @@ export default function TrainerHeader({
   onOpenScreen,
   initialDrawerOpen = false 
 }) {
+  // 1. ХУКИ СОСТОЯНИЯ (СТРОГО НА САМОМ ВЕРХУ ДО УСЛОВНЫХ RETURN)
   const [isDrawerOpen, setIsDrawerOpen] = useState(initialDrawerOpen);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [studentsList, setStudentsList] = useState([]);
+  const [readNotifIds, setReadNotifIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gymconnect_coach_read_notifs');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   useEffect(() => {
     if (initialDrawerOpen) {
@@ -47,9 +62,28 @@ export default function TrainerHeader({
     }
   }, [initialDrawerOpen]);
 
-  const cleanUsername = trainer?.username ? trainer.username.replace('@', '').trim() : 'coach';
+  const cleanUsername = trainer?.username ? trainer.username.replace('@', '').trim().toLowerCase() : 'coach';
   const isApproved = trainer?.status === 'approved';
   const coachFullName = trainer?.full_name || `${trainer?.first_name || 'Тренер'} ${trainer?.last_name || ''}`.trim();
+
+  // Загрузка подопечных для формирования ленты живых уведомлений
+  useEffect(() => {
+    async function loadStudents() {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, telegram_id, first_name, last_name, phone, format, remaining_workouts, left_trainings, goal, attendance_today, payment_status, monthly_price')
+          .or(`trainer_username.ilike.${cleanUsername},trainer_username.ilike.@${cleanUsername},trainer_telegram.ilike.${cleanUsername},trainer_telegram.ilike.@${cleanUsername}`);
+
+        if (!error && data) {
+          setStudentsList(data);
+        }
+      } catch (e) {
+        console.warn('Ошибка загрузки учеников в TrainerHeader:', e);
+      }
+    }
+    loadStudents();
+  }, [cleanUsername]);
 
   const handleMenuClick = (screenId) => {
     setIsDrawerOpen(false);
@@ -58,22 +92,109 @@ export default function TrainerHeader({
     }
   };
 
+  // ФОРМИРОВАНИЕ ДИНАМИЧЕСКИХ УВЕДОМЛЕНИЙ ИЗ БАЗЫ
+  const generateNotifications = () => {
+    const notifs = [];
+
+    studentsList.forEach(st => {
+      const studentName = `${st.first_name || 'Атлет'} ${st.last_name || ''}`.trim();
+      const left = st.left_trainings !== undefined ? st.left_trainings : (st.remaining_workouts !== undefined ? st.remaining_workouts : 12);
+
+      // 1. Уведомление о явке ученика сегодня
+      if (st.attendance_today === 'attending') {
+        notifs.push({
+          id: `checkin_yes_${st.id}`,
+          type: 'attendance_yes',
+          title: 'Подтверждение явки',
+          desc: `${studentName} подтвердил: Будет на тренировке сегодня!`,
+          time: 'Сегодня',
+          isNew: !readNotifIds.includes(`checkin_yes_${st.id}`)
+        });
+      } else if (st.attendance_today === 'missed') {
+        notifs.push({
+          id: `checkin_no_${st.id}`,
+          type: 'attendance_no',
+          title: 'Пропуск тренировки',
+          desc: `${studentName} предупредил: Не сможет прийти сегодня.`,
+          time: 'Сегодня',
+          isNew: !readNotifIds.includes(`checkin_no_${st.id}`)
+        });
+      }
+
+      // 2. Уведомление об остатке занятий
+      if (left <= 1) {
+        notifs.push({
+          id: `low_balance_${st.id}`,
+          type: 'balance',
+          title: 'Абонемент заканчивается',
+          desc: `У ${studentName} осталось ${left} зан. Пора согласовать продление блока.`,
+          time: 'Внимание',
+          isNew: !readNotifIds.includes(`low_balance_${st.id}`)
+        });
+      }
+
+      // 3. Задолженность по оплате
+      if (st.payment_status === 'pending') {
+        notifs.push({
+          id: `pending_pay_${st.id}`,
+          type: 'payment',
+          title: 'Ожидает оплаты',
+          desc: `${studentName}: к оплате ${Number(st.monthly_price || 70000).toLocaleString()} ₸ за абонемент.`,
+          time: 'Касса',
+          isNew: !readNotifIds.includes(`pending_pay_${st.id}`)
+        });
+      }
+    });
+
+    return notifs;
+  };
+
+  const notifications = generateNotifications();
+  const unreadCount = notifications.filter(n => n.isNew).length;
+
+  const handleMarkAllRead = () => {
+    const allIds = notifications.map(n => n.id);
+    setReadNotifIds(allIds);
+    try {
+      localStorage.setItem('gymconnect_coach_read_notifs', JSON.stringify(allIds));
+    } catch (e) {}
+  };
+
   return (
     <>
       {/* ================= АККУРАТНАЯ ВЕРХНЯЯ ШАПКА ================= */}
       <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 sticky top-0 z-40 select-none shadow-xs">
         <div className="flex items-center justify-between gap-2 max-w-md mx-auto w-full">
-          <button
-            type="button"
-            onClick={() => setIsDrawerOpen(true)}
-            className="flex items-center gap-1.5 py-1.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
-            title="Открыть меню тренера"
-          >
-            <Menu className="w-4 h-4 text-white stroke-[2.2]" />
-            <span className="text-xs font-bold tracking-tight">Меню</span>
-          </button>
+          
+          <div className="flex items-center gap-2">
+            {/* Кнопка открытия меню */}
+            <button
+              type="button"
+              onClick={() => setIsDrawerOpen(true)}
+              className="flex items-center gap-1.5 py-1.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
+              title="Открыть меню тренера"
+            >
+              <Menu className="w-4 h-4 text-white stroke-[2.2]" />
+              <span className="text-xs font-bold tracking-tight">Меню</span>
+            </button>
 
-          <div className="flex items-center gap-2 overflow-hidden">
+            {/* КОЛОКОЛЬЧИК УВЕДОМЛЕНИЙ С ИНДИКАТОРОМ */}
+            <button
+              type="button"
+              onClick={() => setIsNotifOpen(true)}
+              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center relative active:scale-90 transition-transform cursor-pointer border border-slate-200/80 shrink-0"
+              title="Центр уведомлений"
+            >
+              <Bell className="w-4 h-4 stroke-[2]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center font-mono shadow-xs animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-hidden">
             <div className="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
               <Dumbbell className="w-3.5 h-3.5 stroke-[2.2]" />
             </div>
@@ -105,6 +226,97 @@ export default function TrainerHeader({
           </div>
         </div>
       </header>
+
+      {/* ================= ЦЕНТР УВЕДОМЛЕНИЙ ТРЕНЕРА ================= */}
+      {isNotifOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-3.5 shadow-2xl max-h-[85vh] flex flex-col justify-between overflow-y-auto">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Bell className="w-4 h-4 stroke-[2.2]" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">Центр уведомлений</h3>
+                  <p className="text-[10px] text-slate-400">События и отметки явки учеников</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllRead}
+                    className="text-[10.5px] font-semibold text-blue-600 hover:underline cursor-pointer"
+                  >
+                    Прочитано
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsNotifOpen(false)}
+                  className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Лента уведомлений */}
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {notifications.length > 0 ? (
+                notifications.map((notif) => (
+                  <div 
+                    key={notif.id}
+                    className={`p-3 rounded-2xl border transition-all space-y-1 ${
+                      notif.type === 'attendance_yes' 
+                        ? 'bg-emerald-50/70 border-emerald-200' 
+                        : notif.type === 'attendance_no'
+                          ? 'bg-rose-50/70 border-rose-200'
+                          : notif.type === 'payment'
+                            ? 'bg-amber-50/70 border-amber-200'
+                            : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                        notif.type === 'attendance_yes' ? 'text-emerald-800' :
+                        notif.type === 'attendance_no' ? 'text-rose-800' :
+                        notif.type === 'payment' ? 'text-amber-800' : 'text-blue-800'
+                      }`}>
+                        {notif.type === 'attendance_yes' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                        {notif.type === 'attendance_no' && <AlertTriangle className="w-3.5 h-3.5" />}
+                        {notif.type === 'payment' && <CreditCard className="w-3.5 h-3.5" />}
+                        <span>{notif.title}</span>
+                      </span>
+                      <span className="text-[9.5px] text-slate-400 font-mono">{notif.time}</span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-700 leading-snug font-medium">
+                      {notif.desc}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-slate-400 space-y-1">
+                  <Bell className="w-6 h-6 mx-auto text-slate-300 mb-1" />
+                  <p className="font-semibold text-xs text-slate-700">Новых уведомлений нет</p>
+                  <p className="text-[10.5px]">Когда ученики отметят явку или оплатят блок, события появятся здесь.</p>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsNotifOpen(false)}
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer active:scale-98 transition-all"
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ================= БОКОВОЕ МЕНЮ (DRAWER) ================= */}
       {isDrawerOpen && (
