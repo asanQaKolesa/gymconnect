@@ -12,18 +12,29 @@ import {
   Plus, 
   Trash2, 
   User, 
-  Check 
+  Check,
+  Send
 } from 'lucide-react';
 import StudentDetailModal from '../components/StudentDetailModal';
+import { sendStudentNotification } from '../../../utils/telegramNotifications';
 
 export default function TrainerNutritionTab({ students = [], onUpdate }) {
-  const [selectedStudentId, setSelectedStudentId] = useState(students[0]?.id || '');
+  // Фильтрация активных атлетов
+  const isStudentActive = (s) => {
+    if (!s) return false;
+    const st = (s.status || '').toLowerCase().trim();
+    return st !== 'left' && st !== 'archived';
+  };
+
+  const activeStudents = students.filter(isStudentActive);
+  const [selectedStudentId, setSelectedStudentId] = useState(activeStudents[0]?.id || '');
   const [selectedStudentForModal, setSelectedStudentForModal] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [pushStatusFeedback, setPushStatusFeedback] = useState(null);
 
   // Параметры КБЖУ
-  const [nutritionGoal, setNutritionGoal] = useState('deficit'); // 'deficit' | 'maintain' | 'surplus'
+  const [nutritionGoal, setNutritionGoal] = useState('deficit');
   const [calories, setCalories] = useState(2200);
   const [protein, setProtein] = useState(160);
   const [fat, setFat] = useState(70);
@@ -38,7 +49,7 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
     { id: 4, name: 'Ужин', time: '19:30', desc: 'Рыба (минтай/лосось) 200г + стручковая фасоль + оливковое масло 1 ч.л.' }
   ]);
 
-  // Рекомендованные добавки (спортпит)
+  // Рекомендованные добавки
   const [supplements, setSupplements] = useState([
     { name: 'Креатин моногидрат', dosage: '5г утром или после тренировки', active: true },
     { name: 'Сывороточный протеин', dosage: '1 порция (30г) в день между приемами', active: true },
@@ -51,12 +62,11 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
 
   // Синхронизация при выборе ученика
   useEffect(() => {
-    if (students.length > 0 && !selectedStudentId) {
-      setSelectedStudentId(students[0].id);
+    if (activeStudents.length > 0 && !selectedStudentId) {
+      setSelectedStudentId(activeStudents[0].id);
     }
-    const current = students.find(s => s.id === selectedStudentId);
+    const current = activeStudents.find(s => s.id === selectedStudentId);
     if (current) {
-      // Автоматический базовый расчет под вес подопечного
       const weight = Number(current.weight) || 75;
       const height = Number(current.height) || 178;
       const age = Number(current.age) || 25;
@@ -75,7 +85,6 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
       setCarbs(Math.round((calcCals - (weight * 2 * 4 + weight * 0.9 * 9)) / 4));
       setWaterMl(Math.round(weight * 35));
 
-      // Если в базе уже есть сохраненный рацион
       if (current.assigned_nutrition && typeof current.assigned_nutrition === 'object') {
         const nut = current.assigned_nutrition;
         if (nut.calories) setCalories(nut.calories);
@@ -88,7 +97,7 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
       }
     }
     setSaveSuccess(false);
-  }, [selectedStudentId, students]);
+  }, [selectedStudentId, activeStudents]);
 
   const handleAddMeal = (e) => {
     e.preventDefault();
@@ -107,6 +116,7 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
     setSupplements(updated);
   };
 
+  // СОХРАНЕНИЕ ПЛАНА ПИТАНИЯ + ПУШ УЧЕНИКУ В TELEGRAM
   const handleSaveNutrition = async () => {
     if (!selectedStudentId) {
       alert('Выберите ученика!');
@@ -115,6 +125,9 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
 
     setSaving(true);
     setSaveSuccess(false);
+    setPushStatusFeedback(null);
+
+    const targetStudent = activeStudents.find(s => s.id === selectedStudentId);
 
     try {
       const payload = {
@@ -139,7 +152,29 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
       if (error) throw error;
 
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2500);
+
+      // Отправляем пуш подопечному в Telegram от имени бота
+      if (targetStudent) {
+        const pushRes = await sendStudentNotification({
+          studentTelegramId: targetStudent.telegram_id,
+          studentUsername: targetStudent.username,
+          studentId: targetStudent.id,
+          title: 'План питания от тренера',
+          message: `Ваш тренер назначил персональный рацион и норму КБЖУ: ${calories} ккал (Белки: ${protein}г, Жиры: ${fat}г, Углеводы: ${carbs}г). Все приемы пищи и добавки доступны в приложении!`
+        });
+
+        if (pushRes && pushRes.ok) {
+          setPushStatusFeedback('✅ План сохранен и отправлен ученику в Telegram!');
+        } else {
+          setPushStatusFeedback('✅ Рацион сохранен в приложении!');
+        }
+      }
+
+      setTimeout(() => {
+        setSaveSuccess(false);
+        setPushStatusFeedback(null);
+      }, 5000);
+
       if (onUpdate) onUpdate();
     } catch (err) {
       alert('Ошибка при сохранении рациона: ' + err.message);
@@ -148,7 +183,7 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
     }
   };
 
-  const currentStudent = students.find(s => s.id === selectedStudentId);
+  const currentStudent = activeStudents.find(s => s.id === selectedStudentId);
 
   return (
     <div className="space-y-3.5 select-none pb-12 text-xs">
@@ -172,7 +207,7 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
               onClick={() => setSelectedStudentForModal(currentStudent)}
               className="text-[11px] font-semibold text-blue-600 flex items-center gap-1 active:scale-95 cursor-pointer"
             >
-              <span>Анкета</span>
+              <span>Вся анкета</span>
               <ExternalLink className="w-3 h-3" />
             </button>
           )}
@@ -185,14 +220,14 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
             onChange={(e) => setSelectedStudentId(e.target.value)}
             className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900"
           >
-            {students.length > 0 ? (
-              students.map(s => (
+            {activeStudents.length > 0 ? (
+              activeStudents.map(s => (
                 <option key={s.id} value={s.id}>
                   {s.first_name} {s.last_name || ''} ({s.goal || 'Тонус'}) • Вес: {s.weight || '—'} кг
                 </option>
               ))
             ) : (
-              <option value="">Нет учеников в базе</option>
+              <option value="">Нет активных учеников</option>
             )}
           </select>
         </div>
@@ -250,7 +285,6 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
           </div>
         </div>
 
-        {/* Водный баланс */}
         <div className="p-3 bg-sky-50/60 border border-sky-200/80 rounded-2xl flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Droplet className="w-4 h-4 text-sky-600 shrink-0" />
@@ -271,7 +305,7 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
         </div>
       </div>
 
-      {/* 3. Меню и рацион по приемам пищи */}
+      {/* 3. Меню по приемам пищи */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <span className="text-xs font-bold text-slate-900">Рацион дня (Приемы пищи)</span>
@@ -376,15 +410,15 @@ export default function TrainerNutritionTab({ students = [], onUpdate }) {
         </div>
       </div>
 
-      {/* Кнопка сохранения с индикацией */}
+      {/* Кнопка сохранения с индикацией и пушем */}
       <div className="pt-2 flex items-center justify-between border-t border-slate-100">
-        {saveSuccess ? (
+        {pushStatusFeedback ? (
           <span className="text-emerald-600 text-xs font-semibold flex items-center gap-1">
             <CheckCircle2 className="w-4 h-4" />
-            <span>Рацион сохранен в профиль ученика!</span>
+            <span>{pushStatusFeedback}</span>
           </span>
         ) : (
-          <span className="text-slate-400 text-[10px]">Синхронизируется с карточкой атлета</span>
+          <span className="text-slate-400 text-[10px]">Атлет сразу увидит рацион в своём приложении</span>
         )}
 
         <button
