@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient';
 // Официальный токен бота GymConnect (@gymconnect_ala_bot)
 const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '8825396654:AAH0GzJqWOzqjys5re9De-Bc7jPIqwxtfDI';
 
-// ПРЯМЫЕ ССЫЛКИ ДЛЯ КНОПОК WEB_APP (Telegram строго требует реальный HTTPS домен без t.me)
+// Валидные прямые адреса WebApp (Telegram API запрещает t.me в web_app.url)
 const APP_URL = 'https://asanqakolesa.github.io/gymconnect/';
 const CRM_WEBAPP_URL = 'https://asanqakolesa.github.io/gymconnect/?trainer=true';
 
@@ -20,7 +20,7 @@ const KNOWN_CHAT_IDS = {
 async function sendTelegramApiMessage(chatId, htmlText, webAppUrl = null, buttonText = '🏋️ Открыть GymConnect') {
   if (!chatId || !BOT_TOKEN) {
     console.warn('Отправка отменена: отсутствует chat_id или BOT_TOKEN', { chatId, hasToken: Boolean(BOT_TOKEN) });
-    return { ok: false, success: false, error: 'Отсутствует Chat ID' };
+    return { ok: false, success: false, error: 'У пользователя не привязан числовой Telegram ID' };
   }
 
   const payload = {
@@ -57,7 +57,13 @@ async function sendTelegramApiMessage(chatId, htmlText, webAppUrl = null, button
     
     if (!resData.ok) {
       console.error('Ошибка Telegram Bot API:', resData);
-      return { ok: false, success: false, error: resData.description || 'Ошибка Telegram API' };
+      return { 
+        ok: false, 
+        success: false, 
+        error: resData.description?.includes('bot can\'t initiate')
+          ? 'Пользователь не нажал /start в боте @gymconnect_ala_bot'
+          : (resData.description || 'Ошибка Telegram API')
+      };
     }
 
     return { ok: true, success: true, data: resData };
@@ -155,7 +161,7 @@ export async function sendStudentNotification({
         targetChatId = data.telegram_id;
       }
     } catch (e) {
-      console.warn('Ошибка поиска telegram_id ученика в profiles:', e);
+      console.warn('Ошибка поиска telegram_id по username:', e);
     }
   }
 
@@ -163,19 +169,28 @@ export async function sendStudentNotification({
     try {
       const { data } = await supabase
         .from('profiles')
-        .select('telegram_id')
+        .select('telegram_id, username')
         .eq('id', studentId)
         .maybeSingle();
 
       if (data?.telegram_id) {
         targetChatId = data.telegram_id;
+      } else if (data?.username) {
+        const u = data.username.replace('@', '').trim().toLowerCase();
+        if (KNOWN_CHAT_IDS[u]) targetChatId = KNOWN_CHAT_IDS[u];
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Ошибка поиска telegram_id по studentId:', e);
+    }
   }
 
-  // Если это тестовый аккаунт основателя
-  if (!targetChatId && (cleanU === 'asanali_kk' || cleanU.includes('asanali'))) {
-    targetChatId = KNOWN_CHAT_IDS['asanali_kk'];
+  // Резервный поиск для тестовых аккаунтов основателя
+  if (!targetChatId) {
+    if (cleanU === 'asanali_kk' || cleanU.includes('asanali')) {
+      targetChatId = KNOWN_CHAT_IDS['asanali_kk'];
+    } else if (cleanU === 'dattabanee') {
+      targetChatId = KNOWN_CHAT_IDS['dattabanee'];
+    }
   }
 
   const messageHtml = `
@@ -184,18 +199,24 @@ export async function sendStudentNotification({
 ${message}
 `.trim();
 
+  // БЕЗОПАСНАЯ ЗАПИСЬ В БАЗУ ЧЕРЕЗ TRY/CATCH (БЕЗ .catch() КОТОРЫЙ ВЫЗЫВАЛ СБОЙ!)
   if (studentId || targetChatId) {
-    supabase.from('notifications').insert([{
-      title,
-      message,
-      type: 'coach_message',
-      is_read: false,
-      user_id: studentId || null,
-      telegram_id: targetChatId ? String(targetChatId) : null,
-      created_at: new Date().toISOString()
-    }]).catch(() => {});
+    try {
+      await supabase.from('notifications').insert([{
+        title,
+        message,
+        type: 'coach_message',
+        is_read: false,
+        user_id: studentId || null,
+        telegram_id: targetChatId ? String(targetChatId) : null,
+        created_at: new Date().toISOString()
+      }]);
+    } catch (dbErr) {
+      console.warn('Таблица notifications еще не создана, пропускаем запись в БД:', dbErr);
+    }
   }
 
+  // Отправляем пуш ученику в Telegram
   return await sendTelegramApiMessage(
     targetChatId, 
     messageHtml, 
