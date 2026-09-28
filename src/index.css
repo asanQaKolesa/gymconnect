@@ -8,6 +8,7 @@
   --apple-font: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   --bg-system: #F2F2F7;
   --apple-blue: #2563EB;
+  --ease-apple-spring: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 * {
@@ -27,24 +28,62 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.012em;
   overflow-x: hidden;
+  /* Защита от паразитного вылета Telegram Mini App при резком свайпе вниз */
+  overscroll-behavior-y: none;
+}
+
+/* ================= ШЕЛКОВИСТЫЕ НАЦИВНЫЕ АНИМАЦИИ РАСКРЫТИЯ (APPLE HIG) ================= */
+@keyframes iosSmoothFadeScale {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes iosBottomSheet {
+  0% {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Все полноэкранные страницы и модалки во всем приложении получают плавное открытие */
+.fixed.inset-0 {
+  animation: iosSmoothFadeScale 0.22s var(--ease-apple-spring) forwards;
+  will-change: transform, opacity;
+}
+
+/* Нижние шторки */
+.sheet-enter {
+  animation: iosBottomSheet 0.26s var(--ease-apple-spring) forwards;
+  will-change: transform;
 }
 
 /* ================= ГЛОБАЛЬНАЯ НАСТРОЙКА ВСЕХ ПОЛЕЙ ВВОДА ================= */
 input, textarea, select {
-  caret-color: #2563EB !important; /* Яркая синяя видимая каретка на всех полях во всем приложении */
+  caret-color: #2563EB !important; /* Яркая синяя каретка везде */
   font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-/* На мобильных устройствах предотвращаем принудительный зум iOS Safari при клике */
+/* На мобильных устройствах предотвращаем принудительный зум iOS Safari */
 @media (max-width: 768px) {
   input:not([type="checkbox"]):not([type="radio"]), 
   textarea, 
   select {
-    font-size: 16px !important; /* В iOS если шрифт >= 16px, система НЕ зумит и НЕ сдвигает курсор */
+    font-size: 16px !important; /* iOS не зумит страницу, если кегль >= 16px */
   }
 }
 
-/* Скрытие стандартного скроллбара для нативного ощущения мини-аппа */
+/* Скрытие стандартного скроллбара и мягкий инерционный скролл */
 ::-webkit-scrollbar {
   display: none;
 }
@@ -52,4 +91,5 @@ input, textarea, select {
 * {
   -ms-overflow-style: none;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
