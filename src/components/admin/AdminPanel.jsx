@@ -148,9 +148,10 @@ export default function AdminPanel({ onBack }) {
     if (!trainersError && trainersData) {
       const trainersWithCount = trainersData.map(trainer => {
         const cleanTrainerUsername = (trainer.username || '').replace('@', '').trim().toLowerCase();
-        const studentsCount = loadedUsers.filter(u => 
-          (u.trainer_username || '').replace('@', '').trim().toLowerCase() === cleanTrainerUsername
-        ).length;
+        const studentsCount = loadedUsers.filter(u => {
+          const uTrainer = (u.trainer_username || u.trainer_telegram || '').replace('@', '').trim().toLowerCase();
+          return uTrainer === cleanTrainerUsername;
+        }).length;
 
         return {
           ...trainer,
@@ -185,19 +186,35 @@ export default function AdminPanel({ onBack }) {
     }
   };
 
+  // СИНХРОНИЗИРОВАННОЕ СОХРАНЕНИЕ ПРИВЯЗКИ ТРЕНЕРА
   const handleSaveEdit = async (e) => {
     e.preventDefault();
+    
+    // Очищаем ник тренера от @ и пробелов, приводим к нижнему регистру
+    const rawTrainer = editingProfile.trainer_username || '';
+    const cleanTrainer = rawTrainer.replace(/[@\s]/g, '').trim().toLowerCase();
+
+    // Синхронизируем оба поля: trainer_username и trainer_telegram
+    // Если поле очищено (пустое) — оба поля становятся null, и ученик полностью отвязывается
+    const normalizedProfile = {
+      ...editingProfile,
+      trainer_username: cleanTrainer || null,
+      trainer_telegram: cleanTrainer || null,
+      username: (editingProfile.username || '').replace(/[@\s]/g, '').trim()
+    };
+
     const { error } = await supabase
       .from('profiles')
-      .update(editingProfile)
+      .update(normalizedProfile)
       .eq('id', editingProfile.id);
 
     if (error) {
       alert('Ошибка обновления: ' + error.message);
     } else {
-      setProfiles(prev => prev.map(p => p.id === editingProfile.id ? editingProfile : p));
+      setProfiles(prev => prev.map(p => p.id === editingProfile.id ? normalizedProfile : p));
       setEditingProfile(null);
-      alert('Изменения успешно сохранены!');
+      alert('Изменения успешно сохранены! Привязка тренера синхронизирована.');
+      fetchAllData();
     }
   };
 
