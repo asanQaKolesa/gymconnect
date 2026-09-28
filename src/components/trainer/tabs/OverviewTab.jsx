@@ -1,5 +1,5 @@
 // src/components/trainer/tabs/OverviewTab.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, 
   Calendar, 
@@ -46,7 +46,7 @@ export default function OverviewTab({
     firstSessionDate: '2026-09-26'
   });
 
-  // Расписание на сегодняшний день с упражнениями
+  // Расписание на сегодняшний день с подтверждением явки учеником
   const [todaySchedule, setTodaySchedule] = useState([
     { 
       id: '1', 
@@ -64,6 +64,7 @@ export default function OverviewTab({
       gym: 'Invictus Go (Mega Park)', 
       format: 'gym', 
       status: 'completed', 
+      client_checkin: 'attending', // Ученик подтвердил явку
       left_trainings: 6,
       remaining: 6,
       monthly_price: 70000,
@@ -94,6 +95,7 @@ export default function OverviewTab({
       gym: 'Онлайн ведение (Zoom)', 
       format: 'online', 
       status: 'pending', 
+      client_checkin: 'attending', // Ученик подтвердил явку
       left_trainings: 3,
       remaining: 3,
       monthly_price: 45000,
@@ -124,6 +126,7 @@ export default function OverviewTab({
       gym: 'Invictus Go (Mega Park)', 
       format: 'gym', 
       status: 'pending', 
+      client_checkin: 'missed', // Ученик предупредил, что не придет
       left_trainings: 1,
       remaining: 1,
       monthly_price: 70000,
@@ -154,6 +157,7 @@ export default function OverviewTab({
       gym: 'Invictus Go (Mega Park)', 
       format: 'gym', 
       status: 'pending', 
+      client_checkin: null, // Еще не подтвердил
       left_trainings: 8,
       remaining: 8,
       monthly_price: 70000,
@@ -168,6 +172,21 @@ export default function OverviewTab({
       ]
     }
   ]);
+
+  // Фоновая синхронизация с отметками учеников из localStorage
+  useEffect(() => {
+    try {
+      setTodaySchedule(prev => prev.map(item => {
+        const localCheckin = localStorage.getItem(`gymconnect_attendance_${item.id}`);
+        if (localCheckin) {
+          return { ...item, client_checkin: localCheckin };
+        }
+        return item;
+      }));
+    } catch (e) {
+      console.warn(e);
+    }
+  }, []);
 
   const [studentsData, setStudentsData] = useState([
     { id: '1', name: 'Данияр Аскаров', phone: '+77771234567', format: 'gym', remaining: 6, status: 'active' },
@@ -425,7 +444,7 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 4. Расписание на сегодня */}
+      {/* 4. Расписание на сегодня с отметками явки от атлета */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
           <div className="flex items-center gap-2">
@@ -438,7 +457,7 @@ export default function OverviewTab({
             </div>
           </div>
           <span className="text-[10px] font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-            26 сентября
+            Сегодня
           </span>
         </div>
 
@@ -449,6 +468,7 @@ export default function OverviewTab({
             filteredSchedule.map((item) => {
               const isCompleted = item.status === 'completed';
               const isCanceled = item.status === 'canceled';
+              const checkinStatus = item.client_checkin;
 
               return (
                 <div
@@ -463,9 +483,9 @@ export default function OverviewTab({
                   }`}
                   title="Нажмите, чтобы открыть полный профиль ученика"
                 >
-                  {/* Верхняя строчка */}
+                  {/* Верхняя строчка: Время, Формат, Отметка ученика и Статус */}
                   <div className="flex items-center justify-between gap-2 border-b border-slate-200/50 pb-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-xs font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded-lg border border-slate-200/80">
                         {item.time}
                       </span>
@@ -476,9 +496,21 @@ export default function OverviewTab({
                       }`}>
                         {item.format === 'gym' ? 'В зале' : 'Онлайн'}
                       </span>
+
+                      {/* ОНЛАЙН-ОТМЕТКА ЯВКИ ОТ УЧЕНИКА */}
+                      {checkinStatus === 'attending' && (
+                        <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300 flex items-center gap-1">
+                          <Check className="w-3 h-3 text-emerald-600 stroke-[3]" /> Будет 👍
+                        </span>
+                      )}
+                      {checkinStatus === 'missed' && (
+                        <span className="text-[9.5px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-300 flex items-center gap-1">
+                          <X className="w-3 h-3 text-rose-600 stroke-[3]" /> Не придет ✕
+                        </span>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       {isCompleted && (
                         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" /> Проведено
@@ -497,7 +529,7 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  {/* Средняя часть */}
+                  {/* Средняя часть: Имя, Локация и Фокус */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-0.5 overflow-hidden">
                       <div className="flex items-center gap-1">
@@ -515,14 +547,14 @@ export default function OverviewTab({
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="text-[10px] text-slate-400 block">Остаток</span>
+                      <span className="text-[10px] text-slate-400 block font-normal">Остаток</span>
                       <span className="text-xs font-bold font-mono text-slate-800 bg-white px-2 py-0.5 rounded-lg border border-slate-200 inline-block mt-0.5">
                         {item.remaining} зан.
                       </span>
                     </div>
                   </div>
 
-                  {/* 3 кнопки в 1 строку */}
+                  {/* 3 кнопки строго в 1 строку без переносов */}
                   <div className="flex items-center gap-1.5 pt-1">
                     <button
                       type="button"
