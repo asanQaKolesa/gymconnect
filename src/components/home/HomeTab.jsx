@@ -5,6 +5,7 @@ import ActionGrid from './ActionGrid';
 import DailyQuote from './DailyQuote';
 import HomeChallenges from './HomeChallenges';
 import HomeArticles from './HomeArticles';
+import TrainersCatalogPage from './TrainersCatalogPage';
 import { 
   CreditCard, 
   X, 
@@ -14,8 +15,8 @@ import {
   Star 
 } from 'lucide-react';
 
-// Встроенная баннер-карусель с 3 реальными фичами
-function HomePromoCarousel({ onOpenSub, onNavigateTab }) {
+// Встроенная баннер-карусель
+function HomePromoCarousel({ onOpenSub, onNavigateTab, onOpenCoaches }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const touchStartX = useRef(0);
 
@@ -33,6 +34,19 @@ function HomePromoCarousel({ onOpenSub, onNavigateTab }) {
     },
     {
       id: 2,
+      tag: 'База наставников',
+      tagColor: 'bg-slate-100 text-slate-800 border-slate-200',
+      title: 'Каталог проверенных тренеров Алматы',
+      desc: 'Подбор персонального наставника под ваш клуб, цель и бюджет с гарантией результата.',
+      icon: <Users className="w-4 h-4 text-slate-800" />,
+      badge: 'Тренеры',
+      bgGradient: 'from-slate-100 via-white to-blue-50/30',
+      action: () => {
+        if (typeof onOpenCoaches === 'function') onOpenCoaches();
+      }
+    },
+    {
+      id: 3,
       tag: 'GymBro Matching',
       tagColor: 'bg-slate-100 text-slate-800 border-slate-200',
       title: 'Найди напарника в своем зале Алматы',
@@ -42,19 +56,6 @@ function HomePromoCarousel({ onOpenSub, onNavigateTab }) {
       bgGradient: 'from-slate-100 via-white to-rose-50/20',
       action: () => {
         if (typeof onNavigateTab === 'function') onNavigateTab('gymbro');
-      }
-    },
-    {
-      id: 3,
-      tag: 'Честный рейтинг',
-      tagColor: 'bg-slate-100 text-slate-800 border-slate-200',
-      title: 'Отзывы на тренеров и фитнес-клубы',
-      desc: 'Выбирайте проверенные залы и делитесь реальным опытом тренировок в Алматы.',
-      icon: <Star className="w-4 h-4 text-slate-800" />,
-      badge: 'Рейтинг',
-      bgGradient: 'from-slate-100 via-white to-amber-50/20',
-      action: () => {
-        if (typeof onNavigateTab === 'function') onNavigateTab('reviews');
       }
     }
   ];
@@ -140,6 +141,7 @@ function HomePromoCarousel({ onOpenSub, onNavigateTab }) {
 
 export default function HomeTab({ userProfile, onOpenSub, onNavigateTab }) {
   const [isProModalOpen, setIsProModalOpen] = useState(false);
+  const [isTrainersCatalogOpen, setIsTrainersCatalogOpen] = useState(false);
 
   const handleOpenSubscription = () => {
     if (typeof onOpenSub === 'function') {
@@ -149,26 +151,38 @@ export default function HomeTab({ userProfile, onOpenSub, onNavigateTab }) {
     }
   };
 
+  // ПОЛНОЭКРАННЫЙ КАТАЛОГ ТРЕНЕРОВ
+  if (isTrainersCatalogOpen) {
+    return (
+      <TrainersCatalogPage 
+        onBack={() => setIsTrainersCatalogOpen(false)}
+        userProfile={userProfile}
+      />
+    );
+  }
+
   return (
     <div className="p-3.5 max-w-md mx-auto flex flex-col pb-8 select-none animate-in fade-in duration-200">
       
-      {/* 1. Верхний бар: PRO-кнопка и колокольчик в один ряд + «30+ атлетов уже с нами» */}
+      {/* 1. Верхний бар */}
       <HomeHeader 
         onOpenSub={handleOpenSubscription} 
       />
 
-      {/* 2. Баннер-карусель анонсов (Скидки, GymBro, Отзывы) */}
+      {/* 2. Баннер-карусель */}
       <HomePromoCarousel 
         onOpenSub={handleOpenSubscription}
         onNavigateTab={onNavigateTab}
+        onOpenCoaches={() => setIsTrainersCatalogOpen(true)}
       />
 
-      {/* 3. Монохромные сервисы GymConnect (подняты наверх) */}
+      {/* 3. Сервисы GymConnect (кликая «Найти тренера», открываем каталог) */}
       <ActionGrid 
         onNavigateTab={onNavigateTab}
+        onOpenCoachesCatalog={() => setIsTrainersCatalogOpen(true)}
       />
 
-      {/* 4. Цитата дня Gymshark со знаком 🦈 */}
+      {/* 4. Цитата дня Gymshark */}
       <DailyQuote />
 
       {/* 5. Активные вызовы дня */}
@@ -218,7 +232,7 @@ export default function HomeTab({ userProfile, onOpenSub, onNavigateTab }) {
             </div>
 
             <a
-              href="https://t.me/gymconnect_kz"
+              href="https://pay.kaspi.kz/pay/sblxzk95"
               target="_blank"
               rel="noreferrer"
               className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all shadow-md"
