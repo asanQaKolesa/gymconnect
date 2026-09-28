@@ -1,5 +1,5 @@
 // src/components/trainer/components/modals/TrainerNotificationsModal.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Bell, 
@@ -8,8 +8,11 @@ import {
   CreditCard, 
   Trash2,
   Check,
-  Dumbbell
+  Dumbbell,
+  Clock
 } from 'lucide-react';
+
+const TTL_48_HOURS = 48 * 60 * 60 * 1000; // 48 часов в миллисекундах
 
 export default function TrainerNotificationsModal({ 
   isOpen, 
@@ -26,21 +29,45 @@ export default function TrainerNotificationsModal({
     }
   });
 
-  // Список удаленных уведомлений (чтобы не копились)
-  const [deletedNotifIds, setDeletedNotifIds] = useState(() => {
+  // Список удаленных вручную уведомлений с временными метками для автоочистки
+  const [deletedNotifsMap, setDeletedNotifsMap] = useState(() => {
     try {
-      const saved = localStorage.getItem('gymconnect_coach_deleted_notifs');
-      return saved ? JSON.parse(saved) : [];
+      const saved = localStorage.getItem('gymconnect_coach_deleted_map');
+      return saved ? JSON.parse(saved) : {};
     } catch {
-      return [];
+      return {};
     }
   });
 
+  // Автоматическая очистка старых удалений из памяти старше 48 часов
+  useEffect(() => {
+    try {
+      const now = Date.now();
+      const updatedMap = { ...deletedNotifsMap };
+      let changed = false;
+
+      Object.entries(updatedMap).forEach(([id, timestamp]) => {
+        if (now - timestamp > TTL_48_HOURS) {
+          delete updatedMap[id];
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        setDeletedNotifsMap(updatedMap);
+        localStorage.setItem('gymconnect_coach_deleted_map', JSON.stringify(updatedMap));
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  }, []);
+
   if (!isOpen) return null;
 
-  // Формирование динамических уведомлений из реальной базы учеников
+  // Формирование уведомлений с фильтрацией по 48-часовому окну
   const generateNotifications = () => {
     const notifs = [];
+    const now = Date.now();
 
     studentsList.forEach(st => {
       const studentName = `${st.first_name || 'Атлет'} ${st.last_name || ''}`.trim();
@@ -48,37 +75,48 @@ export default function TrainerNotificationsModal({
         ? st.left_trainings 
         : (st.remaining_workouts !== undefined ? st.remaining_workouts : 12);
 
-      // 1. Уведомление о подтверждении явки
-      if (st.attendance_today === 'attending') {
-        notifs.push({
-          id: `checkin_yes_${st.id}`,
-          type: 'attendance_yes',
-          title: 'Подтверждение тренировки',
-          desc: `${studentName} подтвердил: Будет на тренировке сегодня!`,
-          time: 'Сегодня',
-          badge: 'Явка подтверждена',
-          isNew: !readNotifIds.includes(`checkin_yes_${st.id}`)
-        });
-      } else if (st.attendance_today === 'missed') {
-        notifs.push({
-          id: `checkin_no_${st.id}`,
-          type: 'attendance_no',
-          title: 'Пропуск тренировки',
-          desc: `${studentName} предупредил: Не сможет прийти сегодня на тренировку.`,
-          time: 'Сегодня',
-          badge: 'Отмена занятия',
-          isNew: !readNotifIds.includes(`checkin_no_${st.id}`)
-        });
+      // Проверка возраста отметки явки
+      let checkinAgeMs = 0;
+      if (st.attendance_date) {
+        checkinAgeMs = now - new Date(st.attendance_date).getTime();
       }
 
-      // 2. Уведомление об остатке занятий в абонементе (≤ 2)
+      // 1. Уведомление о явке (только если событию меньше 48 часов)
+      if (checkinAgeMs < TTL_48_HOURS) {
+        if (st.attendance_today === 'attending') {
+          notifs.push({
+            id: `checkin_yes_${st.id}`,
+            timestamp: st.attendance_date ? new Date(st.attendance_date).getTime() : now,
+            type: 'attendance_yes',
+            title: 'Подтверждение тренировки',
+            desc: `${studentName} подтвердил: Будет на тренировке!`,
+            time: 'До 48 ч',
+            badge: 'Явка подтверждена',
+            isNew: !readNotifIds.includes(`checkin_yes_${st.id}`)
+          });
+        } else if (st.attendance_today === 'missed') {
+          notifs.push({
+            id: `checkin_no_${st.id}`,
+            timestamp: st.attendance_date ? new Date(st.attendance_date).getTime() : now,
+            type: 'attendance_no',
+            title: 'Пропуск тренировки',
+            desc: `${studentName} предупредил: Не сможет прийти на тренировку.`,
+            time: 'До 48 ч',
+            badge: 'Отмена занятия',
+            isNew: !readNotifIds.includes(`checkin_no_${st.id}`)
+          });
+        }
+      }
+
+      // 2. Остаток занятий в блоке (≤ 2)
       if (left <= 2) {
         notifs.push({
           id: `low_balance_${st.id}`,
+          timestamp: now,
           type: 'balance',
           title: 'Абонемент заканчивается',
-          desc: `У ${studentName} осталось всего ${left} зан. Пора согласовать продление блока.`,
-          time: 'Внимание',
+          desc: `У ${studentName} осталось ${left} зан. Пора согласовать продление блока.`,
+          time: 'Актуально',
           badge: `Остаток: ${left} зан.`,
           isNew: !readNotifIds.includes(`low_balance_${st.id}`)
         });
@@ -88,24 +126,28 @@ export default function TrainerNotificationsModal({
       if (st.payment_status === 'pending') {
         notifs.push({
           id: `pending_pay_${st.id}`,
+          timestamp: now,
           type: 'payment',
           title: 'Ожидает оплаты',
-          desc: `${studentName}: к оплате ${Number(st.monthly_price || 70000).toLocaleString()} ₸ за абонемент.`,
-          time: 'Касса',
+          desc: `${studentName}: к оплате ${Number(st.monthly_price || 70000).toLocaleString()} ₸ за блок.`,
+          time: 'Актуально',
           badge: 'Долг',
           isNew: !readNotifIds.includes(`pending_pay_${st.id}`)
         });
       }
     });
 
-    // Фильтруем те, которые тренер удалил вручную
-    return notifs.filter(n => !deletedNotifIds.includes(n.id));
+    // Фильтруем: исключаем удаленные вручную и те, что старше 48 часов
+    return notifs.filter(n => {
+      const isDeleted = Boolean(deletedNotifsMap[n.id]);
+      const isExpired = (now - n.timestamp) > TTL_48_HOURS;
+      return !isDeleted && !isExpired;
+    });
   };
 
   const notifications = generateNotifications();
   const unreadCount = notifications.filter(n => n.isNew).length;
 
-  // Отметить все прочитанными
   const handleMarkAllRead = () => {
     const allIds = notifications.map(n => n.id);
     const updated = Array.from(new Set([...readNotifIds, ...allIds]));
@@ -115,22 +157,22 @@ export default function TrainerNotificationsModal({
     } catch (e) {}
   };
 
-  // Удалить конкретное уведомление (чтобы не мозолило глаза)
   const handleDeleteSingle = (id) => {
-    const updatedDeleted = [...deletedNotifIds, id];
-    setDeletedNotifIds(updatedDeleted);
+    const updatedMap = { ...deletedNotifsMap, [id]: Date.now() };
+    setDeletedNotifsMap(updatedMap);
     try {
-      localStorage.setItem('gymconnect_coach_deleted_notifs', JSON.stringify(updatedDeleted));
+      localStorage.setItem('gymconnect_coach_deleted_map', JSON.stringify(updatedMap));
     } catch (e) {}
   };
 
-  // Очистить все уведомления разом
   const handleClearAll = () => {
-    const allIds = notifications.map(n => n.id);
-    const updatedDeleted = Array.from(new Set([...deletedNotifIds, ...allIds]));
-    setDeletedNotifIds(updatedDeleted);
+    const updatedMap = { ...deletedNotifsMap };
+    notifications.forEach(n => {
+      updatedMap[n.id] = Date.now();
+    });
+    setDeletedNotifsMap(updatedMap);
     try {
-      localStorage.setItem('gymconnect_coach_deleted_notifs', JSON.stringify(updatedDeleted));
+      localStorage.setItem('gymconnect_coach_deleted_map', JSON.stringify(updatedMap));
     } catch (e) {}
   };
 
@@ -190,20 +232,20 @@ export default function TrainerNotificationsModal({
       {/* 2. ЛЕНТА УВЕДОМЛЕНИЙ */}
       <main className="p-3.5 space-y-3 max-w-md mx-auto w-full pb-20">
         
-        {/* Информационный баннер */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
+        {/* Информационный баннер с правилом 48 часов */}
+        <div className="bg-white rounded-3xl p-3.5 border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Bell className="w-4 h-4 stroke-[2.2]" />
+            <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Clock className="w-4 h-4 stroke-[2.2]" />
             </div>
             <div>
-              <h3 className="font-bold text-xs text-slate-900">Лента событий учеников</h3>
-              <p className="text-[10px] text-slate-400">Ненужные уведомления можно удалять</p>
+              <h3 className="font-bold text-xs text-slate-900">Автоочистка уведомлений</h3>
+              <p className="text-[10px] text-slate-400">Уведомления автоматически удаляются спустя 48 часов</p>
             </div>
           </div>
 
-          <span className="text-[10.5px] font-bold font-mono text-slate-700 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
-            {notifications.length} событий
+          <span className="text-[10.5px] font-bold font-mono text-slate-700 bg-slate-100 px-2 py-1 rounded-xl border border-slate-200 shrink-0">
+            {notifications.length} акт.
           </span>
         </div>
 
@@ -239,12 +281,11 @@ export default function TrainerNotificationsModal({
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-slate-400 font-mono">{notif.time}</span>
                     
-                    {/* Кнопка быстрого удаления конкретного уведомления */}
                     <button
                       type="button"
                       onClick={() => handleDeleteSingle(notif.id)}
                       className="p-1 text-slate-400 hover:text-rose-600 active:scale-90 transition-all cursor-pointer"
-                      title="Удалить это уведомление"
+                      title="Удалить сейчас"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -264,7 +305,7 @@ export default function TrainerNotificationsModal({
               <Check className="w-8 h-8 mx-auto text-emerald-500 mb-1" />
               <p className="font-bold text-xs text-slate-800">Все чисто!</p>
               <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                Новые события от учеников появятся здесь автоматически при их активности.
+                Новые события от учеников появятся здесь автоматически и удалятся через 48 часов.
               </p>
             </div>
           )}
