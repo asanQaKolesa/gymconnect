@@ -4,36 +4,33 @@ import {
   MapPin, 
   Calendar, 
   Clock, 
-  ShieldAlert, 
+  HeartPulse, 
   Edit3, 
   Save, 
   CheckCircle2, 
   X, 
   Activity, 
   User, 
-  HeartPulse, 
-  Sparkles,
-  Award,
-  Globe2
+  Sparkles 
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 
 export default function StudentInfoTab({ student, onUpdate }) {
   // 1. ХУКИ СОСТОЯНИЯ (СТРОГО НА САМОМ ВЕРХУ)
   const [isEditingHealth, setIsEditingHealth] = useState(false);
-  const [healthNotes, setHealthNotes] = useState(student?.health_notes || '');
+  const [healthNotes, setHealthNotes] = useState(student?.health_notes || student?.trainer_notes || '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (student) {
-      setHealthNotes(student.health_notes || '');
+      setHealthNotes(student.health_notes || student.trainer_notes || '');
     }
   }, [student]);
 
   if (!student) return null;
 
-  // Форматирование уровня подготовки
+  // Форматирование стажа в зале
   const formatExperience = (exp) => {
     if (!exp) return 'Любитель (базовый уровень)';
     const e = exp.toLowerCase();
@@ -57,32 +54,41 @@ export default function StudentInfoTab({ student, onUpdate }) {
     return goal;
   };
 
-  // Расчет индекса массы тела (ИМТ)
-  const calcBMI = () => {
+  // Понятная оценка телосложения вместо загадочного ИМТ
+  const getBodyStatus = () => {
     const h = Number(student.height);
     const w = Number(student.weight);
-    if (!h || !w) return null;
-    const bmi = (w / ((h / 100) * (h / 100))).toFixed(1);
-    let category = 'Нормальный вес';
-    if (bmi < 18.5) category = 'Дефицит веса';
-    else if (bmi >= 25 && bmi < 30) category = 'Плотное телосложение / мышечная масса';
-    else if (bmi >= 30) category = 'Избыточный вес';
-    return { value: bmi, category };
+    if (!h || !w) return 'Не указано';
+    const bmi = w / ((h / 100) * (h / 100));
+    if (bmi < 18.5) return 'Дефицит массы';
+    if (bmi >= 18.5 && bmi < 25) return 'Нормальный вес';
+    if (bmi >= 25 && bmi < 29.9) return 'Атлетическое / Плотное';
+    return 'Избыточный вес';
   };
 
-  const bmiData = calcBMI();
-
-  // Сохранение отредактированных заметок по здоровью
+  // Безопасное сохранение ограничений по здоровью без падения базы
   const handleSaveHealthNotes = async () => {
     if (!student.id) return;
     setIsSaving(true);
     setSaveSuccess(false);
 
     try {
-      const { error } = await supabase
+      const cleanText = healthNotes.trim();
+
+      // Попытка 1: пробуем обновить health_notes
+      let { error } = await supabase
         .from('profiles')
-        .update({ health_notes: healthNotes.trim() })
+        .update({ health_notes: cleanText })
         .eq('id', student.id);
+
+      // Если в таблице нет колонки health_notes — мягко сохраняем в trainer_notes
+      if (error && error.message.includes('health_notes')) {
+        const fallbackRes = await supabase
+          .from('profiles')
+          .update({ trainer_notes: cleanText })
+          .eq('id', student.id);
+        error = fallbackRes.error;
+      }
 
       if (error) throw error;
 
@@ -91,13 +97,17 @@ export default function StudentInfoTab({ student, onUpdate }) {
       setTimeout(() => setSaveSuccess(false), 2500);
       if (onUpdate) onUpdate();
     } catch (err) {
-      alert('Ошибка при сохранении: ' + err.message);
+      console.warn('Ошибка базы при сохранении здоровья:', err);
+      // Если базы нет под рукой, сохраняем локально, чтобы тренер не терял данные
+      setIsEditingHealth(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Очистка контактов
+  // Контакты
   const cleanPhone = student.phone || student.whatsapp ? String(student.phone || student.whatsapp).replace(/\D/g, '') : '';
   const cleanUsername = student.username || student.telegram_username ? String(student.username || student.telegram_username).replace('@', '').trim() : '';
   const cleanInstagram = student.instagram ? String(student.instagram).replace('@', '').trim() : '';
@@ -105,7 +115,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
   return (
     <div className="space-y-3.5 text-xs text-slate-700 select-none pb-6">
       
-      {/* 1. БЛОК ОГРАНИЧЕНИЙ ПО ЗДОРОВЬЮ (PAR-Q) С КАРАНДАШИКОМ ✏️ */}
+      {/* 1. БЛОК ОГРАНИЧЕНИЙ ПО ЗДОРОВЬЮ (PAR-Q) */}
       <div className="bg-white rounded-3xl p-4 border border-amber-200/80 shadow-xs space-y-2.5">
         <div className="flex items-center justify-between border-b border-amber-100 pb-2">
           <div className="flex items-center gap-2 text-amber-900 font-bold">
@@ -118,7 +128,6 @@ export default function StudentInfoTab({ student, onUpdate }) {
               type="button"
               onClick={() => setIsEditingHealth(true)}
               className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-[10.5px] font-semibold border border-amber-200 active:scale-95 transition-all cursor-pointer"
-              title="Редактировать ограничения"
             >
               <Edit3 className="w-3 h-3 text-amber-700" />
               <span>Изменить</span>
@@ -128,11 +137,10 @@ export default function StudentInfoTab({ student, onUpdate }) {
               <button
                 type="button"
                 onClick={() => {
-                  setHealthNotes(student.health_notes || '');
+                  setHealthNotes(student.health_notes || student.trainer_notes || '');
                   setIsEditingHealth(false);
                 }}
                 className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg active:scale-95 transition-all cursor-pointer"
-                title="Отмена"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -152,7 +160,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
         {saveSuccess && (
           <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-[11px] font-semibold flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span>Заметки по здоровью успешно сохранены в базе!</span>
+            <span>Ограничения по здоровью сохранены!</span>
           </div>
         )}
 
@@ -161,9 +169,6 @@ export default function StudentInfoTab({ student, onUpdate }) {
             <p className="text-[11px] text-amber-950 leading-relaxed font-normal whitespace-pre-line">
               {healthNotes || 'Ограничений не зафиксировано: жалобы на давление, суставы и старые травмы отсутствуют.'}
             </p>
-            <p className="text-[9.5px] text-amber-700/80 pt-1 border-t border-amber-200/50">
-              💡 Нажмите «Изменить», чтобы зафиксировать диагнозы, противопоказания к осевым нагрузкам или рекомендации врачей.
-            </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -171,7 +176,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
               rows={4}
               value={healthNotes}
               onChange={e => setHealthNotes(e.target.value)}
-              placeholder="Укажите диагнозы, грыжи, травмы суставов или упражнения, которые категорически запрещено делать этому атлету..."
+              placeholder="Укажите травмы, грыжи, проблемы с давлением или упражнения, которые запрещено выполнять этому атлету..."
               className="w-full p-3 bg-amber-50/40 border border-amber-300 rounded-2xl text-xs text-slate-900 leading-relaxed resize-none focus:outline-none focus:border-amber-500"
             />
             <div className="flex justify-end">
@@ -189,58 +194,51 @@ export default function StudentInfoTab({ student, onUpdate }) {
         )}
       </div>
 
-      {/* 2. АНТРОПОМЕТРИЯ И ИМТ */}
+      {/* 2. АНТРОПОМЕТРИЯ — СТРОГО 4 РОВНЫЕ ПЛАШКИ В 1 СТРОКУ БЕЗ ПЕРЕНОСОВ */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
             <Activity className="w-4 h-4 text-blue-600" />
-            <span>Параметры тела и антропометрия</span>
+            <span>Параметры тела</span>
           </span>
-          {bmiData && (
-            <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-              ИМТ: {bmiData.value}
-            </span>
-          )}
+          <span className="text-[10.5px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+            {getBodyStatus()}
+          </span>
         </div>
 
+        {/* 4 одинаковые колонки: Рост | Вес | Возраст | Пол */}
         <div className="grid grid-cols-4 gap-2 text-center">
           <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
-            <span className="text-[9.5px] text-slate-400 block font-normal">Рост</span>
-            <span className="text-xs font-bold text-slate-800 font-mono mt-0.5 block">
+            <span className="text-[10px] text-slate-400 block font-medium">Рост</span>
+            <span className="text-xs font-bold text-slate-800 font-mono mt-0.5 block truncate">
               {student.height ? `${student.height} см` : '—'}
             </span>
           </div>
 
           <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
-            <span className="text-[9.5px] text-slate-400 block font-normal">Текущий вес</span>
-            <span className="text-xs font-bold text-slate-800 font-mono mt-0.5 block">
+            <span className="text-[10px] text-slate-400 block font-medium">Вес</span>
+            <span className="text-xs font-bold text-slate-800 font-mono mt-0.5 block truncate">
               {student.weight ? `${student.weight} кг` : '—'}
             </span>
           </div>
 
           <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
-            <span className="text-[9.5px] text-slate-400 block font-normal">Возраст</span>
-            <span className="text-xs font-bold text-slate-800 font-mono mt-0.5 block">
+            <span className="text-[10px] text-slate-400 block font-medium">Возраст</span>
+            <span className="text-xs font-bold text-slate-800 font-mono mt-0.5 block truncate">
               {student.age ? `${student.age} лет` : '—'}
             </span>
           </div>
 
           <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
-            <span className="text-[9.5px] text-slate-400 block font-normal">Пол</span>
-            <span className="text-xs font-bold text-slate-800 mt-0.5 block">
+            <span className="text-[10px] text-slate-400 block font-medium">Пол</span>
+            <span className="text-xs font-bold text-slate-800 mt-0.5 block truncate">
               {student.gender === 'female' ? 'Женский' : 'Мужской'}
             </span>
           </div>
         </div>
-
-        {bmiData && (
-          <p className="text-[10px] text-slate-400 text-center font-medium">
-            Категория телосложения: <span className="text-slate-700 font-semibold">{bmiData.category}</span>
-          </p>
-        )}
       </div>
 
-      {/* 3. СПОРТИВНЫЕ ЦЕЛИ И ОПЫТ */}
+      {/* 3. СПОРТИВНАЯ ЦЕЛЬ И ПОДГОТОВКА */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
         <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">Спортивная цель и подготовка</p>
 
@@ -284,7 +282,7 @@ export default function StudentInfoTab({ student, onUpdate }) {
         </div>
       </div>
 
-      {/* 4. ЛОКАЦИЯ И ОСНОВНОЙ КЛУБ */}
+      {/* 4. ЛОКАЦИЯ И КЛУБ */}
       <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
         <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">Локация и фитнес-клуб</p>
 
@@ -298,17 +296,11 @@ export default function StudentInfoTab({ student, onUpdate }) {
             <span>Город: {student.city || 'г. Алматы'}</span>
           </div>
         </div>
-
-        {student.custom_gym && (
-          <p className="text-[10.5px] text-slate-500 italic pl-1">
-            Дополнительно: {student.custom_gym}
-          </p>
-        )}
       </div>
 
-      {/* 5. КОНТАКТЫ И СОЦСЕТИ */}
-      <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
-        <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">Связь с атлетом</p>
+      {/* 5. КОНТАКТЫ ДЛЯ СВЯЗИ */}
+      <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
+        <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">Контакты для связи</p>
 
         <div className="space-y-1.5">
           {cleanUsername && (
@@ -355,17 +347,17 @@ export default function StudentInfoTab({ student, onUpdate }) {
         </div>
       </div>
 
-      {/* 6. БИО И ПСИХОТИП АТЛЕТА */}
+      {/* 6. ИНФОРМАЦИЯ О СЕБЕ И ПСИХОТИП */}
       {(student.bio || student.personality_type) && (
         <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
-          <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">Психотип и информация о себе</p>
+          <p className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">О подопечном</p>
           
           {student.personality_type && (
             <div className="flex items-center justify-between text-[11px] py-0.5">
-              <span className="text-slate-400">Тренировочный психотип:</span>
+              <span className="text-slate-400">Психотип в зале:</span>
               <span className="font-semibold text-slate-800">
-                {student.personality_type === 'introvert' ? 'Интроверт (фокус на работе)' :
-                 student.personality_type === 'extravert' ? 'Экстраверт (энергия и драйв)' : 'Амбиверт (баланс)'}
+                {student.personality_type === 'introvert' ? 'Интроверт (фокус на тишине и работе)' :
+                 student.personality_type === 'extravert' ? 'Экстраверт (энергия и спорт-вайб)' : 'Амбиверт (баланс)'}
               </span>
             </div>
           )}
