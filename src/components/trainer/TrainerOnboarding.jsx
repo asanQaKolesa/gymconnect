@@ -16,7 +16,8 @@ import {
   X, 
   ChevronRight,
   Search,
-  MapPin
+  MapPin,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import * as GymsData from '../../data/almatyGyms';
@@ -31,6 +32,7 @@ const defaultGym = (Array.isArray(GYMS_ARRAY) && GYMS_ARRAY.length > 2)
 
 export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [activeLegalModal, setActiveLegalModal] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -179,18 +181,48 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
     }));
   };
 
-  const handlePhotoUpload = (e) => {
+  // Загрузка фото в Supabase Storage
+  const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Размер файла не должен превышать 5 МБ');
-        return;
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Размер файла не должен превышать 5 МБ');
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+
+    try {
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const cleanFileName = `trainer_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const filePath = `trainers/${cleanFileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      if (urlData?.publicUrl) {
+        setFormData(prev => ({ ...prev, photo_url: urlData.publicUrl }));
       }
+    } catch (err) {
+      console.warn('Загрузка в Storage не удалась, fallback:', err);
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({ ...prev, photo_url: reader.result }));
       };
       reader.readAsDataURL(file);
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
@@ -331,17 +363,24 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
           
           {/* Фото */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex flex-col items-center text-center">
-            <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-              <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-100 flex items-center justify-center">
-                {formData.photo_url ? (
+            <div className="relative group cursor-pointer" onClick={() => !isUploadingPhoto && fileInputRef.current?.click()}>
+              <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-100 flex items-center justify-center relative">
+                {isUploadingPhoto ? (
+                  <div className="flex flex-col items-center justify-center gap-1 bg-slate-50 w-full h-full">
+                    <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                    <span className="text-[8.5px] font-bold text-slate-500">Загрузка...</span>
+                  </div>
+                ) : formData.photo_url ? (
                   <img src={formData.photo_url} alt="Аватар тренера" className="w-full h-full object-cover" />
                 ) : (
                   <Users className="w-8 h-8 text-slate-400 stroke-[1.6]" />
                 )}
               </div>
-              <div className="absolute -bottom-1 -right-1 p-1.5 bg-blue-600 text-white rounded-full shadow-md">
-                <Camera className="w-3.5 h-3.5" />
-              </div>
+              {!isUploadingPhoto && (
+                <div className="absolute -bottom-1 -right-1 p-1.5 bg-blue-600 text-white rounded-full shadow-md">
+                  <Camera className="w-3.5 h-3.5" />
+                </div>
+              )}
             </div>
             <input
               type="file"
@@ -350,6 +389,9 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
               accept="image/*"
               className="hidden"
             />
+            <p className="text-[10px] text-slate-400 mt-2">
+              {isUploadingPhoto ? 'Загрузка фото в облако...' : 'Нажмите для выбора фотографии'}
+            </p>
           </div>
 
           {/* Имя и Фамилия */}
@@ -441,7 +483,7 @@ export default function TrainerOnboarding({ onComplete, onBack, onExitToProfile 
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploadingPhoto}
             className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-xl shadow-blue-600/30 active:scale-98 transition-all disabled:opacity-50 cursor-pointer"
           >
             <Send className="w-4 h-4" />
