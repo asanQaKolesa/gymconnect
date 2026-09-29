@@ -3,6 +3,19 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
+import posthog from 'posthog-js';
+
+// ================= ИНИЦИАЛИЗАЦИЯ ANALYTICS (POSTHOG) =================
+if (typeof window !== 'undefined') {
+  try {
+    posthog.init('phc_ok48BUQfdDDYDyFTyFbiT5pxz2Rez7Bv4PtoqroRAWXX', {
+      api_host: 'https://us.i.posthog.com',
+      person_profiles: 'identified_only',
+    });
+  } catch (err) {
+    console.warn('PostHog init error:', err);
+  }
+}
 
 // ================= ГЛОБАЛЬНЫЕ СИСТЕМНЫЕ УЛУЧШЕНИЯ ДЛЯ ВСЕГО ПРИЛОЖЕНИЯ =================
 if (typeof window !== 'undefined') {
