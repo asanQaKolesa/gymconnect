@@ -97,8 +97,12 @@ export default function App() {
       return;
     }
 
-    // Фоновая очистка сообщений бота старше 24 часов
-    pruneExpiredBotMessages(24).catch(() => {});
+    // Фоновая безопасная очистка сообщений бота
+    try {
+      if (typeof pruneExpiredBotMessages === 'function') {
+        pruneExpiredBotMessages(24);
+      }
+    } catch (e) {}
 
     // Перехват параметра ?start=coach_username или tgWebAppStartParam=coach_username
     const tgWebApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : null;
@@ -137,7 +141,6 @@ export default function App() {
           // Проверяем, перешел ли ученик по инвайт-ссылке тренера
           const pendingCoach = localStorage.getItem('gymconnect_pending_coach');
           if (pendingCoach && (!data.trainer_username || data.trainer_username.toLowerCase() !== pendingCoach)) {
-            // Привязываем атлета к тренеру в Supabase
             await supabase
               .from('profiles')
               .update({
@@ -152,7 +155,6 @@ export default function App() {
               trainer_telegram: pendingCoach
             };
 
-            // Отправляем пуш-уведомление тренеру в Telegram о новом подключенном ученике безопасно
             try {
               const { data: coachProfile } = await supabase
                 .from('trainer_profiles')
