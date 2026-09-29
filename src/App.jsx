@@ -25,10 +25,10 @@ import {
 import { translations } from './locales/translations';
 import { 
   pruneExpiredBotMessages, 
-  sendStudentNotification 
+  sendStudentNotification,
+  sendTelegramMessage,
+  escapeHtml
 } from './utils/telegramNotifications';
-
-const BOT_TOKEN = '8825396654:AAH0GzJqWOzqjys5re9De-Bc7jPIqwxtfDI';
 
 export default function App() {
   // ================= 1. ВСЕ ХУКИ USESTATE (СТРОГО ДО УСЛОВНЫХ RETURN) =================
@@ -152,7 +152,7 @@ export default function App() {
               trainer_telegram: pendingCoach
             };
 
-            // Отправляем пуш-уведомление тренеру в Telegram о новом подключенном ученике
+            // Отправляем пуш-уведомление тренеру в Telegram о новом подключенном ученике безопасно
             try {
               const { data: coachProfile } = await supabase
                 .from('trainer_profiles')
@@ -162,20 +162,14 @@ export default function App() {
 
               if (coachProfile && coachProfile.telegram_id) {
                 const athleteName = `${data.first_name || 'Атлет'} ${data.last_name || ''}`.trim();
-                fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    chat_id: String(coachProfile.telegram_id),
-                    text: `🎉 <b>Новый ученик в вашей CoachOS!</b>\n\nАтлет <b>${athleteName}</b> (@${data.username || 'нет ника'}) перешел по вашей ссылке-приглашению и подключился к вашему кабинету.\n\nЗайдите в CRM для назначения графика и программы.`,
-                    parse_mode: 'HTML',
-                    reply_markup: {
-                      inline_keyboard: [[
-                        { text: '📊 Открыть CoachOS CRM', web_app: { url: 'https://asanqakolesa.github.io/gymconnect/?trainer=true' } }
-                      ]]
-                    }
-                  })
-                }).catch(() => {});
+                const coachMsg = `🎉 <b>Новый ученик в вашей CoachOS!</b>\n\nАтлет <b>${escapeHtml(athleteName)}</b> (@${escapeHtml(data.username || 'нет ника')}) перешел по вашей ссылке-приглашению и подключился к вашему кабинету.\n\nЗайдите в CRM для назначения графика и программы.`;
+                const replyMarkup = {
+                  inline_keyboard: [[
+                    { text: '📊 Открыть CoachOS CRM', web_app: { url: 'https://asanqakolesa.github.io/gymconnect/?trainer=true' } }
+                  ]]
+                };
+
+                sendTelegramMessage(String(coachProfile.telegram_id), coachMsg, 'HTML', replyMarkup).catch(() => {});
               }
             } catch (err) {}
 
