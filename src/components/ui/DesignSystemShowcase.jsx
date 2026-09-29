@@ -18,7 +18,11 @@ import {
   Check,
   CreditCard,
   RotateCcw,
-  Clock
+  Clock,
+  ExternalLink,
+  ClipboardList,
+  ChevronDown,
+  MessageSquare
 } from 'lucide-react';
 
 export default function DesignSystemShowcase({ onBack }) {
@@ -29,6 +33,11 @@ export default function DesignSystemShowcase({ onBack }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
   const [toastText, setToastText] = useState(null);
+  
+  // Состояние модалки просмотра анкеты
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  // Состояние раскрытия плана дня
+  const [isWorkoutPlanOpen, setIsWorkoutPlanOpen] = useState(false);
 
   const showToast = (text) => {
     setToastText(text);
@@ -48,7 +57,7 @@ export default function DesignSystemShowcase({ onBack }) {
   return (
     <div className="min-h-screen bg-[#F2F2F7] text-slate-900 pb-32 font-sans select-none antialiased">
       
-      {/* ПЛАВАЮЩИЙ ДИНАМИЧЕСКИЙ ТОСТ (DYNAMIC ISLAND) */}
+      {/* 1. ПЛАВАЮЩИЙ ТОСТ (DYNAMIC ISLAND) */}
       {toastText && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-200 max-w-sm w-full px-4 pointer-events-none">
           <div className="bg-slate-900/95 backdrop-blur-xl text-white px-4 py-2.5 rounded-2xl shadow-xl border border-white/10 flex items-center justify-between gap-3 pointer-events-auto">
@@ -67,7 +76,7 @@ export default function DesignSystemShowcase({ onBack }) {
         </div>
       )}
 
-      {/* ШАПКА ВИЗУАЛЬНОЙ СИСТЕМЫ */}
+      {/* 2. ШАПКА ВИЗУАЛЬНОЙ СИСТЕМЫ */}
       <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/70 px-4 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           {onBack && (
@@ -81,12 +90,12 @@ export default function DesignSystemShowcase({ onBack }) {
           )}
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold text-slate-900 tracking-tight">CoachOS Design System</h1>
+              <h1 className="text-sm font-bold text-slate-900 tracking-tight">CoachOS Architecture</h1>
               <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/70">
-                v2.1
+                v3.0 Master
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 font-normal mt-0.5">Единый спокойный стандарт интерфейса</p>
+            <p className="text-[11px] text-slate-500 font-normal mt-0.5">Двухъярусная карточка атлета и Apple HIG</p>
           </div>
         </div>
 
@@ -95,16 +104,16 @@ export default function DesignSystemShowcase({ onBack }) {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto p-4 space-y-3.5">
+      <div className="max-w-md mx-auto p-4 space-y-4">
 
-        {/* 1. БЛОК РАСПИСАНИЯ: СТРОКА УЧЕНИКА (НИКАКИХ РАЗРЫВОВ НА 2 СТРОКИ) */}
+        {/* 1. ЭТАЛОННАЯ ДВУХЪЯРУСНАЯ КАРТОЧКА АТЛЕТА */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h3 className="text-xs font-bold text-slate-800">
                 Расписание на сегодня
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Быстрое списание тренировки</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Имя отображается целиком • действия внизу</p>
             </div>
 
             <span className="text-[10.5px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-xl flex items-center gap-1">
@@ -113,145 +122,222 @@ export default function DesignSystemShowcase({ onBack }) {
             </span>
           </div>
 
-          <div className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200/60 flex items-center justify-between gap-3">
-            {/* Аватар + Имя + Баланс строго в одну строку */}
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
-                АК
-              </div>
-
-              <div className="min-w-0 flex-1">
-                {/* Верхняя строка: Имя + компактный бейдж баланса вместе */}
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <h4 className="text-[13px] font-bold text-slate-900 truncate">Асанали Кусайынов</h4>
-                  <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
-                    {isCompleted ? '9 зан.' : '10 зан.'}
-                  </span>
+          {/* Сама двухъярусная карточка */}
+          <div className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200/70 space-y-2.5">
+            
+            {/* ЯРУС 1: Профиль атлета (Кликабелен целиком для открытия анкеты) */}
+            <div 
+              onClick={() => setIsProfileModalOpen(true)}
+              className="flex items-center justify-between gap-3 cursor-pointer group active:opacity-75 transition-opacity"
+            >
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
+                  АК
                 </div>
 
-                {/* Нижняя строка: Цель тренировок */}
-                <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                  Набор мышечной массы
-                </p>
+                <div className="min-w-0 flex-1">
+                  {/* Имя без обрезки + статус абонемента */}
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-[13.5px] font-bold text-slate-900 leading-snug">
+                      Асанали Кусайынов
+                    </h4>
+                    <span className="text-[10.5px] font-mono font-bold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-lg shrink-0">
+                      {isCompleted ? '9 зан.' : '10 зан.'}
+                    </span>
+                  </div>
+
+                  {/* Цель и клуб */}
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
+                    <span className="font-medium text-slate-700">Набор массы</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="truncate">Invictus Go</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Иконка перехода в анкету */}
+              <div className="shrink-0 w-7 h-7 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-colors shadow-2xs">
+                <ExternalLink className="w-3.5 h-3.5" />
               </div>
             </div>
 
-            {/* Кнопка действия */}
-            <div className="shrink-0">
-              {isCompleted ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCompleted(false);
-                    showToast('↩ Списание отменено • Баланс 10 зан.');
-                  }}
-                  className="py-1.5 px-3 bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 rounded-xl text-xs font-semibold active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs whitespace-nowrap"
-                >
-                  <RotateCcw className="w-3 h-3 text-rose-500" />
-                  <span>Вернуть</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCompleted(true);
-                    showToast('✅ Тренировка проведена • Списано 1 занятие');
-                  }}
-                  className="py-1.5 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shadow-blue-600/20 whitespace-nowrap"
-                >
-                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Проведено</span>
-                </button>
-              )}
+            {/* ЯРУС 2: Панель действий в отдельной нижней строке */}
+            <div className="pt-2 border-t border-slate-200/60 flex items-center gap-2">
+              
+              {/* Кнопка "План дня" */}
+              <button
+                type="button"
+                onClick={() => setIsWorkoutPlanOpen(!isWorkoutPlanOpen)}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  isWorkoutPlanOpen
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 font-bold'
+                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 shadow-2xs'
+                }`}
+              >
+                <ClipboardList className="w-3.5 h-3.5 text-blue-600" />
+                <span>План дня (3 упр.)</span>
+              </button>
+
+              {/* Кнопка "Проведено" / "Вернуть" */}
+              <div className="flex-1">
+                {isCompleted ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCompleted(false);
+                      showToast('↩ Списание отменено • Баланс 10 зан.');
+                    }}
+                    className="w-full py-2 px-3 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-semibold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Вернуть (+1)</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCompleted(true);
+                      showToast('✅ Тренировка проведена • Списано 1 занятие');
+                    }}
+                    className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-blue-600/20"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>Проведено</span>
+                  </button>
+                )}
+              </div>
+
             </div>
+
+            {/* Выпадающий список упражнений (если нажат "План дня") */}
+            {isWorkoutPlanOpen && (
+              <div className="p-3 bg-white rounded-xl border border-slate-200/80 space-y-2 animate-in fade-in slide-in-from-top-2 text-xs">
+                <div className="flex items-center justify-between font-bold text-slate-800 border-b border-slate-100 pb-1.5">
+                  <span>День 1: Грудь и Трицепс</span>
+                  <span className="text-[10px] text-blue-600 font-mono">3 упр.</span>
+                </div>
+                <div className="space-y-1.5 text-slate-600 text-[11.5px]">
+                  <p>1. Жим штанги лежа — <b>4 × 10 (60 кг)</b></p>
+                  <p>2. Жим гантелей под углом — <b>3 × 12 (18 кг)</b></p>
+                  <p>3. Французский жим — <b>3 × 12 (25 кг)</b></p>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
 
-        {/* 2. РАБОЧИЕ ВЕСА И СТЕППЕРЫ (БЕЗ ЗАЛИПАНИЯ В 040) */}
+        {/* 2. ПОЛНОЦЕННАЯ КАРТОЧКА УПРАЖНЕНИЯ Со СТЕППЕРАМИ */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h3 className="text-xs font-bold text-slate-800">
-                Рабочие веса и подходы
+                Карточка упражнения
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Удобный шаг и ручной ввод</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Компактная группа мышц + название без обрезки</p>
             </div>
 
             <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200/80">
-              Без залипания «040»
+              Баг «040» закрыт
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            
-            {/* Повторы */}
-            <div className="p-2.5 bg-slate-50/80 rounded-2xl border border-slate-200/60 flex flex-col justify-between">
-              <span className="text-[10.5px] font-semibold text-slate-500 block text-center mb-1">
-                Повторения
+          <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/70 space-y-3">
+            {/* Группа мышц + Название */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10.5px] font-bold text-blue-700 bg-blue-100/70 px-2.5 py-1.5 rounded-xl shrink-0 uppercase tracking-wide">
+                Грудь
               </span>
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setReps(r => Math.max(1, (Number(r) || 0) - 1))}
-                  className="w-7 h-7 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center active:scale-90 transition-transform shadow-2xs cursor-pointer"
-                >
-                  <Minus className="w-3 h-3 stroke-[2.5]" />
-                </button>
-                <input 
+              <div className="flex-1 min-w-0">
+                <input
                   type="text"
-                  inputMode="numeric"
-                  value={reps}
-                  onChange={(e) => {
-                    const clean = e.target.value.replace(/\D/g, '');
-                    setReps(clean === '' ? '' : Number(clean));
-                  }}
-                  className="w-12 text-center text-sm font-extrabold font-mono text-slate-900 bg-transparent outline-none"
+                  defaultValue="Жим штанги лежа на наклонной скамье"
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-200/80 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-blue-600 truncate"
                 />
-                <button
-                  type="button"
-                  onClick={() => setReps(r => (Number(r) || 0) + 1)}
-                  className="w-7 h-7 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform shadow-2xs cursor-pointer"
-                >
-                  <Plus className="w-3 h-3 stroke-[2.5]" />
-                </button>
               </div>
             </div>
 
-            {/* Вес */}
-            <div className="p-2.5 bg-slate-50/80 rounded-2xl border border-slate-200/60 flex flex-col justify-between">
-              <span className="text-[10.5px] font-semibold text-slate-500 block text-center mb-1">
-                Вес (кг)
-              </span>
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setWeight(w => Math.max(0, Math.round(((Number(w) || 0) - 2.5) * 10) / 10))}
-                  className="w-7 h-7 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center active:scale-90 transition-transform shadow-2xs cursor-pointer"
-                >
-                  <Minus className="w-3 h-3 stroke-[2.5]" />
-                </button>
-                <input 
-                  type="text"
-                  inputMode="decimal"
-                  value={weight}
-                  placeholder="0"
-                  onChange={(e) => handleWeightInput(e.target.value)}
-                  className="w-14 text-center text-sm font-extrabold font-mono text-blue-600 bg-transparent outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setWeight(w => Math.round(((Number(w) || 0) + 2.5) * 10) / 10)}
-                  className="w-7 h-7 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform shadow-2xs cursor-pointer"
-                >
-                  <Plus className="w-3 h-3 stroke-[2.5]" />
-                </button>
+            {/* Степперы: Подходы / Повторы / Вес */}
+            <div className="grid grid-cols-2 gap-2.5">
+              
+              {/* Повторы */}
+              <div className="p-2.5 bg-white rounded-2xl border border-slate-200/70 flex flex-col justify-between shadow-2xs">
+                <span className="text-[10.5px] font-semibold text-slate-400 block text-center mb-1">
+                  Повторения
+                </span>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setReps(r => Math.max(1, (Number(r) || 0) - 1))}
+                    className="w-7 h-7 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center active:scale-90 transition-transform shadow-2xs cursor-pointer"
+                  >
+                    <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </button>
+                  <input 
+                    type="text"
+                    inputMode="numeric"
+                    value={reps}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/\D/g, '');
+                      setReps(clean === '' ? '' : Number(clean));
+                    }}
+                    className="w-12 text-center text-sm font-extrabold font-mono text-slate-900 bg-transparent outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setReps(r => (Number(r) || 0) + 1)}
+                    className="w-7 h-7 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform shadow-2xs cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </button>
+                </div>
               </div>
+
+              {/* Вес */}
+              <div className="p-2.5 bg-white rounded-2xl border border-slate-200/70 flex flex-col justify-between shadow-2xs">
+                <span className="text-[10.5px] font-semibold text-slate-400 block text-center mb-1">
+                  Вес (кг)
+                </span>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setWeight(w => Math.max(0, Math.round(((Number(w) || 0) - 2.5) * 10) / 10))}
+                    className="w-7 h-7 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center active:scale-90 transition-transform shadow-2xs cursor-pointer"
+                  >
+                    <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </button>
+                  <input 
+                    type="text"
+                    inputMode="decimal"
+                    value={weight}
+                    placeholder="0"
+                    onChange={(e) => handleWeightInput(e.target.value)}
+                    className="w-14 text-center text-sm font-extrabold font-mono text-blue-600 bg-transparent outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setWeight(w => Math.round(((Number(w) || 0) + 2.5) * 10) / 10)}
+                    className="w-7 h-7 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform shadow-2xs cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </button>
+                </div>
+              </div>
+
             </div>
 
+            {/* Подсказка тренера по технике (Заметка) */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Заметка по технике: локти 45°, пауза внизу 1 сек..."
+                className="w-full px-3 py-1.5 bg-white border border-slate-200/70 rounded-xl text-xs text-slate-600 placeholder:text-slate-400 outline-none focus:border-blue-500"
+              />
+            </div>
           </div>
         </div>
 
-        {/* 3. КАРТОЧКИ РАЗДЕЛОВ (МЯГКИЕ ИКОНКИ БЕЗ КАПСЛОКА) */}
+        {/* 3. КАРТОЧКИ СЕРВИСОВ (СОЧНЫЕ ИКОНКИ БЕЗ КАПСЛОКА) */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-2">
           <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800">
@@ -333,7 +419,7 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* 4. ГРАФИК ТРЕНИРОВОК (СПОКОЙНЫЕ ПЕРЕКЛЮЧАТЕЛИ 1-7 ДНЕЙ) */}
+        {/* 4. ДНЕЙ В НЕДЕЛЮ (1-7) */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-800">
@@ -386,7 +472,7 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* 5. ПОИСК УЧЕНИКА ИЛИ УПРАЖНЕНИЯ */}
+        {/* 5. ПОИСК */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-2">
           <h3 className="text-xs font-bold text-slate-800">
             Поиск по базе
@@ -412,7 +498,7 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* 6. ГЛАВНЫЕ КНОПКИ ДЕЙСТВИЯ */}
+        {/* 6. ГЛАВНАЯ КНОПКА ДЕЙСТВИЯ */}
         <div className="space-y-2 pt-1">
           <button
             type="button"
@@ -422,17 +508,70 @@ export default function DesignSystemShowcase({ onBack }) {
             <Zap className="w-4 h-4" />
             <span>Сохранить и отправить план в Telegram</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => showToast('Действие отменено')}
-            className="w-full py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 rounded-2xl font-semibold text-xs active:scale-98 transition-all cursor-pointer"
-          >
-            Отмена
-          </button>
         </div>
 
       </div>
+
+      {/* МИНИ-ШТОРКА АНКЕТЫ АТЛЕТА (ВЫЕЗЖАЕТ СНИЗУ ПРИ КЛИКЕ НА КАРТОЧКУ АСАНАЛИ) */}
+      {isProfileModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end justify-center p-0 animate-in fade-in">
+          <div className="bg-white rounded-t-3xl w-full max-w-md p-4 space-y-3.5 shadow-2xl animate-in slide-in-from-bottom-5 duration-200">
+            
+            <div className="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-1" />
+
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-xs">
+                  АК
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Асанали Кусайынов</h4>
+                  <p className="text-[11px] text-slate-400">Анкета подопечного атлета</p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setIsProfileModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-200/70">
+                <span className="text-[10px] text-slate-400 block font-semibold">Рост</span>
+                <span className="text-xs font-bold text-slate-900 font-mono">178 см</span>
+              </div>
+              <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-200/70">
+                <span className="text-[10px] text-slate-400 block font-semibold">Вес</span>
+                <span className="text-xs font-bold text-slate-900 font-mono">75 кг</span>
+              </div>
+              <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-200/70">
+                <span className="text-[10px] text-slate-400 block font-semibold">Возраст</span>
+                <span className="text-xs font-bold text-slate-900 font-mono">24 года</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-rose-50/70 border border-rose-200/70 rounded-2xl space-y-1">
+              <span className="text-[10.5px] font-bold text-rose-800 flex items-center gap-1">
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                <span>Ограничения PAR-Q:</span>
+              </span>
+              <p className="text-xs text-rose-950 font-medium">Без осевой нагрузки на позвоночник, беречь поясницу.</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(false)}
+              className="w-full py-2.5 bg-slate-900 text-white rounded-xl font-bold text-xs"
+            >
+              Закрыть карточку
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
