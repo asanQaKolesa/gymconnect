@@ -15,10 +15,10 @@ import {
   Globe2
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import { sendTelegramMessage, escapeHtml } from '../../utils/telegramNotifications';
 import * as GymsData from '../../data/almatyGyms';
 
 const GYM_LIST = GymsData.ALMATY_GYMS || GymsData.almatyGyms || GymsData.default || [];
-const BOT_TOKEN = '8825396654:AAH0GzJqWOzqjys5re9De-Bc7jPIqwxtfDI';
 
 export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) {
   const [isSaving, setIsSaving] = useState(false);
@@ -246,7 +246,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
       if (error) throw error;
 
-      // Если была привязка к тренеру — уведомляем тренера в Telegram
+      // Если была привязка к тренеру — уведомляем тренера в Telegram безопасно через Supabase
       if (cleanTrainerTelegram) {
         try {
           const { data: coachData } = await supabase
@@ -256,15 +256,9 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             .maybeSingle();
 
           if (coachData && coachData.telegram_id) {
-            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: String(coachData.telegram_id),
-                text: `🎉 <b>Новый ученик в вашей CoachOS!</b>\n\nАтлет <b>${formData.first_name} ${formData.last_name || ''}</b> завершил регистрацию в GymConnect и привязан к вам.\nЗал: <b>${selectedGym}</b>`,
-                parse_mode: 'HTML'
-              })
-            }).catch(() => {});
+            const athleteFullName = `${formData.first_name} ${formData.last_name || ''}`.trim();
+            const coachMessage = `🎉 <b>Новый ученик в вашей CoachOS!</b>\n\nАтлет <b>${escapeHtml(athleteFullName)}</b> завершил регистрацию в GymConnect и привязан к вам.\nЗал: <b>${escapeHtml(selectedGym)}</b>`;
+            sendTelegramMessage(String(coachData.telegram_id), coachMessage).catch(() => {});
           }
         } catch (e) {}
 
