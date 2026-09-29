@@ -14,6 +14,7 @@ import AdminPanel from './components/admin/AdminPanel';
 import TrainerLogin from './components/trainer/TrainerLogin';
 import TrainerOnboarding from './components/trainer/TrainerOnboarding';
 import TrainerCRM from './components/trainer/TrainerCRM';
+import DesignSystemShowcase from './components/ui/DesignSystemShowcase';
 import { appleTheme } from './ui/AppleTheme';
 import { 
   Home, 
@@ -303,6 +304,20 @@ export default function App() {
   };
 
   // ================= 4. ПОСЛЕДОВАТЕЛЬНОСТЬ ЭКРАНОВ =================
+
+  // 4.0. ПРЯМОЙ ДОСТУП К ДИЗАЙН-СИСТЕМЕ (?uikit=true или ?tab=uikit)
+  const isUIKitMode = new URLSearchParams(window.location.search).get('uikit') === 'true' || 
+                      new URLSearchParams(window.location.search).get('tab') === 'uikit';
+
+  if (isUIKitMode) {
+    return (
+      <DesignSystemShowcase 
+        onBack={() => {
+          window.location.href = window.location.pathname;
+        }} 
+      />
+    );
+  }
 
   // 4.1. ТРЕНЕРСКИЙ РЕЖИМ (?trainer=true)
   if (isTrainerMode) {
