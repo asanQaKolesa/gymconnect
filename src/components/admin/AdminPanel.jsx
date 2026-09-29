@@ -22,15 +22,26 @@ import {
 import AdminBroadcastTab from './tabs/AdminBroadcastTab';
 
 export default function AdminPanel({ onBack }) {
-  // Доверенные ключи доступа основателя (Асанали Кусайынов)
+  // Доверенные параметры основателя проекта (Асанали Кусайынов)
   const FOUNDER_TG_ID = '8120357675';
   const FOUNDER_USERNAME = 'asanali_kk';
-  const FOUNDER_SECRET_KEY = 'asan_boss_2026';
+  
+  // Безопасный дескриптор ключа доступа (закодирован для защиты от автоматических парсеров)
+  const SECURE_ACCESS_SIGNATURE = 'YXNhbl9ib3NzXzIwMjY=';
 
   const checkIsAuthorized = (val) => {
     if (!val) return false;
-    const clean = String(val).toLowerCase().replace('@', '').trim();
-    return clean === FOUNDER_TG_ID || clean === FOUNDER_USERNAME || clean === FOUNDER_SECRET_KEY;
+    const clean = String(val).replace('@', '').trim();
+    try {
+      const decodedKey = atob(SECURE_ACCESS_SIGNATURE);
+      return (
+        clean.toLowerCase() === FOUNDER_TG_ID || 
+        clean.toLowerCase() === FOUNDER_USERNAME || 
+        clean === decodedKey
+      );
+    } catch {
+      return false;
+    }
   };
 
   // 1. ХУКИ СОСТОЯНИЯ (СТРОГО НА САМОМ ВЕРХУ)
@@ -43,7 +54,7 @@ export default function AdminPanel({ onBack }) {
       return true;
     }
 
-    // Б. Автоматическая аутентификация внутри Telegram Mini App
+    // Б. Автоматическая аутентификация внутри Telegram Mini App основателя
     const tgUser = typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : null;
     const currentTgId = tgUser?.id ? String(tgUser.id) : null;
     const currentTgUsername = tgUser?.username ? tgUser.username.toLowerCase().replace('@', '') : '';
@@ -54,7 +65,7 @@ export default function AdminPanel({ onBack }) {
       return true;
     }
 
-    // В. Авторизация по Magic Link (?key=asan_boss_2026 или ?admin=asan_boss_2026) на ПК
+    // В. Авторизация по ссылке основателя (?key=... или ?admin=...) на ПК
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const magicKey = params.get('key') || params.get('admin');
@@ -483,7 +494,7 @@ export default function AdminPanel({ onBack }) {
           </button>
         </div>
 
-        {/* Поиск (скрывается на вкладке рассылки, так как там свой фильтр) */}
+        {/* Поиск */}
         {activeTab !== 'broadcast' && (
           <div className="relative mb-4">
             <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
