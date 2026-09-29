@@ -19,12 +19,9 @@ import {
   ShieldCheck,
   Check
 } from 'lucide-react';
-import { 
-  deleteBotMessage, 
-  pruneExpiredBotMessages 
-} from '../../../utils/telegramNotifications';
+import { supabase } from '../../../supabaseClient';
+import { escapeHtml } from '../../../utils/telegramNotifications';
 
-const BOT_TOKEN = '8825396654:AAH0GzJqWOzqjys5re9De-Bc7jPIqwxtfDI';
 const STORAGE_KEY = 'gymconnect_bot_sent_messages';
 
 // Резервный реестр Chat ID для тестов основателя
@@ -110,9 +107,9 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
     });
   }, [targetSegment, selectedGym, selectedUserId, profiles, trainers]);
 
-  // Отправка одного сообщения через Bot API с сохранением message_id
+  // Безопасная отправка одного сообщения через Supabase Edge Function
   const sendSingleMessage = async (chatId, title, text, btnText, btnUrl) => {
-    const messageHtml = `🔔 <b>GymConnect: ${title}</b>\n\n${text}`.trim();
+    const messageHtml = `🔔 <b>GymConnect: ${escapeHtml(title)}</b>\n\n${text}`.trim();
     
     const isInternalApp = btnUrl.startsWith('https://asanqakolesa.github.io');
     const buttonObject = isInternalApp
@@ -129,15 +126,17 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
     };
 
     try {
-      const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const { data, error } = await supabase.functions.invoke('send-telegram', {
+        body: payload
       });
-      const data = await response.json();
+
+      if (error) {
+        console.warn('Ошибка отправки через Edge Function:', error);
+        return false;
+      }
 
       // Сохраняем в реестр отправленных сообщений для возможности удаления
-      if (data.ok && data.result?.message_id) {
+      if (data?.ok && data.result?.message_id) {
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           const list = raw ? JSON.parse(raw) : [];
@@ -151,9 +150,26 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
         } catch (e) {}
       }
 
-      return data.ok;
+      return data?.ok === true;
     } catch (e) {
       console.warn('Ошибка отправки:', e);
+      return false;
+    }
+  };
+
+  // Безопасное удаление сообщения бота через Supabase
+  const executeDeleteBotMessage = async (chatId, messageId) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-telegram', {
+        body: {
+          action: 'deleteMessage',
+          chat_id: String(chatId),
+          message_id: Number(messageId)
+        }
+      });
+      if (error) return false;
+      return data?.ok === true;
+    } catch (e) {
       return false;
     }
   };
@@ -241,7 +257,7 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
     let deletedFail = 0;
 
     for (const item of trackedList) {
-      const ok = await deleteBotMessage(item.chatId, item.messageId);
+      const ok = await executeDeleteBotMessage(item.chatId, item.messageId);
       if (ok) deletedOk++;
       else deletedFail++;
       await new Promise(r => setTimeout(r, 40));
@@ -267,7 +283,7 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
     setIsDeletingBotMessages(true);
     setPurgeFeedback('Отправка запроса deleteMessage в Telegram...');
 
-    const ok = await deleteBotMessage(manualChatId.trim(), manualMessageId.trim());
+    const ok = await executeDeleteBotMessage(manualChatId.trim(), manualMessageId.trim());
 
     setIsDeletingBotMessages(false);
     if (ok) {
