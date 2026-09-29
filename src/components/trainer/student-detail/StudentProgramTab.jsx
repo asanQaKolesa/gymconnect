@@ -10,9 +10,7 @@ import {
   Send
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
-
-// Токен бота платформы GymConnect
-const BOT_TOKEN = '8825396654:AAH0GzJqWOzqjys5re9De-Bc7jPIqwxtfDI';
+import { sendTelegramMessage } from '../../../utils/telegramNotifications';
 
 export default function StudentProgramTab({ student, onUpdate }) {
   // 1. ХУКИ СОСТОЯНИЯ (СТРОГО В НАЧАЛЕ)
@@ -69,21 +67,13 @@ export default function StudentProgramTab({ student, onUpdate }) {
 
   if (!student) return null;
 
-  // Безопасная отправка пуша ученику напрямую в Telegram
+  // Безопасная отправка пуша ученику напрямую в Telegram через Supabase
   const sendTelegramDirect = async (text) => {
     const targetChatId = student.telegram_id || student.chat_id;
     if (!targetChatId) return;
 
     try {
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: targetChatId,
-          text: text,
-          parse_mode: 'HTML'
-        })
-      });
+      await sendTelegramMessage(targetChatId, text, 'HTML');
     } catch (err) {
       console.warn('Мягкая отправка пуша:', err);
     }
@@ -191,7 +181,7 @@ export default function StudentProgramTab({ student, onUpdate }) {
           .eq('id', student.id);
       }
 
-      // Отправляем пуш ученику в Telegram
+      // Отправляем безопасный пуш ученику в Telegram через Supabase
       await sendTelegramDirect(`🏋️ <b>Новая тренировочная программа!</b>\n\nТренер обновил твой план: <b>«${workoutTitle}»</b> (${exercises.length} упр.).\nОткрой приложение @gymconnect_ala_bot для просмотра рабочих весов!`);
 
       setSaveSuccess(true);
