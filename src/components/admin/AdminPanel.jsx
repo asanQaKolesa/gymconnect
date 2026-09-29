@@ -26,7 +26,7 @@ export default function AdminPanel({ onBack }) {
   const FOUNDER_TG_ID = '8120357675';
   const FOUNDER_USERNAME = 'asanali_kk';
   
-  // Безопасный дескриптор ключа доступа (закодирован для защиты от автоматических парсеров)
+  // Безопасный дескриптор ключа доступа
   const SECURE_ACCESS_SIGNATURE = 'YXNhbl9ib3NzXzIwMjY=';
 
   const checkIsAuthorized = (val) => {
@@ -227,27 +227,23 @@ export default function AdminPanel({ onBack }) {
     }
   };
 
+  // 🛡️ Безопасная активация Pro через хранимую функцию PostgreSQL
   const handleGrantPro = async (months) => {
-    const expiresDate = new Date();
-    expiresDate.setMonth(expiresDate.getMonth() + Number(months));
+    try {
+      const secret = atob(SECURE_ACCESS_SIGNATURE);
+      const { data, error } = await supabase.rpc('admin_grant_pro', {
+        target_profile_id: editingProfile.id,
+        months: Number(months),
+        secret_key: secret
+      });
 
-    const updated = {
-      ...editingProfile,
-      is_pro: true,
-      pro_expires_at: expiresDate.toISOString()
-    };
+      if (error) throw error;
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_pro: true, pro_expires_at: expiresDate.toISOString() })
-      .eq('id', editingProfile.id);
-
-    if (error) {
-      alert('Ошибка активации Pro: ' + error.message);
-    } else {
-      setEditingProfile(updated);
-      setProfiles(prev => prev.map(p => p.id === updated.id ? updated : p));
-      alert(`Pro-подписка активирована на ${months} мес.`);
+      alert(`✅ Pro-подписка успешно активирована на ${months} мес.!`);
+      fetchAllData();
+      setEditingProfile(prev => ({ ...prev, is_pro: true }));
+    } catch (err) {
+      alert('Ошибка активации Pro: ' + err.message);
     }
   };
 
@@ -451,7 +447,7 @@ export default function AdminPanel({ onBack }) {
           </div>
         </div>
 
-        {/* НАВИГАЦИЯ: 4 ТАБА (ВКЛЮЧАЯ РАССЫЛКУ В TELEGRAM) */}
+        {/* НАВИГАЦИЯ: 4 ТАБА */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
           <button
             onClick={() => setActiveTab('users')}
