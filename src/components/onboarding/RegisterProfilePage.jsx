@@ -12,7 +12,8 @@ import {
   UserCheck, 
   ArrowRight,
   Flame,
-  Globe2
+  Globe2,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../utils/telegramNotifications';
@@ -22,6 +23,7 @@ const GYM_LIST = GymsData.ALMATY_GYMS || GymsData.almatyGyms || GymsData.default
 
 export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) {
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [gymSearchQuery, setGymSearchQuery] = useState('');
   const [isGymDropdownOpen, setIsGymDropdownOpen] = useState(false);
   const fileInputRef = useRef(null);
@@ -141,18 +143,52 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
     setFormData({ ...formData, instagram: val });
   };
 
-  const handlePhotoUpload = (e) => {
+  // Безопасная загрузка фото в Supabase Storage (бакет avatars)
+  const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert(currentLang === 'kk' ? 'Файл көлемі 5 МБ аспауы тиіс' : 'Размер файла не должен превышать 5 МБ');
-        return;
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert(currentLang === 'kk' ? 'Файл көлемі 5 МБ аспауы тиіс' : 'Размер файла не должен превышать 5 МБ');
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+
+    try {
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const cleanFileName = `user_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const filePath = `profiles/${cleanFileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) {
+        throw uploadError;
       }
+
+      // Получаем публичный безопасный URL
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      if (urlData?.publicUrl) {
+        setFormData(prev => ({ ...prev, photo_url: urlData.publicUrl }));
+      }
+    } catch (err) {
+      console.warn('Загрузка в Storage не удалась, используем оптимизированный локальный поток:', err);
+      // Fallback на чтение для локального предпросмотра
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({ ...prev, photo_url: reader.result }));
       };
       reader.readAsDataURL(file);
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
@@ -309,23 +345,32 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
         <form onSubmit={handleSubmit} className="space-y-3 pb-8">
 
-          {/* Фото */}
+          {/* Фото профиля */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex flex-col items-center text-center">
-            <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+            <div className="relative group cursor-pointer" onClick={() => !isUploadingPhoto && fileInputRef.current?.click()}>
               <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-blue-500 shadow-md bg-slate-100 flex items-center justify-center relative">
-                {formData.photo_url ? (
+                {isUploadingPhoto ? (
+                  <div className="flex flex-col items-center justify-center gap-1 bg-slate-50 w-full h-full">
+                    <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                    <span className="text-[9px] font-bold text-slate-500">Загрузка...</span>
+                  </div>
+                ) : formData.photo_url ? (
                   <img src={formData.photo_url} alt="Аватар" className="w-full h-full object-cover" />
                 ) : (
                   <Users className="w-10 h-10 text-slate-400" />
                 )}
-                <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Camera className="w-6 h-6 text-white" />
-                </div>
+                
+                {!isUploadingPhoto && (
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                )}
               </div>
 
               <button
                 type="button"
-                className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full shadow-md active:scale-90 transition-transform"
+                disabled={isUploadingPhoto}
+                className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full shadow-md active:scale-90 transition-transform disabled:opacity-50"
               >
                 <Camera className="w-3.5 h-3.5" />
               </button>
@@ -343,7 +388,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               {formData.first_name ? `${formData.first_name} ${formData.last_name || ''}` : (currentLang === 'kk' ? 'Атлет фотосы' : 'Фотография атлета')}
             </p>
             <p className="text-[10px] text-slate-400 mt-0.5">
-              {currentLang === 'kk' ? 'Telegram-нан алынды немесе құрылғыдан жүктеңіз' : 'Синхронизировано с Telegram • нажмите для замены'}
+              {isUploadingPhoto ? 'Загрузка в облако Supabase...' : (currentLang === 'kk' ? 'Telegram-нан алынды немесе құрылғыдан жүктеңіз' : 'Синхронизировано • нажмите для замены')}
             </p>
           </div>
 
@@ -997,7 +1042,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
           <div className="pt-2">
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={isSaving || isUploadingPhoto}
               className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-blue-600/30 active:scale-98 transition-all disabled:opacity-50"
             >
               <span>{isSaving ? 'Создание профиля атлета...' : (currentLang === 'kk' ? 'Тіркелуді аяқтау және бастау' : 'Завершить регистрацию и войти')}</span>
