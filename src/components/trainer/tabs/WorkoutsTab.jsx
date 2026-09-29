@@ -11,11 +11,10 @@ import {
   Calendar, 
   Sparkles, 
   Save, 
-  ChevronRight,
-  User,
   ExternalLink,
-  Layers,
-  ChevronDown
+  ChevronDown,
+  ShieldAlert,
+  Zap
 } from 'lucide-react';
 import StudentDetailModal from '../components/StudentDetailModal';
 
@@ -197,7 +196,7 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
   const currentStudent = activeStudents.find(s => s.id === selectedStudentId);
 
   return (
-    <div className="space-y-3 select-none pb-20 text-xs">
+    <div className="space-y-3 select-none pb-28 text-xs">
       
       {/* 1. Карточка выбора подопечного и готовых схем */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-3.5 shadow-xs space-y-2.5">
@@ -224,7 +223,7 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
           )}
         </div>
 
-        {/* Выбор подопечного с кастомной стрелочкой */}
+        {/* Выбор подопечного с аккуратным Apple-селектором */}
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
             Подопечный атлет *
@@ -233,7 +232,7 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
             <select
               value={selectedStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
-              className="w-full appearance-none pl-3 pr-8 py-2 bg-slate-50 border border-slate-200/90 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-blue-600 focus:bg-white transition-all truncate"
+              className="w-full appearance-none pl-3 pr-8 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-blue-600 focus:bg-white transition-all truncate"
             >
               {activeStudents.length > 0 ? (
                 activeStudents.map(s => (
@@ -258,17 +257,17 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
             <button
               type="button"
               onClick={() => applyPresetTemplate('fullbody3')}
-              className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-left text-[10.5px] font-bold text-slate-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+              className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-left text-[11px] font-semibold text-slate-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
             >
-              <span className="text-amber-500">⚡</span>
+              <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
               <span className="truncate">Full Body (3 дня)</span>
             </button>
             <button
               type="button"
               onClick={() => applyPresetTemplate('split_upper_lower')}
-              className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-left text-[10.5px] font-bold text-slate-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+              className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-left text-[11px] font-semibold text-slate-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
             >
-              <span className="text-amber-500">⚡</span>
+              <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
               <span className="truncate">Сплит Верх / Низ (4 дня)</span>
             </button>
           </div>
@@ -286,8 +285,8 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
               <button
                 type="button"
                 onClick={() => setWorkoutType('fullbody')}
-                className={`py-1 text-[10.5px] font-bold rounded-lg transition-all ${
-                  workoutType === 'fullbody' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600'
+                className={`py-1 text-[11px] font-semibold rounded-lg transition-all ${
+                  workoutType === 'fullbody' ? 'bg-white text-blue-600 shadow-2xs font-bold' : 'text-slate-600'
                 }`}
               >
                 Full Body
@@ -295,8 +294,8 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
               <button
                 type="button"
                 onClick={() => setWorkoutType('split')}
-                className={`py-1 text-[10.5px] font-bold rounded-lg transition-all ${
-                  workoutType === 'split' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600'
+                className={`py-1 text-[11px] font-semibold rounded-lg transition-all ${
+                  workoutType === 'split' ? 'bg-white text-blue-600 shadow-2xs font-bold' : 'text-slate-600'
                 }`}
               >
                 Split
@@ -314,7 +313,7 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
                   key={num}
                   type="button"
                   onClick={() => handleFrequencyChange(num)}
-                  className={`py-1 rounded-xl font-bold border transition-all text-center text-[11px] ${
+                  className={`py-1 rounded-xl font-bold border transition-all text-center text-xs ${
                     frequency === num 
                       ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' 
                       : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100'
@@ -327,31 +326,37 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
           </div>
         </div>
 
-        {/* Разминка и ограничения — аккуратная вертикальная или компактная сетка */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+        {/* Разминка и ограничения — аккуратная вертикальная структура без обрезки текста */}
+        <div className="space-y-2 pt-1 border-t border-slate-100">
           <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Разминка
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <Activity className="w-3 h-3 text-blue-500" />
+                <span>Разминка перед тренировкой</span>
+              </label>
+            </div>
             <input 
               type="text"
               value={warmup}
               onChange={(e) => setWarmup(e.target.value)}
-              placeholder="Суставная разминка 10 мин"
-              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200/90 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-blue-600 focus:bg-white transition-all"
+              placeholder="Суставная разминка, МФР ролл, кардио 7-10 мин..."
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-blue-600 focus:bg-white transition-all"
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-              Ограничения (PAR-Q)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-bold text-rose-500 uppercase tracking-wider flex items-center gap-1">
+                <ShieldAlert className="w-3 h-3 text-rose-500" />
+                <span>Ограничения по здоровью (PAR-Q)</span>
+              </label>
+            </div>
             <input 
               type="text"
               value={contraindications}
               onChange={(e) => setContraindications(e.target.value)}
-              placeholder="Без осевой нагрузки"
-              className="w-full px-2.5 py-1.5 bg-rose-50/60 border border-rose-200/80 rounded-xl text-xs font-bold text-rose-800 outline-none focus:border-rose-400 focus:bg-white transition-all"
+              placeholder="Без осевой нагрузки, исключить глубокий присед..."
+              className="w-full px-3 py-2 bg-rose-50/60 border border-rose-200/70 rounded-xl text-xs font-semibold text-rose-900 outline-none focus:border-rose-400 focus:bg-white transition-all"
             />
           </div>
         </div>
@@ -379,9 +384,9 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
               key={dayNum}
               type="button"
               onClick={() => setActiveDay(dayNum)}
-              className={`py-1 px-3 rounded-xl font-bold transition-all text-[11px] shrink-0 cursor-pointer ${
+              className={`py-1 px-3 rounded-xl font-semibold transition-all text-xs shrink-0 cursor-pointer ${
                 activeDay === dayNum 
-                  ? 'bg-blue-600 text-white shadow-2xs' 
+                  ? 'bg-blue-600 text-white shadow-2xs font-bold' 
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
@@ -400,7 +405,7 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
             setDaysWorkouts(updated);
           }}
           placeholder={`Название Дня ${activeDay}`}
-          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200/90 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-blue-600 focus:bg-white transition-all"
+          className="w-full px-3 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-blue-600 focus:bg-white transition-all"
         />
 
         {/* Список упражнений текущего дня */}
@@ -412,12 +417,14 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
             return (
               <div key={index} className="p-2.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2">
                 <div className="flex items-center justify-between gap-1.5">
-                  <div className="grid grid-cols-2 gap-1.5 flex-1 min-w-0">
-                    <div className="relative">
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    
+                    {/* Мышечная группа — 35% ширины */}
+                    <div className="w-[35%] relative shrink-0">
                       <select
                         value={currentMuscle}
                         onChange={(e) => handleExerciseChange(index, 'muscleGroup', e.target.value)}
-                        className="w-full appearance-none pl-2 pr-6 py-1 bg-white border border-slate-200/90 rounded-lg text-[11px] font-bold text-blue-700 outline-none truncate"
+                        className="w-full appearance-none pl-2.5 pr-5 py-1.5 bg-white border border-slate-200/80 rounded-xl text-xs font-bold text-blue-700 outline-none truncate"
                       >
                         {Object.keys(exerciseDatabase).map((mg, i) => (
                           <option key={i} value={mg}>{mg}</option>
@@ -426,11 +433,12 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
                       <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
 
-                    <div className="relative">
+                    {/* Название упражнения — 65% ширины (без обрезки) */}
+                    <div className="flex-1 relative min-w-0">
                       <select
                         value={ex.name}
                         onChange={(e) => handleExerciseChange(index, 'name', e.target.value)}
-                        className="w-full appearance-none pl-2 pr-6 py-1 bg-white border border-slate-200/90 rounded-lg text-[11px] font-bold text-slate-900 outline-none truncate"
+                        className="w-full appearance-none pl-2.5 pr-5 py-1.5 bg-white border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-800 outline-none truncate"
                       >
                         {availableExercises.map((item, i) => (
                           <option key={i} value={item}>{item}</option>
@@ -444,7 +452,7 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
                     <button 
                       type="button"
                       onClick={() => handleRemoveExercise(index)}
-                      className="p-1 text-slate-300 hover:text-rose-600 transition-colors shrink-0 active:scale-90"
+                      className="p-1.5 text-slate-300 hover:text-rose-600 transition-colors shrink-0 active:scale-90"
                       title="Удалить упражнение"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -452,35 +460,35 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
                   )}
                 </div>
 
-                {/* 3 ячейки: Подходы / Повторы / Вес */}
+                {/* 3 аккуратные ячейки: Подходы / Повторы / Вес */}
                 <div className="grid grid-cols-3 gap-1.5 text-center">
-                  <div className="bg-white p-1 rounded-xl border border-slate-200/90 shadow-2xs">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Подходы</span>
+                  <div className="bg-white py-1 px-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Подходы</span>
                     <input 
                       type="number"
                       value={ex.sets}
                       onChange={(e) => handleExerciseChange(index, 'sets', Number(e.target.value))}
-                      className="w-full text-center text-xs font-bold font-mono text-slate-900 bg-transparent outline-none"
+                      className="w-full text-center text-xs font-extrabold font-mono text-slate-900 bg-transparent outline-none"
                     />
                   </div>
 
-                  <div className="bg-white p-1 rounded-xl border border-slate-200/90 shadow-2xs">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Повторы</span>
+                  <div className="bg-white py-1 px-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Повторы</span>
                     <input 
                       type="number"
                       value={ex.reps}
                       onChange={(e) => handleExerciseChange(index, 'reps', Number(e.target.value))}
-                      className="w-full text-center text-xs font-bold font-mono text-slate-900 bg-transparent outline-none"
+                      className="w-full text-center text-xs font-extrabold font-mono text-slate-900 bg-transparent outline-none"
                     />
                   </div>
 
-                  <div className="bg-white p-1 rounded-xl border border-slate-200/90 shadow-2xs">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Вес (кг)</span>
+                  <div className="bg-white py-1 px-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Вес (кг)</span>
                     <input 
                       type="number"
                       value={ex.weight}
                       onChange={(e) => handleExerciseChange(index, 'weight', Number(e.target.value))}
-                      className="w-full text-center text-xs font-bold font-mono text-blue-600 bg-transparent outline-none"
+                      className="w-full text-center text-xs font-extrabold font-mono text-blue-600 bg-transparent outline-none"
                     />
                   </div>
                 </div>
@@ -489,7 +497,7 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
           })}
         </div>
 
-        {/* Кнопка сохранения */}
+        {/* Кнопка сохранения программы */}
         <div className="pt-2 flex items-center justify-between border-t border-slate-100">
           {saveSuccess ? (
             <span className="text-emerald-600 text-xs font-bold flex items-center gap-1">
@@ -504,7 +512,7 @@ export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }
             type="button"
             disabled={saving}
             onClick={handleSaveProgram}
-            className="py-2 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            className="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{saving ? '...' : 'Сохранить программу'}</span>
