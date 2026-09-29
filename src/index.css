@@ -28,7 +28,7 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.012em;
   overflow-x: hidden;
-  overflow-y: auto; /* Гарантированный вертикальный скролл на всех устройствах */
+  overflow-y: auto;
 }
 
 /* На мобильных в Telegram отключаем системное смахивание шторки */
@@ -78,16 +78,7 @@ input, textarea, select {
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-/* Защита от зума в iOS */
-@media (max-width: 768px) {
-  input:not([type="checkbox"]):not([type="radio"]), 
-  textarea, 
-  select {
-    font-size: 16px !important;
-  }
-}
-
-/* Скрытие скроллбара ТОЛЬКО на мобильных устройствах. На ПК скроллбар работает штатно */
+/* Скрытие скроллбара на мобильных устройствах */
 @media (max-width: 768px) {
   ::-webkit-scrollbar {
     display: none;
