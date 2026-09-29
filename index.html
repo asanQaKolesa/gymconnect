@@ -20,9 +20,15 @@
         ym(113139939, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
     </script>
     <!-- /Yandex.Metrika counter -->
+
+    <!-- PostHog Analytics Script (CDN version to avoid npm bundle build issues) -->
+    <script>
+        !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[];u.s=0;u.s<u.length;)g(u,u.s++);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+        posthog.init('phc_ok48BUQfdDDYDyFTyFbiT5pxz2Rez7Bv4PtoqroRAWXX',{api_host:'https://us.i.posthog.com', person_profiles: 'identified_only'})
+    </script>
   </head>
   <body class="bg-[#F2F2F7] text-slate-900 overflow-x-hidden antialiased">
-    <!-- Yandex.Metrika noscript fallback (перенесено в body согласно стандартам Vite) -->
+    <!-- Yandex.Metrika noscript fallback -->
     <noscript><div><img src="https://mc.yandex.ru/watch/113139939" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
     
     <div id="root"></div>
