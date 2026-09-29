@@ -14,7 +14,17 @@ import {
   Square 
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
-import { sendStudentNotification } from '../../../utils/telegramNotifications';
+import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
+
+// Склонение слов в русском языке (1 тренировка, 2 тренировки, 5 тренировок)
+function getWorkoutWord(count) {
+  const rem10 = count % 10;
+  const rem100 = count % 100;
+  if (rem100 >= 11 && rem100 <= 19) return 'тренировок';
+  if (rem10 === 1) return 'тренировка';
+  if (rem10 >= 2 && rem10 <= 4) return 'тренировки';
+  return 'тренировок';
+}
 
 export default function OverviewTab({ 
   trainer, 
@@ -101,7 +111,7 @@ export default function OverviewTab({
     }).length;
   }, [students]);
 
-  // Списание / возврат занятия в 1 клик
+  // 🚀 Списание / возврат занятия в 1 клик с мгновенным пушем ученику в Telegram
   const handleToggleWorkout = async (e, s) => {
     e.stopPropagation();
     const isDone = processedMap[s.id];
@@ -127,14 +137,34 @@ export default function OverviewTab({
         [s.id]: !isDone
       }));
 
-      if (!isDone) {
-        sendStudentNotification({
-          studentTelegramId: s.telegram_id,
-          studentUsername: s.username,
-          studentId: s.id,
-          title: 'Тренировка зачтена',
-          message: `Тренер провел тренировку! Списано 1 занятие. Ваш остаток: ${newLeft} зан.`
-        }).catch(() => {});
+      // Получаем Chat ID ученика для отправки в Telegram
+      const targetTelegramId = s.telegram_id || s.chat_id;
+
+      if (targetTelegramId) {
+        const trainerName = trainer?.full_name || trainer?.first_name || 'Ваш наставник';
+
+        if (!isDone) {
+          // Пуш при списании ("Проведено")
+          const pushText = 
+            `✅ <b>Тренировка проведена!</b>\n\n` +
+            `Списано: <b>1 занятие</b>.\n` +
+            `Ваш текущий остаток: <b>${newLeft}</b> ${getWorkoutWord(newLeft)}.\n\n` +
+            `<i>Тренер: ${escapeHtml(trainerName)} 💪</i>`;
+
+          sendTelegramMessage(targetTelegramId, pushText).catch(err => {
+            console.warn('Ошибка отправки пуша о списании:', err);
+          });
+        } else {
+          // Пуш при отмене списания ("Вернуть (+1)")
+          const returnText = 
+            `↩️ <b>Списание занятия отменено!</b>\n\n` +
+            `Занятие возвращено на баланс (+1).\n` +
+            `Ваш текущий остаток: <b>${newLeft}</b> ${getWorkoutWord(newLeft)}.`;
+
+          sendTelegramMessage(targetTelegramId, returnText).catch(err => {
+            console.warn('Ошибка отправки пуша о возврате:', err);
+          });
+        }
       }
 
       if (onRefresh) onRefresh();
@@ -183,7 +213,7 @@ export default function OverviewTab({
     });
   };
 
-  // Отправка сообщений пакетом
+  // Отправка сообщений пакетом через безопасную Edge Function
   const handleSendBatch = async () => {
     if (remindModal.selectedIds.length === 0 || !remindModal.customMessage.trim()) return;
     setIsSendingBatch(true);
@@ -193,14 +223,12 @@ export default function OverviewTab({
       let count = 0;
 
       for (const s of selectedStudents) {
-        const res = await sendStudentNotification({
-          studentTelegramId: s.telegram_id,
-          studentUsername: s.username,
-          studentId: s.id,
-          title: remindModal.title,
-          message: remindModal.customMessage
-        });
-        if (res && res.ok) count++;
+        const chatId = s.telegram_id || s.chat_id;
+        if (chatId) {
+          const formattedMsg = `🔔 <b>${escapeHtml(remindModal.title)}</b>\n\n${remindModal.customMessage}`;
+          const isOk = await sendTelegramMessage(chatId, formattedMsg);
+          if (isOk) count++;
+        }
       }
 
       setSendSuccessText(`Отправлено: ${count} из ${selectedStudents.length} атлетов`);
@@ -386,7 +414,7 @@ export default function OverviewTab({
 
                       <div className="flex items-center gap-2 text-[10.5px] text-slate-400 mt-0.5 whitespace-nowrap">
                         <span className="font-mono font-medium text-slate-600">
-                          {leftWorkouts} зан.
+                          {leftWorkouts} {getWorkoutWord(leftWorkouts)}
                         </span>
                         <span>•</span>
                         <span className="truncate max-w-[120px] text-slate-500">
@@ -417,7 +445,7 @@ export default function OverviewTab({
                         className="py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[11px] font-bold active:scale-95 transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0 shadow-xs"
                       >
                         <Check className="w-3 h-3 stroke-[3]" />
-                        <span>Списать</span>
+                        <span>Проведено</span>
                       </button>
                     )}
 
