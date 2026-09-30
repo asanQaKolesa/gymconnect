@@ -7,7 +7,6 @@ import {
   Scale, 
   HeartPulse, 
   Dumbbell, 
-  Clock, 
   Plus, 
   Minus, 
   CheckCircle2, 
@@ -18,9 +17,7 @@ import {
   AlertCircle,
   Camera,
   Activity,
-  X,
-  Building,
-  UserCheck
+  X
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
@@ -75,7 +72,6 @@ export default function AthleteDetailScreen({
     );
   }
 
-  // 1. Открыть Telegram чат
   const handleOpenTg = () => {
     const username = (currentStudent.username || currentStudent.telegram_username || '').replace('@', '').trim();
     if (username) {
@@ -85,7 +81,6 @@ export default function AthleteDetailScreen({
     }
   };
 
-  // 2. Смена статуса через модалку карандаша
   const handleChangeStatus = async (newStatus) => {
     setActionLoading(true);
     try {
@@ -104,22 +99,22 @@ export default function AthleteDetailScreen({
     }
   };
 
-  // 3. Отметить оплату (фиксация факта получения денег)
-  const handleConfirmPayment = async () => {
+  // Переключение статуса оплаты через тумблер
+  const handleTogglePayment = async (statusVal) => {
+    if (currentStudent.payment_status === statusVal) return;
     setActionLoading(true);
-    const newPaymentStatus = isPaid ? 'pending' : 'paid';
     try {
       await supabase
         .from('profiles')
-        .update({ payment_status: newPaymentStatus })
+        .update({ payment_status: statusVal })
         .eq('id', currentStudent.id);
 
-      setCurrentStudent(prev => ({ ...prev, payment_status: newPaymentStatus }));
+      setCurrentStudent(prev => ({ ...prev, payment_status: statusVal }));
 
-      if (newPaymentStatus === 'paid') {
+      if (statusVal === 'paid') {
         const tgId = currentStudent.telegram_id || currentStudent.chat_id;
         if (tgId) {
-          sendTelegramMessage(tgId, `✅ <b>Оплата абонемента подтверждена!</b>\n\nТренер отметил получение оплаты за ваш текущий блок тренировок.`).catch(() => {});
+          sendTelegramMessage(tgId, `✅ <b>Оплата тренировок подтверждена!</b>\n\nТренер отметил получение оплаты за ваш абонемент.`).catch(() => {});
         }
       }
       if (onUpdate) onUpdate();
@@ -130,7 +125,7 @@ export default function AthleteDetailScreen({
     }
   };
 
-  // 4. Степпер баланса занятий (-1 / +1)
+  // Степпер баланса занятий (-1 / +1) с мгновенным автосохранением в Supabase
   const handleAdjustBalance = async (delta) => {
     const updated = Math.max(0, leftTrainings + delta);
     setActionLoading(true);
@@ -149,7 +144,6 @@ export default function AthleteDetailScreen({
     }
   };
 
-  // 5. Продление абонемента (+12 занятий суммируются)
   const handleRenewPackage = async () => {
     setActionLoading(true);
     const updated = leftTrainings + 12;
@@ -186,7 +180,6 @@ export default function AthleteDetailScreen({
     }
   };
 
-  // 6. Сохранение условий тарифа
   const handleSavePlanSettings = async () => {
     setActionLoading(true);
     try {
@@ -218,7 +211,6 @@ export default function AthleteDetailScreen({
     }
   };
 
-  // 7. Выставить счёт на оплату
   const handleSendInvoice = () => {
     const tgId = currentStudent.telegram_id || currentStudent.chat_id;
     const coachName = trainer?.full_name || trainer?.first_name || 'Ваш наставник';
@@ -243,14 +235,13 @@ export default function AthleteDetailScreen({
     online: 'Онлайн-ведение'
   }[currentStudent.training_format || currentStudent.package_type || 'individual'] || 'Индивидуально';
 
-  // Разделение смены и точного времени
   const shiftText = currentStudent.workout_shift || currentStudent.workout_time_slot || 'Вечер';
   const exactTimeText = currentStudent.exact_time || currentStudent.custom_time || currentStudent.workout_time || '18:30';
 
   return (
     <div className="min-h-screen bg-slate-50 select-none pb-28">
       
-      {/* ШАПКА ДОСЬЕ */}
+      {/* ШАПКА */}
       <div className="bg-white border-b border-slate-200/80 px-4 py-3 sticky top-0 z-30 shadow-2xs">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <button
@@ -272,7 +263,7 @@ export default function AthleteDetailScreen({
 
       <div className="p-4 max-w-md mx-auto space-y-3.5">
         
-        {/* 1. КОМПАКТНАЯ ВИЗИТКА СО СМЕНОЙ СТАТУСА ЧЕРЕЗ КАРАНДАШИК */}
+        {/* 1. ВИЗИТКА СО СМЕНОЙ СТАТУСА ЧЕРЕЗ КАРАНДАШИК */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -301,7 +292,7 @@ export default function AthleteDetailScreen({
               </div>
             </div>
 
-            {/* Статус со значком карандаша для смены */}
+            {/* Статус с карандашиком */}
             <button
               type="button"
               onClick={() => setIsEditingStatus(true)}
@@ -316,7 +307,6 @@ export default function AthleteDetailScreen({
             </button>
           </div>
 
-          {/* Быстрые контакты */}
           <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
             <button
               type="button"
@@ -364,7 +354,7 @@ export default function AthleteDetailScreen({
           </div>
         )}
 
-        {/* 2. АБОНЕМЕНТ, БАЛАНС И ФИКСАЦИЯ ОПЛАТЫ */}
+        {/* 2. АБОНЕМЕНТ, БАЛАНС И СВАЙП-ТУМБЛЕР ОПЛАТЫ */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
@@ -382,7 +372,7 @@ export default function AthleteDetailScreen({
             </button>
           </div>
 
-          {/* Редактирование условий абонемента */}
+          {/* Редактирование тарифа */}
           {isEditingPlan ? (
             <div className="p-3 bg-slate-50 rounded-xl space-y-3 border border-slate-200/60 text-xs animate-in fade-in">
               <div>
@@ -486,7 +476,7 @@ export default function AthleteDetailScreen({
             </div>
           )}
 
-          {/* Строка баланса со степпером и пояснением */}
+          {/* Баланс тренировок со степпером */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
               <button
@@ -511,55 +501,71 @@ export default function AthleteDetailScreen({
                 disabled={actionLoading}
                 onClick={() => handleAdjustBalance(+1)}
                 className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-90 transition-all flex items-center justify-center cursor-pointer shadow-2xs"
-                title="Добавить / подарить 1 занятие"
+                title="Добавить 1 занятие"
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
 
             <p className="text-[10px] text-slate-400 text-center">
-              При продлении +12 тренировок суммируются к текущему остатку на балансе.
+              При продлении +12 занятий суммируются к текущему остатку.
             </p>
           </div>
 
-          {/* Строка фиксации оплаты + выставление счёта */}
+          {/* СЕГМЕНТНЫЙ ТУМБЛЕР ОПЛАТЫ (ОЖИДАЕТСЯ / ОПЛАЧЕНО) */}
+          <div className="space-y-1.5 pt-1">
+            <span className="text-[11px] font-semibold text-slate-600 block">Статус оплаты блока:</span>
+            <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl gap-1">
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => handleTogglePayment('pending')}
+                className={`h-8 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  !isPaid ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Ожидает оплату</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => handleTogglePayment('paid')}
+                className={`h-8 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  isPaid ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Оплачено</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Кнопки действий: Выставить счёт и Продлить абонемент */}
           <div className="grid grid-cols-2 gap-2 pt-1">
             <button
               type="button"
               onClick={handleSendInvoice}
-              className="h-10 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-slate-200"
+              className="h-10 px-3 bg-slate-100 hover:bg-slate-200 active:scale-98 text-slate-800 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-slate-200"
             >
-              <CreditCard className="w-3.5 h-3.5" />
+              <CreditCard className="w-3.5 h-3.5 text-slate-600" />
               <span>Выставить счёт</span>
             </button>
 
             <button
               type="button"
               disabled={actionLoading}
-              onClick={handleConfirmPayment}
-              className={`h-10 px-3 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
-                isPaid 
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 hover:bg-emerald-100' 
-                  : 'bg-amber-50 text-amber-800 border-amber-200/80 hover:bg-amber-100'
-              }`}
+              onClick={handleRenewPackage}
+              className="h-10 px-3 bg-[#1E60D5] hover:bg-blue-600 active:scale-98 text-white rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>{isPaid ? 'Оплачено (изменить)' : 'Отметить оплату'}</span>
+              <Plus className="w-4 h-4" />
+              <span>Продлить (+12)</span>
             </button>
           </div>
-
-          <button
-            type="button"
-            disabled={actionLoading}
-            onClick={handleRenewPackage}
-            className="w-full h-10 px-3 bg-[#1E60D5] hover:bg-blue-600 active:scale-98 text-white rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
-          >
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>Продлить абонемент (+12 занятий)</span>
-          </button>
         </div>
 
-        {/* 3. АКТУАЛЬНЫЕ ЗАМЕРЫ ТЕЛА + ПЕРЕХОД НА СТРАНИЦУ СРАВНЕНИЯ */}
+        {/* 3. ПОЛНАЯ ЭКСПРЕСС-СЕТКА ЗАМЕРОВ ТЕЛА + ПЕРЕХОД В АНАЛИТИКУ */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
@@ -572,8 +578,15 @@ export default function AthleteDetailScreen({
             </span>
           </div>
 
-          {/* Экспресс-сетка ключевых замеров */}
+          {/* Экспресс-сетка всех ключевых параметров включая симметрию */}
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Рост</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.height ? `${currentStudent.height} см` : '—'}
+              </span>
+            </div>
+
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Вес</span>
               <span className="text-xs font-mono font-bold text-slate-800">
@@ -603,21 +616,56 @@ export default function AthleteDetailScreen({
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-              <span className="text-[10px] text-slate-400 block">Бицепс</span>
+              <span className="text-[10px] text-slate-400 block">Шея</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.neck || '38'} см
+              </span>
+            </div>
+
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Пр. бицепс</span>
               <span className="text-xs font-mono font-bold text-slate-800">
                 {currentStudent.biceps_right || currentStudent.biceps || '36.5'} см
               </span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-              <span className="text-[10px] text-slate-400 block">Бедро</span>
+              <span className="text-[10px] text-slate-400 block">Лев. бицепс</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.thigh_right || currentStudent.thigh || '57'} см
+                {currentStudent.biceps_left || '36'} см
+              </span>
+            </div>
+
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Пр. бедро</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.thigh_right || currentStudent.thigh || '56.5'} см
+              </span>
+            </div>
+
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Лев. бедро</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.thigh_left || '56'} см
+              </span>
+            </div>
+
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Пр. икра</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.calf_right || '37.5'} см
+              </span>
+            </div>
+
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Лев. икра</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.calf_left || '37.5'} см
               </span>
             </div>
           </div>
 
-          {/* Кнопка перехода в отдельный экран полной аналитики замеров */}
+          {/* Кнопка перехода в отдельный экран полной аналитики */}
           <button
             type="button"
             onClick={() => setShowFullMeasurements(true)}
@@ -639,7 +687,7 @@ export default function AthleteDetailScreen({
           </div>
 
           <p className="text-xs text-slate-500 leading-relaxed">
-            Визуальная фиксация прогресса в одинаковом освещении и ракурсах.
+            Визуальная фиксация формы в одинаковом ракурсе и освещении.
           </p>
 
           <button
@@ -732,7 +780,7 @@ export default function AthleteDetailScreen({
 
       </div>
 
-      {/* МОДАЛКА СМЕНЫ СТАТУСА ЧЕРЕЗ КАРАНДАШИК */}
+      {/* МОДАЛКА СМЕНЫ СТАТУСА (КАРАНДАШИК) */}
       {isEditingStatus && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white rounded-t-3xl sm:rounded-2xl border border-slate-200 w-full max-w-md p-4 space-y-3.5 shadow-xl animate-in slide-in-from-bottom duration-150">
