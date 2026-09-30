@@ -1,5 +1,5 @@
 // src/components/onboarding/RegisterProfilePage.jsx
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   Sparkles, 
   MapPin, 
@@ -13,7 +13,9 @@ import {
   ArrowRight,
   Flame,
   Globe2,
-  Loader2
+  Loader2,
+  Clock,
+  HeartPulse
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../utils/telegramNotifications';
@@ -67,7 +69,10 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
     goal: 'Набор массы',
     workout_days: ['Пн', 'Ср', 'Пт'],
+    workout_shift: 'Вечер',
+    exact_time: '18:30',
     workout_time_slot: 'Вечер (16:00 - 21:00)',
+    injury_notes: '',
 
     gymbro_search: false,
     gymbro_radius: 'club',
@@ -160,7 +165,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
       const cleanFileName = `user_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
       const filePath = `profiles/${cleanFileName}`;
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -171,7 +176,6 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         throw uploadError;
       }
 
-      // Получаем публичный безопасный URL
       const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
@@ -181,7 +185,6 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
       }
     } catch (err) {
       console.warn('Загрузка в Storage не удалась, используем оптимизированный локальный поток:', err);
-      // Fallback на чтение для локального предпросмотра
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({ ...prev, photo_url: reader.result }));
@@ -237,6 +240,8 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         localStorage.setItem('gymconnect_telegram_id', tgId);
       }
 
+      const compositeTimeSlot = `${formData.workout_shift} (${formData.exact_time})`;
+
       const newProfilePayload = {
         telegram_id: tgId,
         photo_url: formData.photo_url,
@@ -262,10 +267,17 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         age: calculatedAge || 24,
         height: Number(formData.height) || 0,
         weight: Number(formData.weight) || 0,
+        start_weight: Number(formData.weight) || 0,
+        current_weight: Number(formData.weight) || 0,
         experience_level: formData.experience_level,
         goal: formData.goal,
         workout_days: formData.workout_days,
-        workout_time_slot: formData.workout_time_slot,
+        workout_shift: formData.workout_shift,
+        exact_time: formData.exact_time,
+        workout_time_slot: compositeTimeSlot,
+        custom_time: formData.exact_time,
+        injury_notes: formData.injury_notes ? formData.injury_notes.trim() : '',
+        parq_notes: formData.injury_notes ? formData.injury_notes.trim() : '',
         gymbro_search: formData.gymbro_search,
         gymbro_radius: formData.gymbro_radius,
         gymbro_target_gender: formData.gymbro_target_gender,
@@ -282,7 +294,6 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
       if (error) throw error;
 
-      // Если была привязка к тренеру — уведомляем тренера в Telegram безопасно через Supabase
       if (cleanTrainerTelegram) {
         try {
           const { data: coachData } = await supabase
@@ -293,10 +304,12 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
           if (coachData && coachData.telegram_id) {
             const athleteFullName = `${formData.first_name} ${formData.last_name || ''}`.trim();
-            const coachMessage = `🎉 <b>Новый ученик в вашей CoachOS!</b>\n\nАтлет <b>${escapeHtml(athleteFullName)}</b> завершил регистрацию в GymConnect и привязан к вам.\nЗал: <b>${escapeHtml(selectedGym)}</b>`;
+            const coachMessage = `🎉 <b>Новый ученик в вашей CoachOS!</b>\n\nАтлет <b>${escapeHtml(athleteFullName)}</b> завершил регистрацию в GymConnect и привязан к вам.\nЗал: <b>${escapeHtml(selectedGym)}</b>\nВремя: <b>${escapeHtml(compositeTimeSlot)}</b>`;
             sendTelegramMessage(String(coachData.telegram_id), coachMessage).catch(() => {});
           }
-        } catch (e) {}
+        } catch (e) {
+          console.warn('Не удалось уведомить тренера через Telegram:', e);
+        }
 
         localStorage.removeItem('gymconnect_pending_coach');
       }
@@ -810,14 +823,14 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
             </div>
           </div>
 
-          {/* 6. Цель и график */}
+          {/* 6. Цель, график и здоровье (PAR-Q) */}
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                6. Цель и график тренировок
+                6. Цель, график и здоровье
               </span>
-              <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-semibold">
-                Не обязательно
+              <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">
+                Для тренера и плана
               </span>
             </div>
 
@@ -862,20 +875,56 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               </div>
             </div>
 
+            {/* Раздельный выбор смены и точного времени */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Смена тренировки
+                </label>
+                <select
+                  value={formData.workout_shift}
+                  onChange={e => setFormData({ ...formData, workout_shift: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                >
+                  <option value="Утро">Утро (07:00 - 12:00)</option>
+                  <option value="День">День (12:00 - 16:00)</option>
+                  <option value="Вечер">Вечер (16:00 - 21:00)</option>
+                  <option value="Поздний вечер">Поздний вечер (после 21:00)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Точное время занятия
+                </label>
+                <div className="relative flex items-center">
+                  <Clock className="w-3.5 h-3.5 text-slate-400 absolute left-2.5" />
+                  <input
+                    type="time"
+                    value={formData.exact_time}
+                    onChange={e => setFormData({ ...formData, exact_time: e.target.value })}
+                    className="w-full pl-8 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Поле заметок по здоровью (PAR-Q) */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                Предпочитаемое время тренировок
-              </label>
-              <select
-                value={formData.workout_time_slot}
-                onChange={e => setFormData({ ...formData, workout_time_slot: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
-              >
-                <option value="Утро (07:00 - 12:00)">Утро (07:00 - 12:00)</option>
-                <option value="День / Обед (12:00 - 16:00)">День / Обед (12:00 - 16:00)</option>
-                <option value="Вечер (16:00 - 21:00)">Вечер (16:00 - 21:00)</option>
-                <option value="Поздний вечер (после 21:00)">Поздний вечер (после 21:00)</option>
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                  <HeartPulse className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Травмы и ограничения (PAR-Q)</span>
+                </label>
+                <span className="text-[9.5px] text-slate-400">для тренера</span>
+              </div>
+              <textarea
+                rows={2}
+                value={formData.injury_notes}
+                onChange={e => setFormData({ ...formData, injury_notes: e.target.value })}
+                placeholder="Грыжи, протрузии, перенесённые операции, давление или напишите 'нет'"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-600 resize-none"
+              />
             </div>
           </div>
 
@@ -922,7 +971,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                   <div className="leading-snug">
                     <p className="font-bold text-blue-900">График синхронизирован с анкетой:</p>
                     <p className="text-[10px] text-blue-800 mt-0.5">
-                      Дни <b>({formData.workout_days.join(', ') || 'не выбраны'})</b> и время <b>({formData.workout_time_slot.split(' ')[0]})</b> берутся из раздела целей выше.
+                      Дни <b>({formData.workout_days.join(', ') || 'не выбраны'})</b> и время <b>({formData.workout_shift}, {formData.exact_time})</b> берутся из раздела целей выше.
                     </p>
                   </div>
                 </div>
