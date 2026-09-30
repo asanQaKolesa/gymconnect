@@ -13,14 +13,18 @@ import {
   Dumbbell, 
   Clock, 
   Activity, 
-  Star,
-  UserCheck,
-  CreditCard,
-  Scale,
-  Smile,
-  Users2,
-  TrendingUp,
-  Bot
+  Star, 
+  UserCheck, 
+  CreditCard, 
+  Scale, 
+  Smile, 
+  Users2, 
+  TrendingUp, 
+  Bot,
+  Building,
+  Coffee,
+  Wallet,
+  Users
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
@@ -41,9 +45,9 @@ export default function OverviewTab({
   onOpenPublicProfile, 
   onNavigateToCalendar, 
   onNavigateToBroadcasts, 
-  onNavigateToFinance,
-  onNavigateToAnalytics,
-  onNavigateToStudents,
+  onNavigateToFinance, 
+  onNavigateToAnalytics, 
+  onNavigateToStudents, 
   onRefresh 
 }) {
   const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -287,30 +291,32 @@ export default function OverviewTab({
   return (
     <div className="space-y-3 pb-28 select-none">
       
-      {/* 1. ВЕРХНЯЯ СТРОКА: ТУМБЛЕР В ЗАЛЕ / ВЫХОДНОЙ И КНОПКА ПРИГЛАСИТЬ */}
+      {/* 1. ВЕРХНЯЯ СТРОКА: ТУМБЛЕР С ИКОНКАМИ (ЗАКРЫВАЕТ ЗАЗОР) И ПЛОТНАЯ КНОПКА ПРИГЛАСИТЬ */}
       <div className="flex items-center justify-between gap-2.5">
-        <div className="flex-1 max-w-[210px] grid grid-cols-2 p-1 bg-slate-200/60 rounded-xl">
+        <div className="flex-1 grid grid-cols-2 p-1 bg-slate-200/60 rounded-xl">
           <button
             type="button"
             onClick={() => setActiveWorkMode('gym')}
-            className={`h-8 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer flex items-center justify-center truncate px-2 ${
+            className={`h-8 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer inline-flex items-center justify-center gap-1.5 px-3 truncate ${
               activeWorkMode === 'gym' 
                 ? 'bg-white text-slate-800 shadow-xs' 
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            В зале
+            <Building className="w-3.5 h-3.5 stroke-[2] shrink-0" />
+            <span>В зале</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveWorkMode('day_off')}
-            className={`h-8 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer flex items-center justify-center truncate px-2 ${
+            className={`h-8 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer inline-flex items-center justify-center gap-1.5 px-3 truncate ${
               activeWorkMode === 'day_off' 
                 ? 'bg-white text-slate-800 shadow-xs' 
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            Выходной
+            <Coffee className="w-3.5 h-3.5 stroke-[2] shrink-0" />
+            <span>Выходной</span>
           </button>
         </div>
 
@@ -352,7 +358,7 @@ export default function OverviewTab({
         </button>
       </div>
 
-      {/* 3. ПРОФИЛЬ ТРЕНЕРА */}
+      {/* 3. ПРОФИЛЬ ТРЕНЕРА: УВЕЛИЧЕННОЕ ИМЯ (14px Bold), ВЫВЕРЕННЫЙ РЕЙТИНГ И ПРОСМОТРЫ */}
       <div 
         onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
         className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
@@ -362,22 +368,24 @@ export default function OverviewTab({
             {trainer?.avatar_url ? (
               <img src={trainer.avatar_url} alt="Аватар тренера" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-xs font-bold text-slate-700">
+              <span className="text-sm font-bold text-slate-700">
                 {trainer?.full_name ? trainer.full_name.charAt(0).toUpperCase() : 'Т'}
               </span>
             )}
           </div>
 
-          <div className="min-w-0 flex-1 space-y-0.5">
-            <h3 className="text-xs font-bold text-slate-800 truncate">
+          <div className="min-w-0 flex-1 space-y-1">
+            <h3 className="text-[13.5px] font-bold text-slate-800 truncate leading-snug">
               {trainer?.full_name || trainer?.first_name || 'Персональный наставник'}
             </h3>
             
-            <div className="flex items-center gap-3 text-[11px] text-slate-500">
+            <div className="flex items-center gap-2.5 text-[11px] text-slate-500">
               <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
                 <Star className="w-3.5 h-3.5 text-slate-600 stroke-[1.8]" />
                 <span>5.0</span>
+                <span className="text-slate-400 font-normal">(18)</span>
               </span>
+              <span>•</span>
               <span className="inline-flex items-center gap-1 text-slate-500 font-medium">
                 <Eye className="w-3.5 h-3.5 text-slate-500 stroke-[1.8]" />
                 <span>{trainer?.profile_views || 148} просмотров</span>
@@ -407,15 +415,18 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* 5. ФИНАНСЫ И ПОДОПЕЧНЫЕ */}
+      {/* 5. ФИНАНСЫ И ПОДОПЕЧНЫЕ: С ИКОНКАМИ В ШАПКЕ КАРТОЧЕК */}
       <div className="grid grid-cols-2 gap-2.5">
         <div 
           onClick={() => onNavigateToFinance && onNavigateToFinance()}
           className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-2.5 cursor-pointer hover:border-slate-300 transition-colors"
         >
           <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-            <span className="text-xs font-bold text-slate-800">Финансы</span>
-            <span className="text-xs font-semibold text-[#1E60D5] inline-flex items-center gap-0.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Wallet className="w-3.5 h-3.5 text-slate-600 stroke-[2] shrink-0" />
+              <span className="text-xs font-bold text-slate-800 truncate">Финансы</span>
+            </div>
+            <span className="text-xs font-semibold text-[#1E60D5] inline-flex items-center gap-0.5 shrink-0">
               <span>{currentMonthName}</span>
               <ChevronRight className="w-3 h-3 text-[#1E60D5]" />
             </span>
@@ -453,8 +464,11 @@ export default function OverviewTab({
           className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-2.5 cursor-pointer hover:border-slate-300 transition-colors"
         >
           <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-            <span className="text-xs font-bold text-slate-800">Подопечные</span>
-            <span className="text-xs font-semibold text-[#1E60D5] inline-flex items-center gap-0.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Users className="w-3.5 h-3.5 text-slate-600 stroke-[2] shrink-0" />
+              <span className="text-xs font-bold text-slate-800 truncate">Подопечные</span>
+            </div>
+            <span className="text-xs font-semibold text-[#1E60D5] inline-flex items-center gap-0.5 shrink-0">
               <span>{students.length} всего</span>
               <ChevronRight className="w-3 h-3 text-[#1E60D5]" />
             </span>
@@ -699,7 +713,7 @@ export default function OverviewTab({
                     <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </div>
 
-                  {/* Нижняя панель действий */}
+                  {/* Нижняя панель действий: План + Был + Не был */}
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
@@ -732,7 +746,7 @@ export default function OverviewTab({
                       type="button"
                       disabled={isCurrentProcessing}
                       onClick={(e) => handleSetAttendance(e, s, 'missed')}
-                      className={`h-10 px-3.5 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer ${
+                      className={`h-10 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer ${
                         currentStatus === 'missed'
                           ? 'bg-rose-500 text-white shadow-xs'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
