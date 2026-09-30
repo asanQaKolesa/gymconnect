@@ -12,26 +12,28 @@ import {
   Minus, 
   PauseCircle, 
   PlayCircle, 
-  CheckCircle2,
-  FileText,
-  CreditCard,
-  Edit2,
-  Check,
-  Calendar,
-  Layers,
-  Utensils
+  CheckCircle2, 
+  FileText, 
+  CreditCard, 
+  Edit2, 
+  Check, 
+  AlertCircle,
+  BellRing,
+  Activity,
+  Layers
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
-import { sendTelegramMessage } from '../../../utils/telegramNotifications';
+import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
 
 // Словарь понятного русского перевода системных значений опыта
-const EXPERIENCE_MAP = {
-  beginner: 'Новичок (до 1 года)',
-  starter: 'Новичок (до 1 года)',
-  intermediate: 'Средний уровень (1–3 года)',
-  medium: 'Средний уровень (1–3 года)',
-  advanced: 'Опытный атлет (более 3 лет)',
-  pro: 'Профессионал / Выступающий атлет'
+const translateExperience = (raw) => {
+  if (!raw) return '1–2 года тренировок';
+  const val = String(raw).toLowerCase().trim();
+  if (val.includes('regular')) return 'Регулярные тренировки (1–3 года)';
+  if (val.includes('begin') || val.includes('start')) return 'Новичок (до 1 года)';
+  if (val.includes('inter') || val.includes('medium')) return 'Средний уровень (1–3 года)';
+  if (val.includes('advanc') || val.includes('pro')) return 'Опытный атлет (более 3 лет)';
+  return raw;
 };
 
 export default function AthleteDetailScreen({ 
@@ -42,28 +44,22 @@ export default function AthleteDetailScreen({
 }) {
   const [currentStudent, setCurrentStudent] = useState(student);
   const [actionLoading, setActionLoading] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
 
-  // Режим редактирования цены и условий тарифа
+  // Режим редактирования абонемента
   const [isEditingPlan, setIsEditingPlan] = useState(false);
   const [editPrice, setEditPrice] = useState(currentStudent.monthly_price || 70000);
   const [editBurnable, setEditBurnable] = useState(currentStudent.is_burnable !== false);
-  const [editDaysLimit, setEditDaysLimit] = useState(currentStudent.membership_term || 30);
-
-  // Состояние замеров тела (Вес, Талия, Грудь, Бедра)
-  const [measurements, setMeasurements] = useState({
-    weight: currentStudent.current_weight || currentStudent.weight || '',
-    waist: currentStudent.waist || '',
-    chest: currentStudent.chest || '',
-    hips: currentStudent.hips || ''
-  });
-  const [isSavingMeasurements, setIsSavingMeasurements] = useState(false);
+  const [editDaysLimit, setEditDaysLimit] = useState(parseInt(currentStudent.membership_term, 10) || 30);
+  const [editFormat, setEditFormat] = useState(currentStudent.training_format || currentStudent.package_type || 'individual');
 
   const fullName = currentStudent.full_name || `${currentStudent.first_name || ''} ${currentStudent.last_name || ''}`.trim() || 'Атлет';
   const leftTrainings = Number(currentStudent.left_trainings ?? currentStudent.remaining_workouts ?? 12);
   const totalTrainings = Number(currentStudent.total_trainings || 12);
   const isPaused = (currentStudent.status || '').toLowerCase() === 'paused';
+  const isExpiring = leftTrainings <= 2;
 
-  // 1. Открыть Telegram
+  // 1. Открыть Telegram чат
   const handleOpenTg = () => {
     const username = (currentStudent.username || currentStudent.telegram_username || '').replace('@', '').trim();
     if (username) {
@@ -73,7 +69,7 @@ export default function AthleteDetailScreen({
     }
   };
 
-  // 2. Степпер баланса: изменить на +1 или -1
+  // 2. Степпер баланса занятий (-1 / +1)
   const handleAdjustBalance = async (delta) => {
     const updated = Math.max(0, leftTrainings + delta);
     setActionLoading(true);
@@ -92,7 +88,7 @@ export default function AthleteDetailScreen({
     }
   };
 
-  // 3. Продление абонемента (+12 занятий)
+  // 3. Обновить абонемент (начисление полного пакета)
   const handleRenewPackage = async () => {
     setActionLoading(true);
     const updated = leftTrainings + 12;
@@ -118,18 +114,18 @@ export default function AthleteDetailScreen({
 
       const tgId = currentStudent.telegram_id || currentStudent.chat_id;
       if (tgId) {
-        sendTelegramMessage(tgId, `🎉 <b>Абонемент продлен!</b>\n\nНачислено: <b>+12 тренировок</b>.\nТекущий баланс: <b>${updated} занятий</b>.`).catch(() => {});
+        sendTelegramMessage(tgId, `🎉 <b>Абонемент обновлен!</b>\n\nВам начислено: <b>+12 тренировок</b>.\nТекущий баланс: <b>${updated} занятий</b>.`).catch(() => {});
       }
 
       if (onUpdate) onUpdate();
     } catch (e) {
-      console.warn('Ошибка продления:', e);
+      console.warn('Ошибка обновления абонемента:', e);
     } finally {
       setActionLoading(false);
     }
   };
 
-  // 4. Поставить на паузу / Снять
+  // 4. Пауза / Снятие с паузы
   const handleTogglePause = async () => {
     setActionLoading(true);
     const newStatus = isPaused ? 'active' : 'paused';
@@ -148,7 +144,7 @@ export default function AthleteDetailScreen({
     }
   };
 
-  // 5. Сохранение условий абонемента (цена, сгорание, срок)
+  // 5. Сохранение условий тарифа
   const handleSavePlanSettings = async () => {
     setActionLoading(true);
     try {
@@ -157,7 +153,9 @@ export default function AthleteDetailScreen({
         .update({
           monthly_price: Number(editPrice) || 70000,
           is_burnable: editBurnable,
-          membership_term: `${editDaysLimit} дней`
+          membership_term: `${editDaysLimit} дней`,
+          training_format: editFormat,
+          package_type: editFormat
         })
         .eq('id', currentStudent.id);
 
@@ -165,7 +163,9 @@ export default function AthleteDetailScreen({
         ...prev,
         monthly_price: Number(editPrice) || 70000,
         is_burnable: editBurnable,
-        membership_term: `${editDaysLimit} дней`
+        membership_term: `${editDaysLimit} дней`,
+        training_format: editFormat,
+        package_type: editFormat
       }));
       setIsEditingPlan(false);
       if (onUpdate) onUpdate();
@@ -176,51 +176,48 @@ export default function AthleteDetailScreen({
     }
   };
 
-  // 6. Выставить счёт на оплату в Telegram
+  // 6. Выставить счёт на оплату
   const handleSendInvoice = () => {
     const tgId = currentStudent.telegram_id || currentStudent.chat_id;
     const coachName = trainer?.full_name || trainer?.first_name || 'Ваш наставник';
     const priceText = Number(currentStudent.monthly_price || 70000).toLocaleString();
-    const phone = trainer?.phone || 'указанному номеру';
+    const phone = trainer?.phone || 'указанному номеру Kaspi';
 
-    const invoiceText = `🧾 <b>Счёт на оплату персональных тренировок</b>\n\nАтлет: <b>${escape(fullName)}</b>\nПакет: <b>12 персональных тренировок</b>\nК оплате: <b>${priceText} ₸</b>\n\nРеквизиты для перевода (Kaspi / Счёт):\n<b>${phone}</b> (${coachName})\n\n<i>После оплаты отправьте чек тренеру в ответном сообщении.</i>`;
+    const invoiceText = `🧾 <b>Счёт на оплату тренировок</b>\n\nАтлет: <b>${escapeHtml(fullName)}</b>\nПакет: <b>12 персональных занятий</b>\nК оплате: <b>${priceText} ₸</b>\n\nРеквизиты для перевода (Kaspi):\n<b>${phone}</b> (${coachName})\n\n<i>После оплаты отправьте квитанцию тренеру.</i>`;
 
     if (tgId) {
       sendTelegramMessage(tgId, invoiceText)
-        .then(() => alert('✅ Счёт на оплату успешно отправлен в Telegram-бот подопечного!'))
-        .catch(() => alert('Не удалось отправить в бот. Откройте чат напрямую.'));
+        .then(() => alert('✅ Счёт на оплату отправлен атлету в Telegram!'))
+        .catch(() => alert('Не удалось отправить в бот. Откройте диалог Telegram напрямую.'));
     } else {
       handleOpenTg();
     }
   };
 
-  // 7. Сохранение замеров тела
-  const handleSaveMeasurements = async () => {
-    setIsSavingMeasurements(true);
-    try {
-      await supabase
-        .from('profiles')
-        .update({
-          current_weight: Number(measurements.weight) || null,
-          health_notes: `Талия: ${measurements.waist || '—'} см, Грудь: ${measurements.chest || '—'} см, Бёдра: ${measurements.hips || '—'} см`
-        })
-        .eq('id', currentStudent.id);
+  // 7. Запросить замеры у атлета через бота
+  const handleRequestMeasurements = () => {
+    const tgId = currentStudent.telegram_id || currentStudent.chat_id;
+    const coachName = trainer?.full_name || trainer?.first_name || 'Ваш тренер';
+    const text = `📏 <b>Контроль прогресса и замеры тела</b>\n\nПривет, ${escapeHtml(fullName)}! Тренер ${escapeHtml(coachName)} просит тебя обновить замеры тела (вес, талия, грудь, бёдра).\n\nПожалуйста, сделай замеры натощак и внеси их в бота для отслеживания динамики!`;
 
-      setCurrentStudent(prev => ({
-        ...prev,
-        current_weight: Number(measurements.weight) || null
-      }));
-      alert('✅ Замеры тела успешно сохранены!');
-      if (onUpdate) onUpdate();
-    } catch (e) {
-      console.warn('Ошибка замеров:', e);
-    } finally {
-      setIsSavingMeasurements(false);
+    if (tgId) {
+      sendTelegramMessage(tgId, text)
+        .then(() => {
+          setRequestSent(true);
+          setTimeout(() => setRequestSent(false), 3000);
+        })
+        .catch(() => handleOpenTg());
+    } else {
+      handleOpenTg();
     }
   };
 
-  const experienceText = EXPERIENCE_MAP[(currentStudent.experience_level || '').toLowerCase()] || currentStudent.experience_level || '1–2 года тренировок';
-  const timeSlotText = currentStudent.custom_time || currentStudent.workout_time || currentStudent.workout_time_slot || '18:00';
+  const formatRu = {
+    individual: 'Индивидуально',
+    split: 'Сплит',
+    group: 'Мини-группа',
+    online: 'Онлайн'
+  }[currentStudent.training_format || currentStudent.package_type || 'individual'] || 'Индивидуально';
 
   return (
     <div className="min-h-screen bg-slate-50 select-none pb-28">
@@ -238,7 +235,7 @@ export default function AthleteDetailScreen({
 
           <div className="text-center">
             <h1 className="text-sm font-bold text-slate-800">Досье подопечного</h1>
-            <p className="text-[10px] text-slate-400 font-mono">ID: {currentStudent.id.substring(0, 8)}</p>
+            <p className="text-[10px] text-slate-400 font-medium">Персональная карточка атлета</p>
           </div>
 
           <div className="w-9" />
@@ -247,52 +244,59 @@ export default function AthleteDetailScreen({
 
       <div className="p-4 max-w-md mx-auto space-y-3.5">
         
-        {/* 1. ВИЗИТКА И СТАТУС */}
+        {/* 1. ВИЗИТКА, СТАТУС И ТУМБЛЕР ПАУЗЫ */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center font-bold text-slate-700 text-lg">
-              {currentStudent.avatar_url || currentStudent.photo_url ? (
-                <img src={currentStudent.avatar_url || currentStudent.photo_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span>{fullName.charAt(0).toUpperCase()}</span>
-              )}
-            </div>
-
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex items-center justify-between gap-1">
-                <h3 className="text-base font-bold text-slate-800 truncate">
-                  {fullName}
-                </h3>
-                {isPaused ? (
-                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10.5px] font-semibold shrink-0">
-                    На паузе
-                  </span>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-13 h-13 rounded-2xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center font-bold text-slate-700 text-base">
+                {currentStudent.avatar_url || currentStudent.photo_url ? (
+                  <img src={currentStudent.avatar_url || currentStudent.photo_url} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10.5px] font-semibold shrink-0 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                    Активен
-                  </span>
+                  <span>{fullName.charAt(0).toUpperCase()}</span>
                 )}
               </div>
 
-              <p className="text-xs text-slate-400 font-mono">
-                {currentStudent.username ? `@${currentStudent.username.replace('@', '')}` : (currentStudent.phone || 'Контакты не указаны')}
-              </p>
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-[15px] font-bold text-slate-800 truncate">
+                    {fullName}
+                  </h3>
+                </div>
 
-              {currentStudent.gym && (
-                <p className="text-[11px] text-slate-500 font-medium truncate">
-                  📍 {currentStudent.gym.split('|')[0]}
+                <p className="text-xs text-slate-400 font-mono">
+                  {currentStudent.username ? `@${currentStudent.username.replace('@', '')}` : (currentStudent.phone || 'Контакты не указаны')}
                 </p>
-              )}
+
+                {currentStudent.gym && (
+                  <p className="text-[11px] text-slate-500 font-medium truncate">
+                    📍 {currentStudent.gym.split('|')[0]}
+                  </p>
+                )}
+              </div>
             </div>
+
+            {/* Тумблер паузы прямо в шапке */}
+            <button
+              type="button"
+              disabled={actionLoading}
+              onClick={handleTogglePause}
+              className={`h-8 px-2.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border ${
+                isPaused 
+                  ? 'bg-amber-50 text-amber-700 border-amber-200/80' 
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
+              <span>{isPaused ? 'На паузе' : 'Активен'}</span>
+            </button>
           </div>
 
           {/* Быстрые контакты */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
             <button
               type="button"
               onClick={handleOpenTg}
-              className="h-10 bg-[#1E60D5] hover:bg-blue-600 active:scale-95 text-white rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              className="h-9 bg-[#1E60D5] hover:bg-blue-600 active:scale-95 text-white rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Написать в TG</span>
@@ -301,7 +305,7 @@ export default function AthleteDetailScreen({
             {currentStudent.phone ? (
               <a
                 href={`tel:${currentStudent.phone}`}
-                className="h-10 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all"
+                className="h-9 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all"
               >
                 <Phone className="w-3.5 h-3.5 text-slate-600" />
                 <span>Позвонить</span>
@@ -310,7 +314,7 @@ export default function AthleteDetailScreen({
               <button
                 type="button"
                 disabled
-                className="h-10 bg-slate-50 text-slate-400 rounded-xl text-xs font-medium inline-flex items-center justify-center"
+                className="h-9 bg-slate-50 text-slate-400 rounded-xl text-xs font-medium inline-flex items-center justify-center"
               >
                 Нет номера
               </button>
@@ -318,12 +322,29 @@ export default function AthleteDetailScreen({
           </div>
         </div>
 
-        {/* 2. АБОНЕМЕНТ И БАЛАНС (В ОДНУ СТРОКУ, РЕДАКТИРУЕМЫЙ) */}
+        {/* ПРЕДУПРЕЖДЕНИЕ: АБОНЕМЕНТ ЗАКАНЧИВАЕТСЯ */}
+        {isExpiring && (
+          <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-center justify-between gap-2.5 shadow-2xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-amber-900 block leading-tight">
+                  Абонемент завершается
+                </span>
+                <span className="text-[11px] text-amber-700">
+                  Осталось всего {leftTrainings} зан. Выставите счёт на новый блок.
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 2. АБОНЕМЕНТ И БАЛАНС ТРЕНИРОВОК */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
               <Dumbbell className="w-4 h-4 text-slate-600 stroke-[2]" />
-              <h4 className="text-xs font-bold text-slate-800">Абонемент и баланс</h4>
+              <h4 className="text-xs font-bold text-slate-800">Абонемент и тариф</h4>
             </div>
 
             <button
@@ -332,13 +353,58 @@ export default function AthleteDetailScreen({
               className="text-xs font-semibold text-[#1E60D5] inline-flex items-center gap-1 cursor-pointer"
             >
               <Edit2 className="w-3 h-3" />
-              <span>{isEditingPlan ? 'Скрыть' : 'Тариф'}</span>
+              <span>{isEditingPlan ? 'Закрыть' : 'Изменить тариф'}</span>
             </button>
           </div>
 
-          {/* Редактирование условий пакета */}
+          {/* Редактирование условий абонемента */}
           {isEditingPlan ? (
-            <div className="p-3 bg-slate-50 rounded-xl space-y-2.5 border border-slate-200/60 text-xs animate-in fade-in">
+            <div className="p-3 bg-slate-50 rounded-xl space-y-3 border border-slate-200/60 text-xs animate-in fade-in">
+              {/* Формат тренировок */}
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Формат ведения:</label>
+                <div className="grid grid-cols-4 gap-1 p-1 bg-slate-200/60 rounded-xl">
+                  {['individual', 'split', 'group', 'online'].map(fmt => (
+                    <button
+                      key={fmt}
+                      type="button"
+                      onClick={() => setEditFormat(fmt)}
+                      className={`h-7 rounded-lg text-[10.5px] font-semibold transition-all cursor-pointer ${
+                        editFormat === fmt ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500'
+                      }`}
+                    >
+                      {fmt === 'individual' ? 'Индивид' : fmt === 'split' ? 'Сплит' : fmt === 'group' ? 'Группа' : 'Онлайн'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Тумблер: Сгораемый / Без сгорания */}
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Правило сгорания:</label>
+                <div className="grid grid-cols-2 gap-1 p-1 bg-slate-200/60 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setEditBurnable(true)}
+                    className={`h-7 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      editBurnable ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500'
+                    }`}
+                  >
+                    Сгораемый
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditBurnable(false)}
+                    className={`h-7 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      !editBurnable ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500'
+                    }`}
+                  >
+                    Без сгорания
+                  </button>
+                </div>
+              </div>
+
+              {/* Стоимость и срок */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">Стоимость пакета (₸):</label>
@@ -346,78 +412,68 @@ export default function AthleteDetailScreen({
                     type="number"
                     value={editPrice}
                     onChange={(e) => setEditPrice(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 font-mono"
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 font-mono text-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">Срок сгорания (дней):</label>
+                  <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">Срок действия (дней):</label>
                   <input
                     type="number"
                     value={editDaysLimit}
                     onChange={(e) => setEditDaysLimit(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 font-mono"
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 font-mono text-xs"
                   />
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-[11px] font-medium text-slate-700">Правило сгорания занятий:</span>
-                <button
-                  type="button"
-                  onClick={() => setEditBurnable(!editBurnable)}
-                  className={`px-2.5 py-1 rounded-lg text-[10.5px] font-semibold cursor-pointer transition-colors ${
-                    editBurnable ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-700'
-                  }`}
-                >
-                  {editBurnable ? 'Сгораемый блок' : 'Без сгорания'}
-                </button>
               </div>
 
               <button
                 type="button"
                 disabled={actionLoading}
                 onClick={handleSavePlanSettings}
-                className="w-full py-2 bg-[#1E60D5] text-white rounded-lg text-xs font-semibold cursor-pointer active:scale-98 transition-all"
+                className="w-full py-2 bg-[#1E60D5] text-white rounded-xl text-xs font-semibold cursor-pointer active:scale-98 transition-all shadow-xs"
               >
-                Сохранить условия
+                Сохранить тариф
               </button>
             </div>
           ) : (
-            /* Строка 1: Стоимость + Срок сгорания */
-            <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200/50">
-              <div>
-                <span className="text-[10.5px] text-slate-400 block">Стоимость блока:</span>
-                <span className="font-mono font-bold text-slate-800">
+            /* Информация о тарифе */
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
+                <span className="text-[10px] text-slate-400 font-medium block">Формат</span>
+                <span className="text-xs font-semibold text-slate-800 block mt-0.5">{formatRu}</span>
+              </div>
+              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
+                <span className="text-[10px] text-slate-400 font-medium block">Стоимость</span>
+                <span className="text-xs font-mono font-bold text-slate-800 block mt-0.5">
                   {Number(currentStudent.monthly_price || 70000).toLocaleString()} ₸
                 </span>
               </div>
-
-              <div className="text-right">
-                <span className="text-[10.5px] text-slate-400 block">Регламент:</span>
-                <span className="font-semibold text-slate-700">
-                  {currentStudent.is_burnable !== false ? 'Сгорает за 30 дней' : 'Несгораемый'}
+              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
+                <span className="text-[10px] text-slate-400 font-medium block">Регламент</span>
+                <span className="text-xs font-semibold text-slate-700 block mt-0.5">
+                  {currentStudent.is_burnable !== false ? 'Сгорает 30 дн.' : 'Несгораемый'}
                 </span>
               </div>
             </div>
           )}
 
-          {/* Строка 2: Счётчик занятий в одну линию */}
-          <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+          {/* Строка баланса тренировок: выровненный моно-размер */}
+          <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
             <button
               type="button"
               disabled={actionLoading || leftTrainings <= 0}
               onClick={() => handleAdjustBalance(-1)}
-              className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-90 transition-all flex items-center justify-center cursor-pointer shadow-2xs"
+              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-90 transition-all flex items-center justify-center cursor-pointer shadow-2xs"
               title="Списать 1 занятие"
             >
-              <Minus className="w-4 h-4" />
+              <Minus className="w-3.5 h-3.5" />
             </button>
 
             <div className="text-center">
-              <span className="text-[10px] text-slate-400 font-medium block">Баланс тренировок</span>
-              <p className="text-base font-bold font-mono text-slate-800">
-                {leftTrainings} <span className="text-xs font-normal text-slate-400">из {totalTrainings}</span>
+              <span className="text-[10px] text-slate-400 font-medium block">Баланс занятий</span>
+              <p className="text-[13px] font-mono font-bold text-slate-800">
+                {leftTrainings} из {totalTrainings} тренировок
               </p>
             </div>
 
@@ -425,117 +481,110 @@ export default function AthleteDetailScreen({
               type="button"
               disabled={actionLoading}
               onClick={() => handleAdjustBalance(+1)}
-              className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-90 transition-all flex items-center justify-center cursor-pointer shadow-2xs"
+              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-90 transition-all flex items-center justify-center cursor-pointer shadow-2xs"
               title="Добавить 1 занятие"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {/* Действия: Выставить счёт, Продлить +12, Пауза */}
-          <div className="grid grid-cols-3 gap-2 pt-1">
+          {/* Действия: Выставить счёт и Обновить абонемент */}
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
             <button
               type="button"
               onClick={handleSendInvoice}
-              className="py-2.5 px-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-emerald-200/60"
+              className="h-10 px-3 bg-emerald-50 hover:bg-emerald-100 active:scale-98 text-emerald-800 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-emerald-200/70"
             >
-              <CreditCard className="w-3.5 h-3.5" />
-              <span>Выставить счёт</span>
+              <CreditCard className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Выставить счёт</span>
             </button>
 
             <button
               type="button"
               disabled={actionLoading}
               onClick={handleRenewPackage}
-              className="py-2.5 px-1 bg-blue-50 hover:bg-blue-100 text-[#1E60D5] rounded-xl text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-blue-200/60"
+              className="h-10 px-3 bg-[#1E60D5] hover:bg-blue-600 active:scale-98 text-white rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>+12 зан.</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={actionLoading}
-              onClick={handleTogglePause}
-              className="py-2.5 px-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition-all cursor-pointer border border-slate-200"
-            >
-              {isPaused ? <PlayCircle className="w-3.5 h-3.5" /> : <PauseCircle className="w-3.5 h-3.5" />}
-              <span>{isPaused ? 'Снять' : 'Пауза'}</span>
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Обновить абонемент</span>
             </button>
           </div>
         </div>
 
-        {/* 3. ЗАМЕРЫ ТЕЛА: ВЕС, ТАЛИЯ, ГРУДЬ, БЕДРА */}
+        {/* 3. ЗАМЕРЫ ТЕЛА (ПРОСМОТР + КНОПКА ЗАПРОСА В TELEGRAM) */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
               <Scale className="w-4 h-4 text-slate-600 stroke-[2]" />
-              <h4 className="text-xs font-bold text-slate-800">Замеры тела и динамика</h4>
+              <h4 className="text-xs font-bold text-slate-800">Замеры тела атлета</h4>
             </div>
-            <span className="text-xs font-mono font-bold text-[#1E60D5]">
+
+            <span className="text-[11px] font-mono font-bold text-[#1E60D5]">
               {currentStudent.current_weight || currentStudent.weight || '—'} кг
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 text-center text-xs">
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-1">Вес (кг)</label>
-              <input
-                type="number"
-                step="0.1"
-                placeholder="75.0"
-                value={measurements.weight}
-                onChange={(e) => setMeasurements({ ...measurements, weight: e.target.value })}
-                className="w-full text-center py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold text-slate-800 focus:outline-none focus:border-[#1E60D5]"
-              />
+          {/* Сетка основных замеров (заполняет сам атлет) */}
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Вес</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.current_weight || currentStudent.weight ? `${currentStudent.current_weight || currentStudent.weight} кг` : '—'}
+              </span>
             </div>
 
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-1">Талия (см)</label>
-              <input
-                type="number"
-                placeholder="80"
-                value={measurements.waist}
-                onChange={(e) => setMeasurements({ ...measurements, waist: e.target.value })}
-                className="w-full text-center py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold text-slate-800 focus:outline-none focus:border-[#1E60D5]"
-              />
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Талия</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.waist ? `${currentStudent.waist} см` : '—'}
+              </span>
             </div>
 
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-1">Грудь (см)</label>
-              <input
-                type="number"
-                placeholder="98"
-                value={measurements.chest}
-                onChange={(e) => setMeasurements({ ...measurements, chest: e.target.value })}
-                className="w-full text-center py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold text-slate-800 focus:outline-none focus:border-[#1E60D5]"
-              />
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Грудь</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.chest ? `${currentStudent.chest} см` : '—'}
+              </span>
             </div>
 
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-1">Бёдра (см)</label>
-              <input
-                type="number"
-                placeholder="100"
-                value={measurements.hips}
-                onChange={(e) => setMeasurements({ ...measurements, hips: e.target.value })}
-                className="w-full text-center py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold text-slate-800 focus:outline-none focus:border-[#1E60D5]"
-              />
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Бёдра</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.hips ? `${currentStudent.hips} см` : '—'}
+              </span>
+            </div>
+
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Бицепс</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.biceps ? `${currentStudent.biceps} см` : '—'}
+              </span>
+            </div>
+
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Бедро</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.thigh ? `${currentStudent.thigh} см` : '—'}
+              </span>
             </div>
           </div>
 
+          {/* Кнопка запроса замеров через бота */}
           <button
             type="button"
-            disabled={isSavingMeasurements}
-            onClick={handleSaveMeasurements}
-            className="w-full py-2 bg-slate-100 hover:bg-slate-200 active:scale-98 text-slate-800 rounded-xl text-xs font-semibold cursor-pointer transition-all inline-flex items-center justify-center gap-1.5"
+            onClick={handleRequestMeasurements}
+            className={`w-full h-10 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              requestSent 
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+            }`}
           >
-            <Check className="w-3.5 h-3.5" />
-            <span>Сохранить замеры</span>
+            {requestSent ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <BellRing className="w-3.5 h-3.5 text-slate-600" />}
+            <span>{requestSent ? 'Запрос отправлен атлету!' : 'Запросить замеры в Telegram'}</span>
           </button>
         </div>
 
-        {/* 4. АНКЕТА ПРИ РЕГИСТРАЦИИ (ПОЛНЫЙ РУССКИЙ ПЕРЕВОД) */}
+        {/* 4. ВХОДНАЯ АНКЕТА ИЗ БОТА (ЧИСТЫЙ РУССКИЙ ЯЗЫК) */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
             <FileText className="w-4 h-4 text-slate-600 stroke-[2]" />
@@ -550,24 +599,31 @@ export default function AthleteDetailScreen({
 
             <div className="flex items-center justify-between pt-1.5">
               <span className="text-slate-500">Опыт тренировок:</span>
-              <span className="font-semibold text-slate-800">{experienceText}</span>
+              <span className="font-semibold text-slate-800">{translateExperience(currentStudent.experience_level)}</span>
             </div>
 
             <div className="flex items-center justify-between pt-1.5">
-              <span className="text-slate-500">Точное время занятия:</span>
-              <span className="font-semibold font-mono text-slate-800">{timeSlotText}</span>
+              <span className="text-slate-500">График в зале:</span>
+              <div className="flex items-center gap-1 font-semibold text-slate-800">
+                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-[11px]">
+                  {currentStudent.workout_time_slot || 'Вечер'}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-blue-50 text-[#1E60D5] text-[11px] font-mono">
+                  {currentStudent.custom_time || currentStudent.workout_time || '18:00'}
+                </span>
+              </div>
             </div>
 
-            {/* Рост и возраст раздельно */}
+            {/* Рост и возраст аккуратными плашками */}
             <div className="grid grid-cols-2 gap-2 pt-2">
-              <div className="p-2 bg-slate-50 rounded-xl text-center">
+              <div className="p-2 bg-slate-50 rounded-xl text-center border border-slate-200/40">
                 <span className="text-[10px] text-slate-400 block">Рост</span>
                 <span className="text-xs font-mono font-bold text-slate-800">
                   {currentStudent.height ? `${currentStudent.height} см` : 'Не указан'}
                 </span>
               </div>
 
-              <div className="p-2 bg-slate-50 rounded-xl text-center">
+              <div className="p-2 bg-slate-50 rounded-xl text-center border border-slate-200/40">
                 <span className="text-[10px] text-slate-400 block">Возраст</span>
                 <span className="text-xs font-mono font-bold text-slate-800">
                   {currentStudent.age ? `${currentStudent.age} лет` : 'Не указан'}
@@ -577,7 +633,7 @@ export default function AthleteDetailScreen({
           </div>
         </div>
 
-        {/* 5. АНКЕТА ЗДОРОВЬЯ И ТРАВМЫ (PAR-Q) */}
+        {/* 5. АНКЕТА ЗДОРОВЬЯ И ОГРАНИЧЕНИЯ (PAR-Q) */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
             <HeartPulse className="w-4 h-4 text-rose-500 stroke-[2]" />
