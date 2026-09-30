@@ -15,7 +15,6 @@ import {
   Activity, 
   Star, 
   UserCheck, 
-  CreditCard, 
   Scale, 
   Smile, 
   Users2, 
@@ -42,7 +41,8 @@ export default function OverviewTab({
   trainer, 
   students = [], 
   onSelectStudent, 
-  onOpenPublicProfile, 
+  onOpenPublicProfile,
+  onOpenInquiries,
   onNavigateToCalendar, 
   onNavigateToBroadcasts, 
   onNavigateToFinance, 
@@ -330,7 +330,7 @@ export default function OverviewTab({
         </button>
       </div>
 
-      {/* 2. ПРОФИЛЬ ТРЕНЕРА (ПОДНЯТ ВВЕРХ, С УВЕЛИЧЕННЫМ ИМЕНЕМ) */}
+      {/* 2. ПРОФИЛЬ ТРЕНЕРА */}
       <div 
         onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
         className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
@@ -357,7 +357,7 @@ export default function OverviewTab({
                 <span>5.0</span>
                 <span className="text-slate-400 font-normal">(18)</span>
               </span>
-              <span>•</span>
+              <span className="h-2.5 w-px bg-slate-200 shrink-0" />
               <span className="inline-flex items-center gap-1 text-slate-500 font-medium">
                 <Eye className="w-3.5 h-3.5 text-slate-500 stroke-[1.8]" />
                 <span>{trainer?.profile_views || 148} просмотров</span>
@@ -372,7 +372,7 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 3. НОВЫЕ ЗАЯВКИ ИЗ КАТАЛОГА (РАСПОЛОЖЕНЫ ПОД ПРОФИЛЕМ ТРЕНЕРА) */}
+      {/* 3. НОВЫЕ ЗАЯВКИ ИЗ КАТАЛОГА: ВЕДЕТ НАПРЯМУЮ В InquiriesScreen */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
@@ -386,15 +386,15 @@ export default function OverviewTab({
               </span>
             </div>
             <p className="text-[11px] text-slate-500 truncate mt-0.5">
-              Запросы на пробное занятие
+              Запросы на пробное занятие и консультацию
             </p>
           </div>
         </div>
 
         <button
           type="button"
-          onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
-          className="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0"
+          onClick={() => onOpenInquiries && onOpenInquiries()}
+          className="h-8 px-3 bg-[#1E60D5] hover:bg-blue-600 active:scale-95 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 shadow-2xs"
         >
           Открыть
         </button>
@@ -713,7 +713,6 @@ export default function OverviewTab({
                     <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </div>
 
-                  {/* Нижняя панель действий */}
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
@@ -757,7 +756,6 @@ export default function OverviewTab({
                     </button>
                   </div>
 
-                  {/* Раскрывающийся план тренировки: 2 ряда (название полностью + подходы/повторы/вес) */}
                   {expandedProgramId === s.id && (
                     <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-xs space-y-2.5 animate-in fade-in">
                       <div className="font-bold text-slate-800 flex items-center justify-between border-b border-slate-200/60 pb-1.5">
@@ -767,16 +765,13 @@ export default function OverviewTab({
                         </span>
                       </div>
 
-                      {/* Список упражнений: 1 ряд — название полностью, 2 ряд — плашки параметров */}
                       <div className="space-y-2">
                         {(s.assigned_program?.days?.[Object.keys(s.assigned_program?.days || {})[0]]?.exercises || []).map((ex, i) => (
                           <div key={i} className="bg-white p-2.5 rounded-xl border border-slate-200/60 space-y-1.5">
-                            {/* Ряд 1: Название упражнения во всю ширину */}
                             <div className="font-semibold text-slate-800 text-[12px] leading-snug">
                               {i + 1}. {ex.name}
                             </div>
 
-                            {/* Ряд 2: Подходы, повторения и рабочий вес без сокращений */}
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="px-2 py-0.5 bg-slate-100 rounded-md text-[10.5px] font-mono text-slate-700">
                                 {ex.sets || 4} подхода
@@ -794,7 +789,6 @@ export default function OverviewTab({
                         ))}
                       </div>
 
-                      {/* Заметка тренера к тренировке */}
                       <div className="pt-1.5 border-t border-slate-200/60 space-y-1.5">
                         <label className="text-[10px] font-semibold text-slate-600 block">
                           Заметка к занятию (видна подопечному в боте):
@@ -872,7 +866,7 @@ export default function OverviewTab({
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed">
-              Отправьте ссылку атлету. При переходе он автоматически закрепится за вашей CRM в боте @{botUsername}[cite: 1].
+              Отправьте ссылку атлету. При переходе он автоматически закрепится за вашей CRM в боте @{botUsername}.
             </p>
 
             <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-2">
