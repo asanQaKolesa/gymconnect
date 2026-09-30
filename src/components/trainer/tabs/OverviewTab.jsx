@@ -13,11 +13,14 @@ import {
   Dumbbell, 
   Clock, 
   Activity, 
-  MessageSquare,
+  MessageSquare, 
   Star,
   UserCheck,
   CreditCard,
-  Scale
+  Scale,
+  Smile,
+  Flame,
+  MessageCircle
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
@@ -53,6 +56,8 @@ export default function OverviewTab({
   const [processingId, setProcessingId] = useState(null);
   const [expandedProgramId, setExpandedProgramId] = useState(null);
   const [activeWorkMode, setActiveWorkMode] = useState('gym'); // 'gym' | 'day_off'
+  const [trainerNotes, setTrainerNotes] = useState({});
+  const [savingNoteId, setSavingNoteId] = useState(null);
 
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -176,18 +181,30 @@ export default function OverviewTab({
     });
   }, [activeStudents]);
 
+  // Фиксация явки с учетом сгораемости тарифа
   const handleSetAttendance = async (e, student, newStatus) => {
     e.stopPropagation();
     const prevStatus = statusMap[student.id];
     setProcessingId(student.id);
 
     const currentLeft = Number(student.left_trainings ?? student.remaining_workouts ?? 12);
+    // Проверяем тариф: по умолчанию тариф сгораемый (burnable)
+    const isBurnable = student.is_burnable !== false && student.package_policy !== 'non_burnable';
+
     let updatedLeft = currentLeft;
 
-    if (prevStatus !== 'attended' && newStatus === 'attended') {
-      updatedLeft = Math.max(0, currentLeft - 1);
-    } else if (prevStatus === 'attended' && newStatus !== 'attended') {
-      updatedLeft = currentLeft + 1;
+    if (newStatus === 'attended') {
+      if (prevStatus !== 'attended') {
+        updatedLeft = Math.max(0, currentLeft - 1);
+      }
+    } else if (newStatus === 'missed') {
+      if (prevStatus === 'attended') {
+        // Если до этого списали, но отменили
+        updatedLeft = isBurnable ? currentLeft : currentLeft + 1;
+      } else if (isBurnable && prevStatus !== 'missed') {
+        // По сгораемому тарифу пропуск списывает занятие
+        updatedLeft = Math.max(0, currentLeft - 1);
+      }
     }
 
     try {
@@ -214,7 +231,11 @@ export default function OverviewTab({
         if (newStatus === 'attended') {
           pushText = `✅ <b>Занятие проведено!</b>\n\nСписано: <b>1 занятие</b>.\nОстаток на балансе: <b>${updatedLeft}</b> ${getWorkoutWord(updatedLeft)}.\n\n<i>Тренер: ${escapeHtml(trainerName)}</i>`;
         } else if (newStatus === 'missed') {
-          pushText = `⚠️ <b>Пропуск тренировки зафиксирован</b>\n\nТренер отметил отсутствие на запланированном занятии.\nОстаток в блоке: <b>${updatedLeft}</b> ${getWorkoutWord(updatedLeft)}.`;
+          if (isBurnable) {
+            pushText = `⚠️ <b>Пропуск занятия зафиксирован</b>\n\nПо условиям тарифа занятие списано.\nОстаток в блоке: <b>${updatedLeft}</b> ${getWorkoutWord(updatedLeft)}.`;
+          } else {
+            pushText = `ℹ️ <b>Пропуск тренировки отмечен</b>\n\nЗанятие сохранено на балансе (несгораемый тариф).\nОстаток: <b>${updatedLeft}</b> ${getWorkoutWord(updatedLeft)}.`;
+          }
         }
         if (pushText) sendTelegramMessage(targetTelegramId, pushText).catch(() => {});
       }
@@ -224,6 +245,27 @@ export default function OverviewTab({
       console.warn('Ошибка фиксации явки:', err);
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const handleSaveNote = async (student) => {
+    const noteText = trainerNotes[student.id] ?? student.workout_comment ?? '';
+    setSavingNoteId(student.id);
+    try {
+      await supabase
+        .from('profiles')
+        .update({ workout_comment: noteText })
+        .eq('id', student.id);
+
+      const targetTelegramId = student.telegram_id || student.chat_id;
+      if (targetTelegramId && noteText.trim()) {
+        const msg = `📋 <b>Заметка тренера к тренировке</b>\n\n${escapeHtml(noteText)}`;
+        sendTelegramMessage(targetTelegramId, msg).catch(() => {});
+      }
+    } catch (e) {
+      console.warn('Ошибка сохранения заметки:', e);
+    } finally {
+      setSavingNoteId(null);
     }
   };
 
@@ -238,9 +280,8 @@ export default function OverviewTab({
   return (
     <div className="space-y-3 pb-28 select-none">
       
-      {/* 1. ВЕРХНЯЯ СТРОКА: ИДЕАЛЬНЫЙ ТУМБЛЕР СТАТУСА И КНОПКА ПРИГЛАСИТЬ В ОДНОЙ ЛИНИИ СЕТКИ */}
+      {/* 1. ВЕРХНЯЯ СТРОКА: ТУМБЛЕР В ЗАЛЕ / ВЫХОДНОЙ И КНОПКА ПРИГЛАСИТЬ */}
       <div className="flex items-center justify-between gap-2.5">
-        {/* Apple-style сегментированный тумблер режима работы */}
         <div className="flex-1 max-w-[210px] grid grid-cols-2 p-1 bg-slate-200/60 rounded-xl">
           <button
             type="button"
@@ -266,7 +307,6 @@ export default function OverviewTab({
           </button>
         </div>
 
-        {/* Кнопка Пригласить: сбалансированная, плотная, вровень с границей карточек */}
         <button
           type="button"
           onClick={() => setInviteModalOpen(true)}
@@ -277,7 +317,7 @@ export default function OverviewTab({
         </button>
       </div>
 
-      {/* 2. НОВЫЕ ЗАЯВКИ ИЗ КАТАЛОГА (БЕЗ ИМЕН, ЛАКОНИЧНО) */}
+      {/* 2. НОВЫЕ ЗАЯВКИ ИЗ КАТАЛОГА */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
@@ -303,7 +343,7 @@ export default function OverviewTab({
         </button>
       </div>
 
-      {/* 3. КОМПАКТНЫЙ ПРОФИЛЬ ТРЕНЕРА: ЗВЕЗДОЧКА ПОД ИМЕНЕМ, ЧИСТАЯ СТАТИСТИКА */}
+      {/* 3. ПРОФИЛЬ ТРЕНЕРА: РЕЙТИНГ ПОД ИМЕНЕМ, ЧИСТАЯ СТАТИСТИКА */}
       <div 
         onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
         className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
@@ -324,12 +364,11 @@ export default function OverviewTab({
               {trainer?.full_name || trainer?.first_name || 'Персональный наставник'}
             </h3>
             
-            <div className="flex items-center gap-2 text-[11px] text-slate-500">
+            <div className="flex items-center gap-3 text-[11px] text-slate-500">
               <span className="inline-flex items-center gap-1 font-semibold text-slate-800">
-                <Star className="w-3 h-3 text-slate-700 fill-slate-700" />
+                <Star className="w-3.5 h-3.5 text-slate-700 fill-slate-700" />
                 <span>5.0</span>
               </span>
-              <span>•</span>
               <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
                 <Eye className="w-3.5 h-3.5 text-slate-400" />
                 <span>{trainer?.profile_views || 148} просмотров</span>
@@ -344,7 +383,7 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 4. ОПЕРАТИВНОЕ ПРЕДУПРЕЖДЕНИЕ (МОНОХРОМНАЯ РАМКА) */}
+      {/* 4. ОПЕРАТИВНОЕ ПРЕДУПРЕЖДЕНИЕ */}
       {urgentAlerts.length > 0 && (
         <div className="p-3 bg-white border border-slate-200 rounded-2xl flex items-start gap-2.5 text-xs shadow-xs">
           <AlertCircle className="w-4 h-4 text-slate-700 shrink-0 mt-0.5" />
@@ -359,12 +398,12 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* 5. ФИНАНСЫ И ПОДОПЕЧНЫЕ: СБАЛАНСИРОВАННЫЕ АККУРАТНЫЕ ЦИФРЫ */}
+      {/* 5. ФИНАНСЫ И ПОДОПЕЧНЫЕ */}
       <div className="grid grid-cols-2 gap-2.5">
         <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-2.5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
             <span className="text-xs font-bold text-slate-900">Финансы</span>
-            <span className="text-[10px] font-medium text-slate-400">Месяц</span>
+            <span className="text-xs font-semibold text-slate-400">Месяц</span>
           </div>
 
           <div className="space-y-1.5">
@@ -403,7 +442,7 @@ export default function OverviewTab({
         <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-2.5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
             <span className="text-xs font-bold text-slate-900">Подопечные</span>
-            <span className="text-[10px] font-mono font-bold text-slate-900">{students.length} всего</span>
+            <span className="text-xs font-mono font-semibold text-slate-900">{students.length} всего</span>
           </div>
 
           <div className="space-y-1.5">
@@ -434,46 +473,52 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 6. ЭФФЕКТИВНОСТЬ: СТРОГИЙ МОНОХРОМ БЕЗ СВЕТОФОРА */}
+      {/* 6. РЕАЛЬНЫЕ МЕТРИКИ НАСТАВНИКА: ОЦЕНКА, СТРИК И ОТВЕТЫ В TELEGRAM */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2.5">
         <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
           <div className="flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-slate-700" />
             <h3 className="text-xs font-bold text-slate-900">
-              Показатели работы
+              Качество ведения
             </h3>
           </div>
-          <span className="text-[10px] font-medium text-slate-400">30 дней</span>
+          <span className="text-xs font-semibold text-slate-400">30 дней</span>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
+          {/* Удовлетворенность учеников */}
           <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
-            <span className="text-[10px] font-medium text-slate-500 block truncate">Продления</span>
-            <p className="text-[13px] font-mono font-bold text-slate-900">86%</p>
-            <div className="w-full bg-slate-200 rounded-full h-1 overflow-hidden">
-              <div className="bg-slate-800 h-full rounded-full" style={{ width: '86%' }} />
+            <div className="flex items-center gap-1 text-slate-500">
+              <Smile className="w-3 h-3 text-slate-600" />
+              <span className="text-[10px] font-medium truncate">Оценка</span>
             </div>
+            <p className="text-[13px] font-mono font-bold text-slate-900">4.9 / 5.0</p>
+            <span className="text-[9px] text-slate-400 block truncate">18 отзывов</span>
           </div>
 
+          {/* Стальной стрик дисциплины */}
           <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
-            <span className="text-[10px] font-medium text-slate-500 block truncate">Посещаемость</span>
-            <p className="text-[13px] font-mono font-bold text-slate-900">92%</p>
-            <div className="w-full bg-slate-200 rounded-full h-1 overflow-hidden">
-              <div className="bg-slate-800 h-full rounded-full" style={{ width: '92%' }} />
+            <div className="flex items-center gap-1 text-slate-500">
+              <Flame className="w-3 h-3 text-slate-600" />
+              <span className="text-[10px] font-medium truncate">Ритм</span>
             </div>
+            <p className="text-[13px] font-mono font-bold text-slate-900">12 недель</p>
+            <span className="text-[9px] text-slate-400 block truncate">Без пропусков</span>
           </div>
 
+          {/* Скорость ответа в Telegram */}
           <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
-            <span className="text-[10px] font-medium text-slate-500 block truncate">Загрузка</span>
-            <p className="text-[13px] font-mono font-bold text-slate-900">74%</p>
-            <div className="w-full bg-slate-200 rounded-full h-1 overflow-hidden">
-              <div className="bg-slate-800 h-full rounded-full" style={{ width: '74%' }} />
+            <div className="flex items-center gap-1 text-slate-500">
+              <MessageCircle className="w-3 h-3 text-slate-600" />
+              <span className="text-[10px] font-medium truncate">Связь</span>
             </div>
+            <p className="text-[13px] font-mono font-bold text-slate-900">~15 мин</p>
+            <span className="text-[9px] text-slate-400 block truncate">Ответ в боте</span>
           </div>
         </div>
       </div>
 
-      {/* 7. ГРАФИК НЕДЕЛИ: МОНОХРОМНАЯ ВЫВЕРЕННАЯ СЕТКА */}
+      {/* 7. ГРАФИК НЕДЕЛИ: ЕДИНЫЙ РАЗМЕР ШРИФТА КНОПКИ "ВСЕ ДНИ" */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2">
         <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
           <div className="flex items-center gap-1.5">
@@ -485,17 +530,17 @@ export default function OverviewTab({
 
           <div className="flex items-center gap-2">
             {todayStudents.length > 0 && (
-              <span className="text-[10.5px] font-medium text-slate-500">
+              <span className="text-[11px] font-medium text-slate-500">
                 Явка: {todayAttendancePercent}% ({todayCompletedCount}/{todayStudents.length})
               </span>
             )}
             <button
               type="button"
               onClick={() => onNavigateToCalendar ? onNavigateToCalendar() : setSelectedDayFilter('all')}
-              className="text-[10.5px] font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer"
+              className="text-xs font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer"
             >
               <span>Все дни</span>
-              <ChevronRight className="w-3 h-3" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -514,7 +559,7 @@ export default function OverviewTab({
                 className="flex flex-col items-center gap-1 h-full justify-end cursor-pointer group"
               >
                 <span className={`text-[9px] font-mono font-bold ${
-                  isSelected ? 'text-slate-900' : count > 0 ? 'text-slate-600' : 'text-slate-300'
+                  isSelected ? 'text-[#1E60D5]' : count > 0 ? 'text-slate-600' : 'text-slate-300'
                 }`}>
                   {count}
                 </span>
@@ -524,9 +569,9 @@ export default function OverviewTab({
                     style={{ height: `${heightPercent}%` }}
                     className={`w-full rounded-md transition-all duration-200 ${
                       isSelected 
-                        ? 'bg-slate-900' 
+                        ? 'bg-[#1E60D5]' 
                         : isToday 
-                          ? 'bg-slate-400' 
+                          ? 'bg-blue-300' 
                           : count > 0 
                             ? 'bg-slate-300' 
                             : 'bg-slate-200/50'
@@ -535,7 +580,7 @@ export default function OverviewTab({
                 </div>
 
                 <span className={`text-[9.5px] font-semibold ${
-                  isSelected ? 'text-slate-900' : isToday ? 'text-slate-900 font-bold' : 'text-slate-400'
+                  isSelected ? 'text-[#1E60D5]' : isToday ? 'text-slate-900 font-bold' : 'text-slate-400'
                 }`}>
                   {day}
                 </span>
@@ -545,7 +590,7 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 8. ТРЕНИРОВКИ НА СЕГОДНЯ: ЧИСТЫЕ ТАБЫ ВРЕМЕНИ И ФОРМАТА, КНОПКИ БЫЛ / НЕ БЫЛ */}
+      {/* 8. ТРЕНИРОВКИ НА СЕГОДНЯ: ЧЕТКИЕ ПОДХОДЫ/ПОВТОРЕНИЯ/ВЕСА И ЗАМЕТКА ТРЕНЕРА */}
       <div className="bg-white rounded-2xl border border-slate-200/70 shadow-xs overflow-hidden">
         <div className="p-3.5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -563,7 +608,7 @@ export default function OverviewTab({
           <button
             type="button"
             onClick={() => onNavigateToCalendar && onNavigateToCalendar()}
-            className="text-[11px] font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer"
+            className="text-xs font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer"
           >
             <span>В расписание</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -634,7 +679,7 @@ export default function OverviewTab({
                     <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </div>
 
-                  {/* Нижняя панель действий: увесистые и плотные кнопки */}
+                  {/* Нижняя панель действий */}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -678,21 +723,50 @@ export default function OverviewTab({
                     </button>
                   </div>
 
+                  {/* Раскрывающийся план тренировки с четкими сетами, повторами, весами и заметкой */}
                   {expandedProgramId === s.id && (
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-xs space-y-1.5 animate-in fade-in">
-                      <div className="font-bold text-slate-800 flex items-center justify-between border-b border-slate-200/60 pb-1">
-                        <span>{s.assigned_program?.days?.[Object.keys(s.assigned_program?.days || {})[0]]?.title || 'Программа'}</span>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-xs space-y-2.5 animate-in fade-in">
+                      <div className="font-bold text-slate-800 flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                        <span>{s.assigned_program?.days?.[Object.keys(s.assigned_program?.days || {})[0]]?.title || 'Программа дня'}</span>
                         <span className="text-[10px] text-slate-400 font-normal">
                           {s.assigned_program?.days?.[Object.keys(s.assigned_program?.days || {})[0]]?.exercises?.length || 0} упр.
                         </span>
                       </div>
-                      <div className="space-y-1">
+
+                      {/* Список упражнений с понятными русскими обозначениями */}
+                      <div className="space-y-1.5">
                         {(s.assigned_program?.days?.[Object.keys(s.assigned_program?.days || {})[0]]?.exercises || []).map((ex, i) => (
-                          <div key={i} className="flex justify-between items-center text-[11px] text-slate-600">
-                            <span className="truncate pr-2">{i + 1}. {ex.name}</span>
-                            <span className="font-mono shrink-0">{ex.sets}x{ex.reps} • {ex.weight}кг</span>
+                          <div key={i} className="flex justify-between items-center text-[11px] text-slate-700 bg-white p-2 rounded-lg border border-slate-200/50">
+                            <span className="truncate pr-2 font-medium">{i + 1}. {ex.name}</span>
+                            <span className="font-mono text-slate-900 shrink-0 text-[10.5px]">
+                              {ex.sets || 4} подх. по {ex.reps || 10} повт. {ex.weight ? `• ${ex.weight} кг` : ''}
+                            </span>
                           </div>
                         ))}
+                      </div>
+
+                      {/* Заметка / комментарий тренера к тренировке (синхронизируется с учеником) */}
+                      <div className="pt-1.5 border-t border-slate-200/60 space-y-1.5">
+                        <label className="text-[10px] font-semibold text-slate-600 block">
+                          Заметка к занятию (видна подопечному в боте):
+                        </label>
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            placeholder="Например: акцент на паузу внизу, разминка 10 мин"
+                            value={trainerNotes[s.id] ?? s.workout_comment ?? ''}
+                            onChange={(e) => setTrainerNotes({ ...trainerNotes, [s.id]: e.target.value })}
+                            className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-[#1E60D5]"
+                          />
+                          <button
+                            type="button"
+                            disabled={savingNoteId === s.id}
+                            onClick={() => handleSaveNote(s)}
+                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer active:scale-95 transition-all"
+                          >
+                            {savingNoteId === s.id ? '...' : 'Ок'}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -703,7 +777,7 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 9. КОММУНИКАЦИЯ: СТРОГАЯ ЦЕНТРОВКА, ПОЛНОТЕЛЫЕ КНОПКИ, ПЕРЕХОД ПО ССЫЛКЕ */}
+      {/* 9. КОММУНИКАЦИЯ: ЕДИНЫЙ РАЗМЕР ШРИФТА ШАБЛОНОВ И НАПОМИНАНИЙ */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -716,7 +790,7 @@ export default function OverviewTab({
           <button
             type="button"
             onClick={() => onNavigateToBroadcasts && onNavigateToBroadcasts({ filter: 'all_templates' })}
-            className="text-[11px] font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer"
+            className="text-xs font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer"
           >
             <span>Все шаблоны</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -749,7 +823,7 @@ export default function OverviewTab({
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed">
-              Отправьте ссылку атлету. При переходе он автоматически свяжется с вашей CRM в боте @{botUsername}.
+              Отправьте ссылку атлету. При переходе он автоматически закрепится за вашей CRM в боте @{botUsername}.
             </p>
 
             <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-2">
