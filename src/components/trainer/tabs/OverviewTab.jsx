@@ -69,7 +69,7 @@ export default function OverviewTab({
   const [statusMap, setStatusMap] = useState({});
   const [processingId, setProcessingId] = useState(null);
   const [expandedProgramId, setExpandedProgramId] = useState(null);
-  const [activeWorkMode, setActiveWorkMode] = useState('gym'); // 'gym' | 'day_off'
+  const [activeWorkMode, setActiveWorkMode] = useState('gym');
   const [trainerNotes, setTrainerNotes] = useState({});
   const [savingNoteId, setSavingNoteId] = useState(null);
 
@@ -291,7 +291,7 @@ export default function OverviewTab({
   return (
     <div className="space-y-3 pb-28 select-none">
       
-      {/* 1. ВЕРХНЯЯ СТРОКА: ТУМБЛЕР С ИКОНКАМИ (ЗАКРЫВАЕТ ЗАЗОР) И ПЛОТНАЯ КНОПКА ПРИГЛАСИТЬ */}
+      {/* 1. ВЕРХНЯЯ СТРОКА: ТУМБЛЕР В ЗАЛЕ / ВЫХОДНОЙ И КНОПКА ПРИГЛАСИТЬ */}
       <div className="flex items-center justify-between gap-2.5">
         <div className="flex-1 grid grid-cols-2 p-1 bg-slate-200/60 rounded-xl">
           <button
@@ -358,7 +358,7 @@ export default function OverviewTab({
         </button>
       </div>
 
-      {/* 3. ПРОФИЛЬ ТРЕНЕРА: УВЕЛИЧЕННОЕ ИМЯ (14px Bold), ВЫВЕРЕННЫЙ РЕЙТИНГ И ПРОСМОТРЫ */}
+      {/* 3. ПРОФИЛЬ ТРЕНЕРА */}
       <div 
         onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
         className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
@@ -415,7 +415,7 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* 5. ФИНАНСЫ И ПОДОПЕЧНЫЕ: С ИКОНКАМИ В ШАПКЕ КАРТОЧЕК */}
+      {/* 5. ФИНАНСЫ И АТЛЕТЫ (ВМЕСТО ДЛИННОГО "ПОДОПЕЧНЫЕ", БЕЗ ТРЕХ ТОЧЕК) */}
       <div className="grid grid-cols-2 gap-2.5">
         <div 
           onClick={() => onNavigateToFinance && onNavigateToFinance()}
@@ -435,24 +435,24 @@ export default function OverviewTab({
           <div className="space-y-1.5">
             <div>
               <span className="text-[10px] font-medium text-slate-500 block">Выручка</span>
-              <p className="text-[14px] font-mono font-bold text-slate-800 leading-tight">
+              <p className="text-[14px] font-mono font-semibold text-slate-800 leading-tight">
                 {totalRevenue.toLocaleString()} ₸
               </p>
             </div>
 
             <div className="pt-1 border-t border-slate-100 flex items-center justify-between text-[11px]">
               <span className="text-slate-500 font-medium">Аренда зала:</span>
-              <span className="font-mono font-medium text-slate-700">-{monthlyRent.toLocaleString()} ₸</span>
+              <span className="font-mono font-medium text-slate-600">-{monthlyRent.toLocaleString()} ₸</span>
             </div>
 
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-800 font-semibold">Чистый доход:</span>
-              <span className="font-mono font-bold text-slate-800">{netProfit.toLocaleString()} ₸</span>
+              <span className="text-slate-700 font-medium">Чистый доход:</span>
+              <span className="font-mono font-semibold text-slate-800">{netProfit.toLocaleString()} ₸</span>
             </div>
 
             <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-slate-600 font-medium">Ожидают:</span>
-              <span className="font-mono font-semibold text-slate-800">
+              <span className="text-slate-500 font-medium">Ожидают:</span>
+              <span className="font-mono font-medium text-slate-700">
                 {unpaidTotal.toLocaleString()} ₸ ({unpaidStudents.length})
               </span>
             </div>
@@ -466,7 +466,7 @@ export default function OverviewTab({
           <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
             <div className="flex items-center gap-1.5 min-w-0">
               <Users className="w-3.5 h-3.5 text-slate-600 stroke-[2] shrink-0" />
-              <span className="text-xs font-bold text-slate-800 truncate">Подопечные</span>
+              <span className="text-xs font-bold text-slate-800 truncate">Атлеты</span>
             </div>
             <span className="text-xs font-semibold text-[#1E60D5] inline-flex items-center gap-0.5 shrink-0">
               <span>{students.length} всего</span>
@@ -477,14 +477,14 @@ export default function OverviewTab({
           <div className="space-y-1.5">
             <div>
               <span className="text-[10px] font-medium text-slate-500 block">Активная база</span>
-              <p className="text-[14px] font-mono font-bold text-slate-800 leading-tight">
-                {activeStudents.length} <span className="text-xs font-normal text-slate-500 font-sans">атлетов</span>
+              <p className="text-[14px] font-mono font-semibold text-slate-800 leading-tight">
+                {activeStudents.length} <span className="text-xs font-normal text-slate-500 font-sans">чел.</span>
               </p>
             </div>
 
             <div className="pt-1 border-t border-slate-100 flex items-center justify-between text-[11px]">
               <span className="text-slate-500 font-medium">На паузе:</span>
-              <span className="font-mono font-medium text-slate-700">{pausedStudents.length}</span>
+              <span className="font-mono font-medium text-slate-600">{pausedStudents.length}</span>
             </div>
 
             <div className="flex items-center justify-between text-[11px]">
@@ -493,16 +493,16 @@ export default function OverviewTab({
             </div>
 
             <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-slate-600 font-medium">Заканчивают:</span>
-              <span className="font-mono font-semibold text-slate-800">
-                {unpaidStudents.length} атл.
+              <span className="text-slate-500 font-medium">Заканчивают:</span>
+              <span className="font-mono font-medium text-slate-700">
+                {unpaidStudents.length} чел.
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 6. КАЧЕСТВО ВЕДЕНИЯ */}
+      {/* 6. КАЧЕСТВО ВЕДЕНИЯ: СБАЛАНСИРОВАННЫЕ ЦИФРЫ (FONT-SEMIBOLD ВМЕСТО ГЛУХОГО BOLD) */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2.5">
         <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
           <div className="flex items-center gap-1.5">
@@ -528,7 +528,7 @@ export default function OverviewTab({
               <Smile className="w-3 h-3 text-slate-600 stroke-[2]" />
               <span className="text-[10px] font-medium truncate">Оценка</span>
             </div>
-            <p className="text-[13px] font-mono font-bold text-slate-800">4.9 / 5.0</p>
+            <p className="text-[13px] font-mono font-semibold text-slate-800">4.9 / 5.0</p>
             <span className="text-[9px] text-slate-400 block truncate">18 отзывов</span>
           </div>
 
@@ -537,7 +537,7 @@ export default function OverviewTab({
               <Users2 className="w-3 h-3 text-slate-600 stroke-[2]" />
               <span className="text-[10px] font-medium truncate">Явка базы</span>
             </div>
-            <p className="text-[13px] font-mono font-bold text-slate-800">92%</p>
+            <p className="text-[13px] font-mono font-semibold text-slate-800">92%</p>
             <span className="text-[9px] text-slate-400 block truncate">По графику</span>
           </div>
 
@@ -546,7 +546,7 @@ export default function OverviewTab({
               <TrendingUp className="w-3 h-3 text-slate-600 stroke-[2]" />
               <span className="text-[10px] font-medium truncate">Продления</span>
             </div>
-            <p className="text-[13px] font-mono font-bold text-slate-800">86%</p>
+            <p className="text-[13px] font-mono font-semibold text-slate-800">86%</p>
             <span className="text-[9px] text-slate-400 block truncate">Повторные блоки</span>
           </div>
         </div>
@@ -592,8 +592,8 @@ export default function OverviewTab({
                 onClick={() => setSelectedDayFilter(day)}
                 className="flex flex-col items-center gap-1 h-full justify-end cursor-pointer group"
               >
-                <span className={`text-[9px] font-mono font-bold ${
-                  isSelected ? 'text-[#1E60D5]' : count > 0 ? 'text-slate-600' : 'text-slate-300'
+                <span className={`text-[9px] font-mono font-medium ${
+                  isSelected ? 'text-[#1E60D5] font-semibold' : count > 0 ? 'text-slate-600' : 'text-slate-300'
                 }`}>
                   {count}
                 </span>
@@ -613,8 +613,8 @@ export default function OverviewTab({
                   />
                 </div>
 
-                <span className={`text-[9.5px] font-semibold ${
-                  isSelected ? 'text-[#1E60D5]' : isToday ? 'text-slate-800 font-bold' : 'text-slate-400'
+                <span className={`text-[9.5px] font-medium ${
+                  isSelected ? 'text-[#1E60D5] font-semibold' : isToday ? 'text-slate-800 font-semibold' : 'text-slate-400'
                 }`}>
                   {day}
                 </span>
@@ -696,7 +696,7 @@ export default function OverviewTab({
                           <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold">
                             {formatLabel}
                           </span>
-                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[10px] font-mono font-bold inline-flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[10px] font-mono font-semibold inline-flex items-center gap-1">
                             <Clock className="w-2.5 h-2.5 text-slate-500" />
                             {startTime}
                           </span>
@@ -713,7 +713,7 @@ export default function OverviewTab({
                     <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </div>
 
-                  {/* Нижняя панель действий: План + Был + Не был */}
+                  {/* Нижняя панель действий */}
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
@@ -746,7 +746,7 @@ export default function OverviewTab({
                       type="button"
                       disabled={isCurrentProcessing}
                       onClick={(e) => handleSetAttendance(e, s, 'missed')}
-                      className={`h-10 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer ${
+                      className={`h-10 px-3.5 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer ${
                         currentStatus === 'missed'
                           ? 'bg-rose-500 text-white shadow-xs'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
@@ -771,7 +771,7 @@ export default function OverviewTab({
                         {(s.assigned_program?.days?.[Object.keys(s.assigned_program?.days || {})[0]]?.exercises || []).map((ex, i) => (
                           <div key={i} className="flex justify-between items-center text-[11px] text-slate-700 bg-white p-2 rounded-lg border border-slate-200/50">
                             <span className="truncate pr-2 font-medium">{i + 1}. {ex.name}</span>
-                            <span className="font-mono text-slate-800 shrink-0 text-[10.5px]">
+                            <span className="font-mono text-slate-700 shrink-0 text-[10.5px]">
                               {ex.sets || 4} подх. по {ex.reps || 10} повт. {ex.weight ? `• ${ex.weight} кг` : ''}
                             </span>
                           </div>
@@ -855,7 +855,7 @@ export default function OverviewTab({
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed">
-              Отправьте ссылку атлету. При переходе он автоматически закрепится за вашей CRM в боте @{botUsername}.
+              Отправьте ссылку атлету. При переходе он автоматически закрепится за вашей CRM в боте @{botUsername}[cite: 1].
             </p>
 
             <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-2">
