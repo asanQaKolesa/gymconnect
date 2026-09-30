@@ -9,7 +9,6 @@ import {
   Menu, 
   CreditCard, 
   Rocket, 
-  Gift, 
   ChevronRight, 
   Clock, 
   Users, 
@@ -285,6 +284,31 @@ export default function TrainerHeader({
                     <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
                   </div>
 
+                  {/* Входящие заявки (перенесены сюда — к операционной работе) */}
+                  <div
+                    onClick={() => handleMenuClick('notifications')}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                        <Inbox className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+                          Входящие заявки
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Запросы атлетов на пробное занятие</p>
+                      </div>
+                    </div>
+                    {unreadCount > 0 ? (
+                      <span className="text-[10px] font-bold text-[#1E60D5] bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-lg shrink-0">
+                        +{unreadCount}
+                      </span>
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
+                    )}
+                  </div>
+
                   {/* База атлетов */}
                   <div
                     onClick={() => handleTabClick('students')}
@@ -414,61 +438,68 @@ export default function TrainerHeader({
                 </div>
               </div>
 
-              {/* ================= 2. КЛИЕНТСКИЙ СЕРВИС ================= */}
+              {/* ================= 2. СЕРВИС И РЕГЛАМЕНТЫ АТЛЕТОВ (ЧИСТАЯ СТРУКТУРА) ================= */}
               <div className="space-y-1.5 pt-1">
-                <p className="text-[11px] font-bold text-slate-400 px-1">Клиентский сервис</p>
-
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 space-y-2.5">
-                  <div 
-                    onClick={() => handleMenuClick('notifications')}
-                    className="flex items-center justify-between cursor-pointer group"
+                <p className="text-[11px] font-bold text-slate-400 px-1">Сервис и регламенты атлетов</p>
+                <div className="divide-y divide-slate-100 bg-slate-50/70 border border-slate-200/80 rounded-2xl overflow-hidden px-3">
+                  
+                  {/* Рассылки и автонапоминания */}
+                  <div
+                    onClick={() => handleMenuClick('templates')}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
-                        <Inbox className="w-4 h-4" />
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                        <Bot className="w-4 h-4 stroke-[2]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Входящие заявки</p>
-                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Новые запросы на пробную тренировку</p>
+                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+                          Рассылки и шаблоны
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Утренние переклички и пуши атлетам в бот</p>
                       </div>
                     </div>
-                    {unreadCount > 0 ? (
-                      <span className="text-[10px] font-bold text-[#1E60D5] bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-lg shrink-0">
-                        +{unreadCount}
-                      </span>
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 shrink-0" />
-                    )}
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
                   </div>
 
-                  <div className="pt-2 border-t border-slate-200/60 grid grid-cols-3 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleMenuClick('templates')}
-                      className="py-1.5 px-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-[10.5px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <Bot className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span className="truncate">Рассылки</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleMenuClick('client_rules')}
-                      className="py-1.5 px-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-[10.5px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <Snowflake className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span className="truncate">Заморозка</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleMenuClick('health_parq')}
-                      className="py-1.5 px-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-[10.5px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <HeartPulse className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span className="truncate">PAR-Q</span>
-                    </button>
+                  {/* Заморозка абонементов */}
+                  <div
+                    onClick={() => handleMenuClick('client_rules')}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                        <Snowflake className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+                          Заморозка абонементов
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Пауза на отпуск или болезнь с фиксацией</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
                   </div>
+
+                  {/* Анкета здоровья (PAR-Q) */}
+                  <div
+                    onClick={() => handleMenuClick('health_parq')}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                        <HeartPulse className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+                          Анкета здоровья (PAR-Q)
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Опросник травм и противопоказаний</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
+                  </div>
+
                 </div>
               </div>
 
@@ -571,7 +602,7 @@ export default function TrainerHeader({
                 </button>
               </div>
 
-              {/* ================= 5. СЕРВИС И КОММЬЮНИТИ (ЕДИНАЯ ПЛАШКА КАК В ОПЕРАЦИОННОЙ ПАНЕЛИ) ================= */}
+              {/* ================= 5. СЕРВИС И КОММЬЮНИТИ ================= */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-400 px-1">Сервис и комьюнити</p>
 
@@ -645,7 +676,7 @@ export default function TrainerHeader({
 
             </div>
 
-            {/* ПОДВАЛ МЕНЮ: ЧИСТОЕ ГАРМОНИЧНОЕ ЗАВЕРШЕНИЕ БЕЗ СЛУЧАЙНЫХ ЛИНИЙ И С СТРОГО ЦЕНТРИРОВАННОЙ СТРЕЛКОЙ */}
+            {/* ПОДВАЛ МЕНЮ */}
             <div className="space-y-2 pt-4">
               {onBack && (
                 <button
