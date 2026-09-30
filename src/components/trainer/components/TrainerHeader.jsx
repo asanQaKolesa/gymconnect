@@ -28,7 +28,10 @@ import {
   Headphones, 
   Settings, 
   ExternalLink,
-  Bell
+  Bell,
+  Star,
+  Building2,
+  FileCheck2
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 
@@ -74,7 +77,7 @@ export default function TrainerHeader({
   const isApproved = trainer?.status === 'approved';
   const coachFullName = trainer?.full_name || `${trainer?.first_name || 'Тренер'} ${trainer?.last_name || ''}`.trim();
 
-  // Резервная загрузка на случай, если родительский компонент еще загружает данные
+  // Резервная загрузка подопечных
   useEffect(() => {
     async function loadBackupStudents() {
       if (students && students.length > 0) return;
@@ -101,7 +104,7 @@ export default function TrainerHeader({
     }
   };
 
-  // ЖИВОЙ РАСЧЕТ НЕПРОЧИТАННЫХ СОБЫТИЙ ДЛЯ КРАСНОГО ИНДИКАТОРА
+  // Живой расчет непрочитанных уведомлений
   const effectiveList = students && students.length > 0 ? students : studentsList;
 
   const calculateUnreadCount = () => {
@@ -115,19 +118,15 @@ export default function TrainerHeader({
       const lowBalId = `low_balance_${st.id}`;
       const debtId = `pending_pay_${st.id}`;
 
-      // 1. Явка «Буду»
       if (st.attendance_today === 'attending' && !readNotifIds.includes(checkinYesId) && !deletedMap[checkinYesId]) {
         count++;
       }
-      // 2. Пропуск «Не смогу»
       if (st.attendance_today === 'missed' && !readNotifIds.includes(checkinNoId) && !deletedMap[checkinNoId]) {
         count++;
       }
-      // 3. Заканчивается абонемент (≤ 2 зан.)
       if (left <= 2 && !readNotifIds.includes(lowBalId) && !deletedMap[lowBalId]) {
         count++;
       }
-      // 4. Ожидает оплаты (долг)
       if (st.payment_status === 'pending' && !readNotifIds.includes(debtId) && !deletedMap[debtId]) {
         count++;
       }
@@ -144,7 +143,7 @@ export default function TrainerHeader({
       <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/70 px-4 py-3 sticky top-0 z-40 select-none shadow-2xs">
         <div className="relative flex items-center justify-between max-w-md mx-auto w-full">
           
-          {/* Левая часть: кнопка вызова меню (Светлая!) */}
+          {/* Левая часть: кнопка вызова меню */}
           <div className="z-10 flex items-center">
             <button
               type="button"
@@ -169,7 +168,7 @@ export default function TrainerHeader({
             </div>
           </div>
 
-          {/* Правая часть: колокольчик с индикатором уведомлений */}
+          {/* Правая часть: колокольчик */}
           <div className="z-10 flex items-center">
             <button
               type="button"
@@ -194,7 +193,7 @@ export default function TrainerHeader({
         </div>
       </header>
 
-      {/* ================= СВЕТЛОЕ БОКОВОЕ МЕНЮ (DRAWER) ================= */}
+      {/* ================= СВЕТЛОЕ БОКОВОЕ МЕНЮ (МОНОХРОМНОЕ, БЕЗ КАПСЛОКА) ================= */}
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-xs flex justify-start select-none animate-in fade-in duration-150">
           <div className="w-[88%] max-w-sm bg-white h-full p-4 flex flex-col justify-between shadow-2xl overflow-y-auto">
@@ -221,8 +220,8 @@ export default function TrainerHeader({
                           <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Верифицирован
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
-                          <Clock className="w-3 h-3 text-amber-600" /> На проверке
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                          <Clock className="w-3 h-3 text-slate-400" /> На проверке
                         </span>
                       )}
                     </div>
@@ -238,15 +237,20 @@ export default function TrainerHeader({
                 </button>
               </div>
 
-              {/* Плашка безопасности данных */}
-              <div className="p-2.5 bg-emerald-50/70 border border-emerald-200/70 rounded-2xl flex items-center gap-2.5">
-                <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
-                <p className="text-[10.5px] text-emerald-900 leading-tight">
-                  <span className="font-bold">100% Конфиденциально:</span> данные базы учеников и финансы зашифрованы и доступны только вам.
-                </p>
+              {/* Честная плашка защиты клиентской базы от клубов */}
+              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-start gap-2.5">
+                <Shield className="w-4 h-4 text-slate-700 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[11px] font-bold text-slate-800 leading-tight">
+                    Защита независимости тренера
+                  </p>
+                  <p className="text-[10px] text-slate-500 leading-snug mt-0.5">
+                    Ваша база учеников принадлежит только вам, зашифрована и не передается фитнес-клубам.
+                  </p>
+                </div>
               </div>
 
-              {/* 1. БЫСТРАЯ НАВИГАЦИЯ ПО CRM ТАБАМ (БЕЗ КАПСЛОКА) */}
+              {/* 1. БЫСТРАЯ НАВИГАЦИЯ ПО CRM ТАБАМ */}
               <div className="space-y-1">
                 <p className="text-[11px] font-bold text-slate-500 px-1">Разделы CRM</p>
                 <div className="grid grid-cols-2 gap-1.5 pt-0.5">
@@ -284,9 +288,48 @@ export default function TrainerHeader({
                 </div>
               </div>
 
-              {/* 2. ТАРИФЫ И ПРОДВИЖЕНИЕ (БЕЗ КАПСЛОКА) */}
+              {/* 2. РЕПУТАЦИЯ И ЛОКАЦИИ (КАК В INVICTUS) */}
               <div className="space-y-1.5 pt-1">
-                <p className="text-[11px] font-bold text-slate-500 px-1">Тарифы и продвижение</p>
+                <p className="text-[11px] font-bold text-slate-500 px-1">Репутация и клубы</p>
+
+                <button
+                  type="button"
+                  onClick={() => handleMenuClick('public_card')}
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
+                      <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-900">Мои отзывы и рейтинг</p>
+                      <p className="text-[10px] text-slate-500">Оценки подопечных и лавровый венок</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleMenuClick('edit_profile')}
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
+                      <Building2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-900">Мои залы и прайс</p>
+                      <p className="text-[10px] text-slate-500">{trainer?.gym?.split('|')[0] || 'Клубы работы'}</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+              </div>
+
+              {/* 3. ТАРИФЫ И ПРОДВИЖЕНИЕ */}
+              <div className="space-y-1.5 pt-1">
+                <p className="text-[11px] font-bold text-slate-500 px-1">Тарифы и буст</p>
 
                 <button
                   type="button"
@@ -308,22 +351,22 @@ export default function TrainerHeader({
                 <button
                   type="button"
                   onClick={() => handleMenuClick('promotion')}
-                  className="w-full p-2.5 bg-blue-50/60 hover:bg-blue-100/70 border border-blue-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-blue-200 flex items-center justify-center text-[#1E60D5] shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
                       <Rocket className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-blue-950">Продвижение (Boost)</p>
-                      <p className="text-[10px] text-[#1E60D5] font-medium">В залах Алматы и Онлайн по РК</p>
+                      <p className="text-xs font-semibold text-slate-900">Продвижение (Boost)</p>
+                      <p className="text-[10px] text-slate-500">В залах Алматы и онлайн по Казахстану</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-[#1E60D5]/70" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
               </div>
 
-              {/* 3. ИНСТРУМЕНТЫ ТРЕНЕРА (БЕЗ КАПСЛОКА) */}
+              {/* 4. ИНСТРУМЕНТЫ ТРЕНЕРА */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-500 px-1">Инструменты тренера</p>
 
@@ -364,10 +407,10 @@ export default function TrainerHeader({
                 <button
                   type="button"
                   onClick={() => handleMenuClick('health_parq')}
-                  className="w-full p-2.5 bg-rose-50/50 hover:bg-rose-50 border border-rose-200/60 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-rose-200 flex items-center justify-center text-rose-600 shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
                       <HeartPulse className="w-4 h-4" />
                     </div>
                     <div>
@@ -381,15 +424,15 @@ export default function TrainerHeader({
                 <button
                   type="button"
                   onClick={() => handleMenuClick('templates')}
-                  className="w-full p-2.5 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-200/60 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
                       <MessageSquare className="w-4 h-4" />
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-900">Шаблоны и Telegram-рассылка</p>
-                      <p className="text-[10px] text-emerald-700 font-medium">Отправка в личку Telegram от бота</p>
+                      <p className="text-[10px] text-slate-500">Отправка в личку Telegram от бота</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
@@ -423,53 +466,36 @@ export default function TrainerHeader({
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-900">Пригласить коллегу-тренера</p>
-                      <p className="text-[10px] text-[#1E60D5] font-medium">+1 месяц Pro после первой оплаты</p>
+                      <p className="text-[10px] text-slate-500">+1 месяц Pro после первой оплаты</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
               </div>
 
-              {/* 4. НАСТРОЙКИ ПРОФИЛЯ (БЕЗ КАПСЛОКА) */}
+              {/* 5. ПРАВОВОЙ БЛОК И ДОКУМЕНТАЦИЯ */}
               <div className="space-y-1.5 pt-1">
-                <p className="text-[11px] font-bold text-slate-500 px-1">Настройки профиля</p>
+                <p className="text-[11px] font-bold text-slate-500 px-1">Правовой блок (РК)</p>
 
                 <button
                   type="button"
-                  onClick={() => handleMenuClick('edit_profile')}
+                  onClick={() => handleMenuClick('client_rules')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Settings className="w-4 h-4" />
+                      <FileCheck2 className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-900">Редактировать анкету</p>
-                      <p className="text-[10px] text-slate-500">Все поля регистрации, прайс и залы</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('public_card')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[#1E60D5] shadow-xs">
-                      <ExternalLink className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Публичная визитка</p>
-                      <p className="text-[10px] text-slate-500">Ссылка для клиентов и настройки вида</p>
+                      <p className="text-xs font-semibold text-slate-900">Оферта и соглашение тренера</p>
+                      <p className="text-[10px] text-slate-500">Условия партнерства GymConnect</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
               </div>
 
-              {/* 5. ПОМОЩЬ И СЕРВИС */}
+              {/* 6. ПОМОЩЬ И СЕРВИС */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-500 px-1">Помощь и сервис</p>
 
