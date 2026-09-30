@@ -48,7 +48,6 @@ export default function TrainerHeader({
   const [isDrawerOpen, setIsDrawerOpen] = useState(initialDrawerOpen);
   const [studentsList, setStudentsList] = useState([]);
 
-  // Чтение прочитанных и удаленных уведомлений из памяти
   const [readNotifIds, setReadNotifIds] = useState(() => {
     try {
       const saved = localStorage.getItem('gymconnect_coach_read_notifs');
@@ -77,14 +76,13 @@ export default function TrainerHeader({
   const isApproved = trainer?.status === 'approved';
   const coachFullName = trainer?.full_name || `${trainer?.first_name || 'Тренер'} ${trainer?.last_name || ''}`.trim();
 
-  // Резервная загрузка подопечных
   useEffect(() => {
     async function loadBackupStudents() {
       if (students && students.length > 0) return;
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, attendance_today, left_trainings, remaining_workouts, payment_status, status')
+          .select('id, first_name, last_name, full_name, username, attendance_today, left_trainings, remaining_workouts, payment_status, status')
           .or(`trainer_username.ilike.${cleanUsername},trainer_username.ilike.@${cleanUsername},trainer_telegram.ilike.${cleanUsername},trainer_telegram.ilike.@${cleanUsername}`);
 
         if (!error && data) {
@@ -104,7 +102,6 @@ export default function TrainerHeader({
     }
   };
 
-  // Живой расчет непрочитанных уведомлений
   const effectiveList = students && students.length > 0 ? students : studentsList;
 
   const calculateUnreadCount = () => {
@@ -112,7 +109,6 @@ export default function TrainerHeader({
 
     effectiveList.forEach(st => {
       const left = st.left_trainings !== undefined ? st.left_trainings : (st.remaining_workouts !== undefined ? st.remaining_workouts : 12);
-      
       const checkinYesId = `checkin_yes_${st.id}`;
       const checkinNoId = `checkin_no_${st.id}`;
       const lowBalId = `low_balance_${st.id}`;
@@ -143,20 +139,19 @@ export default function TrainerHeader({
       <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/70 px-4 py-3 sticky top-0 z-40 select-none shadow-2xs">
         <div className="relative flex items-center justify-between max-w-md mx-auto w-full">
           
-          {/* Левая часть: кнопка вызова меню */}
+          {/* Левая часть: ТОЛЬКО ИКОНКА МЕНЮ (36x36px квадратная) */}
           <div className="z-10 flex items-center">
             <button
               type="button"
               onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-1.5 py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl active:scale-95 transition-all border border-slate-200/60 shadow-2xs cursor-pointer"
-              title="Открыть меню тренера"
+              className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center active:scale-90 transition-all border border-slate-200/60 shadow-2xs cursor-pointer"
+              title="Меню"
             >
               <Menu className="w-4 h-4 text-slate-700 stroke-[2.2]" />
-              <span className="text-xs font-bold tracking-tight">Меню</span>
             </button>
           </div>
 
-          {/* Центр: СТРОГО ПО ЦЕНТРУ ЭКРАНА С ТОЧНОСТЬЮ ДО ПИКСЕЛЯ */}
+          {/* Центр: СТРОГО ПО ЦЕНТРУ ЭКРАНА */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="flex items-center gap-1.5 pointer-events-auto">
               <div className="w-7 h-7 rounded-xl bg-[#1E60D5] text-white flex items-center justify-center shadow-xs shrink-0">
@@ -168,7 +163,7 @@ export default function TrainerHeader({
             </div>
           </div>
 
-          {/* Правая часть: колокольчик */}
+          {/* Правая часть: колокольчик (36x36px квадратный) */}
           <div className="z-10 flex items-center">
             <button
               type="button"
@@ -178,7 +173,7 @@ export default function TrainerHeader({
                   ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-xs' 
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-200/80 text-slate-700'
               }`}
-              title="Открыть Центр уведомлений"
+              title="Уведомления"
             >
               <Bell className={`w-4 h-4 stroke-[2.2] ${unreadCount > 0 ? 'text-rose-600 animate-bounce' : 'text-slate-700'}`} />
               
@@ -193,13 +188,13 @@ export default function TrainerHeader({
         </div>
       </header>
 
-      {/* ================= СВЕТЛОЕ БОКОВОЕ МЕНЮ (МОНОХРОМНОЕ, БЕЗ КАПСЛОКА) ================= */}
+      {/* ================= СВЕТЛОЕ БОКОВОЕ МЕНЮ (DRAWER) ================= */}
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-xs flex justify-start select-none animate-in fade-in duration-150">
           <div className="w-[88%] max-w-sm bg-white h-full p-4 flex flex-col justify-between shadow-2xl overflow-y-auto">
             <div className="space-y-4">
               
-              {/* Шапка тренера в меню */}
+              {/* Шапка тренера */}
               <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
                 <div className="flex items-center gap-3 overflow-hidden">
                   <div className="w-12 h-12 rounded-2xl bg-[#1E60D5] text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs overflow-hidden">
@@ -237,7 +232,7 @@ export default function TrainerHeader({
                 </button>
               </div>
 
-              {/* Честная плашка защиты клиентской базы от клубов */}
+              {/* Плашка защиты независимости тренера */}
               <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-start gap-2.5">
                 <Shield className="w-4 h-4 text-slate-700 shrink-0 mt-0.5" />
                 <div>
@@ -250,7 +245,7 @@ export default function TrainerHeader({
                 </div>
               </div>
 
-              {/* 1. БЫСТРАЯ НАВИГАЦИЯ ПО CRM ТАБАМ */}
+              {/* 1. РАЗДЕЛЫ CRM */}
               <div className="space-y-1">
                 <p className="text-[11px] font-bold text-slate-500 px-1">Разделы CRM</p>
                 <div className="grid grid-cols-2 gap-1.5 pt-0.5">
@@ -288,7 +283,7 @@ export default function TrainerHeader({
                 </div>
               </div>
 
-              {/* 2. РЕПУТАЦИЯ И ЛОКАЦИИ (КАК В INVICTUS) */}
+              {/* 2. РЕПУТАЦИЯ И ЛОКАЦИИ */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-500 px-1">Репутация и клубы</p>
 
@@ -351,18 +346,18 @@ export default function TrainerHeader({
                 <button
                   type="button"
                   onClick={() => handleMenuClick('promotion')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                  className="w-full p-2.5 bg-blue-50/60 hover:bg-blue-100/70 border border-blue-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-blue-200 flex items-center justify-center text-[#1E60D5] shadow-xs">
                       <Rocket className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-900">Продвижение (Boost)</p>
-                      <p className="text-[10px] text-slate-500">В залах Алматы и онлайн по Казахстану</p>
+                      <p className="text-xs font-semibold text-blue-950">Продвижение (Boost)</p>
+                      <p className="text-[10px] text-[#1E60D5] font-medium">В залах Алматы и онлайн по Казахстану</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-[#1E60D5]/70" />
                 </button>
               </div>
 
@@ -407,10 +402,10 @@ export default function TrainerHeader({
                 <button
                   type="button"
                   onClick={() => handleMenuClick('health_parq')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                  className="w-full p-2.5 bg-rose-50/50 hover:bg-rose-50 border border-rose-200/60 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-rose-200 flex items-center justify-center text-rose-600 shadow-xs">
                       <HeartPulse className="w-4 h-4" />
                     </div>
                     <div>
@@ -424,15 +419,15 @@ export default function TrainerHeader({
                 <button
                   type="button"
                   onClick={() => handleMenuClick('templates')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                  className="w-full p-2.5 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-200/60 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-xs">
                       <MessageSquare className="w-4 h-4" />
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-900">Шаблоны и Telegram-рассылка</p>
-                      <p className="text-[10px] text-slate-500">Отправка в личку Telegram от бота</p>
+                      <p className="text-[10px] text-emerald-700 font-medium">Отправка в личку Telegram от бота</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
@@ -466,14 +461,14 @@ export default function TrainerHeader({
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-900">Пригласить коллегу-тренера</p>
-                      <p className="text-[10px] text-slate-500">+1 месяц Pro после первой оплаты</p>
+                      <p className="text-[10px] text-[#1E60D5] font-medium">+1 месяц Pro после первой оплаты</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
               </div>
 
-              {/* 5. ПРАВОВОЙ БЛОК И ДОКУМЕНТАЦИЯ */}
+              {/* 5. ПРАВОВОЙ БЛОК */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-500 px-1">Правовой блок (РК)</p>
 
