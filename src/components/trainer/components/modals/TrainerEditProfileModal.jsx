@@ -23,8 +23,8 @@ import {
   Globe2, 
   FileCheck2, 
   Crown,
-  Video,
-  MessageCircle
+  Trophy,
+  Info
 } from 'lucide-react';
 import { supabase } from '../../../../supabaseClient';
 import * as GymsData from '../../../../data/almatyGyms';
@@ -66,6 +66,14 @@ export default function TrainerEditProfileModal({
   const [searchSecondaryGym, setSearchSecondaryGym] = useState('');
   const [isSecondaryDropdownOpen, setIsSecondaryDropdownOpen] = useState(false);
 
+  const sportsTitlesList = [
+    'Мастер спорта (МС)',
+    'Кандидат в мастера спорта (КМС)',
+    'Мастер спорта международного класса (МСМК)',
+    'Чемпион / Призёр соревнований',
+    'Сертифицированный специалист'
+  ];
+
   const specializationList = [
     'Набор массы и гипертрофия',
     'Снижение веса и сушка',
@@ -101,6 +109,11 @@ export default function TrainerEditProfileModal({
     bio: '',
     experience_years: 1,
 
+    // Спортивные звания и статус атлета
+    is_competing_athlete: false,
+    athletic_titles: [],
+    sports_title_custom: '',
+
     gym: GYMS_ARRAY[0] || 'Invictus Go (Mega Park)',
     secondary_gym: '',
 
@@ -108,12 +121,11 @@ export default function TrainerEditProfileModal({
     target_audience: 'all',
     specializations: ['Набор массы и гипертрофия'],
 
-    // По умолчанию ВСЕ ТРИ пункта лидогенерации отключены
     show_in_catalog: false,
     has_free_trial: false,
     has_free_consultation: false,
 
-    // Прейскурант: ВСЕ категории по умолчанию отключены (включая консультацию)
+    // Все услуги отключены по умолчанию
     services_enabled: {
       personal: false,
       split: false,
@@ -125,13 +137,16 @@ export default function TrainerEditProfileModal({
       personal_single: 8000,
       personal_count: 12,
       personal_block: 70000,
+      personal_duration: 60,
 
       split_single: 12000,
       split_count: 12,
       split_block: 100000,
+      split_duration: 60,
 
       group_single: 5000,
       group_month: 40000,
+      group_duration: 60,
 
       online_sessions: 8,
       online_month: 35000,
@@ -146,7 +161,7 @@ export default function TrainerEditProfileModal({
     certificates_link: ''
   });
 
-  // Синхронизация: если тренер на онбординге что-то включил — отображаем, иначе строго false
+  // Синхронизация данных с регистрацией
   useEffect(() => {
     if (isOpen && trainer) {
       const srv = safeParse(trainer.services_offered);
@@ -162,6 +177,10 @@ export default function TrainerEditProfileModal({
         instagram: (trainer.instagram || '').replace('@', ''),
         bio: trainer.bio || '',
         experience_years: Number(trainer.experience_years) || 1,
+
+        is_competing_athlete: Boolean(trainer.is_competing_athlete),
+        athletic_titles: Array.isArray(trainer.athletic_titles) ? trainer.athletic_titles : [],
+        sports_title_custom: trainer.sports_title_custom || '',
 
         gym: trainer.gym || (GYMS_ARRAY[0] || 'Invictus Go (Mega Park)'),
         secondary_gym: trainer.secondary_gym || '',
@@ -187,13 +206,16 @@ export default function TrainerEditProfileModal({
           personal_single: prc.personal_single || 8000,
           personal_count: prc.personal_count || 12,
           personal_block: prc.personal_block || 70000,
+          personal_duration: prc.personal_duration || 60,
 
           split_single: prc.split_single || 12000,
           split_count: prc.split_count || 12,
           split_block: prc.split_block || 100000,
+          split_duration: prc.split_duration || 60,
 
           group_single: prc.group_single || 5000,
           group_month: prc.group_month || 40000,
+          group_duration: prc.group_duration || 60,
 
           online_sessions: prc.online_sessions || 8,
           online_month: prc.online_month || 35000,
@@ -261,6 +283,16 @@ export default function TrainerEditProfileModal({
     });
   };
 
+  const toggleSportsTitle = (title) => {
+    setEditForm(prev => {
+      const exists = prev.athletic_titles.includes(title);
+      const updated = exists 
+        ? prev.athletic_titles.filter(t => t !== title)
+        : [...prev.athletic_titles, title];
+      return { ...prev, athletic_titles: updated };
+    });
+  };
+
   const toggleService = (key) => {
     setEditForm(prev => ({
       ...prev,
@@ -315,6 +347,10 @@ export default function TrainerEditProfileModal({
         bio: editForm.bio.trim(),
         experience_years: Number(editForm.experience_years) || 1,
 
+        is_competing_athlete: editForm.is_competing_athlete,
+        athletic_titles: editForm.athletic_titles,
+        sports_title_custom: editForm.sports_title_custom.trim(),
+
         gym: editForm.gym,
         secondary_gym: editForm.secondary_gym || null,
 
@@ -332,13 +368,16 @@ export default function TrainerEditProfileModal({
           personal_single: Number(editForm.pricing.personal_single) || 8000,
           personal_count: Number(editForm.pricing.personal_count) || 12,
           personal_block: Number(editForm.pricing.personal_block) || 70000,
+          personal_duration: Number(editForm.pricing.personal_duration) || 60,
 
           split_single: Number(editForm.pricing.split_single) || 12000,
           split_count: Number(editForm.pricing.split_count) || 12,
           split_block: Number(editForm.pricing.split_block) || 100000,
+          split_duration: Number(editForm.pricing.split_duration) || 60,
 
           group_single: Number(editForm.pricing.group_single) || 5000,
           group_month: Number(editForm.pricing.group_month) || 40000,
+          group_duration: Number(editForm.pricing.group_duration) || 60,
 
           online_sessions: Number(editForm.pricing.online_sessions) || 8,
           online_month: Number(editForm.pricing.online_month) || 35000,
@@ -540,7 +579,6 @@ export default function TrainerEditProfileModal({
             </div>
           </div>
 
-          {/* О себе */}
           <div>
             <label className="text-[10.5px] font-semibold text-slate-500 block mb-1">О себе и принципах работы</label>
             <textarea
@@ -552,7 +590,6 @@ export default function TrainerEditProfileModal({
             />
           </div>
 
-          {/* Стаж работы */}
           <div className="pt-2 flex items-center justify-between border-t border-slate-100">
             <div>
               <p className="text-xs font-semibold text-slate-900">Опыт работы тренером</p>
@@ -580,7 +617,72 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 2. Поиск и выбор клубов Алматы */}
+        {/* 2. Спортивные звания и статус атлета (НОВЫЙ БЛОК) */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
+          <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <h3 className="text-xs font-bold text-slate-800">
+                Спортивные звания и статус (опционально)
+              </h3>
+            </div>
+            <span className="text-[9.5px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+              Регалии
+            </span>
+          </div>
+
+          {/* Переключатель соревнующегося атлета */}
+          <div 
+            onClick={() => setEditForm(prev => ({ ...prev, is_competing_athlete: !prev.is_competing_athlete }))}
+            className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
+          >
+            <div className="pr-3">
+              <p className="text-xs font-bold text-slate-900 leading-tight">Выступающий соревнующийся атлет</p>
+              <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug">Бодибилдинг, Менс Физик, Фитнес-бикини, Пауэрлифтинг</p>
+            </div>
+            <div className={`w-5 h-5 rounded-md flex items-center justify-center border shrink-0 transition-colors ${
+              editForm.is_competing_athlete ? 'bg-[#1E60D5] border-[#1E60D5] text-white' : 'bg-white border-slate-300'
+            }`}>
+              {editForm.is_competing_athlete && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+            </div>
+          </div>
+
+          {/* Быстрые чипсы званий */}
+          <div className="space-y-1 pt-1">
+            <span className="text-[10.5px] font-semibold text-slate-500 block mb-1">Спортивные разряды:</span>
+            {sportsTitlesList.map(title => {
+              const isSelected = editForm.athletic_titles.includes(title);
+              return (
+                <button
+                  key={title}
+                  type="button"
+                  onClick={() => toggleSportsTitle(title)}
+                  className={`w-full p-2 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                    isSelected 
+                      ? 'bg-blue-50 text-[#1E60D5] border-blue-200 shadow-2xs font-bold' 
+                      : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>{title}</span>
+                  {isSelected && <Check className="w-4 h-4 text-[#1E60D5] stroke-[2.5]" />}
+                </button>
+              );
+            })}
+          </div>
+
+          <div>
+            <label className="text-[10.5px] font-semibold text-slate-500 block mb-1">Своё звание или титул</label>
+            <input
+              type="text"
+              value={editForm.sports_title_custom}
+              onChange={e => setEditForm({ ...editForm, sports_title_custom: e.target.value })}
+              placeholder="Например: Абсолютный чемпион Алматы 2025"
+              className="w-full p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:bg-white focus:border-[#1E60D5]"
+            />
+          </div>
+        </div>
+
+        {/* 3. Поиск и выбор клубов Алматы */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <h3 className="text-xs font-bold text-slate-800 border-b border-slate-100 pb-2">
             Клубы работы в Алматы
@@ -690,7 +792,7 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 3. Формат ведения и целевая аудитория */}
+        {/* 4. Формат ведения и целевая аудитория */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <h3 className="text-xs font-bold text-slate-800 border-b border-slate-100 pb-2">
             Формат ведения и клиенты
@@ -738,9 +840,8 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 4. ПРИВЛЕЧЕНИЕ АТЛЕТОВ И КАТАЛОГ — ПЛАШКА В 1 СТРОКУ, ГАЛОЧКИ ПО УМОЛЧАНИЮ ВЫКЛЮЧЕНЫ */}
+        {/* 5. Привлечение атлетов и каталог (ПЛАШКА В 1 СТРОКУ, ГАЛОЧКИ ПО УМОЛЧАНИЮ ВЫКЛЮЧЕНЫ) */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
-          
           <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
             <div>
               <h3 className="text-xs font-bold text-slate-800">
@@ -750,17 +851,15 @@ export default function TrainerEditProfileModal({
             </div>
           </div>
 
-          {/* Лаконичная аккуратная плашка без съезжающего текста */}
+          {/* Лаконичная плашка ровно в 1 строку без съезжающего текста */}
           <div className="p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex items-center gap-2">
             <Crown className="w-4 h-4 text-amber-600 shrink-0" />
-            <p className="text-[11px] text-amber-900 font-bold leading-snug">
+            <p className="text-[11px] text-amber-900 font-bold leading-snug truncate">
               Доступно в тарифе Pro и выше
             </p>
           </div>
 
           <div className="space-y-2 pt-1">
-            
-            {/* Пункт 1: Отображать профиль в каталоге */}
             <div 
               onClick={() => setEditForm(prev => ({ ...prev, show_in_catalog: !prev.show_in_catalog }))}
               className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
@@ -776,7 +875,6 @@ export default function TrainerEditProfileModal({
               </div>
             </div>
 
-            {/* Пункт 2: Бесплатная пробная тренировка */}
             <div 
               onClick={() => setEditForm(prev => ({ ...prev, has_free_trial: !prev.has_free_trial }))}
               className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
@@ -792,7 +890,6 @@ export default function TrainerEditProfileModal({
               </div>
             </div>
 
-            {/* Пункт 3: Бесплатная онлайн-консультация */}
             <div 
               onClick={() => setEditForm(prev => ({ ...prev, has_free_consultation: !prev.has_free_consultation }))}
               className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
@@ -807,20 +904,19 @@ export default function TrainerEditProfileModal({
                 {editForm.has_free_consultation && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
             </div>
-
           </div>
         </div>
 
-        {/* 5. ПРЕЙСКУРАНТ ТРЕНИРОВОК И ОНЛАЙН-ПРОДУКТОВ */}
+        {/* 6. ПРЕЙСКУРАНТ ТРЕНИРОВОК И УСЛУГ — СТРОГО 2 СТРОКИ, ДЛИТЕЛЬНОСТЬ В КАЖДОЙ */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3.5">
           <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800">
               Стоимость тренировок и услуг (₸)
             </h3>
-            <p className="text-[10.5px] text-slate-400 mt-0.5">Включите галочкой форматы, которые вы ведёте</p>
+            <p className="text-[10.5px] text-slate-400 mt-0.5">Включите форматы, которые вы ведёте</p>
           </div>
 
-          {/* 1. Персональные */}
+          {/* 1. Персональные тренировки */}
           <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
             <div 
               onClick={() => toggleService('personal')}
@@ -833,8 +929,8 @@ export default function TrainerEditProfileModal({
                   {editForm.services_enabled.personal && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">Персональные тренировки (1 на 1)</h4>
-                  <p className="text-[10px] text-slate-500">Индивидуальные занятия в зале</p>
+                  <h4 className="text-xs font-bold text-slate-900 leading-tight">Персональные тренировки</h4>
+                  <p className="text-[10.5px] text-slate-500 mt-0.5">Индивидуальные занятия в зале (1 на 1)</p>
                 </div>
               </div>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
@@ -845,42 +941,55 @@ export default function TrainerEditProfileModal({
             </div>
 
             {editForm.services_enabled.personal && (
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-200/60 animate-in fade-in">
-                <div>
-                  <label className="text-[9.5px] text-slate-500 block mb-1">Разовая (₸)</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={editForm.pricing.personal_single}
-                    onChange={e => handlePriceInput('personal_single', e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-[9.5px] text-slate-500 block mb-1">Занятий в блоке</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={editForm.pricing.personal_count}
-                    onChange={e => handlePriceInput('personal_count', e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-[9.5px] text-slate-500 block mb-1">Блок (₸)</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={editForm.pricing.personal_block}
-                    onChange={e => handlePriceInput('personal_block', e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs text-[#1E60D5]"
-                  />
+              <div className="space-y-2 pt-2 border-t border-slate-200/60 animate-in fade-in">
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label className="text-[9px] text-slate-500 block mb-1">Время (мин)</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={editForm.pricing.personal_duration}
+                      onChange={e => handlePriceInput('personal_duration', e.target.value)}
+                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs"
+                      placeholder="60"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-slate-500 block mb-1">Разовая (₸)</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={editForm.pricing.personal_single}
+                      onChange={e => handlePriceInput('personal_single', e.target.value)}
+                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-slate-500 block mb-1">Занятий</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={editForm.pricing.personal_count}
+                      onChange={e => handlePriceInput('personal_count', e.target.value)}
+                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-slate-500 block mb-1">Блок (₸)</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={editForm.pricing.personal_block}
+                      onChange={e => handlePriceInput('personal_block', e.target.value)}
+                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs text-[#1E60D5]"
+                    />
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* 2. Сплит */}
+          {/* 2. Сплит-тренировки */}
           <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
             <div 
               onClick={() => toggleService('split')}
@@ -893,8 +1002,8 @@ export default function TrainerEditProfileModal({
                   {editForm.services_enabled.split && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">Сплит-тренировки (для пар)</h4>
-                  <p className="text-[10px] text-slate-500">Занятия вдвоём с напарником</p>
+                  <h4 className="text-xs font-bold text-slate-900 leading-tight">Сплит-тренировки</h4>
+                  <p className="text-[10.5px] text-slate-500 mt-0.5">Занятия вдвоём с напарником (для пар)</p>
                 </div>
               </div>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
@@ -905,9 +1014,20 @@ export default function TrainerEditProfileModal({
             </div>
 
             {editForm.services_enabled.split && (
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 animate-in fade-in">
+              <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-200/60 animate-in fade-in">
                 <div>
-                  <label className="text-[9.5px] text-slate-500 block mb-1">Разовая сплит (₸)</label>
+                  <label className="text-[9px] text-slate-500 block mb-1">Время (мин)</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={editForm.pricing.split_duration}
+                    onChange={e => handlePriceInput('split_duration', e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs"
+                    placeholder="60"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-1">Разовая (₸)</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -917,7 +1037,17 @@ export default function TrainerEditProfileModal({
                   />
                 </div>
                 <div>
-                  <label className="text-[9.5px] text-slate-500 block mb-1">Блок сплит (₸)</label>
+                  <label className="text-[9px] text-slate-500 block mb-1">Занятий</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={editForm.pricing.split_count}
+                    onChange={e => handlePriceInput('split_count', e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-1">Блок (₸)</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -943,8 +1073,8 @@ export default function TrainerEditProfileModal({
                   {editForm.services_enabled.group && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">Мини-группы (3–5 человек)</h4>
-                  <p className="text-[10px] text-slate-500">Групповые занятия в зале</p>
+                  <h4 className="text-xs font-bold text-slate-900 leading-tight">Мини-группы</h4>
+                  <p className="text-[10.5px] text-slate-500 mt-0.5">Групповой тренинг в зале (3–5 человек)</p>
                 </div>
               </div>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
@@ -955,9 +1085,20 @@ export default function TrainerEditProfileModal({
             </div>
 
             {editForm.services_enabled.group && (
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 animate-in fade-in">
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-200/60 animate-in fade-in">
                 <div>
-                  <label className="text-[9.5px] text-slate-500 block mb-1">Разовая в группе (₸)</label>
+                  <label className="text-[9px] text-slate-500 block mb-1">Время (мин)</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={editForm.pricing.group_duration}
+                    onChange={e => handlePriceInput('group_duration', e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs"
+                    placeholder="60"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-1">Разовая (₸)</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -967,7 +1108,7 @@ export default function TrainerEditProfileModal({
                   />
                 </div>
                 <div>
-                  <label className="text-[9.5px] text-slate-500 block mb-1">Абонемент в месяц (₸)</label>
+                  <label className="text-[9px] text-slate-500 block mb-1">Месяц (₸)</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -980,7 +1121,7 @@ export default function TrainerEditProfileModal({
             )}
           </div>
 
-          {/* 4. Онлайн-ведение на месяц */}
+          {/* 4. Онлайн-ведение */}
           <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
             <div 
               onClick={() => toggleService('online')}
@@ -993,8 +1134,8 @@ export default function TrainerEditProfileModal({
                   {editForm.services_enabled.online && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">Онлайн-ведение (месячный тариф)</h4>
-                  <p className="text-[10px] text-slate-500">Дистанционный тренинг и КБЖУ 24/7</p>
+                  <h4 className="text-xs font-bold text-slate-900 leading-tight">Онлайн-ведение</h4>
+                  <p className="text-[10.5px] text-slate-500 mt-0.5">Дистанционный тренинг и КБЖУ (месячный тариф)</p>
                 </div>
               </div>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
@@ -1007,7 +1148,7 @@ export default function TrainerEditProfileModal({
             {editForm.services_enabled.online && (
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 animate-in fade-in">
                 <div>
-                  <label className="text-[9.5px] text-slate-500 block mb-1">Занятий/созвонов в мес</label>
+                  <label className="text-[9.5px] text-slate-500 block mb-1">Занятий / созвонов в мес</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -1031,7 +1172,7 @@ export default function TrainerEditProfileModal({
             )}
           </div>
 
-          {/* 5. Разовая онлайн-консультация (ОТДЕЛЬНЫЙ ПРОДУКТ) */}
+          {/* 5. Онлайн-консультация (без выбивающегося ярлыка "Продукт") */}
           <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
             <div 
               onClick={() => toggleService('consultation')}
@@ -1044,13 +1185,8 @@ export default function TrainerEditProfileModal({
                   {editForm.services_enabled.consultation && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                    <span>Разовая онлайн-консультация</span>
-                    <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-mono">
-                      Продукт
-                    </span>
-                  </h4>
-                  <p className="text-[10px] text-slate-500">Разбор рациона, техники и постановка целей</p>
+                  <h4 className="text-xs font-bold text-slate-900 leading-tight">Онлайн-консультация</h4>
+                  <p className="text-[10.5px] text-slate-500 mt-0.5">Экспресс-разбор питания, техники и целей (разово)</p>
                 </div>
               </div>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
@@ -1090,7 +1226,7 @@ export default function TrainerEditProfileModal({
 
         </div>
 
-        {/* 6. Направления работы и специализации */}
+        {/* 7. Направления работы и специализации */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-2.5">
           <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800">
@@ -1121,17 +1257,25 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 7. Подтверждение дипломов и верификация */}
+        {/* 8. Подтверждение дипломов и верификация (С ПОНЯТНОЙ ПЛАШКОЙ К ДИСКУ) */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-[#1E60D5]" />
               <h3 className="text-xs font-bold text-slate-800">
-                Верификация и подтверждение квалификации
+                Верификация и дипломы
               </h3>
             </div>
             <p className="text-[10.5px] text-slate-400 mt-0.5">
               Данные для получения бейджа «Верифицирован ⭐»
+            </p>
+          </div>
+
+          {/* Плашка с примечанием для онлайн-диска */}
+          <div className="p-3 bg-blue-50/70 border border-blue-200/70 rounded-2xl flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-[#1E60D5] shrink-0 mt-0.5" />
+            <p className="text-[11px] text-blue-950 leading-relaxed font-medium">
+              Загрузите фото дипломов и сертификатов на онлайн-диск (Google Drive, Яндекс Диск или iCloud) и поделитесь открытой ссылкой, чтобы мы могли подтвердить вашу квалификацию.
             </p>
           </div>
 
