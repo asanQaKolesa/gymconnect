@@ -28,13 +28,12 @@ import {
   Star, 
   Building2, 
   FileCheck2, 
-  Sparkles, 
-  Globe, 
-  Snowflake, 
   Inbox, 
   UserCheck,
   Activity,
-  Bot
+  Bot,
+  Snowflake,
+  FolderLock
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 
@@ -75,6 +74,21 @@ export default function TrainerHeader({
       setIsDrawerOpen(true);
     }
   }, [initialDrawerOpen]);
+
+  // Блокировка скролла фона при открытом Drawer (overscroll-contain + body overflow)
+  useEffect(() => {
+    if (isDrawerOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isDrawerOpen]);
 
   const cleanUsername = trainer?.username ? trainer.username.replace('@', '').trim().toLowerCase() : 'coach';
   const isVerified = trainer?.verification_status === 'verified';
@@ -137,13 +151,16 @@ export default function TrainerHeader({
 
   const unreadCount = calculateUnreadCount();
 
+  // Получаем динамический клуб из анкеты тренера (club_name или gym)
+  const currentGymDisplay = trainer?.club_name || trainer?.gym?.split('|')[0]?.trim() || 'Фитнес-клуб не указан';
+
   return (
     <>
       {/* ================= АККУРАТНАЯ СИММЕТРИЧНАЯ ШАПКА ================= */}
       <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/70 px-4 py-3 sticky top-0 z-40 select-none shadow-2xs">
         <div className="relative flex items-center justify-between max-w-md mx-auto w-full">
           
-          {/* Левая часть: квадратная кнопка меню 36×36px */}
+          {/* Левая часть: кнопка меню 36×36px */}
           <div className="z-10 flex items-center">
             <button
               type="button"
@@ -155,7 +172,7 @@ export default function TrainerHeader({
             </button>
           </div>
 
-          {/* Центр: строго по центру экрана */}
+          {/* Центр: строго по оси экрана */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="flex items-center gap-1.5 pointer-events-auto">
               <div className="w-7 h-7 rounded-xl bg-[#1E60D5] text-white flex items-center justify-center shadow-xs shrink-0">
@@ -194,11 +211,17 @@ export default function TrainerHeader({
 
       {/* ================= БОКОВОЕ МЕНЮ (DRAWER) ================= */}
       {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-xs flex justify-start select-none animate-in fade-in duration-150">
-          <div className="w-[88%] max-w-sm bg-white h-full p-4 flex flex-col justify-between shadow-2xl overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex justify-start select-none animate-in fade-in duration-150 overscroll-contain"
+          onClick={() => setIsDrawerOpen(false)}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-[88%] max-w-sm bg-white h-full p-4 flex flex-col justify-between shadow-2xl overflow-y-auto overscroll-contain"
+          >
             <div className="space-y-4">
               
-              {/* ШАПКА ПРОФИЛЯ ТРЕНЕРА */}
+              {/* ШАПКА ПРОФИЛЯ ТРЕНЕРА: БЕЗ TG-НИКА, БЕЙДЖ ПОДНЯТ, ШЕСТЕРЕНКА 36×36 */}
               <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
                 <div className="flex items-center gap-3 overflow-hidden flex-1">
                   <div className="w-12 h-12 rounded-2xl bg-[#1E60D5] text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs overflow-hidden">
@@ -209,47 +232,46 @@ export default function TrainerHeader({
                     )}
                   </div>
                   
-                  <div className="overflow-hidden flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[14px] font-bold text-slate-800 truncate leading-snug">
-                        {coachFullName}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => handleMenuClick('edit_profile')}
-                        className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
-                        title="Настройки профиля"
-                      >
-                        <Settings className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <p className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">@{cleanUsername}</p>
+                  <div className="overflow-hidden flex-1 min-w-0 space-y-1">
+                    <p className="text-[14px] font-bold text-slate-800 truncate leading-tight">
+                      {coachFullName}
+                    </p>
                     
-                    <div className="flex items-center gap-1.5 mt-1">
+                    <div className="flex items-center gap-1.5">
                       {isVerified ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60 leading-none">
                           <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Верифицирован
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                          <Clock className="w-3 h-3 text-slate-400" /> Базовый аккаунт
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 leading-none">
+                          <Clock className="w-3 h-3 text-slate-500" /> Базовый аккаунт
                         </span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 active:scale-90 transition-transform cursor-pointer shrink-0 ml-2"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <button
+                    type="button"
+                    onClick={() => handleMenuClick('edit_profile')}
+                    className="w-9 h-9 rounded-xl text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center cursor-pointer border border-slate-200/60"
+                    title="Настройки профиля"
+                  >
+                    <Settings className="w-4 h-4 stroke-[2]" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsDrawerOpen(false)}
+                    className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer border border-slate-200/60"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
-              {/* ================= 1. ОСНОВНЫЕ РАЗДЕЛЫ CRM (СВЯЗКА С ОБЗОРОМ) ================= */}
+              {/* ================= 1. ОПЕРАЦИОННАЯ ПАНЕЛЬ ================= */}
               <div className="space-y-1.5">
                 <p className="text-[11px] font-bold text-slate-400 px-1">Операционная панель</p>
                 <div className="divide-y divide-slate-100 bg-slate-50/70 border border-slate-200/80 rounded-2xl overflow-hidden px-3">
@@ -266,7 +288,9 @@ export default function TrainerHeader({
                         <Dumbbell className="w-4 h-4 stroke-[2]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Главный обзор</h4>
+                        <h4 className={`text-[13px] truncate leading-tight ${activeTab === 'overview' ? 'font-bold text-[#1E60D5]' : 'font-semibold text-slate-800'}`}>
+                          Главный обзор
+                        </h4>
                         <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">План на сегодня и контроль явок</p>
                       </div>
                     </div>
@@ -285,14 +309,16 @@ export default function TrainerHeader({
                         <Users className="w-4 h-4 stroke-[2]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">База атлетов</h4>
+                        <h4 className={`text-[13px] truncate leading-tight ${activeTab === 'students' ? 'font-bold text-[#1E60D5]' : 'font-semibold text-slate-800'}`}>
+                          База атлетов
+                        </h4>
                         <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Досье подопечных, история и замеры</p>
                       </div>
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
                   </div>
 
-                  {/* Расписание и слоты */}
+                  {/* Расписание занятий */}
                   <div
                     onClick={() => handleTabClick('schedule')}
                     className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
@@ -304,14 +330,16 @@ export default function TrainerHeader({
                         <Calendar className="w-4 h-4 stroke-[2]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Расписание занятий</h4>
+                        <h4 className={`text-[13px] truncate leading-tight ${activeTab === 'schedule' ? 'font-bold text-[#1E60D5]' : 'font-semibold text-slate-800'}`}>
+                          Расписание занятий
+                        </h4>
                         <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Сетка по часам и свободные окна</p>
                       </div>
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
                   </div>
 
-                  {/* Программы и упражнения */}
+                  {/* Конструктор тренировок */}
                   <div
                     onClick={() => handleTabClick('workouts')}
                     className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
@@ -323,8 +351,10 @@ export default function TrainerHeader({
                         <FileText className="w-4 h-4 stroke-[2]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Конструктор тренировок</h4>
-                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Сплиты, веса и 140+ упражнений зала</p>
+                        <h4 className={`text-[13px] truncate leading-tight ${activeTab === 'workouts' ? 'font-bold text-[#1E60D5]' : 'font-semibold text-slate-800'}`}>
+                          Конструктор тренировок
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Сплиты, веса и каталог упражнений</p>
                       </div>
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
@@ -342,14 +372,16 @@ export default function TrainerHeader({
                         <Wallet className="w-4 h-4 stroke-[2]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Касса и финансы</h4>
+                        <h4 className={`text-[13px] truncate leading-tight ${activeTab === 'finance' ? 'font-bold text-[#1E60D5]' : 'font-semibold text-slate-800'}`}>
+                          Касса и финансы
+                        </h4>
                         <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Выручка, аренда зала и счета Kaspi</p>
                       </div>
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
                   </div>
 
-                  {/* Аналитика и качество */}
+                  {/* Качество ведения */}
                   <div
                     onClick={() => handleTabClick('analytics')}
                     className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
@@ -361,7 +393,9 @@ export default function TrainerHeader({
                         <Activity className="w-4 h-4 stroke-[2]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Качество ведения</h4>
+                        <h4 className={`text-[13px] truncate leading-tight ${activeTab === 'analytics' ? 'font-bold text-[#1E60D5]' : 'font-semibold text-slate-800'}`}>
+                          Качество ведения
+                        </h4>
                         <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Оценки атлетов, стрик и доходимость</p>
                       </div>
                     </div>
@@ -380,7 +414,9 @@ export default function TrainerHeader({
                         <Utensils className="w-4 h-4 stroke-[2]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Рационы и питание</h4>
+                        <h4 className={`text-[13px] truncate leading-tight ${activeTab === 'nutrition' ? 'font-bold text-[#1E60D5]' : 'font-semibold text-slate-800'}`}>
+                          Рационы и питание
+                        </h4>
                         <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">КБЖУ, приемы пищи и БАДы</p>
                       </div>
                     </div>
@@ -390,91 +426,67 @@ export default function TrainerHeader({
                 </div>
               </div>
 
-              {/* ================= 2. КОММУНИКАЦИЯ И ЗАЯВКИ ================= */}
+              {/* ================= 2. КЛИЕНТСКИЙ СЕРВИС (ЕДИНЫЙ ХАБ С МИКРО-КНОПКАМИ) ================= */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-400 px-1">Клиентский сервис</p>
 
-                {/* Входящие заявки на тренировки */}
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('notifications')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
-                      <Inbox className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Заявки из клубов города</p>
-                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Новые запросы на пробную тренировку</p>
-                    </div>
-                  </div>
-                  {unreadCount > 0 && (
-                    <span className="text-[10px] font-bold text-[#1E60D5] bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-lg shrink-0">
-                      +{unreadCount}
-                    </span>
-                  )}
-                </button>
-
-                {/* Центр рассылок и автонапоминаний */}
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('templates')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
-                      <Bot className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Рассылки и шаблоны</p>
-                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Утренние переклички и пуши в бот</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                </button>
-
-                {/* Заморозка абонементов */}
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('client_rules')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
-                      <Snowflake className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Заморозка абонементов</p>
-                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Пауза на отпуск или больничный</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                </button>
-
-                {/* Регламент и анкета PAR-Q */}
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleMenuClick('client_rules')}
-                    className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center gap-2 text-left active:scale-98 transition-all cursor-pointer"
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 space-y-2.5">
+                  {/* Основное действие: Заявки */}
+                  <div 
+                    onClick={() => handleMenuClick('notifications')}
+                    className="flex items-center justify-between cursor-pointer group"
                   >
-                    <Scale className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                    <span className="text-[11.5px] font-semibold text-slate-800 truncate">Регламент отмен</span>
-                  </button>
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                        <Inbox className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Заявки из клубов города</p>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Входящие лиды на пробные тренировки</p>
+                      </div>
+                    </div>
+                    {unreadCount > 0 ? (
+                      <span className="text-[10px] font-bold text-[#1E60D5] bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-lg shrink-0">
+                        +{unreadCount}
+                      </span>
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 shrink-0" />
+                    )}
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleMenuClick('health_parq')}
-                    className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center gap-2 text-left active:scale-98 transition-all cursor-pointer"
-                  >
-                    <HeartPulse className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                    <span className="text-[11.5px] font-semibold text-slate-800 truncate">Травмы (PAR-Q)</span>
-                  </button>
+                  {/* Микро-действия сервиса */}
+                  <div className="pt-2 border-t border-slate-200/60 grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleMenuClick('templates')}
+                      className="py-1.5 px-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-[10.5px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Bot className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span className="truncate">Рассылки</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleMenuClick('client_rules')}
+                      className="py-1.5 px-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-[10.5px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Snowflake className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span className="truncate">Заморозка</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleMenuClick('health_parq')}
+                      className="py-1.5 px-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-[10.5px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <HeartPulse className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span className="truncate">PAR-Q</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* ================= 3. ПУБЛИЧНЫЙ ПРОФИЛЬ И БРЕНД (ОБЪЕДИНЕН В ЕДИНЫЙ ХАБ) ================= */}
+              {/* ================= 3. ПУБЛИЧНЫЙ ПРОФИЛЬ И БРЕНД (МОНОХРОМНАЯ ИКОНКА) ================= */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-400 px-1">Публичный профиль и бренд</p>
 
@@ -484,12 +496,12 @@ export default function TrainerHeader({
                     className="flex items-center justify-between cursor-pointer group"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
-                        <UserCheck className="w-4 h-4 text-[#1E60D5]" />
+                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                        <UserCheck className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Анкета в каталоге тренеров</p>
-                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">5.0 рейтинг • {trainer?.gym?.split('|')[0] || 'Клубы работы'}</p>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">5.0 рейтинг • {currentGymDisplay}</p>
                       </div>
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 shrink-0" />
@@ -517,71 +529,88 @@ export default function TrainerHeader({
                 </div>
               </div>
 
-              {/* ================= 4. ПОДПИСКА И РОСТ ================= */}
+              {/* ================= 4. РАЗВИТИЕ ПРАКТИКИ (ХАБ: ТАРИФЫ + ПРОДВИЖЕНИЕ + РЕФЕРАЛ) ================= */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-400 px-1">Развитие практики</p>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 space-y-2.5">
+                  <div 
                     onClick={() => handleMenuClick('subscription')}
-                    className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center gap-2 text-left active:scale-98 transition-all cursor-pointer"
+                    className="flex items-center justify-between cursor-pointer group"
                   >
-                    <CreditCard className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                    <span className="text-[11.5px] font-semibold text-slate-800 truncate">Тариф Pro</span>
-                  </button>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                        <CreditCard className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Тарифы подписки</p>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Управление планом CoachOS Pro</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 shrink-0" />
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleMenuClick('promotion')}
-                    className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center gap-2 text-left active:scale-98 transition-all cursor-pointer"
-                  >
-                    <Rocket className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                    <span className="text-[11.5px] font-semibold text-slate-800 truncate">Топ в каталоге</span>
-                  </button>
+                  <div className="pt-2 border-t border-slate-200/60 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleMenuClick('promotion')}
+                      className="py-1.5 px-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Rocket className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Продвижение</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleMenuClick('referral')}
+                      className="py-1.5 px-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Gift className="w-3.5 h-3.5 text-slate-500" />
+                      <span>+1 мес. Pro</span>
+                    </button>
+                  </div>
                 </div>
+              </div>
 
+              {/* ================= 5. ДОКУМЕНТАЦИЯ И СЕРВИС (ПОЛНОРАЗМЕРНЫЕ БЛОКИ) ================= */}
+              <div className="space-y-1.5 pt-1">
+                <p className="text-[11px] font-bold text-slate-400 px-1">Правовой блок и сервис</p>
+
+                {/* Документация и оферта (Большая кнопка) */}
                 <button
                   type="button"
-                  onClick={() => handleMenuClick('referral')}
+                  onClick={() => handleMenuClick('client_rules')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
                     <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
-                      <Gift className="w-4 h-4" />
+                      <FileCheck2 className="w-4 h-4" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Пригласить наставника</p>
-                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">+1 месяц Pro за каждого коллегу</p>
+                      <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Документация и оферта</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Партнерский договор, регламенты и защита базы</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
-              </div>
 
-              {/* ================= 5. ПРАВОВОЙ БЛОК И ПОДДЕРЖКА ================= */}
-              <div className="space-y-1.5 pt-1">
-                <p className="text-[11px] font-bold text-slate-400 px-1">Сервис и безопасность</p>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleMenuClick('client_rules')}
-                    className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center gap-2 text-left active:scale-98 transition-all cursor-pointer"
-                  >
-                    <Shield className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                    <span className="text-[11.5px] font-semibold text-slate-800 truncate">Защита базы</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleMenuClick('support')}
-                    className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center gap-2 text-left active:scale-98 transition-all cursor-pointer"
-                  >
-                    <Headphones className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                    <span className="text-[11.5px] font-semibold text-slate-800 truncate">Поддержка 24/7</span>
-                  </button>
-                </div>
+                {/* Поддержка 24/7 (Большая кнопка) */}
+                <button
+                  type="button"
+                  onClick={() => handleMenuClick('support')}
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                      <Headphones className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Служба заботы 24/7</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Прямой чат поддержки с куратором платформы</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </button>
               </div>
 
             </div>
