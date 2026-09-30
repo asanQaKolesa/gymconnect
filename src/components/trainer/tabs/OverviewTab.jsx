@@ -15,6 +15,7 @@ import {
   Activity, 
   Star,
   UserCheck,
+  CreditCard,
   Scale,
   Smile,
   Users2,
@@ -47,7 +48,6 @@ export default function OverviewTab({
 }) {
   const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-  // Текущий месяц в естественном регистре ("Октябрь")
   const currentMonthName = useMemo(() => {
     const months = [
       'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
@@ -164,7 +164,6 @@ export default function OverviewTab({
     ? Math.round((todayCompletedCount / todayStudents.length) * 100) 
     : 0;
 
-  // Извлечение строго точного времени без слова "вечер"
   const getStartTime = (slot) => {
     if (!slot) return '18:00';
     const clean = slot.replace(/[^0-9:\-—]/g, '').trim();
@@ -296,7 +295,7 @@ export default function OverviewTab({
             onClick={() => setActiveWorkMode('gym')}
             className={`h-8 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer flex items-center justify-center truncate px-2 ${
               activeWorkMode === 'gym' 
-                ? 'bg-white text-slate-900 shadow-xs' 
+                ? 'bg-white text-slate-800 shadow-xs' 
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -307,7 +306,7 @@ export default function OverviewTab({
             onClick={() => setActiveWorkMode('day_off')}
             className={`h-8 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer flex items-center justify-center truncate px-2 ${
               activeWorkMode === 'day_off' 
-                ? 'bg-white text-slate-900 shadow-xs' 
+                ? 'bg-white text-slate-800 shadow-xs' 
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -325,15 +324,15 @@ export default function OverviewTab({
         </button>
       </div>
 
-      {/* 2. НОВЫЕ ЗАЯВКИ ИЗ КАТАЛОГА (АККУРАТНЫЙ СТАТУСНЫЙ БЕЙДЖ ВМЕСТО ТОЧКИ) */}
+      {/* 2. НОВЫЕ ЗАЯВКИ ИЗ КАТАЛОГА */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
             <UserCheck className="w-4 h-4 stroke-[2]" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-900">Новые заявки</span>
+              <span className="text-xs font-bold text-slate-800">Новые заявки</span>
               <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-[#1E60D5] text-[10px] font-mono font-bold leading-none">
                 +2
               </span>
@@ -347,13 +346,13 @@ export default function OverviewTab({
         <button
           type="button"
           onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
-          className="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0"
+          className="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0"
         >
           Открыть
         </button>
       </div>
 
-      {/* 3. ПРОФИЛЬ ТРЕНЕРА: ЗВЕЗДОЧКА КОНТУРОМ (БЕЗ ОТВЛЕКАЮЩЕЙ ЗАЛИВКИ) */}
+      {/* 3. ПРОФИЛЬ ТРЕНЕРА */}
       <div 
         onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
         className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
@@ -370,16 +369,16 @@ export default function OverviewTab({
           </div>
 
           <div className="min-w-0 flex-1 space-y-0.5">
-            <h3 className="text-xs font-bold text-slate-900 truncate">
+            <h3 className="text-xs font-bold text-slate-800 truncate">
               {trainer?.full_name || trainer?.first_name || 'Персональный наставник'}
             </h3>
             
             <div className="flex items-center gap-3 text-[11px] text-slate-500">
-              <span className="inline-flex items-center gap-1 font-semibold text-slate-800">
-                <Star className="w-3.5 h-3.5 text-slate-700 stroke-[1.8]" />
+              <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
+                <Star className="w-3.5 h-3.5 text-slate-600 stroke-[1.8]" />
                 <span>5.0</span>
               </span>
-              <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
+              <span className="inline-flex items-center gap-1 text-slate-500 font-medium">
                 <Eye className="w-3.5 h-3.5 text-slate-500 stroke-[1.8]" />
                 <span>{trainer?.profile_views || 148} просмотров</span>
               </span>
@@ -396,9 +395,9 @@ export default function OverviewTab({
       {/* 4. ОПЕРАТИВНОЕ ПРЕДУПРЕЖДЕНИЕ */}
       {urgentAlerts.length > 0 && (
         <div className="p-3 bg-white border border-slate-200 rounded-2xl flex items-start gap-2.5 text-xs shadow-xs">
-          <AlertCircle className="w-4 h-4 text-slate-700 shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1 leading-snug">
-            <span className="font-bold text-slate-900 block">
+            <span className="font-bold text-slate-800 block">
               Внимание по подопечным
             </span>
             <span className="text-[11px] text-slate-500 mt-0.5 block">
@@ -408,14 +407,14 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* 5. ФИНАНСЫ И ПОДОПЕЧНЫЕ: ССЫЛКИ ПО МЕСЯЦАМ, БЕЗ ЛИШНИХ ИКОНОК, ЕДИНЫЙ СТИЛЬ */}
+      {/* 5. ФИНАНСЫ И ПОДОПЕЧНЫЕ */}
       <div className="grid grid-cols-2 gap-2.5">
         <div 
           onClick={() => onNavigateToFinance && onNavigateToFinance()}
           className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-2.5 cursor-pointer hover:border-slate-300 transition-colors"
         >
           <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-            <span className="text-xs font-bold text-slate-900">Финансы</span>
+            <span className="text-xs font-bold text-slate-800">Финансы</span>
             <span className="text-xs font-semibold text-[#1E60D5] inline-flex items-center gap-0.5">
               <span>{currentMonthName}</span>
               <ChevronRight className="w-3 h-3 text-[#1E60D5]" />
@@ -425,7 +424,7 @@ export default function OverviewTab({
           <div className="space-y-1.5">
             <div>
               <span className="text-[10px] font-medium text-slate-500 block">Выручка</span>
-              <p className="text-[14px] font-mono font-bold text-slate-900 leading-tight">
+              <p className="text-[14px] font-mono font-bold text-slate-800 leading-tight">
                 {totalRevenue.toLocaleString()} ₸
               </p>
             </div>
@@ -436,13 +435,13 @@ export default function OverviewTab({
             </div>
 
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-900 font-semibold">Чистый доход:</span>
-              <span className="font-mono font-bold text-slate-900">{netProfit.toLocaleString()} ₸</span>
+              <span className="text-slate-800 font-semibold">Чистый доход:</span>
+              <span className="font-mono font-bold text-slate-800">{netProfit.toLocaleString()} ₸</span>
             </div>
 
             <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
               <span className="text-slate-600 font-medium">Ожидают:</span>
-              <span className="font-mono font-semibold text-slate-900">
+              <span className="font-mono font-semibold text-slate-800">
                 {unpaidTotal.toLocaleString()} ₸ ({unpaidStudents.length})
               </span>
             </div>
@@ -454,7 +453,7 @@ export default function OverviewTab({
           className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-2.5 cursor-pointer hover:border-slate-300 transition-colors"
         >
           <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-            <span className="text-xs font-bold text-slate-900">Подопечные</span>
+            <span className="text-xs font-bold text-slate-800">Подопечные</span>
             <span className="text-xs font-semibold text-[#1E60D5] inline-flex items-center gap-0.5">
               <span>{students.length} всего</span>
               <ChevronRight className="w-3 h-3 text-[#1E60D5]" />
@@ -464,7 +463,7 @@ export default function OverviewTab({
           <div className="space-y-1.5">
             <div>
               <span className="text-[10px] font-medium text-slate-500 block">Активная база</span>
-              <p className="text-[14px] font-mono font-bold text-slate-900 leading-tight">
+              <p className="text-[14px] font-mono font-bold text-slate-800 leading-tight">
                 {activeStudents.length} <span className="text-xs font-normal text-slate-500 font-sans">атлетов</span>
               </p>
             </div>
@@ -481,7 +480,7 @@ export default function OverviewTab({
 
             <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
               <span className="text-slate-600 font-medium">Заканчивают:</span>
-              <span className="font-mono font-semibold text-slate-900">
+              <span className="font-mono font-semibold text-slate-800">
                 {unpaidStudents.length} атл.
               </span>
             </div>
@@ -489,12 +488,12 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 6. КАЧЕСТВО ВЕДЕНИЯ: ССЫЛКА С СИНЕЙ СТРЕЛКОЙ, ПОНЯТНЫЕ ТРЕНЕРСКИЕ МЕТРИКИ */}
+      {/* 6. КАЧЕСТВО ВЕДЕНИЯ */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2.5">
         <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
           <div className="flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-slate-700 stroke-[2]" />
-            <h3 className="text-xs font-bold text-slate-900">
+            <Activity className="w-3.5 h-3.5 text-slate-600 stroke-[2]" />
+            <h3 className="text-xs font-bold text-slate-800">
               Качество ведения
             </h3>
           </div>
@@ -510,44 +509,41 @@ export default function OverviewTab({
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          {/* Средняя оценка от атлетов */}
           <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
             <div className="flex items-center gap-1 text-slate-600">
-              <Smile className="w-3 h-3 text-slate-700 stroke-[2]" />
+              <Smile className="w-3 h-3 text-slate-600 stroke-[2]" />
               <span className="text-[10px] font-medium truncate">Оценка</span>
             </div>
-            <p className="text-[13px] font-mono font-bold text-slate-900">4.9 / 5.0</p>
+            <p className="text-[13px] font-mono font-bold text-slate-800">4.9 / 5.0</p>
             <span className="text-[9px] text-slate-400 block truncate">18 отзывов</span>
           </div>
 
-          {/* Общая посещаемость базы */}
           <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
             <div className="flex items-center gap-1 text-slate-600">
-              <Users2 className="w-3 h-3 text-slate-700 stroke-[2]" />
+              <Users2 className="w-3 h-3 text-slate-600 stroke-[2]" />
               <span className="text-[10px] font-medium truncate">Явка базы</span>
             </div>
-            <p className="text-[13px] font-mono font-bold text-slate-900">92%</p>
+            <p className="text-[13px] font-mono font-bold text-slate-800">92%</p>
             <span className="text-[9px] text-slate-400 block truncate">По графику</span>
           </div>
 
-          {/* Доходимость блоков до конца / продления */}
           <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
             <div className="flex items-center gap-1 text-slate-600">
-              <TrendingUp className="w-3 h-3 text-slate-700 stroke-[2]" />
+              <TrendingUp className="w-3 h-3 text-slate-600 stroke-[2]" />
               <span className="text-[10px] font-medium truncate">Продления</span>
             </div>
-            <p className="text-[13px] font-mono font-bold text-slate-900">86%</p>
+            <p className="text-[13px] font-mono font-bold text-slate-800">86%</p>
             <span className="text-[9px] text-slate-400 block truncate">Повторные блоки</span>
           </div>
         </div>
       </div>
 
-      {/* 7. ГРАФИК НЕДЕЛИ: ВЫВЕРЕННАЯ ПО ОСИ СТРЕЛКА "ВСЕ ДНИ" */}
+      {/* 7. ГРАФИК НЕДЕЛИ */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2">
         <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
           <div className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-slate-700 stroke-[2]" />
-            <h3 className="text-xs font-bold text-slate-900">
+            <Calendar className="w-3.5 h-3.5 text-slate-600 stroke-[2]" />
+            <h3 className="text-xs font-bold text-slate-800">
               График недели
             </h3>
           </div>
@@ -604,7 +600,7 @@ export default function OverviewTab({
                 </div>
 
                 <span className={`text-[9.5px] font-semibold ${
-                  isSelected ? 'text-[#1E60D5]' : isToday ? 'text-slate-900 font-bold' : 'text-slate-400'
+                  isSelected ? 'text-[#1E60D5]' : isToday ? 'text-slate-800 font-bold' : 'text-slate-400'
                 }`}>
                   {day}
                 </span>
@@ -614,12 +610,12 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 8. ТРЕНИРОВКИ НА СЕГОДНЯ: ВЫВЕРЕННАЯ СТРЕЛКА "В РАСПИСАНИЕ", ЧЕТКОЕ ВРЕМЯ (18:00) */}
+      {/* 8. ТРЕНИРОВКИ НА СЕГОДНЯ */}
       <div className="bg-white rounded-2xl border border-slate-200/70 shadow-xs overflow-hidden">
         <div className="p-3.5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <Dumbbell className="w-3.5 h-3.5 text-slate-700 stroke-[2]" />
-            <h3 className="text-xs font-bold text-slate-900">
+            <Dumbbell className="w-3.5 h-3.5 text-slate-600 stroke-[2]" />
+            <h3 className="text-xs font-bold text-slate-800">
               {selectedDayFilter === 'all' 
                 ? 'Все подопечные' 
                 : selectedDayFilter === currentDayShort 
@@ -672,7 +668,7 @@ export default function OverviewTab({
 
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-center gap-1.5">
-                          <h4 className="text-xs font-bold text-slate-900 truncate">
+                          <h4 className="text-xs font-bold text-slate-800 truncate">
                             {s.full_name || 'Без имени'}
                           </h4>
                           {hasHealthWarning && (
@@ -703,14 +699,14 @@ export default function OverviewTab({
                     <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </div>
 
-                  {/* Нижняя панель действий: логичная структура кнопок во всю ширину */}
+                  {/* Нижняя панель действий */}
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setExpandedProgramId(expandedProgramId === s.id ? null : s.id)}
                       className={`h-10 rounded-xl text-xs font-semibold border inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         expandedProgramId === s.id 
-                          ? 'bg-slate-900 text-white border-slate-900' 
+                          ? 'bg-[#1E60D5] text-white border-[#1E60D5]' 
                           : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80 shadow-2xs'
                       }`}
                     >
@@ -736,9 +732,9 @@ export default function OverviewTab({
                       type="button"
                       disabled={isCurrentProcessing}
                       onClick={(e) => handleSetAttendance(e, s, 'missed')}
-                      className={`h-10 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer ${
+                      className={`h-10 px-3.5 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer ${
                         currentStatus === 'missed'
-                          ? 'bg-slate-800 text-white shadow-xs'
+                          ? 'bg-rose-500 text-white shadow-xs'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
                       }`}
                     >
@@ -761,7 +757,7 @@ export default function OverviewTab({
                         {(s.assigned_program?.days?.[Object.keys(s.assigned_program?.days || {})[0]]?.exercises || []).map((ex, i) => (
                           <div key={i} className="flex justify-between items-center text-[11px] text-slate-700 bg-white p-2 rounded-lg border border-slate-200/50">
                             <span className="truncate pr-2 font-medium">{i + 1}. {ex.name}</span>
-                            <span className="font-mono text-slate-900 shrink-0 text-[10.5px]">
+                            <span className="font-mono text-slate-800 shrink-0 text-[10.5px]">
                               {ex.sets || 4} подх. по {ex.reps || 10} повт. {ex.weight ? `• ${ex.weight} кг` : ''}
                             </span>
                           </div>
@@ -778,13 +774,13 @@ export default function OverviewTab({
                             placeholder="Например: акцент на паузу внизу, разминка 10 мин"
                             value={trainerNotes[s.id] ?? s.workout_comment ?? ''}
                             onChange={(e) => setTrainerNotes({ ...trainerNotes, [s.id]: e.target.value })}
-                            className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-[#1E60D5]"
+                            className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#1E60D5]"
                           />
                           <button
                             type="button"
                             disabled={savingNoteId === s.id}
                             onClick={() => handleSaveNote(s)}
-                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer active:scale-95 transition-all"
+                            className="px-3 py-1.5 bg-[#1E60D5] hover:bg-blue-600 text-white rounded-lg text-xs font-semibold cursor-pointer active:scale-95 transition-all"
                           >
                             {savingNoteId === s.id ? '...' : 'Ок'}
                           </button>
@@ -799,12 +795,12 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 9. КОММУНИКАЦИЯ: СТРОГОЕ ВЫРАВНИВАНИЕ ПО ЦЕНТРАЛЬНОЙ ОСИ И ТЕЛЕГРАМ-БОТ ИКОНКА */}
+      {/* 9. КОММУНИКАЦИЯ */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bot className="w-4 h-4 text-slate-700 stroke-[2] shrink-0" />
-            <span className="text-xs font-bold text-slate-900 leading-none">
+            <Bot className="w-4 h-4 text-slate-600 stroke-[2] shrink-0" />
+            <span className="text-xs font-bold text-slate-800 leading-none">
               Коммуникация
             </span>
           </div>
@@ -834,7 +830,7 @@ export default function OverviewTab({
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white rounded-t-3xl sm:rounded-2xl border border-slate-200 w-full max-w-md p-4 space-y-3 shadow-xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-900">Ссылка для подопечного</h3>
+              <h3 className="text-xs font-bold text-slate-800">Ссылка для подопечного</h3>
               <button 
                 type="button"
                 onClick={() => setInviteModalOpen(false)}
