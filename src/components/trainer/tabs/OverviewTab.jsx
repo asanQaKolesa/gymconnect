@@ -14,9 +14,8 @@ import {
   Dumbbell, 
   Clock, 
   Activity, 
-  Plus, 
   MessageSquare,
-  Award
+  Star
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
@@ -37,7 +36,6 @@ export default function OverviewTab({
   onOpenPublicProfile, 
   onNavigateToCalendar, 
   onNavigateToBroadcasts, 
-  onOpenAddScheduleModal, 
   onRefresh 
 }) {
   const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -50,18 +48,12 @@ export default function OverviewTab({
     return `${day}.${month}.${year}`;
   }, []);
 
-  const currentDayName = useMemo(() => {
-    const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-    return days[new Date().getDay()];
-  }, []);
-
   const currentDayShort = useMemo(() => {
     const map = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     return map[new Date().getDay()];
   }, []);
 
   const [selectedDayFilter, setSelectedDayFilter] = useState(currentDayShort);
-  // statusMap: { [studentId]: 'attended' | 'missed' }
   const [statusMap, setStatusMap] = useState({});
   const [processingId, setProcessingId] = useState(null);
   const [expandedProgramId, setExpandedProgramId] = useState(null);
@@ -150,7 +142,6 @@ export default function OverviewTab({
     ? Math.round((todayCompletedCount / todayStudents.length) * 100) 
     : 0;
 
-  // Извлечение точного времени начала (например, "18:00")
   const getStartTime = (slot) => {
     if (!slot) return '18:00';
     const clean = slot.trim();
@@ -178,7 +169,6 @@ export default function OverviewTab({
     });
   }, [activeStudents]);
 
-  // Двусторонняя фиксация явки: "Был" или "Не был"
   const handleSetAttendance = async (e, student, newStatus) => {
     e.stopPropagation();
     const prevStatus = statusMap[student.id];
@@ -239,79 +229,62 @@ export default function OverviewTab({
   };
 
   return (
-    <div className="space-y-3.5 pb-28 select-none">
+    <div className="space-y-3 pb-28 select-none">
       
-      {/* 1. ШАПКА: ЧИСТАЯ КРУПНАЯ ДАТА + ПАРНЫЕ САПФИРОВЫЕ КНОПКИ */}
+      {/* 1. ШАПКА: ЧИСТАЯ ДАТА + КНОПКА ПРИГЛАСИТЬ */}
       <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <h2 className="text-[20px] font-bold font-mono tracking-tight text-slate-900 leading-none">
-            {formattedDate}
-          </h2>
-          <span className="text-[11px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">
-            {currentDayName}
-          </span>
-        </div>
+        <h2 className="text-[17px] font-bold font-mono tracking-tight text-slate-900 leading-none">
+          {formattedDate}
+        </h2>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => onOpenAddScheduleModal ? onOpenAddScheduleModal() : onNavigateToCalendar && onNavigateToCalendar()}
-            className="h-9 px-2.5 bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 active:scale-95 rounded-xl text-xs font-semibold flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
-            title="Добавить слот"
-          >
-            <Plus className="w-3.5 h-3.5 text-slate-500" />
-            <span>Слот</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setInviteModalOpen(true)}
-            className="h-9 px-3 bg-[#1E60D5] hover:bg-blue-600 active:scale-95 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-          >
-            <UserPlus className="w-3.5 h-3.5 stroke-[2.2]" />
-            <span>Пригласить</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setInviteModalOpen(true)}
+          className="h-8.5 px-3 bg-[#1E60D5] hover:bg-blue-600 active:scale-95 text-white rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+        >
+          <UserPlus className="w-3.5 h-3.5 stroke-[2.2]" />
+          <span>Пригласить</span>
+        </button>
       </div>
 
-      {/* 2. УВЕЛИЧЕННАЯ КАРТОЧКА ТРЕНЕРА (С ФОКУСОМ НА СТАЖ, КАТЕГОРИЮ И ПРОСМОТРЫ) */}
+      {/* 2. КОМПАКТНЫЙ ПРОФИЛЬ ТРЕНЕРА (СТАТИСТИКА АНКЕТЫ) */}
       <div 
         onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
-        className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3.5 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
+        className="bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
       >
-        <div className="flex items-center gap-3.5 min-w-0 flex-1">
-          <div className="w-13 h-13 rounded-2xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center">
             {trainer?.avatar_url ? (
               <img src={trainer.avatar_url} alt="Аватар тренера" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-sm font-bold text-slate-700">
+              <span className="text-xs font-bold text-slate-700">
                 {trainer?.full_name ? trainer.full_name.charAt(0).toUpperCase() : 'Т'}
               </span>
             )}
           </div>
 
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <h3 className="text-[14px] font-bold text-slate-900 truncate">
-                {trainer?.full_name || trainer?.first_name || 'Персональный наставник'}
-              </h3>
-              <Award className="w-3.5 h-3.5 text-[#1E60D5] shrink-0" />
-            </div>
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <h3 className="text-xs font-bold text-slate-900 truncate">
+              {trainer?.full_name || trainer?.first_name || 'Персональный наставник'}
+            </h3>
             
-            <div className="flex items-center gap-2 text-[11.5px] text-slate-500 truncate">
-              <span className="font-medium text-slate-700">Стаж {trainer?.experience_years || 5} лет</span>
-              <span>•</span>
-              <span className="flex items-center gap-1 shrink-0 text-slate-600">
-                <Eye className="w-3.5 h-3.5 text-slate-400" />
+            <div className="flex items-center gap-2 text-[11px] text-slate-500">
+              <span className="inline-flex items-center gap-1 text-slate-700 font-medium">
+                <Eye className="w-3 h-3 text-slate-400" />
                 <span>{trainer?.profile_views || 148} просмотров</span>
+              </span>
+              <span>•</span>
+              <span className="inline-flex items-center gap-1 text-slate-700 font-medium">
+                <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                <span>5.0</span>
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 text-[#1E60D5] shrink-0 font-semibold text-xs">
+        <div className="inline-flex items-center gap-1 text-[#1E60D5] shrink-0 font-semibold text-xs">
           <span>Визитка</span>
-          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
         </div>
       </div>
 
@@ -321,7 +294,7 @@ export default function OverviewTab({
           <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1 leading-snug">
             <span className="font-bold text-slate-900 block">
-              Внимание по подопечным
+              Внимание по абонементам
             </span>
             <span className="text-[11px] text-slate-500 mt-0.5 block">
               У {urgentAlerts.length} атлетов заканчивается блок занятий или требуется оплата.
@@ -330,24 +303,24 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* 4. ФИНАНСЫ И ПОДОПЕЧНЫЕ (МОНОХРОМНАЯ СЕТКА 2 КОЛОНКИ) */}
+      {/* 4. ФИНАНСЫ И ПОДОПЕЧНЫЕ (ВЫВЕРЕННЫЙ ЕДИНЫЙ ТИПОГРАФСКИЙ СТИЛЬ) */}
       <div className="grid grid-cols-2 gap-2.5">
-        <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+        <div className="bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-2.5">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
             <span className="text-xs font-bold text-slate-900">Финансы</span>
-            <span className="text-[10px] font-medium text-slate-400">Месяц</span>
+            <span className="text-[10.5px] font-medium text-slate-400">Месяц</span>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div>
-              <span className="text-[10.5px] text-slate-500 block">Общая выручка</span>
-              <p className="text-[15px] font-mono font-bold text-slate-900">
+              <span className="text-[10.5px] font-medium text-slate-500 block">Выручка</span>
+              <p className="text-[15px] font-mono font-bold text-slate-900 leading-tight">
                 {totalRevenue.toLocaleString()} ₸
               </p>
             </div>
 
             <div className="pt-1 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Аренда зала:</span>
+              <span className="text-slate-500 font-medium">Аренда зала:</span>
               <span className="font-mono font-medium text-slate-700">-{monthlyRent.toLocaleString()} ₸</span>
             </div>
 
@@ -358,75 +331,77 @@ export default function OverviewTab({
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+        <div className="bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-2.5">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
             <span className="text-xs font-bold text-slate-900">Подопечные</span>
-            <span className="text-[10px] font-mono font-bold text-slate-900">{students.length} всего</span>
+            <span className="text-[10.5px] font-mono font-bold text-slate-900">{students.length} всего</span>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div>
-              <span className="text-[10.5px] text-slate-500 block">Активная база</span>
-              <p className="text-[15px] font-mono font-bold text-slate-900">
-                {activeStudents.length} <span className="text-xs font-normal text-slate-500">атлетов</span>
+              <span className="text-[10.5px] font-medium text-slate-500 block">Активная база</span>
+              <p className="text-[15px] font-mono font-bold text-slate-900 leading-tight">
+                {activeStudents.length} <span className="text-xs font-normal text-slate-500 font-sans">атлетов</span>
               </p>
             </div>
 
             <div className="pt-1 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">На паузе:</span>
+              <span className="text-slate-500 font-medium">На паузе:</span>
               <span className="font-mono font-medium text-slate-700">{pausedStudents.length}</span>
             </div>
 
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">В архиве:</span>
+              <span className="text-slate-500 font-medium">В архиве:</span>
               <span className="font-mono font-medium text-slate-400">{leftStudents.length}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 5. ДИАГРАММА ЭФФЕКТИВНОСТИ И РЕТЕНШНА */}
-      <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-3">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+      {/* 5. ЭФФЕКТИВНОСТЬ НАСТАВНИКА (ПОНЯТНЫЕ МЕТРИКИ + МОНОХРОМ ИКОНКИ) */}
+      <div className="bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs space-y-2.5">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
           <div className="flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-[#1E60D5]" />
+            <Activity className="w-3.5 h-3.5 text-slate-600" />
             <h3 className="text-xs font-bold text-slate-900">
               Эффективность наставника
             </h3>
           </div>
-          <span className="text-[10px] font-semibold text-slate-400">Текущий цикл</span>
+          <span className="text-[10.5px] font-medium text-slate-400">За 30 дней</span>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
-            <span className="text-[10px] text-slate-500 block truncate">Ретеншн базы</span>
+          <div className="p-2 bg-slate-50 rounded-xl space-y-1">
+            <span className="text-[10px] font-medium text-slate-500 block truncate">Продления</span>
             <p className="text-sm font-mono font-bold text-slate-900">86%</p>
             <div className="w-full bg-slate-200 rounded-full h-1 overflow-hidden">
               <div className="bg-[#1E60D5] h-full rounded-full" style={{ width: '86%' }} />
             </div>
           </div>
 
-          <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
-            <span className="text-[10px] text-slate-500 block truncate">Явка атлетов</span>
+          <div className="p-2 bg-slate-50 rounded-xl space-y-1">
+            <span className="text-[10px] font-medium text-slate-500 block truncate">Посещаемость</span>
             <p className="text-sm font-mono font-bold text-slate-900">92%</p>
             <div className="w-full bg-slate-200 rounded-full h-1 overflow-hidden">
               <div className="bg-slate-700 h-full rounded-full" style={{ width: '92%' }} />
             </div>
           </div>
 
-          <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
-            <span className="text-[10px] text-slate-500 block truncate">Пиковый слот</span>
-            <p className="text-xs font-mono font-bold text-slate-900 truncate mt-0.5">18:00–21:00</p>
-            <span className="text-[9px] text-slate-400 block truncate">Основная плотность</span>
+          <div className="p-2 bg-slate-50 rounded-xl space-y-1">
+            <span className="text-[10px] font-medium text-slate-500 block truncate">Загрузка графика</span>
+            <p className="text-sm font-mono font-bold text-slate-900">74%</p>
+            <div className="w-full bg-slate-200 rounded-full h-1 overflow-hidden">
+              <div className="bg-slate-500 h-full rounded-full" style={{ width: '74%' }} />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 6. ГРАФИК НАГРУЗКИ НЕДЕЛИ */}
-      <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2.5">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+      {/* 6. ГРАФИК НЕДЕЛИ */}
+      <div className="bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs space-y-2">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
           <div className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-slate-500" />
+            <Calendar className="w-3.5 h-3.5 text-slate-600" />
             <h3 className="text-xs font-bold text-slate-900">
               График недели
             </h3>
@@ -441,7 +416,7 @@ export default function OverviewTab({
             <button
               type="button"
               onClick={() => onNavigateToCalendar ? onNavigateToCalendar() : setSelectedDayFilter('all')}
-              className="text-[10.5px] font-semibold text-[#1E60D5] hover:text-blue-700 flex items-center gap-0.5 cursor-pointer"
+              className="text-[10.5px] font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer"
             >
               <span>Все дни</span>
               <ChevronRight className="w-3 h-3" />
@@ -494,11 +469,11 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 7. ТРЕНИРОВКИ НА СЕГОДНЯ: ВРЕМЯ И ФОРМАТ ТАБАМИ, РАЗДЕЛЬНЫЕ КНОПКИ ЯВКИ */}
+      {/* 7. ТРЕНИРОВКИ НА СЕГОДНЯ: ВРЕМЯ И ФОРМАТ ТАБАМИ, БЫЛ / НЕ БЫЛ */}
       <div className="bg-white rounded-2xl border border-slate-200/70 shadow-xs overflow-hidden">
-        <div className="p-3.5 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-3 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <Dumbbell className="w-3.5 h-3.5 text-[#1E60D5]" />
+            <Dumbbell className="w-3.5 h-3.5 text-slate-600" />
             <h3 className="text-xs font-bold text-slate-900">
               {selectedDayFilter === 'all' 
                 ? 'Все подопечные' 
@@ -512,7 +487,7 @@ export default function OverviewTab({
           <button
             type="button"
             onClick={() => onNavigateToCalendar && onNavigateToCalendar()}
-            className="text-[11px] font-semibold text-[#1E60D5] hover:text-blue-700 flex items-center gap-0.5 cursor-pointer"
+            className="text-[11px] font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer"
           >
             <span>В расписание</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -521,20 +496,19 @@ export default function OverviewTab({
 
         <div className="divide-y divide-slate-100">
           {displayedStudents.length === 0 ? (
-            <div className="py-10 text-center space-y-1.5">
-              <Clock className="w-6 h-6 text-slate-300 mx-auto stroke-[1.5]" />
+            <div className="py-8 text-center space-y-1">
+              <Clock className="w-5 h-5 text-slate-300 mx-auto stroke-[1.5]" />
               <p className="text-xs text-slate-500">На этот день тренировок не запланировано</p>
             </div>
           ) : (
             displayedStudents.map((s) => {
-              const currentStatus = statusMap[s.id]; // 'attended' | 'missed' | undefined
+              const currentStatus = statusMap[s.id];
               const isCurrentProcessing = processingId === s.id;
               const startTime = getStartTime(s.workout_time_slot);
               const formatLabel = getFormatLabel(s);
 
               return (
-                <div key={s.id} className="p-3.5 space-y-3">
-                  {/* Верхняя строка: аватар, имя, формат и точное время плашками */}
+                <div key={s.id} className="p-3 space-y-2.5">
                   <div 
                     onClick={() => onSelectStudent && onSelectStudent(s)}
                     className="flex items-center justify-between gap-3 cursor-pointer"
@@ -555,12 +529,11 @@ export default function OverviewTab({
                           {s.full_name || 'Без имени'}
                         </h4>
                         
-                        {/* Табы формата и точного времени начала */}
                         <div className="flex items-center gap-1.5">
                           <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold">
                             {formatLabel}
                           </span>
-                          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-[#1E60D5] text-[10px] font-mono font-bold flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-[#1E60D5] text-[10px] font-mono font-bold inline-flex items-center gap-1">
                             <Clock className="w-2.5 h-2.5" />
                             {startTime}
                           </span>
@@ -571,12 +544,12 @@ export default function OverviewTab({
                     <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </div>
 
-                  {/* Нижняя панель действий: План тренировки + Был (зелёный) + Не был (красный) */}
+                  {/* Нижняя панель действий */}
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => setExpandedProgramId(expandedProgramId === s.id ? null : s.id)}
-                      className={`h-9 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      className={`h-8.5 px-3 rounded-xl text-xs font-semibold border inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         expandedProgramId === s.id 
                           ? 'bg-[#1E60D5] text-white border-[#1E60D5]' 
                           : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80'
@@ -586,12 +559,11 @@ export default function OverviewTab({
                       <span>План</span>
                     </button>
 
-                    {/* Кнопка Был на занятии (Sport Green) */}
                     <button
                       type="button"
                       disabled={isCurrentProcessing}
                       onClick={(e) => handleSetAttendance(e, s, 'attended')}
-                      className={`flex-1 h-9 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all active:scale-98 cursor-pointer ${
+                      className={`flex-1 h-8.5 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1 transition-all active:scale-98 cursor-pointer ${
                         currentStatus === 'attended'
                           ? 'bg-[#16A34A] text-white shadow-xs'
                           : 'bg-emerald-50 hover:bg-emerald-100 text-[#16A34A] border border-emerald-200/80'
@@ -601,12 +573,11 @@ export default function OverviewTab({
                       <span>Был</span>
                     </button>
 
-                    {/* Кнопка Не был на занятии (Danger Rose) */}
                     <button
                       type="button"
                       disabled={isCurrentProcessing}
                       onClick={(e) => handleSetAttendance(e, s, 'missed')}
-                      className={`h-9 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all active:scale-98 cursor-pointer ${
+                      className={`h-8.5 px-3 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1 transition-all active:scale-98 cursor-pointer ${
                         currentStatus === 'missed'
                           ? 'bg-[#E11D48] text-white shadow-xs'
                           : 'bg-rose-50 hover:bg-rose-100 text-[#E11D48] border border-rose-200/80'
@@ -618,8 +589,8 @@ export default function OverviewTab({
                   </div>
 
                   {expandedProgramId === s.id && (
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-xs space-y-2 animate-in fade-in">
-                      <div className="font-bold text-slate-800 flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                    <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/60 text-xs space-y-1.5 animate-in fade-in">
+                      <div className="font-bold text-slate-800 flex items-center justify-between border-b border-slate-200/60 pb-1">
                         <span>{s.assigned_program?.days?.[Object.keys(s.assigned_program?.days || {})[0]]?.title || 'Программа'}</span>
                         <span className="text-[10px] text-slate-400 font-normal">
                           {s.assigned_program?.days?.[Object.keys(s.assigned_program?.days || {})[0]]?.exercises?.length || 0} упр.
@@ -642,31 +613,29 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 8. СВЯЗЬ С АТЛЕТАМИ: БЫСТРЫЙ ПЕРЕХОД НА СТРАНИЦУ РАССЫЛОК */}
-      <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2.5">
+      {/* 8. СВЯЗЬ С АТЛЕТАМИ: ВЫВЕРЕННАЯ ЦЕНТРОВКА ИКОНОК И ТЕКСТА */}
+      <div className="bg-white rounded-2xl p-3 border border-slate-200/70 shadow-xs space-y-2">
         <div className="flex items-center gap-1.5">
-          <MessageSquare className="w-3.5 h-3.5 text-[#1E60D5]" />
-          <span className="text-xs font-bold text-slate-900 block">
+          <MessageSquare className="w-3.5 h-3.5 text-slate-600" />
+          <span className="text-xs font-bold text-slate-900 block leading-none">
             Коммуникация
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Главная кнопка теперь открывает страницу рассылок со списком записанных на сегодня */}
           <button
             type="button"
             onClick={() => onNavigateToBroadcasts && onNavigateToBroadcasts({ filter: 'today' })}
-            className="flex-1 h-10 px-3 bg-[#1E60D5] hover:bg-blue-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer shadow-xs"
+            className="flex-1 h-9.5 px-3 bg-[#1E60D5] hover:bg-blue-600 text-white rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer shadow-xs leading-none"
           >
             <Send className="w-3.5 h-3.5 shrink-0" />
             <span>Напомнить о тренировке</span>
           </button>
 
-          {/* Квадратная кнопка перехода ко всем шаблонам (оплата, КБЖУ, отмена и т.д.) */}
           <button
             type="button"
             onClick={() => onNavigateToBroadcasts && onNavigateToBroadcasts({ filter: 'all_templates' })}
-            className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 hover:bg-slate-50 active:scale-95 text-slate-700 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-2xs"
+            className="w-9.5 h-9.5 rounded-xl bg-white border border-slate-200/80 hover:bg-slate-50 active:scale-95 text-slate-700 inline-flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-2xs"
             title="Все шаблоны напоминаний"
           >
             <SlidersHorizontal className="w-4 h-4 text-slate-600" />
