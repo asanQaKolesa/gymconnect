@@ -71,7 +71,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
     workout_days: ['Пн', 'Ср', 'Пт'],
     workout_shift: 'Вечер',
     exact_time: '18:30',
-    workout_time_slot: 'Вечер (16:00 - 21:00)',
+    workout_time_slot: 'Вечер',
     injury_notes: '',
 
     gymbro_search: false,
@@ -240,7 +240,8 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         localStorage.setItem('gymconnect_telegram_id', tgId);
       }
 
-      const compositeTimeSlot = `${formData.workout_shift} (${formData.exact_time})`;
+      // Сохраняем в workout_time_slot чистое название смены без скобок
+      const cleanShiftOnly = formData.workout_shift;
 
       const newProfilePayload = {
         telegram_id: tgId,
@@ -274,8 +275,9 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
         workout_days: formData.workout_days,
         workout_shift: formData.workout_shift,
         exact_time: formData.exact_time,
-        workout_time_slot: compositeTimeSlot,
+        workout_time_slot: cleanShiftOnly,
         custom_time: formData.exact_time,
+        workout_time: formData.exact_time,
         injury_notes: formData.injury_notes ? formData.injury_notes.trim() : '',
         parq_notes: formData.injury_notes ? formData.injury_notes.trim() : '',
         gymbro_search: formData.gymbro_search,
@@ -304,7 +306,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
 
           if (coachData && coachData.telegram_id) {
             const athleteFullName = `${formData.first_name} ${formData.last_name || ''}`.trim();
-            const coachMessage = `🎉 <b>Новый ученик в вашей CoachOS!</b>\n\nАтлет <b>${escapeHtml(athleteFullName)}</b> завершил регистрацию в GymConnect и привязан к вам.\nЗал: <b>${escapeHtml(selectedGym)}</b>\nВремя: <b>${escapeHtml(compositeTimeSlot)}</b>`;
+            const coachMessage = `🎉 <b>Новый ученик в вашей CoachOS!</b>\n\nАтлет <b>${escapeHtml(athleteFullName)}</b> завершил регистрацию в GymConnect и привязан к вам.\nЗал: <b>${escapeHtml(selectedGym)}</b>\nВремя: <b>${escapeHtml(formData.workout_shift)} • ${escapeHtml(formData.exact_time)}</b>`;
             sendTelegramMessage(String(coachData.telegram_id), coachMessage).catch(() => {});
           }
         } catch (e) {
@@ -875,7 +877,7 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
               </div>
             </div>
 
-            {/* Раздельный выбор смены и точного времени */}
+            {/* Чистые смены тренировок + точное время без скобок */}
             <div className="grid grid-cols-2 gap-2.5">
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">
@@ -883,13 +885,17 @@ export default function RegisterProfilePage({ currentLang = 'ru', onComplete }) 
                 </label>
                 <select
                   value={formData.workout_shift}
-                  onChange={e => setFormData({ ...formData, workout_shift: e.target.value })}
+                  onChange={e => setFormData({ 
+                    ...formData, 
+                    workout_shift: e.target.value,
+                    workout_time_slot: e.target.value 
+                  })}
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
                 >
-                  <option value="Утро">Утро (07:00 - 12:00)</option>
-                  <option value="День">День (12:00 - 16:00)</option>
-                  <option value="Вечер">Вечер (16:00 - 21:00)</option>
-                  <option value="Поздний вечер">Поздний вечер (после 21:00)</option>
+                  <option value="Утро">Утро</option>
+                  <option value="Обед">Обед</option>
+                  <option value="После обеда">После обеда</option>
+                  <option value="Вечер">Вечер</option>
                 </select>
               </div>
 
