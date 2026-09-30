@@ -10,7 +10,7 @@ import {
   Activity, 
   Send,
   Target,
-  LineChart as ChartIcon,
+  BarChart3,
   Sparkles,
   Clock
 } from 'lucide-react';
@@ -23,19 +23,24 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
 
   const fullName = student?.full_name || `${student?.first_name || ''} ${student?.last_name || ''}`.trim() || 'Атлет';
 
-  // Базовые параметры
-  const heightCm = Number(student?.height || 178);
+  // Базовые параметры с безопасными дефолтами
+  const heightCm = Number(student?.height) > 0 ? Number(student.height) : 178;
   const startWeight = Number(student?.weight || student?.start_weight || 75.0);
   const prevWeight = Number((startWeight - 2.8).toFixed(1));
   const currentWeight = Number(student?.current_weight || student?.weight || 71.5);
   const targetWeight = Number(student?.target_weight || 68.0);
 
   const formatNumericDate = (dateVal) => {
-    const d = dateVal ? new Date(dateVal) : new Date();
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}.${month}.${year}`;
+    try {
+      const d = dateVal ? new Date(dateVal) : new Date();
+      if (isNaN(d.getTime())) return '01.08.2026';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}.${month}.${year}`;
+    } catch {
+      return '01.08.2026';
+    }
   };
 
   const startDateFormatted = student?.created_at ? formatNumericDate(student.created_at) : '01.08.2026';
@@ -43,40 +48,42 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
   const currentDateFormatted = formatNumericDate(new Date());
 
   // Матрица анатомических замеров
-  const measurementRows = [
-    { key: 'waist', label: 'Талия (живот)', start: 86.0, prev: 82.5, current: Number(student?.waist || 80.0), unit: 'см' },
-    { key: 'chest', label: 'Грудь', start: 101.0, prev: 99.5, current: Number(student?.chest || 99.0), unit: 'см' },
-    { key: 'hips', label: 'Бёдра (ягодицы)', start: 103.0, prev: 99.0, current: Number(student?.hips || 97.5), unit: 'см' },
-    { key: 'neck', label: 'Шея', start: 39.0, prev: 38.5, current: Number(student?.neck || 38.0), unit: 'см' },
-    { key: 'biceps_r', label: 'Правый бицепс', start: 34.5, prev: 35.5, current: Number(student?.biceps_right || 36.0), unit: 'см' },
-    { key: 'biceps_l', label: 'Левый бицепс', start: 34.0, prev: 35.0, current: Number(student?.biceps_left || 35.5), unit: 'см' },
-    { key: 'thigh_r', label: 'Правое бедро', start: 58.5, prev: 57.0, current: Number(student?.thigh_right || 56.0), unit: 'см' },
-    { key: 'thigh_l', label: 'Левое бедро', start: 58.0, prev: 56.5, current: Number(student?.thigh_left || 55.5), unit: 'см' },
-    { key: 'calf_r', label: 'Правая икра', start: 38.0, prev: 37.5, current: Number(student?.calf_right || 37.0), unit: 'см' },
-    { key: 'calf_l', label: 'Левая икра', start: 38.0, prev: 37.5, current: Number(student?.calf_left || 37.0), unit: 'см' }
-  ];
+  const measurementRows = useMemo(() => [
+    { key: 'waist', label: 'Талия (живот)', start: 86.0, prev: 82.5, current: Number(student?.waist) || 80.0, unit: 'см' },
+    { key: 'chest', label: 'Грудь', start: 101.0, prev: 99.5, current: Number(student?.chest) || 99.0, unit: 'см' },
+    { key: 'hips', label: 'Бёдра (ягодицы)', start: 103.0, prev: 99.0, current: Number(student?.hips) || 97.5, unit: 'см' },
+    { key: 'neck', label: 'Шея', start: 39.0, prev: 38.5, current: Number(student?.neck) || 38.0, unit: 'см' },
+    { key: 'biceps_r', label: 'Правый бицепс', start: 34.5, prev: 35.5, current: Number(student?.biceps_right) || 36.0, unit: 'см' },
+    { key: 'biceps_l', label: 'Левый бицепс', start: 34.0, prev: 35.0, current: Number(student?.biceps_left) || 35.5, unit: 'см' },
+    { key: 'thigh_r', label: 'Правое бедро', start: 58.5, prev: 57.0, current: Number(student?.thigh_right) || 56.0, unit: 'см' },
+    { key: 'thigh_l', label: 'Левое бедро', start: 58.0, prev: 56.5, current: Number(student?.thigh_left) || 55.5, unit: 'см' },
+    { key: 'calf_r', label: 'Правая икра', start: 38.0, prev: 37.5, current: Number(student?.calf_right) || 37.0, unit: 'см' },
+    { key: 'calf_l', label: 'Левая икра', start: 38.0, prev: 37.5, current: Number(student?.calf_left) || 37.0, unit: 'см' }
+  ], [student]);
 
-  // Расчёт пропорций и ИМТ
+  // Расчёт пропорций и ИМТ с защитой от деления на 0
   const startWaist = 86.0;
-  const currentWaist = Number(student?.waist || 80.0);
+  const currentWaist = Number(student?.waist) || 80.0;
   const startChest = 101.0;
-  const currentChest = Number(student?.chest || 99.0);
-  const startHips = 103.0;
-  const currentHips = Number(student?.hips || 97.5);
+  const currentChest = Number(student?.chest) || 99.0;
+  const currentHips = Number(student?.hips) || 97.5;
 
-  const startVTaper = (startChest / startWaist).toFixed(2);
-  const currentVTaper = (currentChest / currentWaist).toFixed(2);
-  const currentWHR = (currentWaist / currentHips).toFixed(2);
-  const currentBMI = (currentWeight / Math.pow(heightCm / 100, 2)).toFixed(1);
+  const startVTaper = startWaist > 0 ? (startChest / startWaist).toFixed(2) : '1.17';
+  const currentVTaper = currentWaist > 0 ? (currentChest / currentWaist).toFixed(2) : '1.24';
+  const currentWHR = currentHips > 0 ? (currentWaist / currentHips).toFixed(2) : '0.82';
+  const currentBMI = heightCm > 0 ? (currentWeight / Math.pow(heightCm / 100, 2)).toFixed(1) : '22.6';
 
   const activeMetric = useMemo(() => {
     return measurementRows.find(m => m.key === selectedMetricKey) || measurementRows[0];
   }, [selectedMetricKey, measurementRows]);
 
-  // Генератор SVG кривых
+  // Безопасный генератор SVG кривых
   const generateSvgChart = (p1, p2, p3, minVal, maxVal, width = 340, height = 115) => {
-    const range = (maxVal - minVal) || 1;
-    const getY = (val) => height - 22 - ((val - minVal) / range) * (height - 44);
+    const range = (maxVal - minVal) > 0 ? (maxVal - minVal) : 1;
+    const getY = (val) => {
+      const clampedVal = isNaN(val) ? minVal : val;
+      return height - 22 - ((clampedVal - minVal) / range) * (height - 44);
+    };
 
     const x1 = 36;
     const x2 = width / 2;
@@ -93,20 +100,19 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
   };
 
   const weightChart = useMemo(() => {
-    const all = [startWeight, prevWeight, currentWeight, targetWeight];
+    const all = [startWeight, prevWeight, currentWeight, targetWeight].filter(n => !isNaN(n));
     const min = Math.min(...all) - 1.2;
     const max = Math.max(...all) + 1.2;
     return generateSvgChart(startWeight, prevWeight, currentWeight, min, max, 340, 115);
   }, [startWeight, prevWeight, currentWeight, targetWeight]);
 
   const dynamicMetricChart = useMemo(() => {
-    const all = [activeMetric.start, activeMetric.prev, activeMetric.current];
+    const all = [activeMetric.start, activeMetric.prev, activeMetric.current].filter(n => !isNaN(n));
     const min = Math.min(...all) - 1.0;
     const max = Math.max(...all) + 1.0;
     return generateSvgChart(activeMetric.start, activeMetric.prev, activeMetric.current, min, max, 340, 105);
   }, [activeMetric]);
 
-  // Хронология с компактными комментариями
   const [timelineNotes, setTimelineNotes] = useState({
     '0': 'Отличный темп, талия уменьшается без потери плечевого пояса.',
     '1': 'Добавлен белок в рацион, силовые в тяге растут.',
@@ -159,6 +165,64 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
       alert('У ученика не привязан Telegram ID для автоматического бота.');
     }
   };
+
+  // Хронология срезов
+  const timelineHistory = [
+    {
+      date: currentDateFormatted,
+      title: 'Актуальный замер',
+      weight: currentWeight,
+      note: 'Хорошая прорисовка талии, симметрия рук стабильна.',
+      stats: [
+        { label: 'Талия', val: '80.0 см' },
+        { label: 'Грудь', val: '99.0 см' },
+        { label: 'Бёдра', val: '97.5 см' },
+        { label: 'Шея', val: '38.0 см' },
+        { label: 'Пр. бицепс', val: '36.0 см' },
+        { label: 'Лев. бицепс', val: '35.5 см' },
+        { label: 'Пр. бедро', val: '56.0 см' },
+        { label: 'Лев. бедро', val: '55.5 см' },
+        { label: 'Пр. икра', val: '37.0 см' },
+        { label: 'Лев. икра', val: '37.0 см' }
+      ]
+    },
+    {
+      date: prevDateFormatted,
+      title: 'Прошлый замер (-2 нед)',
+      weight: prevWeight,
+      note: 'Увеличен белок в рационе, рабочий вес в тяге поднят.',
+      stats: [
+        { label: 'Талия', val: '82.5 см' },
+        { label: 'Грудь', val: '99.5 см' },
+        { label: 'Бёдра', val: '99.0 см' },
+        { label: 'Шея', val: '38.5 см' },
+        { label: 'Пр. бицепс', val: '35.5 см' },
+        { label: 'Лев. бицепс', val: '35.0 см' },
+        { label: 'Пр. бедро', val: '57.0 см' },
+        { label: 'Лев. бедро', val: '56.5 см' },
+        { label: 'Пр. икра', val: '37.5 см' },
+        { label: 'Лев. икра', val: '37.5 см' }
+      ]
+    },
+    {
+      date: startDateFormatted,
+      title: 'Стартовая фиксация',
+      weight: startWeight,
+      note: 'Первичный антропометрический срез при входе.',
+      stats: [
+        { label: 'Талия', val: '86.0 см' },
+        { label: 'Грудь', val: '101.0 см' },
+        { label: 'Бёдра', val: '103.0 см' },
+        { label: 'Шея', val: '39.0 см' },
+        { label: 'Пр. бицепс', val: '34.5 см' },
+        { label: 'Лев. бицепс', val: '34.0 см' },
+        { label: 'Пр. бедро', val: '58.5 см' },
+        { label: 'Лев. бедро', val: '58.0 см' },
+        { label: 'Пр. икра', val: '38.0 см' },
+        { label: 'Лев. икра', val: '38.0 см' }
+      ]
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 select-none pb-28">
@@ -273,7 +337,7 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
           <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-2">
             <div className="flex items-center justify-between text-[11px]">
               <span className="font-semibold text-slate-700 flex items-center gap-1">
-                <ChartIcon className="w-3.5 h-3.5 text-slate-500" />
+                <BarChart3 className="w-3.5 h-3.5 text-slate-500" />
                 <span>Тренд изменения массы</span>
               </span>
               <span className="font-mono text-emerald-700 font-bold">
@@ -536,7 +600,7 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
                   ))}
                 </div>
 
-                {/* КОММЕНТАРИЙ ТРЕНЕРА СТРОГО В ОДНУ СТРОКУ */}
+                {/* КОММЕНТАРИЙ ТРЕНЕРА В ОДНУ СТРОКУ */}
                 <div className="relative flex items-center">
                   <input
                     type="text"
@@ -559,7 +623,7 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
           </div>
         </div>
 
-        {/* 7. ФИРМЕННАЯ СИНЯЯ КНОПКА ЗАПРОСА В TELEGRAM (БЕЗ ЧЁРНОГО ЦВЕТА) */}
+        {/* 7. ФИРМЕННАЯ СИНЯЯ КНОПКА ЗАПРОСА В TELEGRAM */}
         <button
           type="button"
           onClick={handleRequestTelegram}
