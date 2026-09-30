@@ -5,27 +5,35 @@ import {
   Search, 
   UserPlus, 
   Users, 
-  Clock, 
-  CheckCircle2, 
-  PauseCircle, 
-  Archive, 
-  AlertCircle, 
   ChevronRight, 
-  Scale, 
-  Dumbbell, 
-  Phone, 
+  Copy, 
+  Check, 
+  X,
   Send,
+  PauseCircle,
   Building
 } from 'lucide-react';
 
 export default function AthletesScreen({ 
   students = [], 
+  trainer,
   onBack, 
-  onSelectStudent, 
-  onOpenAddModal 
+  onSelectStudent 
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'expiring' | 'paused' | 'archived'
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const cleanCoachNick = (trainer?.username || 'coach').replace(/[@\s]/g, '').trim().toLowerCase();
+  const botUsername = 'gymconnect_ala_bot';
+  const inviteLink = `https://t.me/${botUsername}?start=c_${cleanCoachNick}`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
 
   // KPI метрики базы
   const metrics = useMemo(() => {
@@ -47,21 +55,19 @@ export default function AthletesScreen({
     return { total, active, paused, archived, expiring };
   }, [students]);
 
-  // Фильтрация и поиск
+  // Фильтрация и живой поиск
   const filteredStudents = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
 
     return students.filter(s => {
-      // 1. Поиск по имени, tg, телефону, залу
       const fullName = (s.full_name || `${s.first_name || ''} ${s.last_name || ''}`).toLowerCase();
-      const tg = (s.username || s.telegram_username || s.trainer_username || '').toLowerCase();
+      const tg = (s.username || s.telegram_username || '').toLowerCase();
       const phone = (s.phone || s.whatsapp || '').replace(/\D/g, '');
       const gym = (s.gym || s.custom_gym || '').toLowerCase();
 
       const matchesSearch = !q || fullName.includes(q) || tg.includes(q) || phone.includes(q) || gym.includes(q);
       if (!matchesSearch) return false;
 
-      // 2. Статусный фильтр
       const st = (s.status || 'active').toLowerCase();
       const left = Number(s.left_trainings ?? s.remaining_workouts ?? 12);
       const isPending = s.payment_status === 'pending';
@@ -99,25 +105,25 @@ export default function AthletesScreen({
 
           <div className="text-center">
             <h1 className="text-sm font-bold text-slate-800">База атлетов</h1>
-            <p className="text-[10.5px] text-slate-400 font-medium">Досье, программы и история замеров</p>
+            <p className="text-[10.5px] text-slate-400 font-medium">Досье, абонементы и замеры</p>
           </div>
 
           <button
             type="button"
-            onClick={onOpenAddModal}
+            onClick={() => setInviteModalOpen(true)}
             className="w-9 h-9 rounded-xl bg-[#1E60D5] hover:bg-blue-600 text-white flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs"
-            title="Добавить ученика"
+            title="Пригласить атлета"
           >
             <UserPlus className="w-4 h-4 stroke-[2.2]" />
           </button>
         </div>
 
-        {/* СТРОКА ЖИВОГО ПОИСКА */}
+        {/* ЖИВОЙ ПОИСК */}
         <div className="mt-3 max-w-md mx-auto relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Поиск по имени, @телеграм, телефону или клубу..."
+            placeholder="Поиск по имени, @телеграм, телефону или залу..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-10 pl-9 pr-3 bg-slate-100/90 border border-slate-200/70 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-[#1E60D5] focus:bg-white transition-all placeholder:text-slate-400"
@@ -217,7 +223,7 @@ export default function AthletesScreen({
               <Users className="w-8 h-8 text-slate-300 mx-auto" />
               <h3 className="text-xs font-bold text-slate-700">Атлеты не найдены</h3>
               <p className="text-[11px] text-slate-400">
-                Попробуйте изменить запрос поиска или сбросить фильтры.
+                Попробуйте изменить поисковый запрос или отправьте ссылку-приглашение новому атлету.
               </p>
             </div>
           ) : (
@@ -276,7 +282,6 @@ export default function AthletesScreen({
                     <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </div>
 
-                  {/* Нижняя информационная плашка карточки */}
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
                     <div className="flex items-center gap-1.5">
                       <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">
@@ -308,6 +313,42 @@ export default function AthletesScreen({
         </div>
 
       </div>
+
+      {/* ШТОРКА ССЫЛКИ-ПРИГЛАШЕНИЯ ДЛЯ АВТОРЕГИСТРАЦИИ */}
+      {inviteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl border border-slate-200 w-full max-w-md p-4 space-y-3.5 shadow-xl animate-in slide-in-from-bottom duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-xs font-bold text-slate-800">
+                Пригласить подопечного в CRM
+              </h3>
+              <button
+                type="button"
+                onClick={() => setInviteModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Отправьте эту ссылку ученику в Telegram. Он откроет бота, заполнит анкету (цели, график, замеры) и <strong>автоматически появится в вашей CRM</strong>. Вручную ничего заполнять не нужно!
+            </p>
+
+            <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-2">
+              <span className="text-[11px] font-mono text-slate-700 truncate">{inviteLink}</span>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="h-9 px-3.5 bg-[#1E60D5] hover:bg-blue-600 text-white rounded-xl text-xs font-semibold shrink-0 cursor-pointer active:scale-95 transition-all shadow-xs inline-flex items-center gap-1.5"
+              >
+                {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedLink ? 'Скопировано' : 'Копировать'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
