@@ -330,35 +330,7 @@ export default function OverviewTab({
         </button>
       </div>
 
-      {/* 2. НОВЫЕ ЗАЯВКИ ИЗ КАТАЛОГА */}
-      <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
-            <UserCheck className="w-4 h-4 stroke-[2]" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-800">Новые заявки</span>
-              <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-[#1E60D5] text-[10px] font-mono font-bold leading-none">
-                +2
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500 truncate mt-0.5">
-              Запросы на пробное занятие
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
-          className="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0"
-        >
-          Открыть
-        </button>
-      </div>
-
-      {/* 3. ПРОФИЛЬ ТРЕНЕРА */}
+      {/* 2. ПРОФИЛЬ ТРЕНЕРА (ПОДНЯТ ВВЕРХ, С УВЕЛИЧЕННЫМ ИМЕНЕМ) */}
       <div 
         onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
         className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
@@ -400,6 +372,34 @@ export default function OverviewTab({
         </div>
       </div>
 
+      {/* 3. НОВЫЕ ЗАЯВКИ ИЗ КАТАЛОГА (РАСПОЛОЖЕНЫ ПОД ПРОФИЛЕМ ТРЕНЕРА) */}
+      <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+            <UserCheck className="w-4 h-4 stroke-[2]" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-800">Новые заявки</span>
+              <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-[#1E60D5] text-[10px] font-mono font-bold leading-none">
+                +2
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 truncate mt-0.5">
+              Запросы на пробное занятие
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
+          className="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0"
+        >
+          Открыть
+        </button>
+      </div>
+
       {/* 4. ОПЕРАТИВНОЕ ПРЕДУПРЕЖДЕНИЕ */}
       {urgentAlerts.length > 0 && (
         <div className="p-3 bg-white border border-slate-200 rounded-2xl flex items-start gap-2.5 text-xs shadow-xs">
@@ -415,7 +415,7 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* 5. ФИНАНСЫ И АТЛЕТЫ (ВМЕСТО ДЛИННОГО "ПОДОПЕЧНЫЕ", БЕЗ ТРЕХ ТОЧЕК) */}
+      {/* 5. ФИНАНСЫ И АТЛЕТЫ */}
       <div className="grid grid-cols-2 gap-2.5">
         <div 
           onClick={() => onNavigateToFinance && onNavigateToFinance()}
@@ -502,7 +502,7 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 6. КАЧЕСТВО ВЕДЕНИЯ: СБАЛАНСИРОВАННЫЕ ЦИФРЫ (FONT-SEMIBOLD ВМЕСТО ГЛУХОГО BOLD) */}
+      {/* 6. КАЧЕСТВО ВЕДЕНИЯ */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2.5">
         <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
           <div className="flex items-center gap-1.5">
@@ -757,7 +757,7 @@ export default function OverviewTab({
                     </button>
                   </div>
 
-                  {/* Раскрывающийся план тренировки */}
+                  {/* Раскрывающийся план тренировки: 2 ряда (название полностью + подходы/повторы/вес) */}
                   {expandedProgramId === s.id && (
                     <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-xs space-y-2.5 animate-in fade-in">
                       <div className="font-bold text-slate-800 flex items-center justify-between border-b border-slate-200/60 pb-1.5">
@@ -767,17 +767,34 @@ export default function OverviewTab({
                         </span>
                       </div>
 
-                      <div className="space-y-1.5">
+                      {/* Список упражнений: 1 ряд — название полностью, 2 ряд — плашки параметров */}
+                      <div className="space-y-2">
                         {(s.assigned_program?.days?.[Object.keys(s.assigned_program?.days || {})[0]]?.exercises || []).map((ex, i) => (
-                          <div key={i} className="flex justify-between items-center text-[11px] text-slate-700 bg-white p-2 rounded-lg border border-slate-200/50">
-                            <span className="truncate pr-2 font-medium">{i + 1}. {ex.name}</span>
-                            <span className="font-mono text-slate-700 shrink-0 text-[10.5px]">
-                              {ex.sets || 4} подх. по {ex.reps || 10} повт. {ex.weight ? `• ${ex.weight} кг` : ''}
-                            </span>
+                          <div key={i} className="bg-white p-2.5 rounded-xl border border-slate-200/60 space-y-1.5">
+                            {/* Ряд 1: Название упражнения во всю ширину */}
+                            <div className="font-semibold text-slate-800 text-[12px] leading-snug">
+                              {i + 1}. {ex.name}
+                            </div>
+
+                            {/* Ряд 2: Подходы, повторения и рабочий вес без сокращений */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="px-2 py-0.5 bg-slate-100 rounded-md text-[10.5px] font-mono text-slate-700">
+                                {ex.sets || 4} подхода
+                              </span>
+                              <span className="px-2 py-0.5 bg-slate-100 rounded-md text-[10.5px] font-mono text-slate-700">
+                                {ex.reps || 10} повторений
+                              </span>
+                              {ex.weight ? (
+                                <span className="px-2 py-0.5 bg-blue-50 text-[#1E60D5] rounded-md text-[10.5px] font-mono font-semibold">
+                                  {ex.weight} кг
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
                         ))}
                       </div>
 
+                      {/* Заметка тренера к тренировке */}
                       <div className="pt-1.5 border-t border-slate-200/60 space-y-1.5">
                         <label className="text-[10px] font-semibold text-slate-600 block">
                           Заметка к занятию (видна подопечному в боте):
