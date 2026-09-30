@@ -19,15 +19,15 @@ import {
   Clock, 
   ExternalLink, 
   ClipboardList, 
-  Trash2,
-  ChevronDown,
-  Send,
-  Timer,
-  PenTool,
-  Palette,
-  Type,
-  AlignLeft,
-  CheckCircle2
+  Trash2, 
+  ChevronDown, 
+  Send, 
+  Timer, 
+  PenTool, 
+  Palette, 
+  Type, 
+  BookOpen, 
+  Layers 
 } from 'lucide-react';
 
 export default function DesignSystemShowcase({ onBack }) {
@@ -108,6 +108,7 @@ export default function DesignSystemShowcase({ onBack }) {
   const [weight, setWeight] = useState(60);
   const [restTime, setRestTime] = useState(90);
   
+  const [searchQuery, setSearchQuery] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
   const [toastText, setToastText] = useState(null);
   
@@ -133,12 +134,12 @@ export default function DesignSystemShowcase({ onBack }) {
   return (
     <div className="min-h-screen bg-[#F2F2F7] text-slate-900 pb-36 font-sans select-none antialiased relative">
       
-      {/* 1. ТОСТ DYNAMIC ISLAND */}
+      {/* 1. ТОСТ DYNAMIC ISLAND (СВЕТЛЫЙ МАТОВЫЙ ГЛАССМОРФИЗМ) */}
       {toastText && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-200 max-w-sm w-full px-4 pointer-events-none">
           <div className="bg-white/95 backdrop-blur-2xl text-slate-900 px-4 py-3 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.1)] border border-slate-200 flex items-center justify-between gap-3 pointer-events-auto">
             <div className="flex items-center gap-2.5 text-xs font-semibold whitespace-nowrap min-w-0">
-              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-[#1E60D5] animate-pulse shrink-0" />
               <span className="truncate">{toastText}</span>
             </div>
             <button 
@@ -152,7 +153,7 @@ export default function DesignSystemShowcase({ onBack }) {
         </div>
       )}
 
-      {/* 2. ШАПКА */}
+      {/* 2. ШАПКА ВИЗУАЛЬНОЙ СИСТЕМЫ */}
       <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-2xl border-b border-slate-200/80 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5 min-w-0">
           {onBack && (
@@ -167,76 +168,200 @@ export default function DesignSystemShowcase({ onBack }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="text-sm font-bold text-slate-900 tracking-tight whitespace-nowrap truncate">
-                GymConnect UI Standards
+                GymConnect Брендбук
               </h1>
-              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/70 whitespace-nowrap shrink-0">
-                1-Line Law
+              <span className="text-[10.5px] font-bold text-[#1E60D5] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/70 whitespace-nowrap shrink-0">
+                Sapphire v5.0
               </span>
             </div>
             <p className="text-[11px] text-slate-500 font-normal mt-0.5 truncate whitespace-nowrap">
-              Строгое правило одной строки для заголовков
+              Официальная дизайн-система CoachOS CRM
             </p>
           </div>
         </div>
 
-        <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+        <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-[#1E60D5] flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
           GC
         </div>
       </div>
 
       <div className="max-w-md mx-auto p-3.5 space-y-4">
 
-        {/* ================= РАЗДЕЛ 0: ДЕМОНСТРАЦИЯ ПРАВИЛ ВЁРСТКИ ================= */}
+        {/* ================= РАЗДЕЛ А: СПЕЦИФИКАЦИЯ ЦВЕТОВ (МИНИ-БРЕНДБУК) ================= */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-            <AlignLeft className="w-4 h-4 text-blue-600 shrink-0" />
-            <h3 className="text-xs font-bold text-slate-800 whitespace-nowrap truncate">
-              Правила вёрстки: Заголовок vs Описание
-            </h3>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-[#1E60D5] shrink-0" />
+              <h3 className="text-xs font-bold text-slate-800">
+                Цветовые токены бренда (Color Palette)
+              </h3>
+            </div>
+            <span className="text-[10px] text-slate-400 font-mono">6 системных цветов</span>
           </div>
 
-          {/* Пример правила 1 */}
-          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-1">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10.5px] font-bold text-blue-700 whitespace-nowrap shrink-0">
-                Правило 1 (Строго 1 строка):
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap shrink-0">
-                truncate
-              </span>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            
+            {/* 1. Sapphire Primary */}
+            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-900 text-xs">Sapphire Blue</span>
+                <div className="w-5 h-5 rounded-lg bg-[#1E60D5] shadow-xs shrink-0" />
+              </div>
+              <div>
+                <span className="text-[11px] font-mono font-bold text-[#1E60D5] block">#1E60D5</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Кнопки, активные табы</span>
+              </div>
             </div>
-            {/* Даже гигантское название не ломает строку */}
-            <p className="text-[13.5px] font-bold text-slate-900 truncate whitespace-nowrap">
-              Жим штанги на наклонной скамье 30° с широкой постановкой рук и медленной фазой
-            </p>
-          </div>
 
-          {/* Пример правила 2 */}
-          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-1">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10.5px] font-bold text-emerald-700 whitespace-nowrap shrink-0">
-                Правило 2 (Разрешено 2–3 строки):
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap shrink-0">
-                leading-relaxed
-              </span>
+            {/* 2. Sport Green */}
+            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-900 text-xs">Sport Green</span>
+                <div className="w-5 h-5 rounded-lg bg-[#16A34A] shadow-xs shrink-0" />
+              </div>
+              <div>
+                <span className="text-[11px] font-mono font-bold text-emerald-700 block">#16A34A</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Проведено, оплачено</span>
+              </div>
             </div>
-            {/* Описание спокойно занимает несколько строк с красивым отступом */}
-            <p className="text-[11.5px] text-slate-600 font-normal leading-relaxed">
-              Локти под 45 градусов к корпусу. Пауза в нижней точке 1 секунда для растяжения грудных. Подъем на выдохе без резкого отбива от груди.
-            </p>
+
+            {/* 3. Warning Amber */}
+            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-900 text-xs">Amber Flame</span>
+                <div className="w-5 h-5 rounded-lg bg-[#F59E0B] shadow-xs shrink-0" />
+              </div>
+              <div>
+                <span className="text-[11px] font-mono font-bold text-amber-700 block">#F59E0B</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Стрик, дедлайн оплаты</span>
+              </div>
+            </div>
+
+            {/* 4. Danger Rose */}
+            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-900 text-xs">Danger Rose</span>
+                <div className="w-5 h-5 rounded-lg bg-[#E11D48] shadow-xs shrink-0" />
+              </div>
+              <div>
+                <span className="text-[11px] font-mono font-bold text-rose-700 block">#E11D48</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">PAR-Q травмы, удаление</span>
+              </div>
+            </div>
+
+            {/* 5. Canvas Background */}
+            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-900 text-xs">Canvas Gray</span>
+                <div className="w-5 h-5 rounded-lg bg-[#F2F2F7] border border-slate-300 shrink-0" />
+              </div>
+              <div>
+                <span className="text-[11px] font-mono font-bold text-slate-600 block">#F2F2F7</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Фон всего приложения</span>
+              </div>
+            </div>
+
+            {/* 6. Card Surface */}
+            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-900 text-xs">Card White</span>
+                <div className="w-5 h-5 rounded-lg bg-[#FFFFFF] border border-slate-300 shadow-2xs shrink-0" />
+              </div>
+              <div>
+                <span className="text-[11px] font-mono font-bold text-slate-600 block">#FFFFFF</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Белые карточки Inset</span>
+              </div>
+            </div>
+
           </div>
         </div>
 
-        {/* ================= 1. КАРТОЧКА АТЛЕТА В РАСПИСАНИИ (БЕЗ ЗАЛА, БЕЗ ТОЧЕК) ================= */}
+        {/* ================= РАЗДЕЛ Б: СПЕЦИФИКАЦИЯ ШРИФТОВ (ТИПОГРАФИКА) ================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2">
+              <Type className="w-4 h-4 text-[#1E60D5] shrink-0" />
+              <h3 className="text-xs font-bold text-slate-800">
+                Шрифтовая шкала (Typography Scale)
+              </h3>
+            </div>
+            <span className="text-[10px] text-slate-400 font-mono">Plus Jakarta Sans</span>
+          </div>
+
+          <div className="space-y-2.5 text-xs divide-y divide-slate-100">
+            {/* Title 1 */}
+            <div className="pt-1 flex items-start justify-between gap-3">
+              <div>
+                <span className="font-bold text-slate-900 block text-[15px] leading-tight">
+                  Заголовок блока (Card Title)
+                </span>
+                <span className="text-slate-400 text-[10.5px] block mt-0.5">
+                  Имя атлета, название секций, залы
+                </span>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="font-mono text-slate-700 text-[11px] font-bold block">15px Bold</span>
+                <span className="text-[9.5px] text-slate-400 font-mono block">Plus Jakarta</span>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="pt-2 flex items-start justify-between gap-3">
+              <div>
+                <span className="font-semibold text-slate-800 block text-[13px] leading-tight">
+                  Основной текст (Body Text)
+                </span>
+                <span className="text-slate-400 text-[10.5px] block mt-0.5">
+                  Упражнения, пункты списков, кнопки
+                </span>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="font-mono text-slate-700 text-[11px] font-bold block">13px Semibold</span>
+                <span className="text-[9.5px] text-slate-400 font-mono block">Plus Jakarta</span>
+              </div>
+            </div>
+
+            {/* Caption */}
+            <div className="pt-2 flex items-start justify-between gap-3">
+              <div>
+                <span className="text-slate-600 block text-[11.5px] font-medium leading-tight">
+                  Подзаголовок и время (Caption)
+                </span>
+                <span className="text-slate-400 text-[10.5px] block mt-0.5">
+                  Слот времени, дескрипторы, пояснения
+                </span>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="font-mono text-slate-700 text-[11px] font-bold block">11.5px Medium</span>
+                <span className="text-[9.5px] text-slate-400 font-mono block">Plus Jakarta</span>
+              </div>
+            </div>
+
+            {/* Mono Number */}
+            <div className="pt-2 flex items-start justify-between gap-3">
+              <div>
+                <span className="font-mono font-extrabold text-slate-900 block text-[14px] leading-tight">
+                  60 кг • 10 повторов • 840k ₸
+                </span>
+                <span className="text-slate-400 text-[10.5px] block mt-0.5">
+                  Веса, подходы, балансы кассы (без сминаний)
+                </span>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="font-mono text-slate-700 text-[11px] font-bold block">14px Mono</span>
+                <span className="text-[9.5px] text-slate-400 font-mono block">SF Mono</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ================= 1. КАРТОЧКА АТЛЕТА В РАСПИСАНИИ (ЧИСТАЯ, БЕЗ ТОЧЕК И ЗАЛА) ================= */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="border-b border-slate-100 pb-2">
-            <h3 className="text-xs font-bold text-slate-800 whitespace-nowrap truncate">
+            <h3 className="text-xs font-bold text-slate-800">
               Расписание на сегодня
             </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap truncate">
-              Имя атлета и бейджи строго в своих рядах
-            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Имя целиком • чипсы цели и времени внизу</p>
           </div>
 
           <div className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200/70 space-y-3">
@@ -254,56 +379,56 @@ export default function DesignSystemShowcase({ onBack }) {
                 />
 
                 <div className="min-w-0 flex-1">
-                  {/* Имя целиком в 1 строку */}
-                  <h4 className="text-[14px] font-bold text-slate-900 leading-snug whitespace-nowrap truncate">
+                  {/* Имя целиком */}
+                  <h4 className="text-[14px] font-bold text-slate-900 leading-snug truncate">
                     Асанали Кусайынов
                   </h4>
 
-                  {/* Бейджи времени и цели в 1 строку (без точек и без зала) */}
-                  <div className="flex items-center gap-1.5 mt-1.5 whitespace-nowrap overflow-hidden">
-                    <span className="text-[11px] font-semibold text-slate-700 bg-white border border-slate-200/80 px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0 shadow-2xs">
-                      <Clock className="w-3 h-3 text-blue-600" />
+                  {/* Чипсы времени и цели (без висячих точек и без зала) */}
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    <span className="text-[11px] font-semibold text-slate-700 bg-white border border-slate-200/80 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-2xs">
+                      <Clock className="w-3 h-3 text-[#1E60D5]" />
                       <span>18:30</span>
                     </span>
 
-                    <span className="text-[11px] font-semibold text-blue-800 bg-blue-50 border border-blue-200/60 px-2 py-0.5 rounded-lg truncate shrink-0">
+                    <span className="text-[11px] font-semibold text-[#1E60D5] bg-blue-50 border border-blue-200/60 px-2 py-0.5 rounded-lg">
                       Набор массы
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="shrink-0 w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-colors shadow-2xs">
+              <div className="shrink-0 w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-400 group-hover:text-[#1E60D5] transition-colors shadow-2xs">
                 <ExternalLink className="w-3.5 h-3.5" />
               </div>
             </div>
 
-            {/* Панель действий в 1 строку */}
+            {/* Панель действий */}
             <div className="pt-2.5 border-t border-slate-200/70 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setIsWorkoutPlanOpen(!isWorkoutPlanOpen)}
-                className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   isWorkoutPlanOpen
-                    ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
+                    ? 'bg-blue-50 text-[#1E60D5] border-blue-200 shadow-2xs'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 shadow-2xs active:scale-95'
                 }`}
               >
-                <ClipboardList className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                <span className="whitespace-nowrap">План дня</span>
+                <ClipboardList className="w-3.5 h-3.5 text-[#1E60D5]" />
+                <span>План дня</span>
               </button>
 
-              <div className="flex-1 min-w-0">
+              <div className="flex-1">
                 {isCompleted ? (
                   <button
                     type="button"
                     onClick={() => {
                       setIsCompleted(false);
-                      showToast('↩ Списание отменено');
+                      showToast('↩ Списание отменено • Баланс восстановлен');
                     }}
-                    className="w-full py-2.5 px-3 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs whitespace-nowrap"
+                    className="w-full py-2.5 px-3 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                   >
-                    <RotateCcw className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
                     <span>Вернуть (+1)</span>
                   </button>
                 ) : (
@@ -311,11 +436,11 @@ export default function DesignSystemShowcase({ onBack }) {
                     type="button"
                     onClick={() => {
                       setIsCompleted(true);
-                      showToast('✅ Тренировка проведена');
+                      showToast('✅ Тренировка проведена • Списано 1 занятие');
                     }}
-                    className="w-full py-2.5 px-3 bg-[#1D4ED8] hover:bg-blue-800 text-white rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-blue-600/25 whitespace-nowrap"
+                    className="w-full py-2.5 px-3 bg-[#1E60D5] hover:bg-blue-700 text-white rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-blue-600/25"
                   >
-                    <Check className="w-3.5 h-3.5 stroke-[3] shrink-0" />
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
                     <span>Проведено</span>
                   </button>
                 )}
@@ -326,18 +451,15 @@ export default function DesignSystemShowcase({ onBack }) {
             {isWorkoutPlanOpen && (
               <div className="p-3 bg-white rounded-2xl border border-slate-200 space-y-2 animate-in fade-in duration-150 text-xs">
                 <div className="flex items-center justify-between font-bold text-slate-800 border-b border-slate-100 pb-1.5">
-                  <span className="text-xs whitespace-nowrap truncate">День 1: Грудь и Трицепс</span>
-                  <span className="text-[10.5px] text-slate-600 font-semibold bg-slate-100 px-2 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                  <span>День 1: Грудь и Трицепс</span>
+                  <span className="text-[10.5px] text-slate-600 font-semibold bg-slate-100 px-2 py-0.5 rounded-md">
                     3 упражнения
                   </span>
                 </div>
 
-                {/* Упражнение 1 */}
                 <div className="p-2 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-1.5">
-                  <p className="text-xs font-bold text-slate-900 whitespace-nowrap truncate">
-                    1. Жим штанги на наклонной скамье 30°
-                  </p>
-                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                  <p className="text-xs font-bold text-slate-900">1. Жим штанги на наклонной скамье 30°</p>
+                  <div className="flex items-center gap-1.5">
                     <span className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 text-[10.5px] font-mono font-bold rounded-lg shadow-2xs">
                       4 подхода
                     </span>
@@ -350,12 +472,9 @@ export default function DesignSystemShowcase({ onBack }) {
                   </div>
                 </div>
 
-                {/* Упражнение 2 */}
                 <div className="p-2 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-1.5">
-                  <p className="text-xs font-bold text-slate-900 whitespace-nowrap truncate">
-                    2. Жим гантелей под углом
-                  </p>
-                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                  <p className="text-xs font-bold text-slate-900">2. Жим гантелей под углом</p>
+                  <div className="flex items-center gap-1.5">
                     <span className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 text-[10.5px] font-mono font-bold rounded-lg shadow-2xs">
                       3 подхода
                     </span>
@@ -373,21 +492,19 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* ================= 2. КАРТОЧКА УПРАЖНЕНИЯ: ПРОСТОРНЫЕ КВАДРАТНЫЕ КНОПКИ ================= */}
+        {/* ================= 2. КАРТОЧКА УПРАЖНЕНИЯ: СЕТЫ И ПОВТОРЫ В 2 КОЛОНКИ, ВЕС ВНИЗУ ================= */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
-              <h3 className="text-xs font-bold text-slate-800 whitespace-nowrap truncate">
+              <h3 className="text-xs font-bold text-slate-800">
                 Карточка упражнения и нагрузки
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap truncate">
-                Кнопки квадратные 36×36px • ничего не накладывается
-              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Кнопки квадратные 36×36px • ничего не накладывается</p>
             </div>
             
             <button 
               type="button" 
-              className="p-1.5 text-slate-300 hover:text-rose-600 rounded-lg transition-colors cursor-pointer shrink-0"
+              className="p-1.5 text-slate-300 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
               title="Удалить"
             >
               <Trash2 className="w-4 h-4" />
@@ -399,8 +516,8 @@ export default function DesignSystemShowcase({ onBack }) {
             {/* Группа мышц */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">Группа мышц:</span>
-                <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">9 зон анатомии</span>
+                <span className="text-[11px] font-semibold text-slate-600">Группа мышц:</span>
+                <span className="text-[10px] text-slate-400 font-medium">9 зон анатомии</span>
               </div>
               <div className="relative">
                 <button
@@ -411,11 +528,11 @@ export default function DesignSystemShowcase({ onBack }) {
                   }}
                   className="w-full py-2.5 px-3 bg-white border border-slate-200/80 rounded-xl text-xs font-bold text-slate-800 flex items-center justify-between active:scale-98 transition-all cursor-pointer shadow-2xs"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-                    <span className="truncate whitespace-nowrap">{selectedMuscle}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#1E60D5]" />
+                    <span>{selectedMuscle}</span>
                   </div>
-                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${isMuscleDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isMuscleDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {isMuscleDropdownOpen && (
@@ -432,8 +549,8 @@ export default function DesignSystemShowcase({ onBack }) {
                           setIsMuscleDropdownOpen(false);
                           setIsCustomExerciseMode(false);
                         }}
-                        className={`p-2 rounded-xl text-xs font-semibold text-left transition-all cursor-pointer truncate whitespace-nowrap ${
-                          selectedMuscle === mg ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                        className={`p-2 rounded-xl text-xs font-semibold text-left transition-all cursor-pointer truncate ${
+                          selectedMuscle === mg ? 'bg-blue-50 text-[#1E60D5] font-bold' : 'hover:bg-slate-50 text-slate-700'
                         }`}
                       >
                         {mg}
@@ -444,17 +561,17 @@ export default function DesignSystemShowcase({ onBack }) {
               </div>
             </div>
 
-            {/* Название упражнения (Строго в 1 строку с троеточием) */}
+            {/* Название упражнения */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">Упражнение:</span>
+                <span className="text-[11px] font-semibold text-slate-600">Упражнение:</span>
                 <button
                   type="button"
                   onClick={() => setIsCustomExerciseMode(!isCustomExerciseMode)}
-                  className="text-[10.5px] font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
+                  className="text-[10.5px] font-semibold text-[#1E60D5] hover:text-blue-700 flex items-center gap-1 cursor-pointer"
                 >
-                  <PenTool className="w-3 h-3 shrink-0" />
-                  <span>{isCustomExerciseMode ? 'Из базы' : '+ Своё'}</span>
+                  <PenTool className="w-3 h-3" />
+                  <span>{isCustomExerciseMode ? 'Выбрать из базы' : '+ Своё название'}</span>
                 </button>
               </div>
 
@@ -464,7 +581,7 @@ export default function DesignSystemShowcase({ onBack }) {
                   value={customExerciseName}
                   onChange={(e) => setCustomExerciseName(e.target.value)}
                   placeholder="Введите авторское название упражнения..."
-                  className="w-full px-3 py-2 bg-white border border-blue-400 rounded-xl text-xs font-bold text-slate-900 outline-none shadow-2xs whitespace-nowrap truncate"
+                  className="w-full px-3 py-2 bg-white border border-blue-400 rounded-xl text-xs font-bold text-slate-900 outline-none shadow-2xs"
                 />
               ) : (
                 <div className="relative">
@@ -476,9 +593,9 @@ export default function DesignSystemShowcase({ onBack }) {
                     }}
                     className="w-full py-2.5 px-3 bg-white border border-slate-200/80 rounded-xl text-xs font-bold text-slate-800 flex items-center justify-between active:scale-98 transition-all cursor-pointer shadow-2xs text-left"
                   >
-                    <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
-                      <span className="truncate whitespace-nowrap">{selectedExercise}</span>
-                      <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className="truncate">{selectedExercise}</span>
+                      <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md shrink-0">
                         {selectedEquipment}
                       </span>
                     </div>
@@ -497,10 +614,10 @@ export default function DesignSystemShowcase({ onBack }) {
                             setIsExerciseDropdownOpen(false);
                           }}
                           className={`w-full p-2 rounded-xl text-xs font-semibold text-left transition-all cursor-pointer flex items-center justify-between ${
-                            selectedExercise === item.name ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                            selectedExercise === item.name ? 'bg-blue-50 text-[#1E60D5] font-bold' : 'hover:bg-slate-50 text-slate-700'
                           }`}
                         >
-                          <span className="truncate whitespace-nowrap flex-1">{item.name}</span>
+                          <span className="truncate">{item.name}</span>
                           <span className="text-[9.5px] text-slate-400 font-mono ml-2 shrink-0">{item.equipment}</span>
                         </button>
                       ))}
@@ -510,12 +627,12 @@ export default function DesignSystemShowcase({ onBack }) {
               )}
             </div>
 
-            {/* СЕТЫ И ПОВТОРЫ В 2 КОЛОНКИ: КВАДРАТНЫЕ КНОПКИ 36×36px */}
+            {/* СЕТЫ И ПОВТОРЫ В 2 ПРОСТОРНЫЕ КОЛОНКИ (БЕЗ НАЕЗДА ДРУГ НА ДРУГА) */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               
               {/* Сеты */}
               <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-                <span className="text-[11px] font-semibold text-slate-500 block text-center mb-2 whitespace-nowrap">
+                <span className="text-[11px] font-semibold text-slate-500 block text-center mb-2">
                   Подходы (сеты)
                 </span>
                 <div className="flex items-center justify-between px-1">
@@ -536,7 +653,7 @@ export default function DesignSystemShowcase({ onBack }) {
                   <button
                     type="button"
                     onClick={() => setSets(s => (Number(s) || 0) + 1)}
-                    className="w-9 h-9 rounded-xl bg-[#1D4ED8] hover:bg-blue-700 text-white font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-xs shrink-0"
+                    className="w-9 h-9 rounded-xl bg-[#1E60D5] hover:bg-blue-700 text-white font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-xs shrink-0"
                   >
                     <Plus className="w-4 h-4 stroke-[2.5]" />
                   </button>
@@ -545,7 +662,7 @@ export default function DesignSystemShowcase({ onBack }) {
 
               {/* Повторы */}
               <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-                <span className="text-[11px] font-semibold text-slate-500 block text-center mb-2 whitespace-nowrap">
+                <span className="text-[11px] font-semibold text-slate-500 block text-center mb-2">
                   Повторения
                 </span>
                 <div className="flex items-center justify-between px-1">
@@ -566,7 +683,7 @@ export default function DesignSystemShowcase({ onBack }) {
                   <button
                     type="button"
                     onClick={() => setReps(r => (Number(r) || 0) + 1)}
-                    className="w-9 h-9 rounded-xl bg-[#1D4ED8] hover:bg-blue-700 text-white font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-xs shrink-0"
+                    className="w-9 h-9 rounded-xl bg-[#1E60D5] hover:bg-blue-700 text-white font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-xs shrink-0"
                   >
                     <Plus className="w-4 h-4 stroke-[2.5]" />
                   </button>
@@ -575,14 +692,14 @@ export default function DesignSystemShowcase({ onBack }) {
 
             </div>
 
-            {/* Рабочий вес отдельной строкой */}
+            {/* Вес отдельной широкой строкой */}
             <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between gap-3">
               <div>
-                <span className="text-[11px] font-semibold text-slate-500 block whitespace-nowrap">Рабочий вес</span>
-                <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">Шаг 2.5 кг</span>
+                <span className="text-[11px] font-semibold text-slate-500 block">Рабочий вес</span>
+                <span className="text-[10px] text-slate-400 font-medium">Шаг 2.5 кг</span>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setWeight(w => Math.max(0, Math.round(((Number(w) || 0) - 2.5) * 10) / 10))}
@@ -604,28 +721,28 @@ export default function DesignSystemShowcase({ onBack }) {
                 <button
                   type="button"
                   onClick={() => setWeight(w => Math.round(((Number(w) || 0) + 2.5) * 10) / 10)}
-                  className="w-9 h-9 rounded-xl bg-[#1D4ED8] hover:bg-blue-700 text-white font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-xs shrink-0"
+                  className="w-9 h-9 rounded-xl bg-[#1E60D5] hover:bg-blue-700 text-white font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-xs shrink-0"
                 >
                   <Plus className="w-4 h-4 stroke-[2.5]" />
                 </button>
               </div>
             </div>
 
-            {/* Время отдыха */}
+            {/* Быстрый выбор времени отдыха */}
             <div className="pt-0.5 flex items-center justify-between">
-              <span className="text-[10.5px] font-medium text-slate-500 flex items-center gap-1 whitespace-nowrap">
-                <Timer className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="text-[10.5px] font-medium text-slate-500 flex items-center gap-1">
+                <Timer className="w-3.5 h-3.5 text-[#1E60D5]" />
                 <span>Отдых между сетами:</span>
               </span>
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5">
                 {[60, 90, 120].map(sec => (
                   <button
                     key={sec}
                     type="button"
                     onClick={() => setRestTime(sec)}
-                    className={`px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    className={`px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold transition-all cursor-pointer ${
                       restTime === sec
-                        ? 'bg-[#1D4ED8] text-white shadow-2xs'
+                        ? 'bg-[#1E60D5] text-white shadow-2xs'
                         : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                     }`}
                   >
@@ -635,26 +752,24 @@ export default function DesignSystemShowcase({ onBack }) {
               </div>
             </div>
 
-            {/* Заметка тренера (Правило 2: Разрешено 2-3 строки) */}
-            <textarea
-              rows={2}
-              placeholder="Подсказка по технике: локти под 45 градусов, пауза в нижней точке 1 секунда для растяжения..."
-              className="w-full px-3 py-2 bg-white border border-slate-200/70 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 outline-none focus:border-blue-500 shadow-2xs resize-none leading-relaxed"
+            {/* Заметка тренера */}
+            <input
+              type="text"
+              placeholder="Заметка тренера: локти под 45°, пауза в нижней точке 1 сек..."
+              className="w-full px-3 py-2 bg-white border border-slate-200/70 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 outline-none focus:border-blue-500 shadow-2xs"
             />
           </div>
         </div>
 
-        {/* ================= 3. ЦЕНТР ПУШ-УВЕДОМЛЕНИЙ (БЕЗ СМИНАНИЯ) ================= */}
+        {/* ================= 3. ЦЕНТР ПУШ-УВЕДОМЛЕНИЙ (ТЕКСТ «ОПЛАТА» НЕ ОБРЕЗАЕТСЯ) ================= */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
-              <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5 whitespace-nowrap truncate">
-                <Send className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Send className="w-3.5 h-3.5 text-[#1E60D5]" />
                 <span>Быстрые пуши ученику в Telegram</span>
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap truncate">
-                Мгновенная отправка через бота
-              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Мгновенная отправка через бота</p>
             </div>
 
             <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 whitespace-nowrap shrink-0">
@@ -662,6 +777,7 @@ export default function DesignSystemShowcase({ onBack }) {
             </span>
           </div>
 
+          {/* 3 кнопки (Текст ровный, ничего не обрезается) */}
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
@@ -675,15 +791,15 @@ export default function DesignSystemShowcase({ onBack }) {
                   : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
             >
-              <span className="text-xs truncate block font-bold whitespace-nowrap">План дня</span>
-              <span className="text-[10px] text-slate-400 truncate block mt-0.5 font-medium whitespace-nowrap">Отправить</span>
+              <span className="text-xs truncate block font-bold">План дня</span>
+              <span className="text-[10px] text-slate-400 truncate block mt-0.5 font-medium">Отправить в бот</span>
             </button>
 
             <button
               type="button"
               onClick={() => {
                 setActivePushPreview('reminder');
-                showToast('Напоминание отправлено');
+                showToast('Напоминание о тренировке отправлено');
               }}
               className={`p-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col justify-center h-15 ${
                 activePushPreview === 'reminder'
@@ -691,8 +807,8 @@ export default function DesignSystemShowcase({ onBack }) {
                   : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
             >
-              <span className="text-xs truncate block font-bold whitespace-nowrap">Напоминание</span>
-              <span className="text-[10px] text-slate-400 truncate block mt-0.5 font-medium whitespace-nowrap">30 минут</span>
+              <span className="text-xs truncate block font-bold">Напоминание</span>
+              <span className="text-[10px] text-slate-400 truncate block mt-0.5 font-medium">Через 30 минут</span>
             </button>
 
             <button
@@ -707,8 +823,8 @@ export default function DesignSystemShowcase({ onBack }) {
                   : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
             >
-              <span className="text-xs truncate block font-bold whitespace-nowrap">Оплата</span>
-              <span className="text-[10px] text-slate-400 truncate block mt-0.5 font-medium whitespace-nowrap">Остаток 1</span>
+              <span className="text-xs truncate block font-bold">Оплата</span>
+              <span className="text-[10px] text-slate-400 truncate block mt-0.5 font-medium">Осталось 1 зан.</span>
             </button>
           </div>
 
@@ -720,22 +836,22 @@ export default function DesignSystemShowcase({ onBack }) {
             </div>
 
             {activePushPreview === 'workout' && (
-              <p className="text-[11.5px] text-slate-800 leading-relaxed pt-0.5">
+              <p className="text-[11.5px] text-slate-800 leading-snug pt-0.5">
                 🏋️ <b>Ваш тренер назначил план тренировки!</b><br />
                 День 1: Грудь и Трицепс (3 упражнения, рабочий вес 60 кг).<br />
-                <span className="text-blue-600 font-semibold">Откройте приложение, чтобы посмотреть схему.</span>
+                <span className="text-[#1E60D5] font-semibold">Откройте приложение, чтобы посмотреть схему.</span>
               </p>
             )}
 
             {activePushPreview === 'reminder' && (
-              <p className="text-[11.5px] text-slate-800 leading-relaxed pt-0.5">
+              <p className="text-[11.5px] text-slate-800 leading-snug pt-0.5">
                 ⏰ <b>Напоминание о тренировке!</b><br />
                 Жду тебя сегодня в зале к 18:30. Не опаздывай, начнем с разминки! 💪
               </p>
             )}
 
             {activePushPreview === 'payment' && (
-              <p className="text-[11.5px] text-slate-800 leading-relaxed pt-0.5">
+              <p className="text-[11.5px] text-slate-800 leading-snug pt-0.5">
                 💳 <b>Продление абонемента</b><br />
                 У вас осталось 1 занятие в текущем блоке. Продлите абонемент, чтобы зафиксировать слот!
               </p>
@@ -745,31 +861,25 @@ export default function DesignSystemShowcase({ onBack }) {
 
         {/* ================= 4. РАЗДЕЛЫ УПРАВЛЕНИЯ ================= */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-2">
-          <div className="border-b border-slate-100 pb-2">
-            <h3 className="text-xs font-bold text-slate-800 whitespace-nowrap truncate">
+          <div className="border-b border-slate-100/80 pb-2">
+            <h3 className="text-xs font-bold text-slate-800">
               Разделы управления
             </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap truncate">
-              Быстрый переход по функциям
-            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Быстрый переход по функциям</p>
           </div>
 
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100/80">
             <div 
               onClick={() => showToast('Открыта база учеников')}
               className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
             >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-blue-50 text-[#1E60D5] border border-blue-100 flex items-center justify-center shrink-0">
                   <Users className="w-4 h-4 stroke-[2]" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-[13px] font-semibold text-slate-900 leading-tight whitespace-nowrap truncate">
-                    База подопечных атлетов
-                  </h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5 whitespace-nowrap truncate">
-                    14 учеников в залах Алматы
-                  </p>
+                <div className="min-w-0">
+                  <h4 className="text-[13px] font-semibold text-slate-900 leading-tight">База подопечных атлетов</h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">14 учеников в залах Алматы</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
@@ -779,20 +889,16 @@ export default function DesignSystemShowcase({ onBack }) {
               onClick={() => showToast('Открыта касса')}
               className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
             >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
                   <DollarSign className="w-4 h-4 stroke-[2]" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-[13px] font-semibold text-slate-900 leading-tight whitespace-nowrap truncate">
-                    Касса и абонементы
-                  </h4>
-                  <p className="text-[11px] text-emerald-700 font-semibold mt-0.5 whitespace-nowrap truncate">
-                    840 000 ₸ за текущий месяц
-                  </p>
+                <div className="min-w-0">
+                  <h4 className="text-[13px] font-semibold text-slate-900 leading-tight">Касса и абонементы</h4>
+                  <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">840 000 ₸ за текущий месяц</p>
                 </div>
               </div>
-              <span className="text-[11px] font-mono font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg shrink-0 whitespace-nowrap">
+              <span className="text-[11px] font-mono font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg shrink-0">
                 Оплачено
               </span>
             </div>
@@ -801,17 +907,13 @@ export default function DesignSystemShowcase({ onBack }) {
               onClick={() => showToast('Стрик дисциплины: 44 недели')}
               className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
             >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
                   <Flame className="w-4 h-4 stroke-[2]" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-[13px] font-semibold text-slate-900 leading-tight whitespace-nowrap truncate">
-                    Дисциплина (Streak)
-                  </h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5 whitespace-nowrap truncate">
-                    Рекорд тренера: 44 недели в строю 🔥
-                  </p>
+                <div className="min-w-0">
+                  <h4 className="text-[13px] font-semibold text-slate-900 leading-tight">Дисциплина (Streak)</h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Рекорд тренера: 44 недели в строю 🔥</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
@@ -821,17 +923,13 @@ export default function DesignSystemShowcase({ onBack }) {
               onClick={() => showToast('Внимание: у атлета есть травмы')}
               className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
             >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center shrink-0">
                   <ShieldAlert className="w-4 h-4 stroke-[2]" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-[13px] font-semibold text-slate-900 leading-tight whitespace-nowrap truncate">
-                    Ограничения по здоровью
-                  </h4>
-                  <p className="text-[11px] text-rose-700 font-medium mt-0.5 whitespace-nowrap truncate">
-                    Без осевой нагрузки на спину
-                  </p>
+                <div className="min-w-0">
+                  <h4 className="text-[13px] font-semibold text-slate-900 leading-tight">Ограничения по здоровью</h4>
+                  <p className="text-[11px] text-rose-700 font-medium mt-0.5">Без осевой нагрузки на спину</p>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
@@ -839,13 +937,13 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* ================= 5. ДНЕЙ В НЕДЕЛЮ (1–7) ================= */}
+        {/* ================= 5. ДНЕЙ В НЕДЕЛЮ (1–7) И СХЕМА СПЛИТА ================= */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-800 whitespace-nowrap truncate">
+            <h3 className="text-xs font-bold text-slate-800">
               Дней тренировок в неделю
             </h3>
-            <span className="text-xs font-mono font-bold text-blue-600 whitespace-nowrap shrink-0">{activeDaysCount} дня / нед.</span>
+            <span className="text-xs font-mono font-bold text-[#1E60D5]">{activeDaysCount} дня / нед.</span>
           </div>
 
           <div className="grid grid-cols-7 gap-1 bg-slate-100 p-1 rounded-2xl">
@@ -856,7 +954,7 @@ export default function DesignSystemShowcase({ onBack }) {
                 onClick={() => setActiveDaysCount(d)}
                 className={`py-1.5 text-xs font-mono font-bold rounded-xl transition-all cursor-pointer ${
                   activeDaysCount === d 
-                    ? 'bg-[#1D4ED8] text-white shadow-xs' 
+                    ? 'bg-[#1E60D5] text-white shadow-xs' 
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -866,7 +964,7 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
 
           <div className="pt-2 border-t border-slate-100">
-            <span className="text-[11px] font-semibold text-slate-500 block mb-1.5 whitespace-nowrap">
+            <span className="text-[11px] font-semibold text-slate-500 block mb-1.5">
               Схема тренировочного сплита:
             </span>
             <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-2xl">
@@ -879,7 +977,7 @@ export default function DesignSystemShowcase({ onBack }) {
                   key={item.id}
                   type="button"
                   onClick={() => setActiveSplit(item.id)}
-                  className={`py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer text-center truncate whitespace-nowrap ${
+                  className={`py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer text-center truncate ${
                     activeSplit === item.id 
                       ? 'bg-white text-slate-900 shadow-2xs font-bold' 
                       : 'text-slate-600 hover:text-slate-900'
@@ -892,14 +990,14 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* ================= 6. КНОПКА ДЕЙСТВИЯ ================= */}
+        {/* ================= 6. КНОПКА ДЕЙСТВИЯ (SAPPHIRE BLUE) ================= */}
         <div className="space-y-2.5 pt-1">
           <button
             type="button"
             onClick={() => showToast('План тренировок назначен подопечному!')}
-            className="w-full py-3.5 px-5 bg-[#1D4ED8] hover:bg-blue-800 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(29,78,216,0.22)] active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
+            className="w-full py-3.5 px-5 bg-[#1E60D5] hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(30,96,213,0.24)] active:scale-[0.98] transition-all cursor-pointer"
           >
-            <Zap className="w-4 h-4 fill-current text-white shrink-0" />
+            <Zap className="w-4 h-4 fill-current text-white" />
             <span>Сохранить и отправить план в Telegram</span>
           </button>
         </div>
@@ -914,21 +1012,21 @@ export default function DesignSystemShowcase({ onBack }) {
             <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-1" />
 
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-3">
                 <img 
                   src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" 
                   alt="Асанали"
-                  className="w-11 h-11 rounded-2xl object-cover border-2 border-white shadow-xs shrink-0"
+                  className="w-11 h-11 rounded-2xl object-cover border-2 border-white shadow-xs"
                 />
-                <div className="min-w-0">
-                  <h4 className="text-[14px] font-bold text-slate-900 whitespace-nowrap truncate">Асанали Кусайынов</h4>
-                  <p className="text-[11px] text-slate-400 whitespace-nowrap truncate">Анкета подопечного атлета</p>
+                <div>
+                  <h4 className="text-[14px] font-bold text-slate-900">Асанали Кусайынов</h4>
+                  <p className="text-[11px] text-slate-400">Анкета подопечного атлета</p>
                 </div>
               </div>
               <button 
                 type="button" 
                 onClick={() => setIsProfileModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 cursor-pointer shrink-0"
+                className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -936,33 +1034,31 @@ export default function DesignSystemShowcase({ onBack }) {
 
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-200/70">
-                <span className="text-[10px] text-slate-400 block font-semibold whitespace-nowrap">Рост</span>
+                <span className="text-[10px] text-slate-400 block font-semibold">Рост</span>
                 <span className="text-xs font-bold text-slate-900 font-mono">178 см</span>
               </div>
               <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-200/70">
-                <span className="text-[10px] text-slate-400 block font-semibold whitespace-nowrap">Вес</span>
+                <span className="text-[10px] text-slate-400 block font-semibold">Вес</span>
                 <span className="text-xs font-bold text-slate-900 font-mono">75 кг</span>
               </div>
               <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-200/70">
-                <span className="text-[10px] text-slate-400 block font-semibold whitespace-nowrap">Возраст</span>
+                <span className="text-[10px] text-slate-400 block font-semibold">Возраст</span>
                 <span className="text-xs font-bold text-slate-900 font-mono">24 года</span>
               </div>
             </div>
 
             <div className="p-3 bg-rose-50/80 border border-rose-200/70 rounded-2xl space-y-1">
-              <span className="text-[10.5px] font-bold text-rose-800 flex items-center gap-1 whitespace-nowrap">
-                <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+              <span className="text-[10.5px] font-bold text-rose-800 flex items-center gap-1">
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
                 <span>Ограничения PAR-Q:</span>
               </span>
-              <p className="text-xs text-rose-950 font-medium leading-relaxed">
-                Без осевой нагрузки на позвоночник, беречь поясницу после травмы.
-              </p>
+              <p className="text-xs text-rose-950 font-medium">Без осевой нагрузки на позвоночник, беречь поясницу.</p>
             </div>
 
             <button
               type="button"
               onClick={() => setIsProfileModalOpen(false)}
-              className="w-full py-3 bg-[#1D4ED8] hover:bg-blue-800 text-white rounded-2xl font-bold text-xs cursor-pointer active:scale-95 shadow-sm shadow-blue-600/20 whitespace-nowrap"
+              className="w-full py-3 bg-[#1E60D5] hover:bg-blue-700 text-white rounded-2xl font-bold text-xs cursor-pointer active:scale-95 shadow-sm shadow-blue-600/20"
             >
               Закрыть карточку
             </button>
