@@ -110,9 +110,15 @@ export default function TrainerHeader({
 
   const effectiveList = students && students.length > 0 ? students : studentsList;
 
+  // Подсчет живых метрик для карточек меню
+  const activeCount = effectiveList.filter(s => s.status === 'active' || !s.status).length;
+  const totalRevenue = effectiveList.reduce((acc, s) => acc + (Number(s.monthly_price) || 70000), 0);
+  const revenueFormatted = totalRevenue >= 1000000 
+    ? `${(totalRevenue / 1000000).toFixed(1)}M ₸` 
+    : `${Math.round(totalRevenue / 1000)}k ₸`;
+
   const calculateUnreadCount = () => {
     let count = 0;
-
     effectiveList.forEach(st => {
       const left = st.left_trainings !== undefined ? st.left_trainings : (st.remaining_workouts !== undefined ? st.remaining_workouts : 12);
       const checkinYesId = `checkin_yes_${st.id}`;
@@ -120,20 +126,11 @@ export default function TrainerHeader({
       const lowBalId = `low_balance_${st.id}`;
       const debtId = `pending_pay_${st.id}`;
 
-      if (st.attendance_today === 'attending' && !readNotifIds.includes(checkinYesId) && !deletedMap[checkinYesId]) {
-        count++;
-      }
-      if (st.attendance_today === 'missed' && !readNotifIds.includes(checkinNoId) && !deletedMap[checkinNoId]) {
-        count++;
-      }
-      if (left <= 2 && !readNotifIds.includes(lowBalId) && !deletedMap[lowBalId]) {
-        count++;
-      }
-      if (st.payment_status === 'pending' && !readNotifIds.includes(debtId) && !deletedMap[debtId]) {
-        count++;
-      }
+      if (st.attendance_today === 'attending' && !readNotifIds.includes(checkinYesId) && !deletedMap[checkinYesId]) count++;
+      if (st.attendance_today === 'missed' && !readNotifIds.includes(checkinNoId) && !deletedMap[checkinNoId]) count++;
+      if (left <= 2 && !readNotifIds.includes(lowBalId) && !deletedMap[lowBalId]) count++;
+      if (st.payment_status === 'pending' && !readNotifIds.includes(debtId) && !deletedMap[debtId]) count++;
     });
-
     return count;
   };
 
@@ -145,7 +142,7 @@ export default function TrainerHeader({
       <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/70 px-4 py-3 sticky top-0 z-40 select-none shadow-2xs">
         <div className="relative flex items-center justify-between max-w-md mx-auto w-full">
           
-          {/* Левая часть: ТОЛЬКО ИКОНКА МЕНЮ (36x36px) */}
+          {/* Левая часть: квадратная иконка меню 36×36px */}
           <div className="z-10 flex items-center">
             <button
               type="button"
@@ -169,7 +166,7 @@ export default function TrainerHeader({
             </div>
           </div>
 
-          {/* Правая часть: колокольчик уведомлений */}
+          {/* Правая часть: колокольчик уведомлений 36×36px */}
           <div className="z-10 flex items-center">
             <button
               type="button"
@@ -194,13 +191,13 @@ export default function TrainerHeader({
         </div>
       </header>
 
-      {/* ================= СВЕТЛОЕ БОКОВОЕ МЕНЮ (ЕДИНЫЙ МОНОХРОМ) ================= */}
+      {/* ================= БОКОВОЕ МЕНЮ (ПОЛНАЯ АРХИТЕКТУРА) ================= */}
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-xs flex justify-start select-none animate-in fade-in duration-150">
           <div className="w-[88%] max-w-sm bg-white h-full p-4 flex flex-col justify-between shadow-2xl overflow-y-auto">
             <div className="space-y-4">
               
-              {/* Шапка профиля: Имя + Шестеренка настроек + Статус верификации */}
+              {/* ШАПКА ПРОФИЛЯ ТРЕНЕРА */}
               <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
                 <div className="flex items-center gap-3 overflow-hidden flex-1">
                   <div className="w-12 h-12 rounded-2xl bg-[#1E60D5] text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs overflow-hidden">
@@ -211,24 +208,24 @@ export default function TrainerHeader({
                     )}
                   </div>
                   
-                  <div className="overflow-hidden flex-1">
-                    <div className="flex items-center gap-2">
+                  <div className="overflow-hidden flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
                       <p className="text-[14px] font-bold text-slate-900 truncate leading-snug">
                         {coachFullName}
                       </p>
                       <button
                         type="button"
                         onClick={() => handleMenuClick('edit_profile')}
-                        className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+                        className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
                         title="Настройки профиля"
                       >
                         <Settings className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    <p className="text-[11px] text-slate-400 font-mono mt-0.5">@{cleanUsername}</p>
+                    <p className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">@{cleanUsername}</p>
                     
-                    {/* Статус: спокойный, без лишних действий */}
+                    {/* Статус верификации: спокойный, без кликов */}
                     <div className="flex items-center gap-1.5 mt-1">
                       {isVerified ? (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
@@ -252,393 +249,434 @@ export default function TrainerHeader({
                 </button>
               </div>
 
-              {/* 1. БАЗОВЫЕ РАЗДЕЛЫ CRM (ТАБЫ 2x4) */}
-              <div className="space-y-1">
-                <p className="text-[11px] font-bold text-slate-500 px-1">Разделы CRM</p>
-                <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                  {[
-                    { id: 'overview', label: 'Обзор KPI', icon: Dumbbell },
-                    { id: 'students', label: 'Ученики', icon: Users },
-                    { id: 'workouts', label: 'Программы', icon: FileText },
-                    { id: 'nutrition', label: 'Питание', icon: Utensils },
-                    { id: 'schedule', label: 'Расписание', icon: Calendar },
-                    { id: 'finance', label: 'Касса', icon: Wallet },
-                    { id: 'analytics', label: 'Аналитика', icon: TrendingUp },
-                    { id: 'notes', label: 'Заметки', icon: FileText }
-                  ].map((tab) => {
-                    const Icon = tab.icon;
-                    const isCurrent = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => {
-                          if (onSelectTab) onSelectTab(tab.id);
-                          setIsDrawerOpen(false);
-                        }}
-                        className={`p-2 rounded-xl text-left flex items-center gap-2 transition-all cursor-pointer ${
-                          isCurrent 
-                            ? 'bg-[#1E60D5] text-white font-semibold shadow-xs' 
-                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/60'
-                        }`}
-                      >
-                        <Icon className={`w-3.5 h-3.5 ${isCurrent ? 'text-white' : 'text-slate-500'}`} />
-                        <span className="text-xs truncate">{tab.label}</span>
-                      </button>
-                    );
-                  })}
+              {/* ================= РАЗДЕЛ 1. ОПЕРАЦИОННАЯ СИСТЕМА CRM (6 ЖИВЫХ КАРТОЧЕК) ================= */}
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-bold text-slate-500 px-1">Операционная система</p>
+                <div className="divide-y divide-slate-100 bg-slate-50/70 border border-slate-200/80 rounded-2xl overflow-hidden px-3">
+                  
+                  {/* 1. Главный обзор */}
+                  <div
+                    onClick={() => {
+                      if (onSelectTab) onSelectTab('overview');
+                      setIsDrawerOpen(false);
+                    }}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        activeTab === 'overview' ? 'bg-[#1E60D5] text-white shadow-xs' : 'bg-white border border-slate-200/80 text-slate-700'
+                      }`}>
+                        <Dumbbell className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Главный обзор дня</h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">План на сегодня • Стрик 44 недели</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
+                  </div>
+
+                  {/* 2. База подопечных */}
+                  <div
+                    onClick={() => {
+                      if (onSelectTab) onSelectTab('students');
+                      setIsDrawerOpen(false);
+                    }}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        activeTab === 'students' ? 'bg-[#1E60D5] text-white shadow-xs' : 'bg-white border border-slate-200/80 text-slate-700'
+                      }`}>
+                        <Users className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[13px] font-semibold text-slate-900 truncate leading-tight">База подопечных</h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">{activeCount} атлетов в строю • Досье и замеры</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
+                  </div>
+
+                  {/* 3. Программы тренировок */}
+                  <div
+                    onClick={() => {
+                      if (onSelectTab) onSelectTab('workouts');
+                      setIsDrawerOpen(false);
+                    }}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        activeTab === 'workouts' ? 'bg-[#1E60D5] text-white shadow-xs' : 'bg-white border border-slate-200/80 text-slate-700'
+                      }`}>
+                        <FileText className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Программы тренировок</h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Конструктор нагрузок • База 140+ упр.</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
+                  </div>
+
+                  {/* 4. Расписание и календарь */}
+                  <div
+                    onClick={() => {
+                      if (onSelectTab) onSelectTab('schedule');
+                      setIsDrawerOpen(false);
+                    }}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        activeTab === 'schedule' ? 'bg-[#1E60D5] text-white shadow-xs' : 'bg-white border border-slate-200/80 text-slate-700'
+                      }`}>
+                        <Calendar className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Расписание и календарь</h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Сетка слотов по часам • Запись на неделю</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
+                  </div>
+
+                  {/* 5. Касса и чистый доход */}
+                  <div
+                    onClick={() => {
+                      if (onSelectTab) onSelectTab('finance');
+                      setIsDrawerOpen(false);
+                    }}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        activeTab === 'finance' ? 'bg-[#1E60D5] text-white shadow-xs' : 'bg-white border border-slate-200/80 text-slate-700'
+                      }`}>
+                        <Wallet className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Касса и чистый доход</h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">{revenueFormatted} за месяц • Учет аренды зала</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
+                  </div>
+
+                  {/* 6. Рационы и питание */}
+                  <div
+                    onClick={() => {
+                      if (onSelectTab) onSelectTab('nutrition');
+                      setIsDrawerOpen(false);
+                    }}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        activeTab === 'nutrition' ? 'bg-[#1E60D5] text-white shadow-xs' : 'bg-white border border-slate-200/80 text-slate-700'
+                      }`}>
+                        <Utensils className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Рационы и питание</h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Калькулятор КБЖУ • Планы питания атлетов</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
+                  </div>
+
                 </div>
               </div>
 
-              {/* 2. КЛИЕНТЫ И РЕЗУЛЬТАТ */}
+              {/* ================= РАЗДЕЛ 2. КЛИЕНТЫ И ПРОДАЖИ ================= */}
               <div className="space-y-1.5 pt-1">
-                <p className="text-[11px] font-bold text-slate-500 px-1">Клиенты и результат</p>
+                <p className="text-[11px] font-bold text-slate-500 px-1">Клиенты и продажи</p>
 
+                {/* Входящие заявки */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('notifications')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Inbox className="w-4 h-4 text-slate-700" />
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <Inbox className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Заявки на тренировки</p>
-                      <p className="text-[10px] text-slate-500">Входящие лиды из каталога залов</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('health_parq')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Camera className="w-4 h-4 text-slate-700" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Замеры и фото До / После</p>
-                      <p className="text-[10px] text-slate-500">Динамика веса, талии и фиксация прогресса</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Заявки на тренировки</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Входящие лиды из каталога залов Алматы</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="text-[10px] font-bold text-[#1E60D5] bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-lg shrink-0">
+                    Новые: 2
+                  </span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('client_rules')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Snowflake className="w-4 h-4 text-slate-700" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Заморозка абонементов</p>
-                      <p className="text-[10px] text-slate-500">Пауза на отпуск или больничный</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('health_parq')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <HeartPulse className="w-4 h-4 text-slate-700" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Анкета здоровья (PAR-Q)</p>
-                      <p className="text-[10px] text-slate-500">Опросник травм и противопоказаний</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-              </div>
-
-              {/* 3. ФИНАНСЫ ТРЕНЕРА */}
-              <div className="space-y-1.5 pt-1">
-                <p className="text-[11px] font-bold text-slate-500 px-1">Финансы тренера</p>
-
+                {/* Реквизиты и оплата Kaspi */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('subscription')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <CreditCard className="w-4 h-4 text-slate-700" />
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <CreditCard className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Реквизиты и оплата Kaspi</p>
-                      <p className="text-[10px] text-slate-500">Kaspi Gold и счет в бот в 1 клик</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('income_calc')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Calculator className="w-4 h-4 text-slate-700" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Калькулятор дохода</p>
-                      <p className="text-[10px] text-slate-500">Декомпозиция выручки в месяц</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Реквизиты и оплата Kaspi</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Kaspi Gold / Pay • Выставление счета в бот</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
 
+                {/* Заморозка абонементов */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('client_rules')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Scale className="w-4 h-4 text-slate-700" />
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <Snowflake className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Регламент для клиентов</p>
-                      <p className="text-[10px] text-slate-500">Правила отмены и сгорания занятий</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Заморозка абонементов</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Пауза на отпуск или больничный с фиксацией</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
               </div>
 
-              {/* 4. МОНЕТИЗАЦИЯ И РОСТ (ТАРИФЫ И BOOST) */}
+              {/* ================= РАЗДЕЛ 3. БРЕНД, ВИЗИТКА И РОСТ ================= */}
               <div className="space-y-1.5 pt-1">
-                <p className="text-[11px] font-bold text-slate-500 px-1">Монетизация и рост</p>
+                <p className="text-[11px] font-bold text-slate-500 px-1">Бренд, визитка и рост</p>
 
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('subscription')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <CreditCard className="w-4 h-4 text-slate-700" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Управление подпиской Pro</p>
-                      <p className="text-[10px] text-slate-500">Тарифы, продление и промокоды</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
+                {/* Продвижение Boost */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('promotion')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Rocket className="w-4 h-4 text-slate-700" />
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <Rocket className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Продвижение (Boost)</p>
-                      <p className="text-[10px] text-slate-500">Поднятие в топ каталога залов</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Продвижение (Boost)</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Поднятие анкеты в топ каталога клубов города</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
 
+                {/* Управление подпиской Pro */}
                 <button
                   type="button"
-                  onClick={() => handleMenuClick('templates')}
+                  onClick={() => handleMenuClick('subscription')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Sparkles className="w-4 h-4 text-slate-700" />
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <CreditCard className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Создать онлайн-продукт</p>
-                      <p className="text-[10px] text-slate-500">Марафоны, гайды и челленджи</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('referral')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Gift className="w-4 h-4 text-slate-700" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Пригласить коллегу-тренера</p>
-                      <p className="text-[10px] text-slate-500">+1 месяц Pro после первой оплаты</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Управление подпиской Pro</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Тариф CoachOS Pro, продление и условия</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
-              </div>
 
-              {/* 5. БРЕНД И ВИЗИТКА */}
-              <div className="space-y-1.5 pt-1">
-                <p className="text-[11px] font-bold text-slate-500 px-1">Бренд и визитка</p>
-
+                {/* Мои отзывы и рейтинг */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('public_card')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Star className="w-4 h-4 text-slate-700" />
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <Star className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Мои отзывы и рейтинг</p>
-                      <p className="text-[10px] text-slate-500">Оценки подопечных и визитка</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('edit_profile')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Building2 className="w-4 h-4 text-slate-700" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Мои залы и прайс</p>
-                      <p className="text-[10px] text-slate-500">{trainer?.gym?.split('|')[0] || 'Клубы работы'}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Мои отзывы и рейтинг</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Оценки подопечных и публичная визитка</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('qr_code')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <QrCode className="w-4 h-4 text-slate-700" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">QR-код визитки</p>
-                      <p className="text-[10px] text-slate-500">Показать клиенту в зале для быстрой записи</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
+                {/* Создать онлайн-продукт */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('templates')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <MessageSquare className="w-4 h-4 text-slate-700" />
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <Sparkles className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Шаблоны тренировок</p>
-                      <p className="text-[10px] text-slate-500">Быстрое назначение плана ученикам</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Создать онлайн-продукт</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Платные марафоны, чек-листы и курсы</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </button>
+
+                {/* Мои залы и прайс */}
+                <button
+                  type="button"
+                  onClick={() => handleMenuClick('edit_profile')}
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <Building2 className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Мои залы и прайс</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">{trainer?.gym?.split('|')[0] || 'Клубы работы'}</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </button>
+
+                {/* QR-код визитки */}
+                <button
+                  type="button"
+                  onClick={() => handleMenuClick('qr_code')}
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <QrCode className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">QR-код визитки</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Быстрая запись клиента прямо в зале с камеры</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </button>
+
+                {/* Пригласить тренера */}
+                <button
+                  type="button"
+                  onClick={() => handleMenuClick('referral')}
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <Gift className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Пригласить коллегу-тренера</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">+1 месяц Pro в подарок за рекомендацию</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
               </div>
 
-              {/* 6. ПРАВОВОЙ БЛОК И ПОДДЕРЖКА */}
+              {/* ================= РАЗДЕЛ 4. ПРАВОВОЙ БЛОК И ПОДДЕРЖКА ================= */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-500 px-1">Правовой блок и сервис</p>
 
+                {/* Защита независимости базы */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('client_rules')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Shield className="w-4 h-4 text-slate-700" />
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <Shield className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Защита независимости базы</p>
-                      <p className="text-[10px] text-slate-500">Контакты учеников не передаются клубам</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Защита независимости базы</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Гарантия: база учеников не передается клубам</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
 
+                {/* Оферта и соглашение */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('client_rules')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <FileCheck2 className="w-4 h-4 text-slate-700" />
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <FileCheck2 className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Оферта и соглашение тренера</p>
-                      <p className="text-[10px] text-slate-500">Условия партнерства GymConnect</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Оферта и соглашение тренера</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Партнерский договор использования IT-платформы</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
 
-                {/* Выбор языка */}
+                {/* Регламент для клиентов */}
+                <button
+                  type="button"
+                  onClick={() => handleMenuClick('client_rules')}
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <Scale className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Регламент для клиентов</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Правила отмены и сгорания занятий</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </button>
+
+                {/* Язык приложения */}
                 <div className="w-full p-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Globe className="w-4 h-4 text-slate-700" />
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <Globe className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Язык приложения</p>
-                      <p className="text-[10px] text-slate-500">Русский (RU)</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Язык приложения</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Язык интерфейса платформы</p>
                     </div>
                   </div>
-                  <span className="text-[11px] font-bold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-lg shadow-2xs">
+                  <span className="text-[11px] font-bold text-slate-700 bg-white border border-slate-200 px-2.5 py-1 rounded-xl shadow-2xs shrink-0">
                     Русский
                   </span>
                 </div>
 
+                {/* Техподдержка */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('support')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
-                      <Headphones className="w-4 h-4 text-slate-700" />
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
+                      <Headphones className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900">Техподдержка 24/7</p>
-                      <p className="text-[10px] text-slate-500">Онлайн-помощь и решение вопросов</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Техподдержка 24/7</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Служба заботы о наставниках</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
               </div>
+
             </div>
 
-            {/* НИЖНИЙ БЛОК: ВОЗВРАТ В АТЛЕТА И ВЫХОД */}
+            {/* ПОДВАЛ МЕНЮ */}
             <div className="space-y-2 pt-3 border-t border-slate-100">
               {onBack && (
                 <button
@@ -671,6 +709,7 @@ export default function TrainerHeader({
                 </button>
               </div>
             </div>
+
           </div>
         </div>
       )}
