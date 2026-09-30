@@ -14,15 +14,15 @@ import {
   DollarSign, 
   Sparkles, 
   Search, 
-  ShieldCheck,
-  CheckCircle2,
-  Loader2,
-  X,
-  MapPin,
-  Award,
-  Globe2,
-  FileCheck2,
-  Crown
+  ShieldCheck, 
+  CheckCircle2, 
+  Loader2, 
+  X, 
+  MapPin, 
+  Award, 
+  Globe2, 
+  FileCheck2, 
+  Crown 
 } from 'lucide-react';
 import { supabase } from '../../../../supabaseClient';
 import * as GymsData from '../../../../data/almatyGyms';
@@ -40,6 +40,13 @@ function formatYears(count) {
   if (rem10 === 1) return `${n} год`;
   if (rem10 >= 2 && rem10 <= 4) return `${n} года`;
   return `${n} лет`;
+}
+
+// Безопасный парсер JSON для сквозной синхронизации
+function safeParse(val) {
+  if (!val) return {};
+  if (typeof val === 'object') return val;
+  try { return JSON.parse(val); } catch { return {}; }
 }
 
 export default function TrainerEditProfileModal({ 
@@ -102,12 +109,12 @@ export default function TrainerEditProfileModal({
     target_audience: 'all',
     specializations: ['Набор массы и гипертрофия'],
 
-    // По умолчанию ВСЕ ТРИ пункта привлечения ВЫКЛЮЧЕНЫ (без галочек)
+    // По умолчанию ВСЕ ТРИ пункта привлечения ВЫКЛЮЧЕНЫ
     show_in_catalog: false,
     has_free_trial: false,
     has_free_consultation: false,
 
-    // Прейскурант: по умолчанию ВСЕ категории ВЫКЛЮЧЕНЫ (без галочек)
+    // Прейскурант: по умолчанию ВСЕ категории ВЫКЛЮЧЕНЫ
     services_enabled: {
       personal: false,
       split: false,
@@ -136,9 +143,13 @@ export default function TrainerEditProfileModal({
     certificates_link: ''
   });
 
-  // Загружаем данные только один раз при открытии окна
+  // СКВОЗНАЯ СИНХРОНИЗАЦИЯ: подтягиваем именно те данные, которые тренер указал при регистрации
   useEffect(() => {
     if (isOpen && trainer) {
+      const srv = safeParse(trainer.services_offered);
+      const pub = safeParse(trainer.public_settings);
+      const prc = safeParse(trainer.pricing);
+
       setEditForm({
         photo_url: trainer.avatar_url || trainer.photo_url || '',
         first_name: trainer.first_name || '',
@@ -158,31 +169,31 @@ export default function TrainerEditProfileModal({
           ? trainer.specializations 
           : ['Набор массы и гипертрофия'],
 
-        // Загрузка сохраненных флагов или строго false по умолчанию
-        show_in_catalog: Boolean(trainer.public_settings?.show_in_catalog),
+        // Если при регистрации было выбрано — отображаем. Если нет — строго false без галочек.
+        show_in_catalog: Boolean(pub.show_in_catalog ?? trainer.show_in_catalog),
         has_free_trial: Boolean(trainer.has_free_trial),
         has_free_consultation: Boolean(trainer.has_free_consultation),
 
         services_enabled: {
-          personal: Boolean(trainer.services_offered?.personal),
-          split: Boolean(trainer.services_offered?.split),
-          group: Boolean(trainer.services_offered?.group),
-          online: Boolean(trainer.services_offered?.online)
+          personal: Boolean(srv.personal),
+          split: Boolean(srv.split),
+          group: Boolean(srv.group),
+          online: Boolean(srv.online)
         },
         pricing: {
-          personal_single: trainer.pricing?.personal_single || 8000,
-          personal_count: trainer.pricing?.personal_count || 12,
-          personal_block: trainer.pricing?.personal_block || 70000,
+          personal_single: prc.personal_single || 8000,
+          personal_count: prc.personal_count || 12,
+          personal_block: prc.personal_block || 70000,
 
-          split_single: trainer.pricing?.split_single || 12000,
-          split_count: trainer.pricing?.split_count || 12,
-          split_block: trainer.pricing?.split_block || 100000,
+          split_single: prc.split_single || 12000,
+          split_count: prc.split_count || 12,
+          split_block: prc.split_block || 100000,
 
-          group_single: trainer.pricing?.group_single || 5000,
-          group_month: trainer.pricing?.group_month || 40000,
+          group_single: prc.group_single || 5000,
+          group_month: prc.group_month || 40000,
 
-          online_single: trainer.pricing?.online_single || 10000,
-          online_month: trainer.pricing?.online_month || 35000
+          online_single: prc.online_single || 10000,
+          online_month: prc.online_month || 35000
         },
 
         education_place: trainer.education_place || '',
@@ -191,7 +202,7 @@ export default function TrainerEditProfileModal({
         certificates_link: trainer.certificates_link || ''
       });
     }
-  }, [isOpen]);
+  }, [isOpen, trainer, cleanUsername]);
 
   if (!isOpen) return null;
 
@@ -307,6 +318,8 @@ export default function TrainerEditProfileModal({
         specializations: editForm.specializations,
         specialization: editForm.specializations.join(', '),
 
+        // Сохраняем флаги привлечения и формат услуг
+        show_in_catalog: editForm.show_in_catalog,
         has_free_trial: editForm.has_free_trial,
         has_free_consultation: editForm.has_free_consultation,
         services_offered: editForm.services_enabled,
@@ -346,7 +359,7 @@ export default function TrainerEditProfileModal({
 
       if (error) throw error;
 
-      alert('✅ Профиль тренера успешно обновлен и синхронизирован с визиткой!');
+      alert('✅ Данные успешно обновлены и синхронизированы!');
       if (onSaved) onSaved();
       onClose();
     } catch (e) {
@@ -359,9 +372,8 @@ export default function TrainerEditProfileModal({
   return (
     <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-150">
       
-      {/* 1. ШАПКА С ИДЕАЛЬНОЙ МАТЕМАТИЧЕСКОЙ ЦЕНТРОВКОЙ И КНОПКОЙ «НАЗАД» */}
+      {/* 1. ШАПКА С МАТЕМАТИЧЕСКИМ ЦЕНТРИРОВАНИЕМ И ЛАКОНИЧНОЙ КНОПКОЙ «НАЗАД» */}
       <div className="shrink-0 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 px-4 py-3 relative flex items-center justify-between shadow-2xs">
-        {/* Кнопка Назад */}
         <div className="z-10 flex items-center">
           <button
             type="button"
@@ -380,21 +392,12 @@ export default function TrainerEditProfileModal({
           </h2>
         </div>
 
-        {/* Правый балансир для идеальной симметрии */}
         <div className="w-16 z-10" />
       </div>
 
-      {/* 2. СКРОЛЛИРУЕМАЯ ОБЛАСТЬ */}
+      {/* 2. СКРОЛЛИРУЕМАЯ ОБЛАСТЬ (БЕЗ ЛИШНЕГО УВЕДОМЛЕНИЯ СВЕРХУ) */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 max-w-md mx-auto w-full pb-8">
         
-        {/* Информационная плашка синхронизации */}
-        <div className="p-3 bg-blue-50/70 border border-blue-200/70 rounded-2xl flex items-start gap-2.5 shadow-2xs">
-          <Sparkles className="w-4 h-4 text-[#1E60D5] shrink-0 mt-0.5" />
-          <p className="text-[11px] text-blue-950 leading-relaxed font-medium">
-            Все заполненные данные моментально обновляют вашу <b>публичную визитку</b>, карточку в <b>Каталоге тренеров</b> и Telegram-боте <b>@gymconnect_ala_bot</b>.
-          </p>
-        </div>
-
         {/* Аватар тренера */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs flex flex-col items-center text-center">
           <div 
@@ -711,28 +714,34 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 4. Привлечение атлетов и видимость в каталоге (ОБЪЕДИНЕНЫ В ОДНУ СЕКЦИЮ, ВСЕ БЕЗ ГАЛОЧЕК ПО УМОЛЧАНИЮ) */}
+        {/* 4. ПРИВЛЕЧЕНИЕ АТЛЕТОВ И КАТАЛОГ (ДОСТУПНО В ТАРИФЕ «ПРОФИ ДО 30 УЧЕНИКОВ» И ВЫШЕ) */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           
-          {/* Заголовок блока */}
           <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
             <div>
               <h3 className="text-xs font-bold text-slate-800">
                 Привлечение атлетов и каталог
               </h3>
-              <p className="text-[10.5px] text-slate-400 mt-0.5">Видимость профиля для новых клиентов города</p>
+              <p className="text-[10.5px] text-slate-400 mt-0.5">Лидогенерация и поиск новых клиентов</p>
             </div>
           </div>
 
-          {/* Верхняя плашка Coach Operation System Pro */}
-          <div className="p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex items-center gap-2">
-            <Crown className="w-4 h-4 text-amber-600 shrink-0" />
-            <p className="text-[11px] text-amber-900 font-medium leading-snug">
-              Доступно при активной подписке <b>Coach Operation System Pro</b>
-            </p>
+          {/* Плашка тарифа «Профи» (до 30 учеников) сверху */}
+          <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <Crown className="w-4 h-4 fill-white" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-amber-950 leading-tight">
+                Доступно в тарифе «Профи (до 30 учеников)» и выше
+              </p>
+              <p className="text-[10.5px] text-amber-800 mt-0.5 leading-snug">
+                Отображение в каталоге, пробные тренировки и консультации не входят в базовый тариф.
+              </p>
+            </div>
           </div>
 
-          {/* 3 аккуратных переключателя с просторными 2-строчными описаниями */}
+          {/* 3 переключателя: по умолчанию выключены, либо подтягивают выбор тренера из регистрации */}
           <div className="space-y-2 pt-1">
             
             {/* Пункт 1: Отображать профиль в каталоге */}
@@ -786,7 +795,7 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 5. Прейскурант тренировок — ВСЕ ПО УМОЛЧАНИЮ ОТКЛЮЧЕНЫ, СТАВИТ ГАЛОЧКУ И РЕДАКТИРУЕТ */}
+        {/* 5. ПРЕЙСКУРАНТ ТРЕНИРОВОК — ПО УМОЛЧАНИЮ ВСЕ ВЫКЛЮЧЕНЫ, ЛИБО ПОДТЯГИВАЮТСЯ ИЗ РЕГИСТРАЦИИ */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3.5">
           <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800">
@@ -1037,7 +1046,7 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 7. Подтверждение дипломов и верификация (Без ИИН!) */}
+        {/* 7. Подтверждение дипломов и верификация (Без ИИН) */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
@@ -1123,7 +1132,7 @@ export default function TrainerEditProfileModal({
           className="w-full py-3.5 px-5 bg-[#1E60D5] hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
         >
           <Save className="w-4 h-4" />
-          <span>{isSaving ? 'Сохранение изменений...' : 'Сохранить анкету'}</span>
+          <span>{isSaving ? 'Сохранение изменений...' : 'Сохранить профиль'}</span>
         </button>
       </div>
 
