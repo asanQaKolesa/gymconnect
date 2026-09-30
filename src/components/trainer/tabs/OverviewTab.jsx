@@ -4,18 +4,19 @@ import {
   Calendar, 
   Send, 
   Check, 
-  RotateCcw, 
+  X,
   AlertCircle, 
-  ClipboardList,
-  UserPlus,
-  ChevronRight,
-  Eye,
-  SlidersHorizontal,
-  Dumbbell,
-  Clock,
-  Activity,
-  Plus,
-  MessageSquare
+  ClipboardList, 
+  UserPlus, 
+  ChevronRight, 
+  Eye, 
+  SlidersHorizontal, 
+  Dumbbell, 
+  Clock, 
+  Activity, 
+  Plus, 
+  MessageSquare,
+  Award
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
@@ -33,15 +34,14 @@ export default function OverviewTab({
   trainer, 
   students = [], 
   onSelectStudent, 
-  onOpenPublicProfile,
-  onNavigateToCalendar,
-  onNavigateToBroadcasts,
-  onOpenAddScheduleModal,
+  onOpenPublicProfile, 
+  onNavigateToCalendar, 
+  onNavigateToBroadcasts, 
+  onOpenAddScheduleModal, 
   onRefresh 
 }) {
   const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-  // Форматирование даты: строго цифрами, крупно и аккуратно
   const formattedDate = useMemo(() => {
     const date = new Date();
     const day = String(date.getDate()).padStart(2, '0');
@@ -61,19 +61,11 @@ export default function OverviewTab({
   }, []);
 
   const [selectedDayFilter, setSelectedDayFilter] = useState(currentDayShort);
-  const [processedMap, setProcessedMap] = useState({});
+  // statusMap: { [studentId]: 'attended' | 'missed' }
+  const [statusMap, setStatusMap] = useState({});
   const [processingId, setProcessingId] = useState(null);
   const [expandedProgramId, setExpandedProgramId] = useState(null);
 
-  // Модалка рассылки
-  const [remindModal, setRemindModal] = useState({
-    isOpen: false,
-    customMessage: 'Привет! Напоминаю о сегодняшней тренировке по графику. Жду в зале вовремя! 💪'
-  });
-  const [isSendingBatch, setIsSendingBatch] = useState(false);
-  const [sendSuccessText, setSendSuccessText] = useState(null);
-
-  // Модалка диплинка приглашения атлета
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -99,7 +91,6 @@ export default function OverviewTab({
     return ['Пн', 'Ср', 'Пт'];
   };
 
-  // Сегментация базы подопечных
   const activeStudents = useMemo(() => {
     return students.filter(s => {
       const st = (s.status || '').toLowerCase().trim();
@@ -118,7 +109,6 @@ export default function OverviewTab({
     });
   }, [students]);
 
-  // Финансы: выручка, аренда зала, чистый доход
   const totalRevenue = useMemo(() => {
     return activeStudents.reduce((acc, s) => {
       let price = 70000;
@@ -133,10 +123,9 @@ export default function OverviewTab({
   const monthlyRent = Number(trainer?.monthly_rent || 90000);
   const netProfit = Math.max(0, totalRevenue - monthlyRent);
 
-  // Нагрузка недели
   const weekLoadStats = useMemo(() => {
     const counts = {};
-    daysOfWeek.forEach(d => counts[d] = 0);
+    daysOfWeek.forEach(d => { counts[d] = 0; });
 
     activeStudents.forEach(s => {
       const sDays = parseDays(s.workout_days);
@@ -149,28 +138,35 @@ export default function OverviewTab({
     return { counts, maxCount };
   }, [activeStudents]);
 
-  // Явка за сегодня
   const todayStudents = useMemo(() => {
     return activeStudents.filter(s => parseDays(s.workout_days).includes(currentDayShort));
   }, [activeStudents, currentDayShort]);
 
   const todayCompletedCount = useMemo(() => {
-    return todayStudents.filter(s => processedMap[s.id]).length;
-  }, [todayStudents, processedMap]);
+    return todayStudents.filter(s => statusMap[s.id] === 'attended').length;
+  }, [todayStudents, statusMap]);
 
   const todayAttendancePercent = todayStudents.length > 0 
     ? Math.round((todayCompletedCount / todayStudents.length) * 100) 
     : 0;
 
-  // Сортировка тренировок строго по времени
+  // Извлечение точного времени начала (например, "18:00")
+  const getStartTime = (slot) => {
+    if (!slot) return '18:00';
+    const clean = slot.trim();
+    if (clean.includes('-')) return clean.split('-')[0].trim().substring(0, 5);
+    if (clean.includes('—')) return clean.split('—')[0].trim().substring(0, 5);
+    return clean.substring(0, 5);
+  };
+
   const displayedStudents = useMemo(() => {
     let list = selectedDayFilter === 'all' 
       ? activeStudents 
       : activeStudents.filter(s => parseDays(s.workout_days).includes(selectedDayFilter));
     
     return [...list].sort((a, b) => {
-      const timeA = (a.workout_time_slot || '18:00').substring(0, 5);
-      const timeB = (b.workout_time_slot || '18:00').substring(0, 5);
+      const timeA = getStartTime(a.workout_time_slot);
+      const timeB = getStartTime(b.workout_time_slot);
       return timeA.localeCompare(timeB);
     });
   }, [activeStudents, selectedDayFilter]);
@@ -182,70 +178,55 @@ export default function OverviewTab({
     });
   }, [activeStudents]);
 
-  const handleToggleWorkout = async (e, s) => {
+  // Двусторонняя фиксация явки: "Был" или "Не был"
+  const handleSetAttendance = async (e, student, newStatus) => {
     e.stopPropagation();
-    const isDone = Boolean(processedMap[s.id]);
-    setProcessingId(s.id);
+    const prevStatus = statusMap[student.id];
+    setProcessingId(student.id);
 
-    const currentLeft = Number(s.left_trainings ?? s.remaining_workouts ?? 12);
-    const newLeft = isDone ? currentLeft + 1 : Math.max(0, currentLeft - 1);
+    const currentLeft = Number(student.left_trainings ?? student.remaining_workouts ?? 12);
+    let updatedLeft = currentLeft;
+
+    if (prevStatus !== 'attended' && newStatus === 'attended') {
+      updatedLeft = Math.max(0, currentLeft - 1);
+    } else if (prevStatus === 'attended' && newStatus !== 'attended') {
+      updatedLeft = currentLeft + 1;
+    }
 
     try {
-      s.left_trainings = newLeft;
-      s.remaining_workouts = newLeft;
+      student.left_trainings = updatedLeft;
+      student.remaining_workouts = updatedLeft;
 
       await supabase
         .from('profiles')
         .update({
-          left_trainings: newLeft,
-          remaining_workouts: newLeft
+          left_trainings: updatedLeft,
+          remaining_workouts: updatedLeft
         })
-        .eq('id', s.id);
+        .eq('id', student.id);
 
-      setProcessedMap(prev => ({ ...prev, [s.id]: !isDone }));
+      setStatusMap(prev => ({
+        ...prev,
+        [student.id]: prev[student.id] === newStatus ? null : newStatus
+      }));
 
-      const targetTelegramId = s.telegram_id || s.chat_id;
+      const targetTelegramId = student.telegram_id || student.chat_id;
       if (targetTelegramId) {
         const trainerName = trainer?.full_name || trainer?.first_name || 'Наставник';
-        const pushText = !isDone
-          ? `✅ <b>Занятие проведено!</b>\n\nСписано: <b>1 занятие</b>.\nОстаток в блоке: <b>${newLeft}</b> ${getWorkoutWord(newLeft)}.\n\n<i>Тренер: ${escapeHtml(trainerName)}</i>`
-          : `↩️️ <b>Списание занятия отменено</b>\n\nЗанятие возвращено на баланс (+1).\nОстаток в блоке: <b>${newLeft}</b> ${getWorkoutWord(newLeft)}.`;
-
-        sendTelegramMessage(targetTelegramId, pushText).catch(() => {});
+        let pushText = '';
+        if (newStatus === 'attended') {
+          pushText = `✅ <b>Занятие проведено!</b>\n\nСписано: <b>1 занятие</b>.\nОстаток на балансе: <b>${updatedLeft}</b> ${getWorkoutWord(updatedLeft)}.\n\n<i>Тренер: ${escapeHtml(trainerName)}</i>`;
+        } else if (newStatus === 'missed') {
+          pushText = `⚠️ <b>Пропуск тренировки зафиксирован</b>\n\nТренер отметил отсутствие на запланированном занятии.\nОстаток в блоке: <b>${updatedLeft}</b> ${getWorkoutWord(updatedLeft)}.`;
+        }
+        if (pushText) sendTelegramMessage(targetTelegramId, pushText).catch(() => {});
       }
 
       if (onRefresh) onRefresh();
     } catch (err) {
-      console.warn('Ошибка списания занятия:', err);
+      console.warn('Ошибка фиксации явки:', err);
     } finally {
       setProcessingId(null);
-    }
-  };
-
-  const handleSendReminder = async () => {
-    if (!remindModal.customMessage.trim() || displayedStudents.length === 0) return;
-    setIsSendingBatch(true);
-
-    try {
-      let count = 0;
-      for (const s of displayedStudents) {
-        const chatId = s.telegram_id || s.chat_id;
-        if (chatId) {
-          const msg = `🔔 <b>Напоминание о тренировке</b>\n\n${remindModal.customMessage}`;
-          const ok = await sendTelegramMessage(chatId, msg);
-          if (ok) count++;
-        }
-      }
-
-      setSendSuccessText(`Напоминание отправлено: ${count}`);
-      setTimeout(() => {
-        setSendSuccessText(null);
-        setRemindModal(prev => ({ ...prev, isOpen: false }));
-      }, 2500);
-    } catch (e) {
-      console.warn('Ошибка рассылки:', e);
-    } finally {
-      setIsSendingBatch(false);
     }
   };
 
@@ -262,15 +243,13 @@ export default function OverviewTab({
       
       {/* 1. ШАПКА: ЧИСТАЯ КРУПНАЯ ДАТА + ПАРНЫЕ САПФИРОВЫЕ КНОПКИ */}
       <div className="flex items-center justify-between px-1">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-[20px] font-bold font-mono tracking-tight text-slate-900 leading-none">
-              {formattedDate}
-            </h2>
-            <span className="text-[11px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">
-              {currentDayName}
-            </span>
-          </div>
+        <div className="flex items-center gap-2">
+          <h2 className="text-[20px] font-bold font-mono tracking-tight text-slate-900 leading-none">
+            {formattedDate}
+          </h2>
+          <span className="text-[11px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">
+            {currentDayName}
+          </span>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -295,39 +274,42 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 2. ПУБЛИЧНАЯ ВИЗИТКА ТРЕНЕРА */}
+      {/* 2. УВЕЛИЧЕННАЯ КАРТОЧКА ТРЕНЕРА (С ФОКУСОМ НА СТАЖ, КАТЕГОРИЮ И ПРОСМОТРЫ) */}
       <div 
         onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
-        className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
+        className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3.5 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
       >
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center">
+        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+          <div className="w-13 h-13 rounded-2xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center">
             {trainer?.avatar_url ? (
               <img src={trainer.avatar_url} alt="Аватар тренера" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-xs font-bold text-slate-700">
+              <span className="text-sm font-bold text-slate-700">
                 {trainer?.full_name ? trainer.full_name.charAt(0).toUpperCase() : 'Т'}
               </span>
             )}
           </div>
 
-          <div className="min-w-0 flex-1">
-            <h3 className="text-xs font-bold text-slate-900 truncate">
-              {trainer?.full_name || trainer?.first_name || 'Персональный наставник'}
-            </h3>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h3 className="text-[14px] font-bold text-slate-900 truncate">
+                {trainer?.full_name || trainer?.first_name || 'Персональный наставник'}
+              </h3>
+              <Award className="w-3.5 h-3.5 text-[#1E60D5] shrink-0" />
+            </div>
             
-            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 truncate">
-              <span className="truncate">{trainer?.club_name || 'Фитнес-клуб (Алматы)'}</span>
+            <div className="flex items-center gap-2 text-[11.5px] text-slate-500 truncate">
+              <span className="font-medium text-slate-700">Стаж {trainer?.experience_years || 5} лет</span>
               <span>•</span>
-              <span className="flex items-center gap-1 shrink-0 text-slate-700 font-medium">
-                <Eye className="w-3 h-3 text-slate-400" />
+              <span className="flex items-center gap-1 shrink-0 text-slate-600">
+                <Eye className="w-3.5 h-3.5 text-slate-400" />
                 <span>{trainer?.profile_views || 148} просмотров</span>
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 text-[#1E60D5] shrink-0 font-semibold text-[11px]">
+        <div className="flex items-center gap-1 text-[#1E60D5] shrink-0 font-semibold text-xs">
           <span>Визитка</span>
           <ChevronRight className="w-4 h-4 text-slate-400" />
         </div>
@@ -403,7 +385,7 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 5. НОВАЯ ДИАГРАММА ЭФФЕКТИВНОСТИ И РЕТЕНШНА (KPI НАСТАВНИКА) */}
+      {/* 5. ДИАГРАММА ЭФФЕКТИВНОСТИ И РЕТЕНШНА */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <div className="flex items-center gap-1.5">
@@ -512,7 +494,7 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 7. ТРЕНИРОВКИ НА СЕГОДНЯ (С ИКОНКОЙ И ПЕРЕХОДОМ В РАСПИСАНИЕ) */}
+      {/* 7. ТРЕНИРОВКИ НА СЕГОДНЯ: ВРЕМЯ И ФОРМАТ ТАБАМИ, РАЗДЕЛЬНЫЕ КНОПКИ ЯВКИ */}
       <div className="bg-white rounded-2xl border border-slate-200/70 shadow-xs overflow-hidden">
         <div className="p-3.5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -545,14 +527,14 @@ export default function OverviewTab({
             </div>
           ) : (
             displayedStudents.map((s) => {
-              const leftWorkouts = Number(s.left_trainings ?? s.remaining_workouts ?? 12);
-              const isDone = Boolean(processedMap[s.id]);
+              const currentStatus = statusMap[s.id]; // 'attended' | 'missed' | undefined
               const isCurrentProcessing = processingId === s.id;
-              const exactTime = s.workout_time_slot ? s.workout_time_slot.substring(0, 5) : '18:00';
+              const startTime = getStartTime(s.workout_time_slot);
               const formatLabel = getFormatLabel(s);
 
               return (
-                <div key={s.id} className="p-3.5 space-y-2.5">
+                <div key={s.id} className="p-3.5 space-y-3">
+                  {/* Верхняя строка: аватар, имя, формат и точное время плашками */}
                   <div 
                     onClick={() => onSelectStudent && onSelectStudent(s)}
                     className="flex items-center justify-between gap-3 cursor-pointer"
@@ -568,21 +550,19 @@ export default function OverviewTab({
                         )}
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-bold text-slate-900 truncate">
-                            {s.full_name || 'Без имени'}
-                          </h4>
-                          <span className="text-[10px] text-slate-400 font-mono shrink-0">
-                            Остаток: {leftWorkouts}
-                          </span>
-                        </div>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <h4 className="text-xs font-bold text-slate-900 truncate">
+                          {s.full_name || 'Без имени'}
+                        </h4>
                         
-                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
-                          <span className="truncate">{formatLabel}</span>
-                          <span>•</span>
-                          <span className="font-mono font-bold text-slate-800 shrink-0">
-                            {exactTime}
+                        {/* Табы формата и точного времени начала */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                            {formatLabel}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-[#1E60D5] text-[10px] font-mono font-bold flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5" />
+                            {startTime}
                           </span>
                         </div>
                       </div>
@@ -591,42 +571,50 @@ export default function OverviewTab({
                     <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </div>
 
-                  {/* Кнопки управления: синий активный Sapphire */}
-                  <div className="flex items-center gap-2 pt-0.5">
+                  {/* Нижняя панель действий: План тренировки + Был (зелёный) + Не был (красный) */}
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => setExpandedProgramId(expandedProgramId === s.id ? null : s.id)}
-                      className={`flex-1 h-9 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      className={`h-9 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         expandedProgramId === s.id 
                           ? 'bg-[#1E60D5] text-white border-[#1E60D5]' 
                           : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80'
                       }`}
                     >
                       <ClipboardList className="w-3.5 h-3.5" />
-                      <span>План тренировки</span>
+                      <span>План</span>
                     </button>
 
-                    {isDone ? (
-                      <button
-                        type="button"
-                        disabled={isCurrentProcessing}
-                        onClick={(e) => handleToggleWorkout(e, s)}
-                        className="flex-1 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-98 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Отменить явку</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={isCurrentProcessing}
-                        onClick={(e) => handleToggleWorkout(e, s)}
-                        className="flex-1 h-9 rounded-xl bg-[#1E60D5] hover:bg-blue-600 active:scale-98 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                      >
-                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                        <span>Был на занятии</span>
-                      </button>
-                    )}
+                    {/* Кнопка Был на занятии (Sport Green) */}
+                    <button
+                      type="button"
+                      disabled={isCurrentProcessing}
+                      onClick={(e) => handleSetAttendance(e, s, 'attended')}
+                      className={`flex-1 h-9 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all active:scale-98 cursor-pointer ${
+                        currentStatus === 'attended'
+                          ? 'bg-[#16A34A] text-white shadow-xs'
+                          : 'bg-emerald-50 hover:bg-emerald-100 text-[#16A34A] border border-emerald-200/80'
+                      }`}
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Был</span>
+                    </button>
+
+                    {/* Кнопка Не был на занятии (Danger Rose) */}
+                    <button
+                      type="button"
+                      disabled={isCurrentProcessing}
+                      onClick={(e) => handleSetAttendance(e, s, 'missed')}
+                      className={`h-9 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all active:scale-98 cursor-pointer ${
+                        currentStatus === 'missed'
+                          ? 'bg-[#E11D48] text-white shadow-xs'
+                          : 'bg-rose-50 hover:bg-rose-100 text-[#E11D48] border border-rose-200/80'
+                      }`}
+                    >
+                      <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Не был</span>
+                    </button>
                   </div>
 
                   {expandedProgramId === s.id && (
@@ -654,7 +642,7 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 8. СВЯЗЬ С АТЛЕТАМИ: ИКОНКА СЕКЦИИ И САПФИРОВАЯ КНОПКА */}
+      {/* 8. СВЯЗЬ С АТЛЕТАМИ: БЫСТРЫЙ ПЕРЕХОД НА СТРАНИЦУ РАССЫЛОК */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2.5">
         <div className="flex items-center gap-1.5">
           <MessageSquare className="w-3.5 h-3.5 text-[#1E60D5]" />
@@ -663,31 +651,27 @@ export default function OverviewTab({
           </span>
         </div>
 
-        {sendSuccessText ? (
-          <div className="p-2.5 bg-slate-100 rounded-xl text-slate-800 text-xs font-medium text-center">
-            {sendSuccessText}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setRemindModal(prev => ({ ...prev, isOpen: true }))}
-              className="flex-1 h-10 px-3 bg-[#1E60D5] hover:bg-blue-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer shadow-xs"
-            >
-              <Send className="w-3.5 h-3.5 shrink-0" />
-              <span>Напомнить о тренировке</span>
-            </button>
+        <div className="flex items-center gap-2">
+          {/* Главная кнопка теперь открывает страницу рассылок со списком записанных на сегодня */}
+          <button
+            type="button"
+            onClick={() => onNavigateToBroadcasts && onNavigateToBroadcasts({ filter: 'today' })}
+            className="flex-1 h-10 px-3 bg-[#1E60D5] hover:bg-blue-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer shadow-xs"
+          >
+            <Send className="w-3.5 h-3.5 shrink-0" />
+            <span>Напомнить о тренировке</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => onNavigateToBroadcasts && onNavigateToBroadcasts()}
-              className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 hover:bg-slate-50 active:scale-95 text-slate-700 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-2xs"
-              title="Все шаблоны и рассылки"
-            >
-              <SlidersHorizontal className="w-4 h-4 text-slate-600" />
-            </button>
-          </div>
-        )}
+          {/* Квадратная кнопка перехода ко всем шаблонам (оплата, КБЖУ, отмена и т.д.) */}
+          <button
+            type="button"
+            onClick={() => onNavigateToBroadcasts && onNavigateToBroadcasts({ filter: 'all_templates' })}
+            className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 hover:bg-slate-50 active:scale-95 text-slate-700 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-2xs"
+            title="Все шаблоны напоминаний"
+          >
+            <SlidersHorizontal className="w-4 h-4 text-slate-600" />
+          </button>
+        </div>
       </div>
 
       {/* МОДАЛКА ПРИГЛАШЕНИЯ АТЛЕТА */}
@@ -717,41 +701,6 @@ export default function OverviewTab({
                 className="px-3 py-1 bg-[#1E60D5] hover:bg-blue-600 text-white rounded-lg text-xs font-semibold shrink-0 cursor-pointer active:scale-95 transition-all shadow-xs"
               >
                 {copiedLink ? 'Готово' : 'Копировать'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* МОДАЛКА НАПОМИНАНИЯ */}
-      {remindModal.isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white rounded-t-3xl sm:rounded-2xl border border-slate-200 w-full max-w-md p-4 space-y-3 shadow-xl">
-            <h4 className="text-xs font-bold text-slate-900">
-              Напоминание для группы ({displayedStudents.length} атл.)
-            </h4>
-            <textarea
-              rows={3}
-              value={remindModal.customMessage}
-              onChange={e => setRemindModal(prev => ({ ...prev, customMessage: e.target.value }))}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 resize-none focus:outline-none focus:border-[#1E60D5]"
-            />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setRemindModal(prev => ({ ...prev, isOpen: false }))}
-                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-xs transition-colors cursor-pointer"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                disabled={isSendingBatch}
-                onClick={handleSendReminder}
-                className="flex-1 py-2 bg-[#1E60D5] hover:bg-blue-600 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer shadow-xs"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Отправить</span>
               </button>
             </div>
           </div>
