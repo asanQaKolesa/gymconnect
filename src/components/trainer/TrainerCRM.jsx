@@ -1,5 +1,5 @@
 // src/components/trainer/TrainerCRM.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import TrainerHeader from './components/TrainerHeader';
 import OverviewTab from './tabs/OverviewTab';
@@ -64,7 +64,8 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     gym: ''
   });
 
-  const refreshTrainerData = async (isSilent = false) => {
+  // Загрузка данных строго по требованию
+  const refreshTrainerData = useCallback(async (isSilent = false) => {
     try {
       const cleanUsername = trainerUsername ? trainerUsername.replace('@', '').trim().toLowerCase() : '';
       if (!cleanUsername) return;
@@ -100,22 +101,50 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     } finally {
       if (!isSilent) setLoading(false);
     }
-  };
+  }, [trainerUsername]);
 
+  // Загрузка при открытии + Подписка на Realtime (0 холостых запросов!)
   useEffect(() => {
     if (!trainerUsername) {
       setLoading(false);
       return;
     }
 
+    // 1. Первоначальная загрузка
     refreshTrainerData(false);
 
-    const pollTimer = setInterval(() => {
-      refreshTrainerData(true);
-    }, 5000);
+    // 2. Realtime-подписка: база сама пришлет сигнал, если изменился профиль или ученик
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => {
+          refreshTrainerData(true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'trainer_leads' },
+        () => {
+          refreshTrainerData(true);
+        }
+      )
+      .subscribe();
 
-    return () => clearInterval(pollTimer);
-  }, [trainerUsername]);
+    // 3. Обновление при возвращении тренера в приложение (когда развернул Telegram)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshTrainerData(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [trainerUsername, refreshTrainerData]);
 
   const handleAddStudentSubmit = async (e) => {
     e.preventDefault();
@@ -247,7 +276,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     );
   }
 
-  // 2. Экран входящих заявок (открывается при клике на колокольчик или заявки)
+  // 2. Экран входящих заявок
   if (activeScreen === 'notifications' || activeScreen === 'inquiries') {
     return (
       <InquiriesScreen
