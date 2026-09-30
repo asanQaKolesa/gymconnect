@@ -28,6 +28,17 @@ import TrainerDeleteModal from './components/modals/TrainerDeleteModal';
 import TrainerQrModal from './components/modals/TrainerQrModal';
 import TrainerNotificationsModal from './components/modals/TrainerNotificationsModal';
 
+// Вспомогательная функция гарантированного извлечения имени атлета
+const formatAthleteFullName = (st) => {
+  if (!st) return 'Атлет';
+  if (st.full_name && st.full_name.trim()) return st.full_name.trim();
+  const combined = `${st.first_name || ''} ${st.last_name || ''}`.trim();
+  if (combined) return combined;
+  if (st.username) return `@${st.username.replace('@', '')}`;
+  if (st.telegram_username) return `@${st.telegram_username.replace('@', '')}`;
+  return 'Атлет';
+};
+
 export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
@@ -35,15 +46,12 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Состояние активного полноэкранного раздела из меню
   const [activeScreen, setActiveScreen] = useState(null);
   const [openDrawerOnReturn, setOpenDrawerOnReturn] = useState(false);
 
-  // Состояние выбранного ученика для открытия досье
   const [selectedStudentForDetail, setSelectedStudentForDetail] = useState(null);
   const [studentDetailOrigin, setStudentDetailOrigin] = useState('overview');
 
-  // Форма добавления студента
   const [addStudentForm, setAddStudentForm] = useState({
     first_name: '',
     last_name: '',
@@ -54,13 +62,11 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     gym: ''
   });
 
-  // Загрузка данных тренера и его учеников с тихим опросом
   const refreshTrainerData = async (isSilent = false) => {
     try {
       const cleanUsername = trainerUsername ? trainerUsername.replace('@', '').trim().toLowerCase() : '';
       if (!cleanUsername) return;
 
-      // 1. Профиль тренера
       const { data: tData, error: tErr } = await supabase
         .from('trainer_profiles')
         .select('*')
@@ -70,21 +76,22 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
       if (tErr) throw tErr;
       if (tData) setTrainerData(tData);
 
-      // 2. Список учеников тренера
       const { data: sData } = await supabase
         .from('profiles')
         .select('*')
         .or(`trainer_username.ilike.${cleanUsername},trainer_username.ilike.@${cleanUsername},trainer_telegram.ilike.${cleanUsername},trainer_telegram.ilike.@${cleanUsername}`);
 
-      const validStudents = (sData || []).filter(student => {
-        const studentTrainerU = (student.trainer_username || '').replace('@', '').trim().toLowerCase();
-        const studentTrainerTg = (student.trainer_telegram || '').replace('@', '').trim().toLowerCase();
-
-        if (studentTrainerU) {
-          return studentTrainerU === cleanUsername;
-        }
-        return studentTrainerTg === cleanUsername;
-      });
+      const validStudents = (sData || [])
+        .filter(student => {
+          const studentTrainerU = (student.trainer_username || '').replace('@', '').trim().toLowerCase();
+          const studentTrainerTg = (student.trainer_telegram || '').replace('@', '').trim().toLowerCase();
+          return studentTrainerU === cleanUsername || studentTrainerTg === cleanUsername;
+        })
+        .map(student => ({
+          ...student,
+          // Гарантируем, что у каждого ученика есть полное имя
+          full_name: formatAthleteFullName(student)
+        }));
 
       setStudents(validStudents);
     } catch (err) {
@@ -94,7 +101,6 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     }
   };
 
-  // Первичная загрузка и 5-секундный тихий поллинг
   useEffect(() => {
     if (!trainerUsername) {
       setLoading(false);
@@ -110,7 +116,6 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     return () => clearInterval(pollTimer);
   }, [trainerUsername]);
 
-  // УМНОЕ ДОБАВЛЕНИЕ УЧЕНИКА БЕЗ ДУБЛИКАТОВ
   const handleAddStudentSubmit = async (e) => {
     e.preventDefault();
     if (!addStudentForm.first_name.trim()) {
@@ -126,8 +131,8 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
       const totalNum = Number(addStudentForm.total_trainings) || 12;
       const priceNum = Number(addStudentForm.monthly_price) || 70000;
       const gymName = addStudentForm.gym || trainerData?.gym || 'Invictus Go';
+      const fullName = `${addStudentForm.first_name.trim()} ${addStudentForm.last_name.trim()}`.trim();
 
-      // 1. Проверяем, существует ли уже этот пользователь в базе profiles
       let existingProfile = null;
       if (cleanU) {
         const { data } = await supabase
@@ -149,7 +154,6 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
       }
 
       if (existingProfile) {
-        // УЧЕНИК УЖЕ В БАЗЕ TELEGRAM: привязываем к тренеру без дубликата!
         const { error: updErr } = await supabase
           .from('profiles')
           .update({
@@ -165,13 +169,12 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
           .eq('id', existingProfile.id);
 
         if (updErr) throw updErr;
-
-        alert(`✅ Атлет ${existingProfile.first_name || ''} найден в Telegram и успешно привязан к вам без создания дублей!`);
+        alert(`✅ Атлет ${existingProfile.first_name || ''} найден и привязан к вам!`);
       } else {
-        // НОВЫЙ УЧЕНИК: создаем новую запись
         const payload = {
           first_name: addStudentForm.first_name.trim(),
           last_name: addStudentForm.last_name.trim(),
+          full_name: fullName,
           username: cleanU || null,
           phone: cleanPhone,
           whatsapp: cleanPhone,
@@ -193,7 +196,6 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
           .insert([payload]);
 
         if (insErr) throw insErr;
-
         alert('Ученик успешно зарегистрирован в базе CRM!');
       }
 
@@ -231,7 +233,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     );
   }
 
-  // ================= 1. ПОЛНОЭКРАННОЕ ДОСЬЕ УЧЕНИКА =================
+  // 1. Полноэкранное досье ученика
   if (selectedStudentForDetail) {
     return (
       <StudentDetailModal 
@@ -244,7 +246,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     );
   }
 
-  // ================= 2. ПОЛНОЭКРАННЫЙ ЦЕНТР УВЕДОМЛЕНИЙ НА ВЕСЬ ЭКРАН =================
+  // 2. Центр уведомлений
   if (activeScreen === 'notifications') {
     return (
       <TrainerNotificationsModal 
@@ -255,7 +257,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     );
   }
 
-  // ================= 3. ПОЛНОЭКРАННЫЕ РАЗДЕЛЫ МЕНЮ =================
+  // 3. Полноэкранные разделы меню
   if (activeScreen === 'subscription') {
     return <TrainerSubscriptionModal isOpen={true} onClose={handleCloseScreenToMenu} />;
   }
@@ -304,7 +306,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     return <TrainerQrModal isOpen={true} onClose={handleCloseScreenToMenu} coachName={trainerData?.full_name || trainerData?.first_name || 'Тренер'} cleanUsername={trainerData?.username || trainerUsername} />;
   }
 
-  // ================= 4. ОСНОВНОЙ ДАШБОРД CRM =================
+  // 4. Основной дашборд CRM
   const activeStudentsCount = students.filter(s => s.status === 'active' || !s.status).length;
   const pausedStudentsCount = students.filter(s => s.status === 'paused').length;
   const leftStudentsCount = students.filter(s => s.status === 'left').length;
@@ -316,7 +318,6 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
       <div className="w-full max-w-md min-h-screen flex flex-col justify-between relative bg-[#F2F2F7] shadow-xl">
         <div className="flex-1 pb-10">
           
-          {/* Передаем живой массив students={students} для реактивной работы колокольчика */}
           <TrainerHeader 
             trainer={trainerData} 
             students={students}
