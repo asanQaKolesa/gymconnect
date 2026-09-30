@@ -21,22 +21,20 @@ import {
   Trash2, 
   QrCode, 
   MessageSquare, 
-  Calculator, 
   Shield, 
   HeartPulse, 
   Scale, 
   Headphones, 
   Settings, 
-  Bell,
-  Star,
-  Building2,
-  FileCheck2,
-  Sparkles,
-  Globe,
-  Camera,
-  Snowflake,
-  Inbox,
-  UserCheck
+  Bell, 
+  Star, 
+  Building2, 
+  FileCheck2, 
+  Sparkles, 
+  Globe, 
+  Snowflake, 
+  Inbox, 
+  UserCheck 
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 
@@ -187,7 +185,7 @@ export default function TrainerHeader({
         </div>
       </header>
 
-      {/* ================= СВЕТЛОЕ БОКОВОЕ МЕНЮ (DRAWER) ================= */}
+      {/* ================= БОКОВОЕ МЕНЮ (DRAWER) ================= */}
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-xs flex justify-start select-none animate-in fade-in duration-150">
           <div className="w-[88%] max-w-sm bg-white h-full p-4 flex flex-col justify-between shadow-2xl overflow-y-auto">
@@ -221,7 +219,6 @@ export default function TrainerHeader({
 
                     <p className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">@{cleanUsername}</p>
                     
-                    {/* Статус верификации: спокойный бейдж */}
                     <div className="flex items-center gap-1.5 mt-1">
                       {isVerified ? (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
@@ -338,7 +335,7 @@ export default function TrainerHeader({
                     <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
                   </div>
 
-                  {/* Касса и абонементы */}
+                  {/* Касса и абонементы (Здесь живут все деньги тренера!) */}
                   <div
                     onClick={() => {
                       if (onSelectTab) onSelectTab('finance');
@@ -353,8 +350,8 @@ export default function TrainerHeader({
                         <Wallet className="w-4 h-4 stroke-[2]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Касса и абонементы</h4>
-                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Учет оплат, сгорания занятий и чистый доход</p>
+                        <h4 className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Касса и финансы</h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Учет абонементов, Kaspi-оплаты и чистый доход</p>
                       </div>
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
@@ -429,7 +426,7 @@ export default function TrainerHeader({
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
 
-                {/* Регламент для клиентов (Перенесен сюда!) */}
+                {/* Регламент для клиентов */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('client_rules')}
@@ -466,46 +463,7 @@ export default function TrainerHeader({
                 </button>
               </div>
 
-              {/* ================= 3. ФИНАНСЫ ТРЕНЕРА ================= */}
-              <div className="space-y-1.5 pt-1">
-                <p className="text-[11px] font-bold text-slate-500 px-1">Финансы тренера</p>
-
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('subscription')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
-                      <CreditCard className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Реквизиты и оплата Kaspi</p>
-                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Kaspi Gold / Pay • Выставление счета в бот</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('income_calc')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs shrink-0">
-                      <Calculator className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Калькулятор дохода</p>
-                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Декомпозиция целей и выручки в месяц</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                </button>
-              </div>
-
-              {/* ================= 4. ПОДПИСКА И РОСТ (PRO) ================= */}
+              {/* ================= 3. ПОДПИСКА И РОСТ (PRO) ================= */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-500 px-1">Подписка и рост (Pro)</p>
 
@@ -578,7 +536,7 @@ export default function TrainerHeader({
                 </button>
               </div>
 
-              {/* ================= 5. ПУБЛИЧНЫЙ ПРОФИЛЬ И БРЕНД ================= */}
+              {/* ================= 4. ПУБЛИЧНЫЙ ПРОФИЛЬ И БРЕНД ================= */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-500 px-1">Публичный профиль и бренд</p>
 
@@ -627,7 +585,7 @@ export default function TrainerHeader({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">Мои залы и прайс</p>
-                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Клубы работы и стоимость тренировок</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">{trainer?.gym?.split('|')[0] || 'Клубы работы'}</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -651,7 +609,7 @@ export default function TrainerHeader({
                 </button>
               </div>
 
-              {/* ================= 6. ПРАВОВОЙ БЛОК И ПОДДЕРЖКА ================= */}
+              {/* ================= 5. ПРАВОВОЙ БЛОК И ПОДДЕРЖКА ================= */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-500 px-1">Правовой блок и сервис</p>
 
