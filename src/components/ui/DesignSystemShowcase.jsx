@@ -4,6 +4,7 @@ import {
   Dumbbell, 
   Users, 
   Flame, 
+  Calendar, 
   ArrowLeft, 
   DollarSign, 
   Zap, 
@@ -23,14 +24,16 @@ import {
   ChevronDown,
   Send,
   Timer,
-  PenTool
+  PenTool,
+  Palette,
+  Type
 } from 'lucide-react';
 
 export default function DesignSystemShowcase({ onBack }) {
   const [activeSplit, setActiveSplit] = useState('fullbody');
   const [activeDaysCount, setActiveDaysCount] = useState(3);
   
-  // 9 анатомических зон
+  // 9 анатомических зон мышц
   const muscleGroups = [
     'Грудь', 
     'Спина', 
@@ -59,8 +62,7 @@ export default function DesignSystemShowcase({ onBack }) {
     'Квадрицепс': [
       { name: 'Классические приседания со штангой', equipment: 'Штанга' },
       { name: 'Жим ногами в платформе 45°', equipment: 'Тренажер' },
-      { name: 'Болгарские сплит-приседания с гантелями', equipment: 'Гантели' },
-      { name: 'Разгибания голени в тренажере сидя', equipment: 'Тренажер' }
+      { name: 'Болгарские сплит-приседания с гантелями', equipment: 'Гантели' }
     ],
     'Ягодицы и бицепс бедра': [
       { name: 'Ягодичный мост со штангой на скамье', equipment: 'Штанга' },
@@ -74,13 +76,11 @@ export default function DesignSystemShowcase({ onBack }) {
     ],
     'Бицепс': [
       { name: 'Подъем штанги на бицепс стоя', equipment: 'Штанга' },
-      { name: 'Сгибания рук с гантелями с супинацией', equipment: 'Гантели' },
-      { name: 'Молотковые сгибания с гантелями', equipment: 'Гантели' }
+      { name: 'Сгибания рук с гантелями с супинацией', equipment: 'Гантели' }
     ],
     'Трицепс': [
       { name: 'Французский жим с EZ-грифом лежа', equipment: 'EZ-гриф' },
-      { name: 'Разгибание на блоке вниз с канатом', equipment: 'Блок' },
-      { name: 'Жим штанги узким хватом лежа', equipment: 'Штанга' }
+      { name: 'Разгибание на блоке вниз с канатом', equipment: 'Блок' }
     ],
     'Пресс и кор': [
       { name: 'Скручивания на наклонной скамье', equipment: 'Свой вес' },
@@ -89,8 +89,7 @@ export default function DesignSystemShowcase({ onBack }) {
     ],
     'Кардио и функционал': [
       { name: 'Беговая дорожка (интервалы в горку)', equipment: 'Время' },
-      { name: 'Эллиптический тренажер (пульс 130)', equipment: 'Время' },
-      { name: 'Гребной тренажер Concept2', equipment: 'Время' }
+      { name: 'Эллиптический тренажер (пульс 130)', equipment: 'Время' }
     ]
   };
 
@@ -108,7 +107,6 @@ export default function DesignSystemShowcase({ onBack }) {
   const [weight, setWeight] = useState(60);
   const [restTime, setRestTime] = useState(90);
   
-  const [searchQuery, setSearchQuery] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
   const [toastText, setToastText] = useState(null);
   
@@ -118,7 +116,7 @@ export default function DesignSystemShowcase({ onBack }) {
 
   const showToast = (text) => {
     setToastText(text);
-    setTimeout(() => setToastText(null), 2600);
+    setTimeout(() => setToastText(null), 2500);
   };
 
   const handleNumberInput = (setter, raw) => {
@@ -132,16 +130,12 @@ export default function DesignSystemShowcase({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F2F2F7] text-slate-900 pb-36 font-sans select-none antialiased relative overflow-hidden">
+    <div className="min-h-screen bg-[#F2F2F7] text-slate-900 pb-36 font-sans select-none antialiased relative">
       
-      {/* Мягкие световые пятна для глассморфизма */}
-      <div className="absolute top-12 left-1/2 -translate-x-1/2 w-96 h-96 bg-gradient-to-tr from-blue-300/25 to-indigo-200/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-[480px] -right-20 w-80 h-80 bg-blue-400/15 rounded-full blur-3xl pointer-events-none" />
-      
-      {/* 1. ТОСТ DYNAMIC ISLAND (СВЕТЛОЕ МАТОВОЕ СТЕКЛО) */}
+      {/* 1. ТОСТ DYNAMIC ISLAND (СВЕТЛЫЙ МАТОВЫЙ ГЛАССМОРФИЗМ) */}
       {toastText && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-200 max-w-sm w-full px-4 pointer-events-none">
-          <div className="bg-white/90 backdrop-blur-2xl text-slate-900 px-4 py-3 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.1)] border border-white/80 flex items-center justify-between gap-3 pointer-events-auto">
+          <div className="bg-white/95 backdrop-blur-2xl text-slate-900 px-4 py-3 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.1)] border border-slate-200 flex items-center justify-between gap-3 pointer-events-auto">
             <div className="flex items-center gap-2.5 text-xs font-semibold">
               <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
               <span>{toastText}</span>
@@ -157,8 +151,8 @@ export default function DesignSystemShowcase({ onBack }) {
         </div>
       )}
 
-      {/* 2. ШАПКА */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-white/60 px-4 py-3.5 flex items-center justify-between shadow-2xs">
+      {/* 2. ШАПКА ВИЗУАЛЬНОЙ СИСТЕМЫ */}
+      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-2xl border-b border-slate-200/80 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           {onBack && (
             <button 
@@ -171,60 +165,165 @@ export default function DesignSystemShowcase({ onBack }) {
           )}
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold text-slate-900 tracking-tight">CoachOS Design System</h1>
-              <span className="text-[10.5px] font-bold text-blue-700 bg-blue-50/90 px-2 py-0.5 rounded-md border border-blue-200/70">
-                v3.7
+              <h1 className="text-sm font-bold text-slate-900 tracking-tight">GymConnect UI Kit</h1>
+              <span className="text-[10.5px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/70">
+                Стандарт 4.0
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 font-normal mt-0.5">Выверенный спокойный стиль</p>
+            <p className="text-[11px] text-slate-500 font-normal mt-0.5">Единая дизайн-система CoachOS CRM</p>
           </div>
         </div>
 
-        <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200/80 text-blue-600 flex items-center justify-center font-bold text-xs shadow-2xs">
+        <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold text-xs">
           GC
         </div>
       </div>
 
-      <div className="max-w-md mx-auto p-4 space-y-4 relative z-10">
+      <div className="max-w-md mx-auto p-3.5 space-y-4">
 
-        {/* ================= 1. КАРТОЧКА АТЛЕТА В РАСПИСАНИИ ================= */}
-        <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-4 border border-white/90 shadow-[0_8px_30px_rgba(0,0,0,0.04)] space-y-3">
-          <div className="border-b border-slate-100/80 pb-2">
+        {/* ================= РАЗДЕЛ А: СПЕЦИФИКАЦИЯ ЦВЕТОВ (COLOR TOKENS) ================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-2.5">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+            <Palette className="w-4 h-4 text-blue-600" />
+            <h3 className="text-xs font-bold text-slate-800">
+              Цветовая палитра (Color Tokens)
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-blue-900 block">Cobalt Primary</span>
+                <span className="text-blue-700 text-[10px] font-mono">#1D4ED8 • Главные кнопки</span>
+              </div>
+              <div className="w-5 h-5 rounded-lg bg-[#1D4ED8] shadow-xs" />
+            </div>
+
+            <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-emerald-900 block">Sport Green</span>
+                <span className="text-emerald-700 text-[10px] font-mono">#16A34A • Успех, Проведено</span>
+              </div>
+              <div className="w-5 h-5 rounded-lg bg-[#16A34A] shadow-xs" />
+            </div>
+
+            <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-amber-900 block">Warning Amber</span>
+                <span className="text-amber-700 text-[10px] font-mono">#F59E0B • Стрик, Внимание</span>
+              </div>
+              <div className="w-5 h-5 rounded-lg bg-[#F59E0B] shadow-xs" />
+            </div>
+
+            <div className="p-2 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-rose-900 block">Danger Rose</span>
+                <span className="text-rose-700 text-[10px] font-mono">#E11D48 • PAR-Q травмы</span>
+              </div>
+              <div className="w-5 h-5 rounded-lg bg-[#E11D48] shadow-xs" />
+            </div>
+
+            <div className="p-2 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-slate-900 block">Background Canvas</span>
+                <span className="text-slate-600 text-[10px] font-mono">#F2F2F7 • Системный фон</span>
+              </div>
+              <div className="w-5 h-5 rounded-lg bg-[#F2F2F7] border border-slate-300" />
+            </div>
+
+            <div className="p-2 rounded-xl bg-white border border-slate-200 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-slate-900 block">Card Surface</span>
+                <span className="text-slate-600 text-[10px] font-mono">#FFFFFF • Карточки</span>
+              </div>
+              <div className="w-5 h-5 rounded-lg bg-white border border-slate-300" />
+            </div>
+          </div>
+        </div>
+
+        {/* ================= РАЗДЕЛ Б: СПЕЦИФИКАЦИЯ ШРИФТОВ (TYPOGRAPHY SCALE) ================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-2.5">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+            <Type className="w-4 h-4 text-blue-600" />
+            <h3 className="text-xs font-bold text-slate-800">
+              Шрифтовая сетка (Typography Scale)
+            </h3>
+          </div>
+
+          <div className="space-y-1.5 text-xs divide-y divide-slate-100">
+            <div className="pt-1 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-slate-900 block text-[15px]">Заголовок карточки (Title)</span>
+                <span className="text-slate-400 text-[10.5px]">15px Bold • Имена, разделы</span>
+              </div>
+              <span className="font-mono text-slate-500 text-[11px]">15px Bold</span>
+            </div>
+
+            <div className="pt-1.5 flex items-center justify-between">
+              <div>
+                <span className="font-semibold text-slate-800 block text-[13px]">Основной текст (Body)</span>
+                <span className="text-slate-400 text-[10.5px]">13px Semibold • Упражнения, инпуты</span>
+              </div>
+              <span className="font-mono text-slate-500 text-[11px]">13px Semibold</span>
+            </div>
+
+            <div className="pt-1.5 flex items-center justify-between">
+              <div>
+                <span className="text-slate-600 block text-[11.5px] font-medium">Подзаголовок (Caption)</span>
+                <span className="text-slate-400 text-[10.5px]">11.5px Medium • Время, дескрипторы</span>
+              </div>
+              <span className="font-mono text-slate-500 text-[11px]">11.5px</span>
+            </div>
+
+            <div className="pt-1.5 flex items-center justify-between">
+              <div>
+                <span className="font-mono font-extrabold text-slate-900 block text-[14px]">85.5 кг • 70 000 ₸ (Mono Number)</span>
+                <span className="text-slate-400 text-[10.5px]">14px Mono • Веса, сеты, касса</span>
+              </div>
+              <span className="font-mono text-slate-500 text-[11px]">14px Mono</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ================= 1. КАРТОЧКА АТЛЕТА В РАСПИСАНИИ (ЗАЛ И ОСТАТОК УБРАНЫ) ================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
+          <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800">
               Расписание на сегодня
             </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Вся информация в карточке атлета</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Имя целиком • чипсы цели и времени внизу</p>
           </div>
 
-          <div className="bg-slate-50/70 rounded-2xl p-3 border border-slate-200/60 space-y-3">
+          <div className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200/70 space-y-3">
             
-            {/* ЯРУС 1: Профиль атлета (Без зеленой точки, имя целиком) */}
+            {/* Профиль атлета */}
             <div 
               onClick={() => setIsProfileModalOpen(true)}
               className="flex items-center justify-between gap-3 cursor-pointer group active:opacity-75 transition-opacity"
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                {/* Фото атлета без онлайн-точек */}
+                {/* Фото атлета без зеленых точек */}
                 <img 
                   src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" 
                   alt="Асанали"
-                  className="w-12 h-12 rounded-2xl object-cover border border-slate-200/80 shadow-xs shrink-0"
+                  className="w-12 h-12 rounded-2xl object-cover border border-slate-200 shadow-xs shrink-0"
                 />
 
                 <div className="min-w-0 flex-1">
-                  {/* Строка 1: Имя целиком */}
+                  {/* Имя целиком */}
                   <h4 className="text-[14px] font-bold text-slate-900 leading-snug">
                     Асанали Кусайынов
                   </h4>
 
-                  {/* Строка 2: Цель • Время 18:30 • Остаток (без синих рамок) */}
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1 flex-wrap font-medium">
-                    <span className="text-slate-800 font-semibold">Набор массы</span>
-                    <span className="text-slate-300">•</span>
-                    <span className="text-slate-700 font-mono">18:30</span>
-                    <span className="text-slate-300">•</span>
-                    <span className="text-slate-500">
-                      Остаток: {isCompleted ? '9' : '10'} занятий
+                  {/* Чипсы времени и цели (БЕЗ ТОЧЕК И БЕЗ ЗАЛА!) */}
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-[11px] font-semibold text-slate-700 bg-white border border-slate-200/80 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-2xs">
+                      <Clock className="w-3 h-3 text-blue-600" />
+                      <span>18:30</span>
+                    </span>
+
+                    <span className="text-[11px] font-semibold text-blue-800 bg-blue-50 border border-blue-200/60 px-2 py-0.5 rounded-lg">
+                      Набор массы
                     </span>
                   </div>
                 </div>
@@ -235,8 +334,8 @@ export default function DesignSystemShowcase({ onBack }) {
               </div>
             </div>
 
-            {/* ЯРУС 2: Панель действий */}
-            <div className="pt-2.5 border-t border-slate-200/70 flex items-center gap-2">
+            {/* Панель действий */}
+            <div className="pt-2 border-t border-slate-200/70 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setIsWorkoutPlanOpen(!isWorkoutPlanOpen)}
@@ -270,7 +369,7 @@ export default function DesignSystemShowcase({ onBack }) {
                       setIsCompleted(true);
                       showToast('✅ Тренировка проведена • Списано 1 занятие');
                     }}
-                    className="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-blue-600/25"
+                    className="w-full py-2.5 px-3 bg-[#1D4ED8] hover:bg-blue-800 text-white rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-blue-600/25"
                   >
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                     <span>Проведено</span>
@@ -279,11 +378,11 @@ export default function DesignSystemShowcase({ onBack }) {
               </div>
             </div>
 
-            {/* РАСКРЫТИЕ ПЛАНА ДНЯ: 60 КГ БОЛЬШЕ НЕ СИНИЙ */}
+            {/* Раскрывающийся план тренировки */}
             {isWorkoutPlanOpen && (
-              <div className="p-3 bg-white rounded-2xl border border-slate-200 space-y-2.5 animate-in fade-in duration-150 text-xs">
+              <div className="p-3 bg-white rounded-2xl border border-slate-200 space-y-2 animate-in fade-in duration-150 text-xs">
                 <div className="flex items-center justify-between font-bold text-slate-800 border-b border-slate-100 pb-1.5">
-                  <span className="text-xs">День 1: Грудь и Трицепс</span>
+                  <span>День 1: Грудь и Трицепс</span>
                   <span className="text-[10.5px] text-slate-600 font-semibold bg-slate-100 px-2 py-0.5 rounded-md">
                     3 упражнения
                   </span>
@@ -320,54 +419,38 @@ export default function DesignSystemShowcase({ onBack }) {
                     </span>
                   </div>
                 </div>
-
-                {/* Упражнение 3 */}
-                <div className="p-2 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-1.5">
-                  <p className="text-xs font-bold text-slate-900">3. Французский жим с EZ-грифом</p>
-                  <div className="flex items-center gap-1.5">
-                    <span className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 text-[10.5px] font-mono font-bold rounded-lg shadow-2xs">
-                      3 подхода
-                    </span>
-                    <span className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 text-[10.5px] font-mono font-bold rounded-lg shadow-2xs">
-                      12 повторений
-                    </span>
-                    <span className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 text-[10.5px] font-mono font-bold rounded-lg shadow-2xs">
-                      25 кг
-                    </span>
-                  </div>
-                </div>
               </div>
             )}
 
           </div>
         </div>
 
-        {/* ================= 2. КАРТОЧКА УПРАЖНЕНИЯ: СТРОГО КВАДРАТНЫЕ КНОПКИ (w-8 h-8) ================= */}
-        <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-4 border border-white/90 shadow-[0_8px_30px_rgba(0,0,0,0.04)] space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100/80 pb-2">
+        {/* ================= 2. КАРТОЧКА УПРАЖНЕНИЯ (СЕТЫ И ПОВТОРЫ В 2 КОЛОНКИ, ВЕС ВНИЗУ) ================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h3 className="text-xs font-bold text-slate-800">
                 Карточка упражнения и нагрузки
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Квадратные кнопки степперов • 9 групп мышц</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Кнопки квадратные 36×36px • ничего не накладывается</p>
             </div>
             
             <button 
               type="button" 
               className="p-1.5 text-slate-300 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-              title="Удалить карточку"
+              title="Удалить"
             >
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200/70 space-y-3">
+          <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/70 space-y-3">
             
             {/* Группа мышц */}
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[11px] font-semibold text-slate-600">Группа мышц:</span>
-                <span className="text-[10px] text-slate-400 font-medium">9 зон</span>
+                <span className="text-[10px] text-slate-400 font-medium">9 зон анатомии</span>
               </div>
               <div className="relative">
                 <button
@@ -477,100 +560,105 @@ export default function DesignSystemShowcase({ onBack }) {
               )}
             </div>
 
-            {/* СТЕППЕРЫ: СТРОГО КВАДРАТНЫЕ КНОПКИ 32x32px (aspect-square) */}
-            <div className="grid grid-cols-3 gap-2 pt-1">
+            {/* РЕШЕНИЕ ПРОБЛЕМЫ НАЕЗДА КНОПОК: СЕТЫ И ПОВТОРЫ В 2 ПРОСТОРНЫЕ КОЛОНКИ */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
               
               {/* Сеты */}
-              <div className="bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-                <span className="text-[10.5px] font-semibold text-slate-400 block text-center mb-1.5">
-                  Сеты
+              <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+                <span className="text-[11px] font-semibold text-slate-500 block text-center mb-2">
+                  Подходы (сеты)
                 </span>
-                <div className="flex items-center justify-center gap-1.5">
+                <div className="flex items-center justify-between px-1">
                   <button
                     type="button"
                     onClick={() => setSets(s => Math.max(1, (Number(s) || 0) - 1))}
-                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shrink-0"
+                    className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shrink-0"
                   >
-                    <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <Minus className="w-4 h-4 stroke-[2.5]" />
                   </button>
                   <input
                     type="text"
                     inputMode="numeric"
                     value={sets}
                     onChange={(e) => handleNumberInput(setSets, e.target.value)}
-                    className="w-7 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
+                    className="w-10 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setSets(s => (Number(s) || 0) + 1)}
-                    className="w-8 h-8 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xs shrink-0"
+                    className="w-9 h-9 rounded-xl bg-[#1D4ED8] hover:bg-blue-700 text-white font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-xs shrink-0"
                   >
-                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
                   </button>
                 </div>
               </div>
 
               {/* Повторы */}
-              <div className="bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-                <span className="text-[10.5px] font-semibold text-slate-400 block text-center mb-1.5">
-                  Повторы
+              <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+                <span className="text-[11px] font-semibold text-slate-500 block text-center mb-2">
+                  Повторения
                 </span>
-                <div className="flex items-center justify-center gap-1.5">
+                <div className="flex items-center justify-between px-1">
                   <button
                     type="button"
                     onClick={() => setReps(r => Math.max(1, (Number(r) || 0) - 1))}
-                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shrink-0"
+                    className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shrink-0"
                   >
-                    <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <Minus className="w-4 h-4 stroke-[2.5]" />
                   </button>
                   <input
                     type="text"
                     inputMode="numeric"
                     value={reps}
                     onChange={(e) => handleNumberInput(setReps, e.target.value)}
-                    className="w-7 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
+                    className="w-10 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setReps(r => (Number(r) || 0) + 1)}
-                    className="w-8 h-8 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xs shrink-0"
+                    className="w-9 h-9 rounded-xl bg-[#1D4ED8] hover:bg-blue-700 text-white font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-xs shrink-0"
                   >
-                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
                   </button>
                 </div>
               </div>
 
-              {/* Вес */}
-              <div className="bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-                <span className="text-[10.5px] font-semibold text-slate-400 block text-center mb-1.5">
-                  Вес (кг)
-                </span>
-                <div className="flex items-center justify-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setWeight(w => Math.max(0, Math.round(((Number(w) || 0) - 2.5) * 10) / 10))}
-                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shrink-0"
-                  >
-                    <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
-                  </button>
+            </div>
+
+            {/* Вес отдельной широкой строкой со свободным шагом 2.5 кг */}
+            <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between gap-3">
+              <div>
+                <span className="text-[11px] font-semibold text-slate-500 block">Рабочий вес</span>
+                <span className="text-[10px] text-slate-400 font-medium">Шаг 2.5 кг</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setWeight(w => Math.max(0, Math.round(((Number(w) || 0) - 2.5) * 10) / 10))}
+                  className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shrink-0"
+                >
+                  <Minus className="w-4 h-4 stroke-[2.5]" />
+                </button>
+                <div className="px-3 py-1 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-1">
                   <input
                     type="text"
                     inputMode="decimal"
                     value={weight}
                     placeholder="0"
                     onChange={(e) => handleNumberInput(setWeight, e.target.value)}
-                    className="w-8 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
+                    className="w-12 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setWeight(w => Math.round(((Number(w) || 0) + 2.5) * 10) / 10)}
-                    className="w-8 h-8 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xs shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                  </button>
+                  <span className="text-xs font-mono font-bold text-slate-500">кг</span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setWeight(w => Math.round(((Number(w) || 0) + 2.5) * 10) / 10)}
+                  className="w-9 h-9 rounded-xl bg-[#1D4ED8] hover:bg-blue-700 text-white font-bold flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-xs shrink-0"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                </button>
               </div>
-
             </div>
 
             {/* Быстрый выбор времени отдыха */}
@@ -587,7 +675,7 @@ export default function DesignSystemShowcase({ onBack }) {
                     onClick={() => setRestTime(sec)}
                     className={`px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold transition-all cursor-pointer ${
                       restTime === sec
-                        ? 'bg-blue-600 text-white shadow-2xs'
+                        ? 'bg-[#1D4ED8] text-white shadow-2xs'
                         : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                     }`}
                   >
@@ -597,7 +685,7 @@ export default function DesignSystemShowcase({ onBack }) {
               </div>
             </div>
 
-            {/* Заметка по технике для атлета */}
+            {/* Заметка тренера */}
             <input
               type="text"
               placeholder="Заметка тренера: локти под 45°, пауза в нижней точке 1 сек..."
@@ -606,9 +694,9 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* ================= 3. ЦЕНТР ПУШ-УВЕДОМЛЕНИЙ (LIVE BOT В 1 СТРОКУ, КОМПАКТНЫЙ ШРИФТ) ================= */}
-        <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-4 border border-white/90 shadow-[0_8px_30px_rgba(0,0,0,0.04)] space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100/80 pb-2">
+        {/* ================= 3. ЦЕНТР ПУШ-УВЕДОМЛЕНИЙ (LIVE BOT В 1 СТРОКУ) ================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <Send className="w-3.5 h-3.5 text-blue-600" />
@@ -617,13 +705,12 @@ export default function DesignSystemShowcase({ onBack }) {
               <p className="text-[11px] text-slate-400 mt-0.5">Мгновенная отправка через бота</p>
             </div>
 
-            {/* Live Bot строго в одну строку */}
             <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 whitespace-nowrap shrink-0">
               Live Bot
             </span>
           </div>
 
-          {/* 3 кнопки с уменьшенным аккуратным текстом */}
+          {/* 3 кнопки */}
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
@@ -674,7 +761,7 @@ export default function DesignSystemShowcase({ onBack }) {
             </button>
           </div>
 
-          {/* Превью сообщения Telegram */}
+          {/* Превью пуша */}
           <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1">
             <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono border-b border-slate-200/60 pb-1">
               <span>Сообщение в боте атлета:</span>
@@ -706,7 +793,7 @@ export default function DesignSystemShowcase({ onBack }) {
         </div>
 
         {/* ================= 4. РАЗДЕЛЫ УПРАВЛЕНИЯ ================= */}
-        <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-4 border border-white/90 shadow-[0_8px_30px_rgba(0,0,0,0.04)] space-y-2">
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-2">
           <div className="border-b border-slate-100/80 pb-2">
             <h3 className="text-xs font-bold text-slate-800">
               Разделы управления
@@ -784,7 +871,7 @@ export default function DesignSystemShowcase({ onBack }) {
         </div>
 
         {/* ================= 5. ДНЕЙ В НЕДЕЛЮ (1–7) И СХЕМА СПЛИТА ================= */}
-        <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-4 border border-white/90 shadow-[0_8px_30px_rgba(0,0,0,0.04)] space-y-3">
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-800">
               Дней тренировок в неделю
@@ -800,7 +887,7 @@ export default function DesignSystemShowcase({ onBack }) {
                 onClick={() => setActiveDaysCount(d)}
                 className={`py-1.5 text-xs font-mono font-bold rounded-xl transition-all cursor-pointer ${
                   activeDaysCount === d 
-                    ? 'bg-blue-600 text-white shadow-xs' 
+                    ? 'bg-[#1D4ED8] text-white shadow-xs' 
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -841,7 +928,7 @@ export default function DesignSystemShowcase({ onBack }) {
           <button
             type="button"
             onClick={() => showToast('План тренировок назначен подопечному!')}
-            className="w-full py-3.5 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(37,99,235,0.22)] active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full py-3.5 px-5 bg-[#1D4ED8] hover:bg-blue-800 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(29,78,216,0.22)] active:scale-[0.98] transition-all cursor-pointer"
           >
             <Zap className="w-4 h-4 fill-current text-white" />
             <span>Сохранить и отправить план в Telegram</span>
@@ -904,7 +991,7 @@ export default function DesignSystemShowcase({ onBack }) {
             <button
               type="button"
               onClick={() => setIsProfileModalOpen(false)}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs cursor-pointer active:scale-95 shadow-sm shadow-blue-600/20"
+              className="w-full py-3 bg-[#1D4ED8] hover:bg-blue-800 text-white rounded-2xl font-bold text-xs cursor-pointer active:scale-95 shadow-sm shadow-blue-600/20"
             >
               Закрыть карточку
             </button>
