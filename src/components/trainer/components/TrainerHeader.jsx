@@ -9,6 +9,7 @@ import {
   Menu, 
   CreditCard, 
   Rocket, 
+  Gift, 
   ChevronRight, 
   Clock, 
   Users, 
@@ -19,7 +20,6 @@ import {
   Trash2, 
   QrCode, 
   HeartPulse, 
-  Scale, 
   Headphones, 
   Settings, 
   Bell, 
@@ -515,11 +515,10 @@ export default function TrainerHeader({
                 </div>
               </div>
 
-              {/* ================= 4. РАЗВИТИЕ ПРАКТИКИ: 3 ПОЛНОРАЗМЕРНЫЕ КАРТОЧКИ ================= */}
+              {/* ================= 4. РАЗВИТИЕ ПРАКТИКИ ================= */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-400 px-1">Развитие практики</p>
 
-                {/* 1. Тарифы подписки (+1 мес Pro встроено в описание) */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('subscription')}
@@ -537,7 +536,6 @@ export default function TrainerHeader({
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
 
-                {/* 2. Продвижение тренера */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('promotion')}
@@ -555,7 +553,6 @@ export default function TrainerHeader({
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
 
-                {/* 3. Создать свой продукт */}
                 <button
                   type="button"
                   onClick={() => handleMenuClick('templates')}
@@ -574,98 +571,110 @@ export default function TrainerHeader({
                 </button>
               </div>
 
-              {/* ================= 5. ПРАВОВОЙ БЛОК, СЕРВИС И КОММЬЮНИТИ ================= */}
+              {/* ================= 5. СЕРВИС И КОММЬЮНИТИ (ЕДИНАЯ ПЛАШКА КАК В ОПЕРАЦИОННОЙ ПАНЕЛИ) ================= */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-400 px-1">Сервис и комьюнити</p>
 
-                {/* Документация и оферта */}
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('client_rules')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
-                      <FileCheck2 className="w-4 h-4" />
+                <div className="divide-y divide-slate-100 bg-slate-50/70 border border-slate-200/80 rounded-2xl overflow-hidden px-3">
+                  {/* Документация и оферта */}
+                  <div
+                    onClick={() => handleMenuClick('client_rules')}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                        <FileCheck2 className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+                          Документация и оферта
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">
+                          Партнерский договор и защита базы
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Документация и оферта</p>
-                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Партнерский договор и защита базы</p>
-                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                </button>
 
-                {/* Telegram-канал для тренеров */}
-                <a
-                  href="https://t.me/gymconnect_coach"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer block"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
-                      <Send className="w-4 h-4" />
+                  {/* Telegram-канал для тренеров */}
+                  <a
+                    href="https://t.me/gymconnect_coach"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity block"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                        <Send className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+                          Канал для тренеров
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">
+                          Анонсы обновлений, фичи и комьюнити
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Канал для тренеров</p>
-                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Анонсы обновлений, фичи и комьюнити</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                </a>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
+                  </a>
 
-                {/* Поддержка 24/7 */}
-                <button
-                  type="button"
-                  onClick={() => handleMenuClick('support')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
-                      <Headphones className="w-4 h-4" />
+                  {/* Поддержка 24/7 */}
+                  <div
+                    onClick={() => handleMenuClick('support')}
+                    className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                        <Headphones className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+                          Служба заботы 24/7
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">
+                          Прямой чат поддержки с куратором платформы
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Служба заботы 24/7</p>
-                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Прямой чат поддержки с куратором платформы</p>
-                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                </button>
+                </div>
               </div>
 
             </div>
 
-            {/* ПОДВАЛ МЕНЮ */}
-            <div className="space-y-2 pt-3 border-t border-slate-100">
+            {/* ПОДВАЛ МЕНЮ: ЧИСТОЕ ГАРМОНИЧНОЕ ЗАВЕРШЕНИЕ БЕЗ СЛУЧАЙНЫХ ЛИНИЙ И С СТРОГО ЦЕНТРИРОВАННОЙ СТРЕЛКОЙ */}
+            <div className="space-y-2 pt-4">
               {onBack && (
                 <button
                   type="button"
                   onClick={onBack}
-                  className="w-full py-2.5 px-3 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-semibold text-slate-800 flex items-center justify-center gap-2 transition-colors active:scale-95 cursor-pointer"
+                  className="w-full h-10 px-3 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-semibold text-slate-800 inline-flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer border border-slate-200/60 leading-none"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5 text-slate-600" />
-                  <span>Вернуться в профиль атлета</span>
+                  <ArrowLeft className="w-4 h-4 text-slate-600 shrink-0 self-center" />
+                  <span className="leading-none pt-0.5">Вернуться в профиль атлета</span>
                 </button>
               )}
 
-              <div className="flex items-center gap-2 pt-0.5">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleMenuClick('delete_account')}
-                  className="flex-1 py-2 px-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 rounded-xl text-[11px] font-semibold border border-slate-200/80 transition-colors flex items-center justify-center gap-1 active:scale-95 cursor-pointer"
+                  className="flex-1 h-9 px-2 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 rounded-xl text-[11px] font-semibold border border-slate-200/80 transition-colors inline-flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer leading-none"
                 >
-                  <Trash2 className="w-3 h-3" />
-                  <span>Удалить анкету</span>
+                  <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                  <span className="leading-none">Удалить анкету</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="flex-1 py-2 px-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[11px] font-semibold border border-rose-200/80 transition-colors flex items-center justify-center gap-1 active:scale-95 cursor-pointer"
+                  className="flex-1 h-9 px-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[11px] font-semibold border border-rose-200/80 transition-colors inline-flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer leading-none"
                 >
-                  <LogOut className="w-3 h-3" />
-                  <span>Выйти</span>
+                  <LogOut className="w-3.5 h-3.5 shrink-0" />
+                  <span className="leading-none">Выйти</span>
                 </button>
               </div>
             </div>
