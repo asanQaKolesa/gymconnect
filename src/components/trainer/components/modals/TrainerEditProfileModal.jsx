@@ -22,7 +22,9 @@ import {
   Award, 
   Globe2, 
   FileCheck2, 
-  Crown 
+  Crown,
+  Video,
+  MessageCircle
 } from 'lucide-react';
 import { supabase } from '../../../../supabaseClient';
 import * as GymsData from '../../../../data/almatyGyms';
@@ -106,15 +108,18 @@ export default function TrainerEditProfileModal({
     target_audience: 'all',
     specializations: ['Набор массы и гипертрофия'],
 
+    // По умолчанию ВСЕ ТРИ пункта лидогенерации отключены
     show_in_catalog: false,
     has_free_trial: false,
     has_free_consultation: false,
 
+    // Прейскурант: ВСЕ категории по умолчанию отключены (включая консультацию)
     services_enabled: {
       personal: false,
       split: false,
       group: false,
-      online: false
+      online: false,
+      consultation: false
     },
     pricing: {
       personal_single: 8000,
@@ -128,8 +133,11 @@ export default function TrainerEditProfileModal({
       group_single: 5000,
       group_month: 40000,
 
-      online_single: 10000,
-      online_month: 35000
+      online_sessions: 8,
+      online_month: 35000,
+
+      consultation_duration: 60,
+      consultation_price: 10000
     },
 
     education_place: '',
@@ -138,7 +146,7 @@ export default function TrainerEditProfileModal({
     certificates_link: ''
   });
 
-  // Загружаем точные данные, введённые тренером при регистрации
+  // Синхронизация: если тренер на онбординге что-то включил — отображаем, иначе строго false
   useEffect(() => {
     if (isOpen && trainer) {
       const srv = safeParse(trainer.services_offered);
@@ -164,15 +172,16 @@ export default function TrainerEditProfileModal({
           ? trainer.specializations 
           : ['Набор массы и гипертрофия'],
 
-        show_in_catalog: Boolean(pub.show_in_catalog ?? trainer.show_in_catalog),
-        has_free_trial: Boolean(trainer.has_free_trial),
-        has_free_consultation: Boolean(trainer.has_free_consultation),
+        show_in_catalog: Boolean(pub.show_in_catalog ?? trainer.show_in_catalog ?? false),
+        has_free_trial: Boolean(trainer.has_free_trial ?? false),
+        has_free_consultation: Boolean(trainer.has_free_consultation ?? false),
 
         services_enabled: {
-          personal: Boolean(srv.personal),
-          split: Boolean(srv.split),
-          group: Boolean(srv.group),
-          online: Boolean(srv.online)
+          personal: Boolean(srv.personal ?? false),
+          split: Boolean(srv.split ?? false),
+          group: Boolean(srv.group ?? false),
+          online: Boolean(srv.online ?? false),
+          consultation: Boolean(srv.consultation ?? false)
         },
         pricing: {
           personal_single: prc.personal_single || 8000,
@@ -186,8 +195,11 @@ export default function TrainerEditProfileModal({
           group_single: prc.group_single || 5000,
           group_month: prc.group_month || 40000,
 
-          online_single: prc.online_single || 10000,
-          online_month: prc.online_month || 35000
+          online_sessions: prc.online_sessions || 8,
+          online_month: prc.online_month || 35000,
+
+          consultation_duration: prc.consultation_duration || 60,
+          consultation_price: prc.consultation_price || 10000
         },
 
         education_place: trainer.education_place || '',
@@ -276,7 +288,6 @@ export default function TrainerEditProfileModal({
     typeof g === 'string' && g.toLowerCase().includes(searchSecondaryGym.toLowerCase())
   );
 
-  // 🛡️ Самовосстанавливающееся сохранение: автоматически отсекает неизвестные колонки
   const handleSaveFullProfile = async () => {
     if (!editForm.first_name.trim()) {
       alert('Пожалуйста, укажите имя');
@@ -329,8 +340,11 @@ export default function TrainerEditProfileModal({
           group_single: Number(editForm.pricing.group_single) || 5000,
           group_month: Number(editForm.pricing.group_month) || 40000,
 
-          online_single: Number(editForm.pricing.online_single) || 10000,
-          online_month: Number(editForm.pricing.online_month) || 35000
+          online_sessions: Number(editForm.pricing.online_sessions) || 8,
+          online_month: Number(editForm.pricing.online_month) || 35000,
+
+          consultation_duration: Number(editForm.pricing.consultation_duration) || 60,
+          consultation_price: Number(editForm.pricing.consultation_price) || 10000
         },
 
         education_place: editForm.education_place.trim(),
@@ -357,12 +371,11 @@ export default function TrainerEditProfileModal({
           break;
         }
 
-        // Автоматически перехватываем отсутствующую колонку
         const missingMatch = error.message.match(/column [‘'"]?([a-zA-Z0-9_]+)[’'"]?/i) 
           || error.message.match(/Could not find the ['"]?([a-zA-Z0-9_]+)['"]? column/i);
 
         if (missingMatch && missingMatch[1] && payload[missingMatch[1]] !== undefined) {
-          console.warn(`Колонка "${missingMatch[1]}" отсутствует в базе, пропускаем...`);
+          console.warn(`Колонка "${missingMatch[1]}" отсутствует, пропускаем...`);
           delete payload[missingMatch[1]];
         } else {
           throw error;
@@ -373,7 +386,7 @@ export default function TrainerEditProfileModal({
         throw new Error('Не удалось согласовать структуру данных с базой.');
       }
 
-      alert('✅ Данные успешно сохранены!');
+      alert('✅ Данные профиля успешно сохранены!');
       if (onSaved) onSaved();
       onClose();
     } catch (e) {
@@ -725,7 +738,7 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 4. ПРИВЛЕЧЕНИЕ АТЛЕТОВ И КАТАЛОГ */}
+        {/* 4. ПРИВЛЕЧЕНИЕ АТЛЕТОВ И КАТАЛОГ — ПЛАШКА В 1 СТРОКУ, ГАЛОЧКИ ПО УМОЛЧАНИЮ ВЫКЛЮЧЕНЫ */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           
           <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
@@ -737,21 +750,17 @@ export default function TrainerEditProfileModal({
             </div>
           </div>
 
-          <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
-              <Crown className="w-4 h-4 fill-white" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-amber-950 leading-tight">
-                Доступно в тарифе «Профи (до 30 учеников)» и выше
-              </p>
-              <p className="text-[10.5px] text-amber-800 mt-0.5 leading-snug">
-                Отображение в каталоге, пробные тренировки и консультации не входят в базовый тариф.
-              </p>
-            </div>
+          {/* Лаконичная аккуратная плашка без съезжающего текста */}
+          <div className="p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex items-center gap-2">
+            <Crown className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-[11px] text-amber-900 font-bold leading-snug">
+              Доступно в тарифе Pro и выше
+            </p>
           </div>
 
           <div className="space-y-2 pt-1">
+            
+            {/* Пункт 1: Отображать профиль в каталоге */}
             <div 
               onClick={() => setEditForm(prev => ({ ...prev, show_in_catalog: !prev.show_in_catalog }))}
               className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
@@ -767,6 +776,7 @@ export default function TrainerEditProfileModal({
               </div>
             </div>
 
+            {/* Пункт 2: Бесплатная пробная тренировка */}
             <div 
               onClick={() => setEditForm(prev => ({ ...prev, has_free_trial: !prev.has_free_trial }))}
               className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
@@ -782,6 +792,7 @@ export default function TrainerEditProfileModal({
               </div>
             </div>
 
+            {/* Пункт 3: Бесплатная онлайн-консультация */}
             <div 
               onClick={() => setEditForm(prev => ({ ...prev, has_free_consultation: !prev.has_free_consultation }))}
               className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
@@ -796,19 +807,20 @@ export default function TrainerEditProfileModal({
                 {editForm.has_free_consultation && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
             </div>
+
           </div>
         </div>
 
-        {/* 5. ПРЕЙСКУРАНТ ТРЕНИРОВОК */}
+        {/* 5. ПРЕЙСКУРАНТ ТРЕНИРОВОК И ОНЛАЙН-ПРОДУКТОВ */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3.5">
           <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800">
-              Стоимость тренировок и абонементы (₸)
+              Стоимость тренировок и услуг (₸)
             </h3>
-            <p className="text-[10.5px] text-slate-400 mt-0.5">Отметьте галочкой категории, которые вы ведёте</p>
+            <p className="text-[10.5px] text-slate-400 mt-0.5">Включите галочкой форматы, которые вы ведёте</p>
           </div>
 
-          {/* Персональные */}
+          {/* 1. Персональные */}
           <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
             <div 
               onClick={() => toggleService('personal')}
@@ -868,7 +880,7 @@ export default function TrainerEditProfileModal({
             )}
           </div>
 
-          {/* Сплит */}
+          {/* 2. Сплит */}
           <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
             <div 
               onClick={() => toggleService('split')}
@@ -918,7 +930,7 @@ export default function TrainerEditProfileModal({
             )}
           </div>
 
-          {/* Мини-группы */}
+          {/* 3. Мини-группы */}
           <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
             <div 
               onClick={() => toggleService('group')}
@@ -968,7 +980,7 @@ export default function TrainerEditProfileModal({
             )}
           </div>
 
-          {/* Онлайн-ведение */}
+          {/* 4. Онлайн-ведение на месяц */}
           <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
             <div 
               onClick={() => toggleService('online')}
@@ -981,8 +993,8 @@ export default function TrainerEditProfileModal({
                   {editForm.services_enabled.online && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">Онлайн-ведение и планы</h4>
-                  <p className="text-[10px] text-slate-500">Дистанционные тренировки</p>
+                  <h4 className="text-xs font-bold text-slate-900">Онлайн-ведение (месячный тариф)</h4>
+                  <p className="text-[10px] text-slate-500">Дистанционный тренинг и КБЖУ 24/7</p>
                 </div>
               </div>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
@@ -995,17 +1007,18 @@ export default function TrainerEditProfileModal({
             {editForm.services_enabled.online && (
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 animate-in fade-in">
                 <div>
-                  <label className="text-[9.5px] text-slate-500 block mb-1">Онлайн-консультация (₸)</label>
+                  <label className="text-[9.5px] text-slate-500 block mb-1">Занятий/созвонов в мес</label>
                   <input
                     type="text"
                     inputMode="numeric"
-                    value={editForm.pricing.online_single}
-                    onChange={e => handlePriceInput('online_single', e.target.value)}
+                    value={editForm.pricing.online_sessions}
+                    onChange={e => handlePriceInput('online_sessions', e.target.value)}
                     className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs"
+                    placeholder="8"
                   />
                 </div>
                 <div>
-                  <label className="text-[9.5px] text-slate-500 block mb-1">Онлайн-ведение/мес (₸)</label>
+                  <label className="text-[9.5px] text-slate-500 block mb-1">Стоимость в месяц (₸)</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -1017,6 +1030,64 @@ export default function TrainerEditProfileModal({
               </div>
             )}
           </div>
+
+          {/* 5. Разовая онлайн-консультация (ОТДЕЛЬНЫЙ ПРОДУКТ) */}
+          <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
+            <div 
+              onClick={() => toggleService('consultation')}
+              className="flex items-center justify-between cursor-pointer select-none"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+                  editForm.services_enabled.consultation ? 'bg-[#1E60D5] border-[#1E60D5] text-white' : 'bg-white border-slate-300'
+                }`}>
+                  {editForm.services_enabled.consultation && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>Разовая онлайн-консультация</span>
+                    <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-mono">
+                      Продукт
+                    </span>
+                  </h4>
+                  <p className="text-[10px] text-slate-500">Разбор рациона, техники и постановка целей</p>
+                </div>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                editForm.services_enabled.consultation ? 'text-[#1E60D5] bg-blue-50' : 'text-slate-400 bg-slate-200/60'
+              }`}>
+                {editForm.services_enabled.consultation ? 'Активно' : 'Отключено'}
+              </span>
+            </div>
+
+            {editForm.services_enabled.consultation && (
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 animate-in fade-in">
+                <div>
+                  <label className="text-[9.5px] text-slate-500 block mb-1">Длительность (мин)</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={editForm.pricing.consultation_duration}
+                    onChange={e => handlePriceInput('consultation_duration', e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs"
+                    placeholder="60"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9.5px] text-slate-500 block mb-1">Стоимость консультации (₸)</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={editForm.pricing.consultation_price}
+                    onChange={e => handlePriceInput('consultation_price', e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-xl text-center font-mono font-bold text-xs text-[#1E60D5]"
+                    placeholder="10000"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
         </div>
 
         {/* 6. Направления работы и специализации */}
@@ -1136,7 +1207,7 @@ export default function TrainerEditProfileModal({
           className="w-full py-3.5 px-5 bg-[#1E60D5] hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
         >
           <Save className="w-4 h-4" />
-          <span>{isSaving ? 'Сохранение...' : 'Сохранить профиль'}</span>
+          <span>{isSaving ? 'Сохранение изменений...' : 'Сохранить профиль'}</span>
         </button>
       </div>
 
