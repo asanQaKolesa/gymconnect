@@ -13,6 +13,9 @@ import AnalyticsTab from './tabs/AnalyticsTab';
 import AddStudentModal from './components/AddStudentModal';
 import StudentDetailModal from './components/StudentDetailModal';
 
+// Экран входящих заявок
+import InquiriesScreen from './screens/InquiriesScreen';
+
 // Все полноэкранные страницы меню
 import TrainerSubscriptionModal from './components/modals/TrainerSubscriptionModal';
 import TrainerPromotionModal from './components/modals/TrainerPromotionModal';
@@ -26,7 +29,6 @@ import TrainerReferralModal from './components/modals/TrainerReferralModal';
 import TrainerSupportModal from './components/modals/TrainerSupportModal';
 import TrainerDeleteModal from './components/modals/TrainerDeleteModal';
 import TrainerQrModal from './components/modals/TrainerQrModal';
-import TrainerNotificationsModal from './components/modals/TrainerNotificationsModal';
 
 // Вспомогательная функция гарантированного извлечения имени атлета
 const formatAthleteFullName = (st) => {
@@ -89,7 +91,6 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
         })
         .map(student => ({
           ...student,
-          // Гарантируем, что у каждого ученика есть полное имя
           full_name: formatAthleteFullName(student)
         }));
 
@@ -246,13 +247,13 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     );
   }
 
-  // 2. Центр уведомлений
-  if (activeScreen === 'notifications') {
+  // 2. Экран входящих заявок (открывается при клике на колокольчик или заявки)
+  if (activeScreen === 'notifications' || activeScreen === 'inquiries') {
     return (
-      <TrainerNotificationsModal 
-        isOpen={true}
-        onClose={() => setActiveScreen(null)}
-        studentsList={students}
+      <InquiriesScreen
+        trainer={trainerData}
+        onBack={() => setActiveScreen(null)}
+        onRefresh={() => refreshTrainerData(false)}
       />
     );
   }
@@ -343,7 +344,15 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
                   setSelectedStudentForDetail(st);
                   setStudentDetailOrigin('overview');
                 }}
+                onOpenPublicProfile={() => setActiveScreen('public_card')}
+                onOpenInquiries={() => setActiveScreen('inquiries')}
+                onNavigateToCalendar={() => setActiveTab('schedule')}
+                onNavigateToFinance={() => setActiveTab('finance')}
+                onNavigateToAnalytics={() => setActiveTab('analytics')}
+                onNavigateToStudents={() => setActiveTab('students')}
+                onNavigateToBroadcasts={() => setActiveScreen('templates')}
                 onAddStudentClick={() => setIsAddStudentOpen(true)}
+                onRefresh={() => refreshTrainerData(false)}
               />
             )}
 
@@ -375,7 +384,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
 
             {activeTab === 'schedule' && (
               <ScheduleTab 
-                trainerProfile={trainerData}
+                trainerProfile={trainerData} 
                 onUpdate={() => refreshTrainerData(false)}
               />
             )}
