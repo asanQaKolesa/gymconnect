@@ -13,14 +13,13 @@ import {
   Dumbbell, 
   Clock, 
   Activity, 
-  MessageSquare, 
   Star,
   UserCheck,
-  CreditCard,
   Scale,
   Smile,
-  Flame,
-  MessageCircle
+  Users2,
+  TrendingUp,
+  Bot
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
@@ -42,9 +41,20 @@ export default function OverviewTab({
   onNavigateToCalendar, 
   onNavigateToBroadcasts, 
   onNavigateToFinance,
+  onNavigateToAnalytics,
+  onNavigateToStudents,
   onRefresh 
 }) {
   const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+  // Текущий месяц в естественном регистре ("Октябрь")
+  const currentMonthName = useMemo(() => {
+    const months = [
+      'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+    ];
+    return months[new Date().getMonth()];
+  }, []);
 
   const currentDayShort = useMemo(() => {
     const map = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -154,12 +164,14 @@ export default function OverviewTab({
     ? Math.round((todayCompletedCount / todayStudents.length) * 100) 
     : 0;
 
+  // Извлечение строго точного времени без слова "вечер"
   const getStartTime = (slot) => {
     if (!slot) return '18:00';
-    const clean = slot.trim();
+    const clean = slot.replace(/[^0-9:\-—]/g, '').trim();
     if (clean.includes('-')) return clean.split('-')[0].trim().substring(0, 5);
     if (clean.includes('—')) return clean.split('—')[0].trim().substring(0, 5);
-    return clean.substring(0, 5);
+    if (clean.length >= 4) return clean.substring(0, 5);
+    return '18:00';
   };
 
   const displayedStudents = useMemo(() => {
@@ -181,14 +193,12 @@ export default function OverviewTab({
     });
   }, [activeStudents]);
 
-  // Фиксация явки с учетом сгораемости тарифа
   const handleSetAttendance = async (e, student, newStatus) => {
     e.stopPropagation();
     const prevStatus = statusMap[student.id];
     setProcessingId(student.id);
 
     const currentLeft = Number(student.left_trainings ?? student.remaining_workouts ?? 12);
-    // Проверяем тариф: по умолчанию тариф сгораемый (burnable)
     const isBurnable = student.is_burnable !== false && student.package_policy !== 'non_burnable';
 
     let updatedLeft = currentLeft;
@@ -199,10 +209,8 @@ export default function OverviewTab({
       }
     } else if (newStatus === 'missed') {
       if (prevStatus === 'attended') {
-        // Если до этого списали, но отменили
         updatedLeft = isBurnable ? currentLeft : currentLeft + 1;
       } else if (isBurnable && prevStatus !== 'missed') {
-        // По сгораемому тарифу пропуск списывает занятие
         updatedLeft = Math.max(0, currentLeft - 1);
       }
     }
@@ -317,19 +325,21 @@ export default function OverviewTab({
         </button>
       </div>
 
-      {/* 2. НОВЫЕ ЗАЯВКИ ИЗ КАТАЛОГА */}
+      {/* 2. НОВЫЕ ЗАЯВКИ ИЗ КАТАЛОГА (АККУРАТНЫЙ СТАТУСНЫЙ БЕЙДЖ ВМЕСТО ТОЧКИ) */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
             <UserCheck className="w-4 h-4 stroke-[2]" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-900 truncate">Новые заявки</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#1E60D5] shrink-0" />
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-900">Новые заявки</span>
+              <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-[#1E60D5] text-[10px] font-mono font-bold leading-none">
+                +2
+              </span>
             </div>
             <p className="text-[11px] text-slate-500 truncate mt-0.5">
-              2 запроса на пробное занятие
+              Запросы на пробное занятие
             </p>
           </div>
         </div>
@@ -343,7 +353,7 @@ export default function OverviewTab({
         </button>
       </div>
 
-      {/* 3. ПРОФИЛЬ ТРЕНЕРА: РЕЙТИНГ ПОД ИМЕНЕМ, ЧИСТАЯ СТАТИСТИКА */}
+      {/* 3. ПРОФИЛЬ ТРЕНЕРА: ЗВЕЗДОЧКА КОНТУРОМ (БЕЗ ОТВЛЕКАЮЩЕЙ ЗАЛИВКИ) */}
       <div 
         onClick={() => onOpenPublicProfile && onOpenPublicProfile()}
         className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
@@ -366,20 +376,20 @@ export default function OverviewTab({
             
             <div className="flex items-center gap-3 text-[11px] text-slate-500">
               <span className="inline-flex items-center gap-1 font-semibold text-slate-800">
-                <Star className="w-3.5 h-3.5 text-slate-700 fill-slate-700" />
+                <Star className="w-3.5 h-3.5 text-slate-700 stroke-[1.8]" />
                 <span>5.0</span>
               </span>
               <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
-                <Eye className="w-3.5 h-3.5 text-slate-400" />
+                <Eye className="w-3.5 h-3.5 text-slate-500 stroke-[1.8]" />
                 <span>{trainer?.profile_views || 148} просмотров</span>
               </span>
             </div>
           </div>
         </div>
 
-        <div className="inline-flex items-center gap-0.5 text-[#1E60D5] shrink-0 font-semibold text-xs">
+        <div className="inline-flex items-center gap-0.5 text-[#1E60D5] shrink-0 font-semibold text-xs leading-none">
           <span>Визитка</span>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+          <ChevronRight className="w-3.5 h-3.5 text-[#1E60D5]" />
         </div>
       </div>
 
@@ -398,12 +408,18 @@ export default function OverviewTab({
         </div>
       )}
 
-      {/* 5. ФИНАНСЫ И ПОДОПЕЧНЫЕ */}
+      {/* 5. ФИНАНСЫ И ПОДОПЕЧНЫЕ: ССЫЛКИ ПО МЕСЯЦАМ, БЕЗ ЛИШНИХ ИКОНОК, ЕДИНЫЙ СТИЛЬ */}
       <div className="grid grid-cols-2 gap-2.5">
-        <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-2.5">
+        <div 
+          onClick={() => onNavigateToFinance && onNavigateToFinance()}
+          className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-2.5 cursor-pointer hover:border-slate-300 transition-colors"
+        >
           <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
             <span className="text-xs font-bold text-slate-900">Финансы</span>
-            <span className="text-xs font-semibold text-slate-400">Месяц</span>
+            <span className="text-xs font-semibold text-[#1E60D5] inline-flex items-center gap-0.5">
+              <span>{currentMonthName}</span>
+              <ChevronRight className="w-3 h-3 text-[#1E60D5]" />
+            </span>
           </div>
 
           <div className="space-y-1.5">
@@ -424,14 +440,8 @@ export default function OverviewTab({
               <span className="font-mono font-bold text-slate-900">{netProfit.toLocaleString()} ₸</span>
             </div>
 
-            <div 
-              onClick={() => onNavigateToFinance && onNavigateToFinance()}
-              className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px] cursor-pointer"
-            >
-              <span className="text-slate-700 font-medium inline-flex items-center gap-1">
-                <CreditCard className="w-3 h-3 text-slate-500" />
-                <span>Ожидают:</span>
-              </span>
+            <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+              <span className="text-slate-600 font-medium">Ожидают:</span>
               <span className="font-mono font-semibold text-slate-900">
                 {unpaidTotal.toLocaleString()} ₸ ({unpaidStudents.length})
               </span>
@@ -439,10 +449,16 @@ export default function OverviewTab({
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-2.5">
+        <div 
+          onClick={() => onNavigateToStudents && onNavigateToStudents()}
+          className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs flex flex-col justify-between space-y-2.5 cursor-pointer hover:border-slate-300 transition-colors"
+        >
           <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
             <span className="text-xs font-bold text-slate-900">Подопечные</span>
-            <span className="text-xs font-mono font-semibold text-slate-900">{students.length} всего</span>
+            <span className="text-xs font-semibold text-[#1E60D5] inline-flex items-center gap-0.5">
+              <span>{students.length} всего</span>
+              <ChevronRight className="w-3 h-3 text-[#1E60D5]" />
+            </span>
           </div>
 
           <div className="space-y-1.5">
@@ -464,7 +480,7 @@ export default function OverviewTab({
             </div>
 
             <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-slate-500 font-medium">Заканчивают:</span>
+              <span className="text-slate-600 font-medium">Заканчивают:</span>
               <span className="font-mono font-semibold text-slate-900">
                 {unpaidStudents.length} атл.
               </span>
@@ -473,56 +489,64 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 6. РЕАЛЬНЫЕ МЕТРИКИ НАСТАВНИКА: ОЦЕНКА, СТРИК И ОТВЕТЫ В TELEGRAM */}
+      {/* 6. КАЧЕСТВО ВЕДЕНИЯ: ССЫЛКА С СИНЕЙ СТРЕЛКОЙ, ПОНЯТНЫЕ ТРЕНЕРСКИЕ МЕТРИКИ */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2.5">
         <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
           <div className="flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-slate-700" />
+            <Activity className="w-3.5 h-3.5 text-slate-700 stroke-[2]" />
             <h3 className="text-xs font-bold text-slate-900">
               Качество ведения
             </h3>
           </div>
-          <span className="text-xs font-semibold text-slate-400">30 дней</span>
+
+          <button
+            type="button"
+            onClick={() => onNavigateToAnalytics && onNavigateToAnalytics()}
+            className="text-xs font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer leading-none"
+          >
+            <span>30 дней</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#1E60D5]" />
+          </button>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          {/* Удовлетворенность учеников */}
+          {/* Средняя оценка от атлетов */}
           <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
-            <div className="flex items-center gap-1 text-slate-500">
-              <Smile className="w-3 h-3 text-slate-600" />
+            <div className="flex items-center gap-1 text-slate-600">
+              <Smile className="w-3 h-3 text-slate-700 stroke-[2]" />
               <span className="text-[10px] font-medium truncate">Оценка</span>
             </div>
             <p className="text-[13px] font-mono font-bold text-slate-900">4.9 / 5.0</p>
             <span className="text-[9px] text-slate-400 block truncate">18 отзывов</span>
           </div>
 
-          {/* Стальной стрик дисциплины */}
+          {/* Общая посещаемость базы */}
           <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
-            <div className="flex items-center gap-1 text-slate-500">
-              <Flame className="w-3 h-3 text-slate-600" />
-              <span className="text-[10px] font-medium truncate">Ритм</span>
+            <div className="flex items-center gap-1 text-slate-600">
+              <Users2 className="w-3 h-3 text-slate-700 stroke-[2]" />
+              <span className="text-[10px] font-medium truncate">Явка базы</span>
             </div>
-            <p className="text-[13px] font-mono font-bold text-slate-900">12 недель</p>
-            <span className="text-[9px] text-slate-400 block truncate">Без пропусков</span>
+            <p className="text-[13px] font-mono font-bold text-slate-900">92%</p>
+            <span className="text-[9px] text-slate-400 block truncate">По графику</span>
           </div>
 
-          {/* Скорость ответа в Telegram */}
+          {/* Доходимость блоков до конца / продления */}
           <div className="p-2.5 bg-slate-50 rounded-xl space-y-1">
-            <div className="flex items-center gap-1 text-slate-500">
-              <MessageCircle className="w-3 h-3 text-slate-600" />
-              <span className="text-[10px] font-medium truncate">Связь</span>
+            <div className="flex items-center gap-1 text-slate-600">
+              <TrendingUp className="w-3 h-3 text-slate-700 stroke-[2]" />
+              <span className="text-[10px] font-medium truncate">Продления</span>
             </div>
-            <p className="text-[13px] font-mono font-bold text-slate-900">~15 мин</p>
-            <span className="text-[9px] text-slate-400 block truncate">Ответ в боте</span>
+            <p className="text-[13px] font-mono font-bold text-slate-900">86%</p>
+            <span className="text-[9px] text-slate-400 block truncate">Повторные блоки</span>
           </div>
         </div>
       </div>
 
-      {/* 7. ГРАФИК НЕДЕЛИ: ЕДИНЫЙ РАЗМЕР ШРИФТА КНОПКИ "ВСЕ ДНИ" */}
+      {/* 7. ГРАФИК НЕДЕЛИ: ВЫВЕРЕННАЯ ПО ОСИ СТРЕЛКА "ВСЕ ДНИ" */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-2">
         <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
           <div className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-slate-700" />
+            <Calendar className="w-3.5 h-3.5 text-slate-700 stroke-[2]" />
             <h3 className="text-xs font-bold text-slate-900">
               График недели
             </h3>
@@ -537,10 +561,10 @@ export default function OverviewTab({
             <button
               type="button"
               onClick={() => onNavigateToCalendar ? onNavigateToCalendar() : setSelectedDayFilter('all')}
-              className="text-xs font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer"
+              className="text-xs font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer leading-none"
             >
               <span>Все дни</span>
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-3.5 h-3.5 text-[#1E60D5]" />
             </button>
           </div>
         </div>
@@ -590,11 +614,11 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 8. ТРЕНИРОВКИ НА СЕГОДНЯ: ЧЕТКИЕ ПОДХОДЫ/ПОВТОРЕНИЯ/ВЕСА И ЗАМЕТКА ТРЕНЕРА */}
+      {/* 8. ТРЕНИРОВКИ НА СЕГОДНЯ: ВЫВЕРЕННАЯ СТРЕЛКА "В РАСПИСАНИЕ", ЧЕТКОЕ ВРЕМЯ (18:00) */}
       <div className="bg-white rounded-2xl border border-slate-200/70 shadow-xs overflow-hidden">
         <div className="p-3.5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <Dumbbell className="w-3.5 h-3.5 text-slate-700" />
+            <Dumbbell className="w-3.5 h-3.5 text-slate-700 stroke-[2]" />
             <h3 className="text-xs font-bold text-slate-900">
               {selectedDayFilter === 'all' 
                 ? 'Все подопечные' 
@@ -608,10 +632,10 @@ export default function OverviewTab({
           <button
             type="button"
             onClick={() => onNavigateToCalendar && onNavigateToCalendar()}
-            className="text-xs font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer"
+            className="text-xs font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer leading-none"
           >
             <span>В расписание</span>
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-3.5 h-3.5 text-[#1E60D5]" />
           </button>
         </div>
 
@@ -679,12 +703,12 @@ export default function OverviewTab({
                     <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </div>
 
-                  {/* Нижняя панель действий */}
-                  <div className="flex items-center gap-2">
+                  {/* Нижняя панель действий: логичная структура кнопок во всю ширину */}
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setExpandedProgramId(expandedProgramId === s.id ? null : s.id)}
-                      className={`h-10 px-3.5 rounded-xl text-xs font-semibold border inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      className={`h-10 rounded-xl text-xs font-semibold border inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         expandedProgramId === s.id 
                           ? 'bg-slate-900 text-white border-slate-900' 
                           : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80 shadow-2xs'
@@ -698,7 +722,7 @@ export default function OverviewTab({
                       type="button"
                       disabled={isCurrentProcessing}
                       onClick={(e) => handleSetAttendance(e, s, 'attended')}
-                      className={`flex-1 h-10 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer ${
+                      className={`h-10 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer ${
                         currentStatus === 'attended'
                           ? 'bg-[#16A34A] text-white shadow-xs'
                           : 'bg-emerald-50 hover:bg-emerald-100 text-[#16A34A] border border-emerald-200/80'
@@ -712,7 +736,7 @@ export default function OverviewTab({
                       type="button"
                       disabled={isCurrentProcessing}
                       onClick={(e) => handleSetAttendance(e, s, 'missed')}
-                      className={`h-10 px-3.5 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer ${
+                      className={`h-10 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer ${
                         currentStatus === 'missed'
                           ? 'bg-slate-800 text-white shadow-xs'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
@@ -723,7 +747,7 @@ export default function OverviewTab({
                     </button>
                   </div>
 
-                  {/* Раскрывающийся план тренировки с четкими сетами, повторами, весами и заметкой */}
+                  {/* Раскрывающийся план тренировки */}
                   {expandedProgramId === s.id && (
                     <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-xs space-y-2.5 animate-in fade-in">
                       <div className="font-bold text-slate-800 flex items-center justify-between border-b border-slate-200/60 pb-1.5">
@@ -733,7 +757,6 @@ export default function OverviewTab({
                         </span>
                       </div>
 
-                      {/* Список упражнений с понятными русскими обозначениями */}
                       <div className="space-y-1.5">
                         {(s.assigned_program?.days?.[Object.keys(s.assigned_program?.days || {})[0]]?.exercises || []).map((ex, i) => (
                           <div key={i} className="flex justify-between items-center text-[11px] text-slate-700 bg-white p-2 rounded-lg border border-slate-200/50">
@@ -745,7 +768,6 @@ export default function OverviewTab({
                         ))}
                       </div>
 
-                      {/* Заметка / комментарий тренера к тренировке (синхронизируется с учеником) */}
                       <div className="pt-1.5 border-t border-slate-200/60 space-y-1.5">
                         <label className="text-[10px] font-semibold text-slate-600 block">
                           Заметка к занятию (видна подопечному в боте):
@@ -777,11 +799,11 @@ export default function OverviewTab({
         </div>
       </div>
 
-      {/* 9. КОММУНИКАЦИЯ: ЕДИНЫЙ РАЗМЕР ШРИФТА ШАБЛОНОВ И НАПОМИНАНИЙ */}
+      {/* 9. КОММУНИКАЦИЯ: СТРОГОЕ ВЫРАВНИВАНИЕ ПО ЦЕНТРАЛЬНОЙ ОСИ И ТЕЛЕГРАМ-БОТ ИКОНКА */}
       <div className="bg-white rounded-2xl p-3.5 border border-slate-200/70 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-slate-700 shrink-0" />
+            <Bot className="w-4 h-4 text-slate-700 stroke-[2] shrink-0" />
             <span className="text-xs font-bold text-slate-900 leading-none">
               Коммуникация
             </span>
@@ -790,10 +812,10 @@ export default function OverviewTab({
           <button
             type="button"
             onClick={() => onNavigateToBroadcasts && onNavigateToBroadcasts({ filter: 'all_templates' })}
-            className="text-xs font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer"
+            className="text-xs font-semibold text-[#1E60D5] hover:text-blue-700 inline-flex items-center gap-0.5 cursor-pointer leading-none"
           >
             <span>Все шаблоны</span>
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-3.5 h-3.5 text-[#1E60D5]" />
           </button>
         </div>
 
