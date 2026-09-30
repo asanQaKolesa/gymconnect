@@ -1,9 +1,8 @@
 // src/components/trainer/TrainerCRM.jsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import TrainerHeader from './components/TrainerHeader';
 import OverviewTab from './tabs/OverviewTab';
-import StudentsListTab from './tabs/StudentsListTab';
 import WorkoutsTab from './tabs/WorkoutsTab';
 import TrainerNutritionTab from './tabs/TrainerNutritionTab';
 import ScheduleTab from './tabs/ScheduleTab';
@@ -11,10 +10,11 @@ import FinanceTab from './tabs/FinanceTab';
 import NotesTab from './tabs/NotesTab';
 import AnalyticsTab from './tabs/AnalyticsTab';
 import AddStudentModal from './components/AddStudentModal';
-import StudentDetailModal from './components/StudentDetailModal';
 
-// Экран входящих заявок
+// Полноэкранные модули CRM
 import InquiriesScreen from './screens/InquiriesScreen';
+import AthletesScreen from './screens/AthletesScreen';
+import AthleteDetailScreen from './screens/AthleteDetailScreen';
 
 // Все полноэкранные страницы меню
 import TrainerSubscriptionModal from './components/modals/TrainerSubscriptionModal';
@@ -52,7 +52,6 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   const [openDrawerOnReturn, setOpenDrawerOnReturn] = useState(false);
 
   const [selectedStudentForDetail, setSelectedStudentForDetail] = useState(null);
-  const [studentDetailOrigin, setStudentDetailOrigin] = useState('overview');
 
   const [addStudentForm, setAddStudentForm] = useState({
     first_name: '',
@@ -64,7 +63,6 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     gym: ''
   });
 
-  // Загрузка данных строго по требованию
   const refreshTrainerData = useCallback(async (isSilent = false) => {
     try {
       const cleanUsername = trainerUsername ? trainerUsername.replace('@', '').trim().toLowerCase() : '';
@@ -103,36 +101,25 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     }
   }, [trainerUsername]);
 
-  // Загрузка при открытии + Подписка на Realtime (0 холостых запросов!)
   useEffect(() => {
     if (!trainerUsername) {
       setLoading(false);
       return;
     }
 
-    // 1. Первоначальная загрузка
     refreshTrainerData(false);
 
-    // 2. Realtime-подписка: база сама пришлет сигнал, если изменился профиль или ученик
+    // Realtime подписка без холостых запросов
     const channel = supabase
       .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'profiles' },
-        () => {
-          refreshTrainerData(true);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'trainer_leads' },
-        () => {
-          refreshTrainerData(true);
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        refreshTrainerData(true);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trainer_leads' }, () => {
+        refreshTrainerData(true);
+      })
       .subscribe();
 
-    // 3. Обновление при возвращении тренера в приложение (когда развернул Telegram)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         refreshTrainerData(true);
@@ -263,20 +250,31 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     );
   }
 
-  // 1. Полноэкранное досье ученика
+  // 1. Полноэкранное детальное досье атлета
   if (selectedStudentForDetail) {
     return (
-      <StudentDetailModal 
-        isOpen={true}
+      <AthleteDetailScreen 
         student={selectedStudentForDetail}
-        backText={studentDetailOrigin === 'students' ? 'К списку учеников' : 'К расписанию'}
-        onClose={() => setSelectedStudentForDetail(null)}
+        trainer={trainerData}
+        onBack={() => setSelectedStudentForDetail(null)}
         onUpdate={() => refreshTrainerData(false)}
       />
     );
   }
 
-  // 2. Экран входящих заявок
+  // 2. Полноэкранный модуль базы атлетов (из меню или кнопки перехода)
+  if (activeScreen === 'athletes_screen') {
+    return (
+      <AthletesScreen
+        students={students}
+        onBack={() => setActiveScreen(null)}
+        onSelectStudent={(st) => setSelectedStudentForDetail(st)}
+        onOpenAddModal={() => setIsAddStudentOpen(true)}
+      />
+    );
+  }
+
+  // 3. Экран входящих заявок
   if (activeScreen === 'notifications' || activeScreen === 'inquiries') {
     return (
       <InquiriesScreen
@@ -287,7 +285,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     );
   }
 
-  // 3. Полноэкранные разделы меню
+  // 4. Полноэкранные разделы меню
   if (activeScreen === 'subscription') {
     return <TrainerSubscriptionModal isOpen={true} onClose={handleCloseScreenToMenu} />;
   }
@@ -336,7 +334,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     return <TrainerQrModal isOpen={true} onClose={handleCloseScreenToMenu} coachName={trainerData?.full_name || trainerData?.first_name || 'Тренер'} cleanUsername={trainerData?.username || trainerUsername} />;
   }
 
-  // 4. Основной дашборд CRM
+  // 5. Основной дашборд CRM
   const activeStudentsCount = students.filter(s => s.status === 'active' || !s.status).length;
   const pausedStudentsCount = students.filter(s => s.status === 'paused').length;
   const leftStudentsCount = students.filter(s => s.status === 'left').length;
@@ -354,7 +352,13 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
             onLogout={onLogout} 
             onBack={onBack}
             activeTab={activeTab}
-            onSelectTab={(tabId) => setActiveTab(tabId)}
+            onSelectTab={(tabId) => {
+              if (tabId === 'students') {
+                setActiveScreen('athletes_screen');
+              } else {
+                setActiveTab(tabId);
+              }
+            }}
             onOpenScreen={handleOpenScreenFromHeader}
             initialDrawerOpen={openDrawerOnReturn}
           />
@@ -369,31 +373,16 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
                 leftCount={leftStudentsCount}
                 lowBalanceCount={lowBalanceCount}
                 totalEarnings={totalEarnings}
-                onSelectStudent={(st) => {
-                  setSelectedStudentForDetail(st);
-                  setStudentDetailOrigin('overview');
-                }}
+                onSelectStudent={(st) => setSelectedStudentForDetail(st)}
                 onOpenPublicProfile={() => setActiveScreen('public_card')}
                 onOpenInquiries={() => setActiveScreen('inquiries')}
                 onNavigateToCalendar={() => setActiveTab('schedule')}
                 onNavigateToFinance={() => setActiveTab('finance')}
                 onNavigateToAnalytics={() => setActiveTab('analytics')}
-                onNavigateToStudents={() => setActiveTab('students')}
+                onNavigateToStudents={() => setActiveScreen('athletes_screen')}
                 onNavigateToBroadcasts={() => setActiveScreen('templates')}
                 onAddStudentClick={() => setIsAddStudentOpen(true)}
                 onRefresh={() => refreshTrainerData(false)}
-              />
-            )}
-
-            {activeTab === 'students' && (
-              <StudentsListTab 
-                students={students} 
-                onSelectStudent={(st) => {
-                  setSelectedStudentForDetail(st);
-                  setStudentDetailOrigin('students');
-                }}
-                onOpenAddModal={() => setIsAddStudentOpen(true)}
-                onUpdate={() => refreshTrainerData(false)}
               />
             )}
 
