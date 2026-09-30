@@ -102,12 +102,12 @@ export default function TrainerEditProfileModal({
     target_audience: 'all',
     specializations: ['Набор массы и гипертрофия'],
 
-    // По умолчанию всё выключено
+    // По умолчанию ВСЕ ТРИ пункта привлечения ВЫКЛЮЧЕНЫ (без галочек)
     show_in_catalog: false,
     has_free_trial: false,
     has_free_consultation: false,
 
-    // Прейскурант: по умолчанию все форматы выключены
+    // Прейскурант: по умолчанию ВСЕ категории ВЫКЛЮЧЕНЫ (без галочек)
     services_enabled: {
       personal: false,
       split: false,
@@ -158,15 +158,16 @@ export default function TrainerEditProfileModal({
           ? trainer.specializations 
           : ['Набор массы и гипертрофия'],
 
-        show_in_catalog: trainer.public_settings?.show_in_catalog ?? false,
+        // Загрузка сохраненных флагов или строго false по умолчанию
+        show_in_catalog: Boolean(trainer.public_settings?.show_in_catalog),
         has_free_trial: Boolean(trainer.has_free_trial),
         has_free_consultation: Boolean(trainer.has_free_consultation),
 
         services_enabled: {
-          personal: trainer.services_offered?.personal ?? false,
-          split: trainer.services_offered?.split ?? false,
-          group: trainer.services_offered?.group ?? false,
-          online: trainer.services_offered?.online ?? false
+          personal: Boolean(trainer.services_offered?.personal),
+          split: Boolean(trainer.services_offered?.split),
+          group: Boolean(trainer.services_offered?.group),
+          online: Boolean(trainer.services_offered?.online)
         },
         pricing: {
           personal_single: trainer.pricing?.personal_single || 8000,
@@ -345,7 +346,7 @@ export default function TrainerEditProfileModal({
 
       if (error) throw error;
 
-      alert('✅ Анкета наставника успешно обновлена!');
+      alert('✅ Профиль тренера успешно обновлен и синхронизирован с визиткой!');
       if (onSaved) onSaved();
       onClose();
     } catch (e) {
@@ -358,25 +359,42 @@ export default function TrainerEditProfileModal({
   return (
     <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-150">
       
-      {/* 1. ШАПКА */}
-      <div className="shrink-0 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 px-4 py-3 flex items-center justify-between shadow-2xs">
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex items-center gap-1.5 text-slate-700 hover:text-slate-900 font-bold text-xs active:scale-95 transition-all cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4 text-slate-500" />
-          <span>Назад в меню</span>
-        </button>
+      {/* 1. ШАПКА С ИДЕАЛЬНОЙ МАТЕМАТИЧЕСКОЙ ЦЕНТРОВКОЙ И КНОПКОЙ «НАЗАД» */}
+      <div className="shrink-0 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 px-4 py-3 relative flex items-center justify-between shadow-2xs">
+        {/* Кнопка Назад */}
+        <div className="z-10 flex items-center">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs active:scale-95 transition-all cursor-pointer border border-slate-200/60 shadow-2xs"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+            <span>Назад</span>
+          </button>
+        </div>
 
-        <h2 className="text-xs font-bold text-slate-900">Анкета наставника</h2>
+        {/* Заголовок строго по центру экрана */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <h2 className="text-xs font-bold text-slate-900 tracking-tight pointer-events-auto">
+            Профиль тренера CoachOS
+          </h2>
+        </div>
 
-        <div className="w-16" />
+        {/* Правый балансир для идеальной симметрии */}
+        <div className="w-16 z-10" />
       </div>
 
       {/* 2. СКРОЛЛИРУЕМАЯ ОБЛАСТЬ */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 max-w-md mx-auto w-full pb-8">
         
+        {/* Информационная плашка синхронизации */}
+        <div className="p-3 bg-blue-50/70 border border-blue-200/70 rounded-2xl flex items-start gap-2.5 shadow-2xs">
+          <Sparkles className="w-4 h-4 text-[#1E60D5] shrink-0 mt-0.5" />
+          <p className="text-[11px] text-blue-950 leading-relaxed font-medium">
+            Все заполненные данные моментально обновляют вашу <b>публичную визитку</b>, карточку в <b>Каталоге тренеров</b> и Telegram-боте <b>@gymconnect_ala_bot</b>.
+          </p>
+        </div>
+
         {/* Аватар тренера */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs flex flex-col items-center text-center">
           <div 
@@ -693,67 +711,82 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 4. Видимость в каталоге и акции */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-2.5">
-          <h3 className="text-xs font-bold text-slate-800 border-b border-slate-100 pb-2">
-            Условия и видимость в каталоге
-          </h3>
-
-          <div 
-            onClick={() => setEditForm(prev => ({ ...prev, show_in_catalog: !prev.show_in_catalog }))}
-            className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
-          >
+        {/* 4. Привлечение атлетов и видимость в каталоге (ОБЪЕДИНЕНЫ В ОДНУ СЕКЦИЮ, ВСЕ БЕЗ ГАЛОЧЕК ПО УМОЛЧАНИЮ) */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
+          
+          {/* Заголовок блока */}
+          <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-slate-900">Отображать профиль в каталоге</p>
-              <p className="text-[10.5px] text-slate-500">Атлеты города смогут находить вас и записываться</p>
-            </div>
-            <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
-              editForm.show_in_catalog ? 'bg-[#1E60D5] border-[#1E60D5] text-white' : 'bg-white border-slate-300'
-            }`}>
-              {editForm.show_in_catalog && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+              <h3 className="text-xs font-bold text-slate-800">
+                Привлечение атлетов и каталог
+              </h3>
+              <p className="text-[10.5px] text-slate-400 mt-0.5">Видимость профиля для новых клиентов города</p>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 space-y-2">
-            <span className="text-[10.5px] font-semibold text-slate-500 block mb-1">
-              Условия привлечения атлетов:
-            </span>
+          {/* Верхняя плашка Coach Operation System Pro */}
+          <div className="p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex items-center gap-2">
+            <Crown className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-[11px] text-amber-900 font-medium leading-snug">
+              Доступно при активной подписке <b>Coach Operation System Pro</b>
+            </p>
+          </div>
 
-            {/* Пробная тренировка */}
+          {/* 3 аккуратных переключателя с просторными 2-строчными описаниями */}
+          <div className="space-y-2 pt-1">
+            
+            {/* Пункт 1: Отображать профиль в каталоге */}
+            <div 
+              onClick={() => setEditForm(prev => ({ ...prev, show_in_catalog: !prev.show_in_catalog }))}
+              className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
+            >
+              <div className="pr-3">
+                <p className="text-xs font-bold text-slate-900 leading-tight">Отображать профиль в каталоге</p>
+                <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug">Атлеты города смогут находить вас и записываться</p>
+              </div>
+              <div className={`w-5 h-5 rounded-md flex items-center justify-center border shrink-0 transition-colors ${
+                editForm.show_in_catalog ? 'bg-[#1E60D5] border-[#1E60D5] text-white' : 'bg-white border-slate-300'
+              }`}>
+                {editForm.show_in_catalog && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+              </div>
+            </div>
+
+            {/* Пункт 2: Бесплатная пробная тренировка */}
             <div 
               onClick={() => setEditForm(prev => ({ ...prev, has_free_trial: !prev.has_free_trial }))}
-              className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
+              className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
             >
-              <div>
-                <p className="text-xs font-bold text-slate-900">Бесплатная пробная тренировка</p>
-                <p className="text-[10.5px] text-amber-700 font-medium">Доступно только при активной подписке CoachOS Pro</p>
+              <div className="pr-3">
+                <p className="text-xs font-bold text-slate-900 leading-tight">Бесплатная пробная тренировка</p>
+                <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug">Вводное занятие в зале для знакомства и старта</p>
               </div>
-              <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+              <div className={`w-5 h-5 rounded-md flex items-center justify-center border shrink-0 transition-colors ${
                 editForm.has_free_trial ? 'bg-[#1E60D5] border-[#1E60D5] text-white' : 'bg-white border-slate-300'
               }`}>
                 {editForm.has_free_trial && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
             </div>
 
-            {/* Консультация */}
+            {/* Пункт 3: Бесплатная онлайн-консультация */}
             <div 
               onClick={() => setEditForm(prev => ({ ...prev, has_free_consultation: !prev.has_free_consultation }))}
-              className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
+              className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
             >
-              <div>
-                <p className="text-xs font-bold text-slate-900">Бесплатная онлайн-консультация</p>
-                <p className="text-[10.5px] text-amber-700 font-medium">Доступно только при активной подписке CoachOS Pro</p>
+              <div className="pr-3">
+                <p className="text-xs font-bold text-slate-900 leading-tight">Бесплатная онлайн-консультация</p>
+                <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug">Разбор целей и экспресс-диагностика перед стартом</p>
               </div>
-              <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+              <div className={`w-5 h-5 rounded-md flex items-center justify-center border shrink-0 transition-colors ${
                 editForm.has_free_consultation ? 'bg-[#1E60D5] border-[#1E60D5] text-white' : 'bg-white border-slate-300'
               }`}>
                 {editForm.has_free_consultation && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </div>
             </div>
+
           </div>
         </div>
 
-        {/* 5. Прейскурант тренировок — через галочки чекбоксов */}
+        {/* 5. Прейскурант тренировок — ВСЕ ПО УМОЛЧАНИЮ ОТКЛЮЧЕНЫ, СТАВИТ ГАЛОЧКУ И РЕДАКТИРУЕТ */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3.5">
           <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800">
