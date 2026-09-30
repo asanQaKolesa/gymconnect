@@ -10,23 +10,21 @@ import {
   Clock, 
   Plus, 
   Minus, 
-  PauseCircle, 
-  PlayCircle, 
   CheckCircle2, 
   FileText, 
   CreditCard, 
   Edit2, 
   Check, 
   AlertCircle,
-  BellRing,
   Camera,
-  History,
-  TrendingDown,
-  TrendingUp,
-  RotateCcw
+  Activity,
+  X,
+  Building,
+  UserCheck
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
+import AthleteMeasurementsScreen from './AthleteMeasurementsScreen';
 
 const translateExperience = (raw) => {
   if (!raw) return '1–2 года тренировок';
@@ -46,10 +44,13 @@ export default function AthleteDetailScreen({
 }) {
   const [currentStudent, setCurrentStudent] = useState(student);
   const [actionLoading, setActionLoading] = useState(false);
-  const [requestSent, setRequestSent] = useState(false);
   const [photoNotice, setPhotoNotice] = useState(false);
+  const [showFullMeasurements, setShowFullMeasurements] = useState(false);
 
-  // Режим редактирования абонемента
+  // Модалка смены статуса (карандашик)
+  const [isEditingStatus, setIsEditingStatus] = useState(false);
+
+  // Режим редактирования тарифа
   const [isEditingPlan, setIsEditingPlan] = useState(false);
   const [editPrice, setEditPrice] = useState(currentStudent.monthly_price || 70000);
   const [editBurnable, setEditBurnable] = useState(currentStudent.is_burnable !== false);
@@ -59,37 +60,22 @@ export default function AthleteDetailScreen({
   const fullName = currentStudent.full_name || `${currentStudent.first_name || ''} ${currentStudent.last_name || ''}`.trim() || 'Атлет';
   const leftTrainings = Number(currentStudent.left_trainings ?? currentStudent.remaining_workouts ?? 12);
   const totalTrainings = Number(currentStudent.total_trainings || 12);
-  const isPaused = (currentStudent.status || '').toLowerCase() === 'paused';
+  const currentStatus = (currentStudent.status || 'active').toLowerCase();
   const isExpiring = leftTrainings <= 2;
+  const isPaid = currentStudent.payment_status === 'paid';
 
-  // Парсинг замеров тела
-  const startWeight = Number(currentStudent.weight || currentStudent.start_weight || 78.5);
-  const currentWeight = Number(currentStudent.current_weight || currentStudent.weight || 74.3);
-  const targetWeight = Number(currentStudent.target_weight || 70.0);
-  const weightDelta = (currentWeight - startWeight).toFixed(1);
+  // Если открыт полноэкранный модуль детальных замеров
+  if (showFullMeasurements) {
+    return (
+      <AthleteMeasurementsScreen
+        student={currentStudent}
+        trainer={trainer}
+        onBack={() => setShowFullMeasurements(false)}
+      />
+    );
+  }
 
-  // Карта текущих замеров (в боевом режиме подтягивается из профиля или логов замеров)
-  const bodyMetrics = {
-    fat: currentStudent.body_fat || '18.4',
-    neck: currentStudent.neck || '38.0',
-    chest: currentStudent.chest || '99.0',
-    waist: currentStudent.waist || '81.5',
-    hips: currentStudent.hips || '98.0',
-    bicepsRight: currentStudent.biceps_right || currentStudent.biceps || '36.5',
-    bicepsLeft: currentStudent.biceps_left || '36.0',
-    thighRight: currentStudent.thigh_right || currentStudent.thigh || '57.0',
-    thighLeft: currentStudent.thigh_left || '56.5',
-    calfRight: currentStudent.calf_right || '37.0',
-    calfLeft: currentStudent.calf_left || '37.0'
-  };
-
-  // Демонстрационная хронологическая история замеров для наглядности
-  const measurementsHistory = [
-    { date: '18 сен', weight: currentWeight, waist: bodyMetrics.waist, chest: bodyMetrics.chest },
-    { date: '04 сен', weight: (currentWeight + 1.2).toFixed(1), waist: '83.0', chest: '100.0' },
-    { date: '20 авг', weight: startWeight, waist: '85.0', chest: '101.5' }
-  ];
-
+  // 1. Открыть Telegram чат
   const handleOpenTg = () => {
     const username = (currentStudent.username || currentStudent.telegram_username || '').replace('@', '').trim();
     if (username) {
@@ -99,6 +85,52 @@ export default function AthleteDetailScreen({
     }
   };
 
+  // 2. Смена статуса через модалку карандаша
+  const handleChangeStatus = async (newStatus) => {
+    setActionLoading(true);
+    try {
+      await supabase
+        .from('profiles')
+        .update({ status: newStatus })
+        .eq('id', currentStudent.id);
+
+      setCurrentStudent(prev => ({ ...prev, status: newStatus }));
+      setIsEditingStatus(false);
+      if (onUpdate) onUpdate();
+    } catch (e) {
+      console.warn('Ошибка смены статуса:', e);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // 3. Отметить оплату (фиксация факта получения денег)
+  const handleConfirmPayment = async () => {
+    setActionLoading(true);
+    const newPaymentStatus = isPaid ? 'pending' : 'paid';
+    try {
+      await supabase
+        .from('profiles')
+        .update({ payment_status: newPaymentStatus })
+        .eq('id', currentStudent.id);
+
+      setCurrentStudent(prev => ({ ...prev, payment_status: newPaymentStatus }));
+
+      if (newPaymentStatus === 'paid') {
+        const tgId = currentStudent.telegram_id || currentStudent.chat_id;
+        if (tgId) {
+          sendTelegramMessage(tgId, `✅ <b>Оплата абонемента подтверждена!</b>\n\nТренер отметил получение оплаты за ваш текущий блок тренировок.`).catch(() => {});
+        }
+      }
+      if (onUpdate) onUpdate();
+    } catch (e) {
+      console.warn('Ошибка фиксации оплаты:', e);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // 4. Степпер баланса занятий (-1 / +1)
   const handleAdjustBalance = async (delta) => {
     const updated = Math.max(0, leftTrainings + delta);
     setActionLoading(true);
@@ -117,6 +149,7 @@ export default function AthleteDetailScreen({
     }
   };
 
+  // 5. Продление абонемента (+12 занятий суммируются)
   const handleRenewPackage = async () => {
     setActionLoading(true);
     const updated = leftTrainings + 12;
@@ -142,35 +175,18 @@ export default function AthleteDetailScreen({
 
       const tgId = currentStudent.telegram_id || currentStudent.chat_id;
       if (tgId) {
-        sendTelegramMessage(tgId, `🎉 <b>Абонемент обновлен!</b>\n\nВам начислено: <b>+12 тренировок</b>.\nТекущий баланс: <b>${updated} занятий</b>.`).catch(() => {});
+        sendTelegramMessage(tgId, `🎉 <b>Абонемент продлен!</b>\n\nВам начислено: <b>+12 тренировок</b> (суммировано с остатком).\nТекущий баланс: <b>${updated} занятий</b>.`).catch(() => {});
       }
 
       if (onUpdate) onUpdate();
     } catch (e) {
-      console.warn('Ошибка обновления абонемента:', e);
+      console.warn('Ошибка продления:', e);
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleTogglePause = async () => {
-    setActionLoading(true);
-    const newStatus = isPaused ? 'active' : 'paused';
-    try {
-      await supabase
-        .from('profiles')
-        .update({ status: newStatus })
-        .eq('id', currentStudent.id);
-
-      setCurrentStudent(prev => ({ ...prev, status: newStatus }));
-      if (onUpdate) onUpdate();
-    } catch (e) {
-      console.warn('Ошибка смены статуса:', e);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
+  // 6. Сохранение условий тарифа
   const handleSavePlanSettings = async () => {
     setActionLoading(true);
     try {
@@ -202,6 +218,7 @@ export default function AthleteDetailScreen({
     }
   };
 
+  // 7. Выставить счёт на оплату
   const handleSendInvoice = () => {
     const tgId = currentStudent.telegram_id || currentStudent.chat_id;
     const coachName = trainer?.full_name || trainer?.first_name || 'Ваш наставник';
@@ -213,24 +230,7 @@ export default function AthleteDetailScreen({
     if (tgId) {
       sendTelegramMessage(tgId, invoiceText)
         .then(() => alert('✅ Счёт на оплату отправлен атлету в Telegram!'))
-        .catch(() => alert('Не удалось отправить в бот. Откройте диалог Telegram напрямую.'));
-    } else {
-      handleOpenTg();
-    }
-  };
-
-  const handleRequestMeasurements = () => {
-    const tgId = currentStudent.telegram_id || currentStudent.chat_id;
-    const coachName = trainer?.full_name || trainer?.first_name || 'Ваш тренер';
-    const text = `📏 <b>Контроль прогресса и замеры тела</b>\n\nПривет, ${escapeHtml(fullName)}! Тренер ${escapeHtml(coachName)} просит тебя обновить замеры тела (вес, талия, грудь, бёдра, руки).\n\nПожалуйста, сделай замеры натощак и внеси их в бота для отслеживания динамики!`;
-
-    if (tgId) {
-      sendTelegramMessage(tgId, text)
-        .then(() => {
-          setRequestSent(true);
-          setTimeout(() => setRequestSent(false), 3000);
-        })
-        .catch(() => handleOpenTg());
+        .catch(() => alert('Не удалось отправить в бот. Откройте чат напрямую.'));
     } else {
       handleOpenTg();
     }
@@ -243,7 +243,9 @@ export default function AthleteDetailScreen({
     online: 'Онлайн-ведение'
   }[currentStudent.training_format || currentStudent.package_type || 'individual'] || 'Индивидуально';
 
-  const timeSlotText = currentStudent.custom_time || currentStudent.workout_time || currentStudent.workout_time_slot || '18:00';
+  // Разделение смены и точного времени
+  const shiftText = currentStudent.workout_shift || currentStudent.workout_time_slot || 'Вечер';
+  const exactTimeText = currentStudent.exact_time || currentStudent.custom_time || currentStudent.workout_time || '18:30';
 
   return (
     <div className="min-h-screen bg-slate-50 select-none pb-28">
@@ -261,7 +263,7 @@ export default function AthleteDetailScreen({
 
           <div className="text-center">
             <h1 className="text-sm font-bold text-slate-800">Досье подопечного</h1>
-            <p className="text-[10px] text-slate-400 font-medium">Персональная карточка атлета</p>
+            <p className="text-[10px] text-slate-400 font-medium">Атлет платформы CoachOS</p>
           </div>
 
           <div className="w-9" />
@@ -270,11 +272,10 @@ export default function AthleteDetailScreen({
 
       <div className="p-4 max-w-md mx-auto space-y-3.5">
         
-        {/* 1. КОМПАКТНАЯ ВИЗИТКА С АКТУАЛЬНЫМ АВАТАРОМ И СТАТУСОМ */}
+        {/* 1. КОМПАКТНАЯ ВИЗИТКА СО СМЕНОЙ СТАТУСА ЧЕРЕЗ КАРАНДАШИК */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              {/* Компактный аватар w-11 h-11 */}
               <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center font-bold text-slate-700 text-sm">
                 {currentStudent.avatar_url || currentStudent.photo_url ? (
                   <img src={currentStudent.avatar_url || currentStudent.photo_url} alt="" className="w-full h-full object-cover" />
@@ -300,19 +301,18 @@ export default function AthleteDetailScreen({
               </div>
             </div>
 
-            {/* Тумблер паузы */}
+            {/* Статус со значком карандаша для смены */}
             <button
               type="button"
-              disabled={actionLoading}
-              onClick={handleTogglePause}
-              className={`h-8 px-2.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border ${
-                isPaused 
-                  ? 'bg-amber-50 text-amber-700 border-amber-200/80' 
-                  : 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
-              }`}
+              onClick={() => setIsEditingStatus(true)}
+              className="h-8 px-2.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 active:scale-95"
+              title="Изменить статус атлета"
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
-              <span>{isPaused ? 'На паузе' : 'Активен'}</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                currentStatus === 'active' ? 'bg-emerald-500 animate-pulse' : currentStatus === 'paused' ? 'bg-amber-500' : 'bg-slate-400'
+              }`} />
+              <span>{currentStatus === 'active' ? 'Активен' : currentStatus === 'paused' ? 'На паузе' : 'Ушёл'}</span>
+              <Edit2 className="w-3 h-3 text-slate-400 ml-0.5" />
             </button>
           </div>
 
@@ -357,14 +357,14 @@ export default function AthleteDetailScreen({
                   Абонемент завершается
                 </span>
                 <span className="text-[11px] text-amber-700">
-                  Осталось всего {leftTrainings} зан. Выставите счёт на продление.
+                  Осталось {leftTrainings} зан. Выставите счёт на новый блок.
                 </span>
               </div>
             </div>
           </div>
         )}
 
-        {/* 2. АБОНЕМЕНТ И ТАРИФ (ПОЛНЫЕ ТЕКСТЫ КНОПОК, ДВЕ СТРОКИ) */}
+        {/* 2. АБОНЕМЕНТ, БАЛАНС И ФИКСАЦИЯ ОПЛАТЫ */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
@@ -385,7 +385,6 @@ export default function AthleteDetailScreen({
           {/* Редактирование условий абонемента */}
           {isEditingPlan ? (
             <div className="p-3 bg-slate-50 rounded-xl space-y-3 border border-slate-200/60 text-xs animate-in fade-in">
-              {/* Формат ведения: 2 строки по 2 кнопки без сокращений */}
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">Формат ведения:</label>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -411,7 +410,6 @@ export default function AthleteDetailScreen({
                 </div>
               </div>
 
-              {/* Тумблер сгорания */}
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">Правило сгорания:</label>
                 <div className="grid grid-cols-2 gap-1 p-1 bg-slate-200/60 rounded-xl">
@@ -436,7 +434,6 @@ export default function AthleteDetailScreen({
                 </div>
               </div>
 
-              {/* Стоимость и срок */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">Стоимость пакета (₸):</label>
@@ -469,7 +466,6 @@ export default function AthleteDetailScreen({
               </button>
             </div>
           ) : (
-            /* Информация о тарифе */
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
                 <span className="text-[10px] text-slate-400 font-medium block">Формат</span>
@@ -490,192 +486,149 @@ export default function AthleteDetailScreen({
             </div>
           )}
 
-          {/* Строка баланса тренировок со степпером */}
-          <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
-            <button
-              type="button"
-              disabled={actionLoading || leftTrainings <= 0}
-              onClick={() => handleAdjustBalance(-1)}
-              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-90 transition-all flex items-center justify-center cursor-pointer shadow-2xs"
-              title="Списать 1 занятие"
-            >
-              <Minus className="w-3.5 h-3.5" />
-            </button>
+          {/* Строка баланса со степпером и пояснением */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+              <button
+                type="button"
+                disabled={actionLoading || leftTrainings <= 0}
+                onClick={() => handleAdjustBalance(-1)}
+                className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-90 transition-all flex items-center justify-center cursor-pointer shadow-2xs"
+                title="Списать 1 занятие"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
 
-            <div className="text-center">
-              <span className="text-[10px] text-slate-400 font-medium block">Баланс занятий</span>
-              <p className="text-[13px] font-mono font-bold text-slate-800">
-                {leftTrainings} из {totalTrainings} тренировок
-              </p>
+              <div className="text-center">
+                <span className="text-[10px] text-slate-400 font-medium block">Баланс занятий</span>
+                <p className="text-[13px] font-mono font-bold text-slate-800">
+                  {leftTrainings} из {totalTrainings} тренировок
+                </p>
+              </div>
+
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => handleAdjustBalance(+1)}
+                className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-90 transition-all flex items-center justify-center cursor-pointer shadow-2xs"
+                title="Добавить / подарить 1 занятие"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
             </div>
 
-            <button
-              type="button"
-              disabled={actionLoading}
-              onClick={() => handleAdjustBalance(+1)}
-              className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-90 transition-all flex items-center justify-center cursor-pointer shadow-2xs"
-              title="Добавить / подарить 1 занятие"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
+            <p className="text-[10px] text-slate-400 text-center">
+              При продлении +12 тренировок суммируются к текущему остатку на балансе.
+            </p>
           </div>
 
-          {/* Кнопки действий: 2 строки на полную ширину без обрезков текста */}
-          <div className="space-y-2 pt-1">
+          {/* Строка фиксации оплаты + выставление счёта */}
+          <div className="grid grid-cols-2 gap-2 pt-1">
             <button
               type="button"
               onClick={handleSendInvoice}
-              className="w-full h-10 px-3 bg-emerald-50 hover:bg-emerald-100 active:scale-98 text-emerald-800 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer border border-emerald-200/70"
+              className="h-10 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-slate-200"
             >
-              <CreditCard className="w-4 h-4 shrink-0" />
-              <span>Выставить счёт на оплату</span>
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Выставить счёт</span>
             </button>
 
             <button
               type="button"
               disabled={actionLoading}
-              onClick={handleRenewPackage}
-              className="w-full h-10 px-3 bg-[#1E60D5] hover:bg-blue-600 active:scale-98 text-white rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+              onClick={handleConfirmPayment}
+              className={`h-10 px-3 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                isPaid 
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 hover:bg-emerald-100' 
+                  : 'bg-amber-50 text-amber-800 border-amber-200/80 hover:bg-amber-100'
+              }`}
             >
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>Продлить абонемент (+12 занятий)</span>
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>{isPaid ? 'Оплачено (изменить)' : 'Отметить оплату'}</span>
             </button>
           </div>
+
+          <button
+            type="button"
+            disabled={actionLoading}
+            onClick={handleRenewPackage}
+            className="w-full h-10 px-3 bg-[#1E60D5] hover:bg-blue-600 active:scale-98 text-white rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+          >
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>Продлить абонемент (+12 занятий)</span>
+          </button>
         </div>
 
-        {/* 3. ПОЛНАЯ АНАТОМИЧЕСКАЯ КАРТА ЗАМЕРОВ ТЕЛА И ДЕЛЬТА ПРОГРЕССА */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3.5">
+        {/* 3. АКТУАЛЬНЫЕ ЗАМЕРЫ ТЕЛА + ПЕРЕХОД НА СТРАНИЦУ СРАВНЕНИЯ */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
               <Scale className="w-4 h-4 text-slate-600 stroke-[2]" />
-              <h4 className="text-xs font-bold text-slate-800">Замеры тела и прогресс</h4>
+              <h4 className="text-xs font-bold text-slate-800">Текущие замеры тела</h4>
             </div>
 
             <span className="text-[11px] font-mono font-bold text-[#1E60D5]">
-              {currentWeight} кг
+              {currentStudent.current_weight || currentStudent.weight || '—'} кг
             </span>
           </div>
 
-          {/* Плашка анализа динамики (Дельта) */}
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 grid grid-cols-3 gap-2 text-center text-xs">
-            <div>
-              <span className="text-[10px] text-slate-400 block">Старт</span>
-              <span className="text-xs font-mono font-bold text-slate-700">{startWeight} кг</span>
+          {/* Экспресс-сетка ключевых замеров */}
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Вес</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.current_weight || currentStudent.weight || '—'} кг
+              </span>
             </div>
 
-            <div>
-              <span className="text-[10px] text-slate-400 block">Текущий</span>
-              <span className="text-xs font-mono font-bold text-slate-800">{currentWeight} кг</span>
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Талия</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.waist || '81'} см
+              </span>
             </div>
 
-            <div>
-              <span className="text-[10px] text-slate-400 block">Прогресс (Δ)</span>
-              <span className={`text-xs font-mono font-bold inline-flex items-center gap-0.5 ${
-                Number(weightDelta) <= 0 ? 'text-emerald-600' : 'text-[#1E60D5]'
-              }`}>
-                {Number(weightDelta) <= 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-                {weightDelta > 0 ? `+${weightDelta}` : weightDelta} кг
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Грудь</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.chest || '99'} см
+              </span>
+            </div>
+
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Бёдра</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.hips || '98'} см
+              </span>
+            </div>
+
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Бицепс</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.biceps_right || currentStudent.biceps || '36.5'} см
+              </span>
+            </div>
+
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
+              <span className="text-[10px] text-slate-400 block">Бедро</span>
+              <span className="text-xs font-mono font-bold text-slate-800">
+                {currentStudent.thigh_right || currentStudent.thigh || '57'} см
               </span>
             </div>
           </div>
 
-          {/* Полная анатомическая сетка замеров */}
-          <div className="space-y-2">
-            <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">
-              Анатомические замеры (см)
-            </span>
-
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-                <span className="text-[10px] text-slate-400 block">Жир (%)</span>
-                <span className="text-xs font-mono font-bold text-slate-800">{bodyMetrics.fat}%</span>
-              </div>
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-                <span className="text-[10px] text-slate-400 block">Шея</span>
-                <span className="text-xs font-mono font-bold text-slate-800">{bodyMetrics.neck} см</span>
-              </div>
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-                <span className="text-[10px] text-slate-400 block">Грудь</span>
-                <span className="text-xs font-mono font-bold text-slate-800">{bodyMetrics.chest} см</span>
-              </div>
-
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-                <span className="text-[10px] text-slate-400 block">Талия</span>
-                <span className="text-xs font-mono font-bold text-slate-800">{bodyMetrics.waist} см</span>
-              </div>
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-                <span className="text-[10px] text-slate-400 block">Бёдра</span>
-                <span className="text-xs font-mono font-bold text-slate-800">{bodyMetrics.hips} см</span>
-              </div>
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-                <span className="text-[10px] text-slate-400 block">Пр. бицепс</span>
-                <span className="text-xs font-mono font-bold text-slate-800">{bodyMetrics.bicepsRight} см</span>
-              </div>
-
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-                <span className="text-[10px] text-slate-400 block">Лев. бицепс</span>
-                <span className="text-xs font-mono font-bold text-slate-800">{bodyMetrics.bicepsLeft} см</span>
-              </div>
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-                <span className="text-[10px] text-slate-400 block">Пр. бедро</span>
-                <span className="text-xs font-mono font-bold text-slate-800">{bodyMetrics.thighRight} см</span>
-              </div>
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-                <span className="text-[10px] text-slate-400 block">Лев. бедро</span>
-                <span className="text-xs font-mono font-bold text-slate-800">{bodyMetrics.thighLeft} см</span>
-              </div>
-
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-                <span className="text-[10px] text-slate-400 block">Пр. икра</span>
-                <span className="text-xs font-mono font-bold text-slate-800">{bodyMetrics.calfRight} см</span>
-              </div>
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-                <span className="text-[10px] text-slate-400 block">Лев. икра</span>
-                <span className="text-xs font-mono font-bold text-slate-800">{bodyMetrics.calfLeft} см</span>
-              </div>
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
-                <span className="text-[10px] text-slate-400 block">Целевой</span>
-                <span className="text-xs font-mono font-bold text-emerald-700">{targetWeight} кг</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Хронологическая история замеров */}
-          <div className="space-y-1.5 pt-1">
-            <div className="flex items-center gap-1.5 text-slate-500 text-[11px] font-medium">
-              <History className="w-3.5 h-3.5" />
-              <span>История динамики по датам</span>
-            </div>
-
-            <div className="divide-y divide-slate-100 bg-slate-50 rounded-xl p-2.5 border border-slate-200/40 text-xs">
-              {measurementsHistory.map((item, idx) => (
-                <div key={idx} className="py-1.5 flex items-center justify-between first:pt-0 last:pb-0">
-                  <span className="text-slate-500 font-medium">{item.date}</span>
-                  <div className="flex items-center gap-2 font-mono">
-                    <span className="font-bold text-slate-800">{item.weight} кг</span>
-                    <span className="text-slate-400 text-[10px]">Талия: {item.waist} см</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Кнопка запроса замеров через Telegram */}
+          {/* Кнопка перехода в отдельный экран полной аналитики замеров */}
           <button
             type="button"
-            onClick={handleRequestMeasurements}
-            className={`w-full h-10 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer ${
-              requestSent 
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
-            }`}
+            onClick={() => setShowFullMeasurements(true)}
+            className="w-full h-10 bg-slate-100 hover:bg-slate-200 active:scale-98 text-slate-800 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
-            {requestSent ? <Check className="w-4 h-4 text-emerald-600" /> : <BellRing className="w-4 h-4 text-slate-600" />}
-            <span>{requestSent ? 'Запрос отправлен атлету в Telegram!' : 'Запросить обновление замеров в Telegram'}</span>
+            <Activity className="w-4 h-4 text-slate-600" />
+            <span>Сравнение и полный прогресс замеров</span>
           </button>
         </div>
 
-        {/* 4. ФОТО ПРОГРЕССА (ФОРМА АТЛЕТА) */}
+        {/* 4. ФОТО ФОРМЫ АТЛЕТА */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
@@ -686,7 +639,7 @@ export default function AthleteDetailScreen({
           </div>
 
           <p className="text-xs text-slate-500 leading-relaxed">
-            Визуальная фиксация формы атлета для сопоставления с анатомическими замерами.
+            Визуальная фиксация прогресса в одинаковом освещении и ракурсах.
           </p>
 
           <button
@@ -702,7 +655,7 @@ export default function AthleteDetailScreen({
           </button>
         </div>
 
-        {/* 5. ВХОДНАЯ АНКЕТА ИЗ БОТА (ПОЛНЫЙ РУССКИЙ ЯЗЫК, МОНОХРОМНОЕ ВРЕМЯ) */}
+        {/* 5. ПОЛНАЯ ВХОДНАЯ АНКЕТА ИЗ ОНБОРДИНГА */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
             <FileText className="w-4 h-4 text-slate-600 stroke-[2]" />
@@ -711,6 +664,11 @@ export default function AthleteDetailScreen({
 
           <div className="space-y-2 text-xs divide-y divide-slate-100">
             <div className="flex items-center justify-between pt-1">
+              <span className="text-slate-500">Локация и клуб:</span>
+              <span className="font-semibold text-slate-800">{currentStudent.city || 'Алматы'} • {currentStudent.gym ? currentStudent.gym.split('|')[0] : 'Клуб не указан'}</span>
+            </div>
+
+            <div className="flex items-center justify-between pt-1.5">
               <span className="text-slate-500">Главная цель:</span>
               <span className="font-semibold text-slate-800">{currentStudent.goal || 'Укрепление формы'}</span>
             </div>
@@ -720,20 +678,20 @@ export default function AthleteDetailScreen({
               <span className="font-semibold text-slate-800">{translateExperience(currentStudent.experience_level)}</span>
             </div>
 
-            {/* График и монохромное время */}
+            {/* Смена и точное время раздельно */}
             <div className="flex items-center justify-between pt-1.5">
-              <span className="text-slate-500">График в зале:</span>
-              <div className="flex items-center gap-1 font-semibold text-slate-800">
+              <span className="text-slate-500">График тренировок:</span>
+              <div className="flex items-center gap-1.5 font-semibold text-slate-800">
                 <span className="px-2 py-0.5 rounded-md bg-slate-100 text-[11px]">
-                  Вечер
+                  {shiftText}
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-mono">
-                  {timeSlotText}
+                  {exactTimeText}
                 </span>
               </div>
             </div>
 
-            {/* Рост и возраст аккуратными плашками */}
+            {/* Рост и возраст раздельно */}
             <div className="grid grid-cols-2 gap-2 pt-2">
               <div className="p-2 bg-slate-50 rounded-xl text-center border border-slate-200/40">
                 <span className="text-[10px] text-slate-400 block">Рост</span>
@@ -773,6 +731,71 @@ export default function AthleteDetailScreen({
         </div>
 
       </div>
+
+      {/* МОДАЛКА СМЕНЫ СТАТУСА ЧЕРЕЗ КАРАНДАШИК */}
+      {isEditingStatus && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl border border-slate-200 w-full max-w-md p-4 space-y-3.5 shadow-xl animate-in slide-in-from-bottom duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-xs font-bold text-slate-800">Изменить статус подопечного</h3>
+              <button
+                type="button"
+                onClick={() => setIsEditingStatus(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => handleChangeStatus('active')}
+                className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                  currentStatus === 'active' ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <div className="text-left">
+                  <span className="text-xs font-bold block">🟢 Активен</span>
+                  <span className="text-[10.5px] text-slate-500">Посещает тренировки по графику</span>
+                </div>
+                {currentStatus === 'active' && <Check className="w-4 h-4 text-emerald-600" />}
+              </button>
+
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => handleChangeStatus('paused')}
+                className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                  currentStatus === 'paused' ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <div className="text-left">
+                  <span className="text-xs font-bold block">🟡 На паузе (Заморозка)</span>
+                  <span className="text-[10.5px] text-slate-500">Временный перерыв (отпуск, больничный)</span>
+                </div>
+                {currentStatus === 'paused' && <Check className="w-4 h-4 text-amber-600" />}
+              </button>
+
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => handleChangeStatus('left')}
+                className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                  currentStatus === 'left' ? 'bg-slate-200 border-slate-400 text-slate-800' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <div className="text-left">
+                  <span className="text-xs font-bold block">⚪ Завершил / Ушёл в архив</span>
+                  <span className="text-[10.5px] text-slate-500">Больше не занимается, скрыт из активных</span>
+                </div>
+                {currentStatus === 'left' && <Check className="w-4 h-4 text-slate-600" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
