@@ -17,7 +17,8 @@ import {
   AlertCircle,
   Camera,
   Activity,
-  X
+  X,
+  BellRing
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
@@ -33,6 +34,13 @@ const translateExperience = (raw) => {
   return raw;
 };
 
+// Функция очистки смены от диапазонов в скобках (убирает "(16:00 - 21:00)")
+const cleanShiftName = (shiftVal) => {
+  if (!shiftVal) return 'Вечер';
+  const clean = shiftVal.replace(/\(.*\)/g, '').trim();
+  return clean || 'Вечер';
+};
+
 export default function AthleteDetailScreen({ 
   student, 
   trainer, 
@@ -43,6 +51,7 @@ export default function AthleteDetailScreen({
   const [actionLoading, setActionLoading] = useState(false);
   const [photoNotice, setPhotoNotice] = useState(false);
   const [showFullMeasurements, setShowFullMeasurements] = useState(false);
+  const [reminderSent, setReminderSent] = useState(false);
 
   // Модалка смены статуса (карандашик)
   const [isEditingStatus, setIsEditingStatus] = useState(false);
@@ -61,7 +70,6 @@ export default function AthleteDetailScreen({
   const isExpiring = leftTrainings <= 2;
   const isPaid = currentStudent.payment_status === 'paid';
 
-  // Если открыт полноэкранный модуль детальных замеров
   if (showFullMeasurements) {
     return (
       <AthleteMeasurementsScreen
@@ -99,7 +107,6 @@ export default function AthleteDetailScreen({
     }
   };
 
-  // Переключение статуса оплаты через тумблер
   const handleTogglePayment = async (statusVal) => {
     if (currentStudent.payment_status === statusVal) return;
     setActionLoading(true);
@@ -125,7 +132,6 @@ export default function AthleteDetailScreen({
     }
   };
 
-  // Степпер баланса занятий (-1 / +1) с мгновенным автосохранением в Supabase
   const handleAdjustBalance = async (delta) => {
     const updated = Math.max(0, leftTrainings + delta);
     setActionLoading(true);
@@ -177,6 +183,23 @@ export default function AthleteDetailScreen({
       console.warn('Ошибка продления:', e);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleSendRenewalReminder = () => {
+    const tgId = currentStudent.telegram_id || currentStudent.chat_id;
+    const coachName = trainer?.full_name || trainer?.first_name || 'Ваш наставник';
+    const text = `🔔 <b>Напоминание о продлении тренировок</b>\n\nПривет, ${escapeHtml(fullName)}! В твоем абонементе осталось <b>${leftTrainings} занятий</b>.\n\nЧтобы зафиксировать за собой привычное время и продолжить работу над прогрессом без пауз, давай согласуем продление следующего блока занятий!\n\n<i>Тренер: ${escapeHtml(coachName)}</i>`;
+
+    if (tgId) {
+      sendTelegramMessage(tgId, text)
+        .then(() => {
+          setReminderSent(true);
+          setTimeout(() => setReminderSent(false), 3000);
+        })
+        .catch(() => handleOpenTg());
+    } else {
+      handleOpenTg();
     }
   };
 
@@ -235,7 +258,7 @@ export default function AthleteDetailScreen({
     online: 'Онлайн-ведение'
   }[currentStudent.training_format || currentStudent.package_type || 'individual'] || 'Индивидуально';
 
-  const shiftText = currentStudent.workout_shift || currentStudent.workout_time_slot || 'Вечер';
+  const cleanShift = cleanShiftName(currentStudent.workout_shift || currentStudent.workout_time_slot);
   const exactTimeText = currentStudent.exact_time || currentStudent.custom_time || currentStudent.workout_time || '18:30';
 
   return (
@@ -263,7 +286,7 @@ export default function AthleteDetailScreen({
 
       <div className="p-4 max-w-md mx-auto space-y-3.5">
         
-        {/* 1. ВИЗИТКА СО СМЕНОЙ СТАТУСА ЧЕРЕЗ КАРАНДАШИК */}
+        {/* 1. ВИЗИТКА СО СМЕНОЙ СТАТУСА */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -292,7 +315,6 @@ export default function AthleteDetailScreen({
               </div>
             </div>
 
-            {/* Статус с карандашиком */}
             <button
               type="button"
               onClick={() => setIsEditingStatus(true)}
@@ -337,19 +359,39 @@ export default function AthleteDetailScreen({
           </div>
         </div>
 
-        {/* ПРЕДУПРЕЖДЕНИЕ: АБОНЕМЕНТ ЗАКАНЧИВАЕТСЯ */}
+        {/* УВЕДОМЛЕНИЕ: ОСТАЛОСЬ МЕНЬШЕ 3 ТРЕНИРОВОК С КНОПКОЙ НАПОМИНАНИЯ В TELEGRAM */}
         {isExpiring && (
-          <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-center justify-between gap-2.5 shadow-2xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-              <div className="min-w-0">
-                <span className="text-xs font-bold text-amber-900 block leading-tight">
-                  Абонемент завершается
+          <div className="p-3.5 bg-amber-50 border border-amber-200/90 rounded-2xl space-y-2.5 shadow-xs">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-bold text-amber-950 block leading-tight">
+                  Абонемент заканчивается (осталось: {leftTrainings})
                 </span>
-                <span className="text-[11px] text-amber-700">
-                  Осталось {leftTrainings} зан. Выставите счёт на новый блок.
+                <span className="text-[11px] text-amber-800 block mt-0.5 leading-snug">
+                  Пора напомнить подопечному о продлении графика занятий и выставить счёт.
                 </span>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-0.5">
+              <button
+                type="button"
+                onClick={handleSendRenewalReminder}
+                className="h-8 px-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer active:scale-95"
+              >
+                <BellRing className="w-3 h-3" />
+                <span>{reminderSent ? 'Напоминание ушло!' : 'Напомнить в TG'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSendInvoice}
+                className="h-8 px-2.5 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
+              >
+                <CreditCard className="w-3 h-3 text-amber-700" />
+                <span>Выставить счёт</span>
+              </button>
             </div>
           </div>
         )}
@@ -372,7 +414,6 @@ export default function AthleteDetailScreen({
             </button>
           </div>
 
-          {/* Редактирование тарифа */}
           {isEditingPlan ? (
             <div className="p-3 bg-slate-50 rounded-xl space-y-3 border border-slate-200/60 text-xs animate-in fade-in">
               <div>
@@ -512,7 +553,7 @@ export default function AthleteDetailScreen({
             </p>
           </div>
 
-          {/* СЕГМЕНТНЫЙ ТУМБЛЕР ОПЛАТЫ (ОЖИДАЕТСЯ / ОПЛАЧЕНО) */}
+          {/* СЕГМЕНТНЫЙ ТУМБЛЕР ОПЛАТЫ */}
           <div className="space-y-1.5 pt-1">
             <span className="text-[11px] font-semibold text-slate-600 block">Статус оплаты блока:</span>
             <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl gap-1">
@@ -542,7 +583,6 @@ export default function AthleteDetailScreen({
             </div>
           </div>
 
-          {/* Кнопки действий: Выставить счёт и Продлить абонемент */}
           <div className="grid grid-cols-2 gap-2 pt-1">
             <button
               type="button"
@@ -578,7 +618,6 @@ export default function AthleteDetailScreen({
             </span>
           </div>
 
-          {/* Экспресс-сетка всех ключевых параметров включая симметрию */}
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Рост</span>
@@ -665,7 +704,6 @@ export default function AthleteDetailScreen({
             </div>
           </div>
 
-          {/* Кнопка перехода в отдельный экран полной аналитики */}
           <button
             type="button"
             onClick={() => setShowFullMeasurements(true)}
@@ -703,7 +741,7 @@ export default function AthleteDetailScreen({
           </button>
         </div>
 
-        {/* 5. ПОЛНАЯ ВХОДНАЯ АНКЕТА ИЗ ОНБОРДИНГА */}
+        {/* 5. ВХОДНАЯ АНКЕТА ИЗ ОНБОРДИНГА (ЧИСТАЯ СМЕНА + ТОЧНОЕ ВРЕМЯ) */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
             <FileText className="w-4 h-4 text-slate-600 stroke-[2]" />
@@ -726,12 +764,12 @@ export default function AthleteDetailScreen({
               <span className="font-semibold text-slate-800">{translateExperience(currentStudent.experience_level)}</span>
             </div>
 
-            {/* Смена и точное время раздельно */}
+            {/* Чистое слово смены + точное время без лишних скобок */}
             <div className="flex items-center justify-between pt-1.5">
               <span className="text-slate-500">График тренировок:</span>
               <div className="flex items-center gap-1.5 font-semibold text-slate-800">
                 <span className="px-2 py-0.5 rounded-md bg-slate-100 text-[11px]">
-                  {shiftText}
+                  {cleanShift}
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-mono">
                   {exactTimeText}
@@ -739,7 +777,6 @@ export default function AthleteDetailScreen({
               </div>
             </div>
 
-            {/* Рост и возраст раздельно */}
             <div className="grid grid-cols-2 gap-2 pt-2">
               <div className="p-2 bg-slate-50 rounded-xl text-center border border-slate-200/40">
                 <span className="text-[10px] text-slate-400 block">Рост</span>
@@ -780,7 +817,7 @@ export default function AthleteDetailScreen({
 
       </div>
 
-      {/* МОДАЛКА СМЕНЫ СТАТУСА (КАРАНДАШИК) */}
+      {/* МОДАЛКА СМЕНЫ СТАТУСА */}
       {isEditingStatus && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white rounded-t-3xl sm:rounded-2xl border border-slate-200 w-full max-w-md p-4 space-y-3.5 shadow-xl animate-in slide-in-from-bottom duration-150">
