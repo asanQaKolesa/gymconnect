@@ -24,9 +24,7 @@ import {
   ChevronDown,
   Send,
   Timer,
-  Tag,
-  PenTool,
-  MessageCircle
+  PenTool
 } from 'lucide-react';
 
 export default function DesignSystemShowcase({ onBack }) {
@@ -80,11 +78,11 @@ export default function DesignSystemShowcase({ onBack }) {
   const [isCustomExerciseMode, setIsCustomExerciseMode] = useState(false);
   const [customExerciseName, setCustomExerciseName] = useState('');
 
-  // Параметры нагрузки (Сеты, повторы, вес) — все в едином цвете
+  // Параметры нагрузки (Сеты, повторы, вес)
   const [sets, setSets] = useState(4);
   const [reps, setReps] = useState(10);
   const [weight, setWeight] = useState(60);
-  const [restTime, setRestTime] = useState(90); // секунды отдыха
+  const [restTime, setRestTime] = useState(90);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
@@ -115,10 +113,10 @@ export default function DesignSystemShowcase({ onBack }) {
   return (
     <div className="min-h-screen bg-[#F2F2F7] text-slate-900 pb-36 font-sans select-none antialiased">
       
-      {/* 1. ВСПЛЫВАЮЩИЙ ТОСТ DYNAMIC ISLAND */}
+      {/* 1. ПЛАВАЮЩИЙ ТОСТ DYNAMIC ISLAND (ГЛАССМОРФИЗМ) */}
       {toastText && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-200 max-w-sm w-full px-4 pointer-events-none">
-          <div className="bg-slate-900/95 backdrop-blur-xl text-white px-4 py-2.5 rounded-2xl shadow-xl border border-white/10 flex items-center justify-between gap-3 pointer-events-auto">
+          <div className="bg-slate-900/90 backdrop-blur-2xl text-white px-4 py-2.5 rounded-2xl shadow-xl border border-white/15 flex items-center justify-between gap-3 pointer-events-auto">
             <div className="flex items-center gap-2.5 text-xs font-semibold">
               <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
               <span>{toastText}</span>
@@ -134,8 +132,8 @@ export default function DesignSystemShowcase({ onBack }) {
         </div>
       )}
 
-      {/* 2. ШАПКА ВИЗУАЛЬНОЙ СИСТЕМЫ */}
-      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/70 px-4 py-3.5 flex items-center justify-between">
+      {/* 2. ШАПКА ВИЗУАЛЬНОЙ СИСТЕМЫ (APPLE FROSTED GLASS) */}
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-slate-200/60 px-4 py-3.5 flex items-center justify-between shadow-2xs">
         <div className="flex items-center gap-2.5">
           {onBack && (
             <button 
@@ -149,15 +147,15 @@ export default function DesignSystemShowcase({ onBack }) {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-sm font-bold text-slate-900 tracking-tight">CoachOS Design System</h1>
-              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/70">
-                v3.5 Final
+              <span className="text-[10px] font-bold text-blue-700 bg-blue-50/90 px-2 py-0.5 rounded-md border border-blue-200/70">
+                v3.6 Glass
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 font-normal mt-0.5">Выверенный баланс типографики и степперов</p>
+            <p className="text-[11px] text-slate-500 font-normal mt-0.5">Широкие степперы и градиентный акцент</p>
           </div>
         </div>
 
-        <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-bold text-xs shadow-sm shadow-blue-600/25">
           GC
         </div>
       </div>
@@ -165,24 +163,24 @@ export default function DesignSystemShowcase({ onBack }) {
       <div className="max-w-md mx-auto p-4 space-y-4">
 
         {/* ================= 1. КАРТОЧКА АТЛЕТА В РАСПИСАНИИ ================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-3">
+        <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-4 border border-white/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h3 className="text-xs font-bold text-slate-800">
                 Расписание на сегодня
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Вся информация в одну чистую строку без зала</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Чистая строка без зала • слот 18:30</p>
             </div>
 
-            <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/50 px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-2xs">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
               <span>18:30</span>
             </span>
           </div>
 
-          <div className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200/70 space-y-3">
+          <div className="bg-slate-50/80 rounded-2xl p-3 border border-slate-200/60 space-y-3">
             
-            {/* ЯРУС 1: Профиль атлета (Кликабелен) */}
+            {/* ЯРУС 1: Профиль атлета */}
             <div 
               onClick={() => setIsProfileModalOpen(true)}
               className="flex items-center justify-between gap-3 cursor-pointer group active:opacity-75 transition-opacity"
@@ -207,7 +205,7 @@ export default function DesignSystemShowcase({ onBack }) {
                       Набор массы
                     </span>
                     <span className="text-[11px] text-slate-400 font-medium">
-                      Слот 18:30
+                      В зале сегодня
                     </span>
                   </div>
                 </div>
@@ -225,7 +223,7 @@ export default function DesignSystemShowcase({ onBack }) {
                 onClick={() => setIsWorkoutPlanOpen(!isWorkoutPlanOpen)}
                 className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   isWorkoutPlanOpen
-                    ? 'bg-blue-50 text-blue-700 border-blue-200 font-extrabold shadow-2xs'
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 shadow-2xs active:scale-95'
                 }`}
               >
@@ -253,7 +251,7 @@ export default function DesignSystemShowcase({ onBack }) {
                       setIsCompleted(true);
                       showToast('✅ Тренировка проведена • Списано 1 занятие');
                     }}
-                    className="w-full py-2.5 px-3.5 bg-[#165DFB] hover:bg-[#1150DC] text-white rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-blue-600/25"
+                    className="w-full py-2.5 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-blue-600/25"
                   >
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                     <span>Проведено</span>
@@ -282,14 +280,14 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* ================= 2. КАРТОЧКА УПРАЖНЕНИЯ: ШИРОКИЕ СТЕППЕРЫ + СНАРЯД + ОТДЫХ ================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-3">
+        {/* ================= 2. КАРТОЧКА УПРАЖНЕНИЯ: ШИРОКИЕ СТЕППЕРЫ (НЕ ВЫТЯНУТЫЕ) ================= */}
+        <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-4 border border-white/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h3 className="text-xs font-bold text-slate-800">
                 Карточка упражнения и нагрузки
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Широкие степперы • единый цвет цифр</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Широкие площадки кнопок • синий активный плюс</p>
             </div>
             
             <button 
@@ -417,15 +415,15 @@ export default function DesignSystemShowcase({ onBack }) {
               )}
             </div>
 
-            {/* СТЕППЕРЫ: ГОРИЗОНТАЛЬНО ШИРОКИЕ (w-9 h-7) + ЕДИНЫЙ ЧЁРНЫЙ ЦВЕТ ЦИФР */}
-            <div className="grid grid-cols-3 gap-2.5 pt-1">
+            {/* СТЕППЕРЫ: ШИРОКИЕ (w-10 h-7), СИНИЙ ПЛЮС, ЕДИНЫЙ ЦВЕТ ЧИСЕЛ */}
+            <div className="grid grid-cols-3 gap-2 pt-1">
               
               {/* Сеты */}
-              <div className="bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-                <span className="text-[10.5px] font-semibold text-slate-400 block text-center mb-1.5">
+              <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+                <span className="text-[10px] font-semibold text-slate-400 block text-center mb-1">
                   Сеты
                 </span>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <button
                     type="button"
                     onClick={() => setSets(s => Math.max(1, (Number(s) || 0) - 1))}
@@ -438,12 +436,12 @@ export default function DesignSystemShowcase({ onBack }) {
                     inputMode="numeric"
                     value={sets}
                     onChange={(e) => handleNumberInput(setSets, e.target.value)}
-                    className="w-8 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
+                    className="w-7 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setSets(s => (Number(s) || 0) + 1)}
-                    className="w-9 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xs"
+                    className="w-9 h-7 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xs"
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
@@ -451,11 +449,11 @@ export default function DesignSystemShowcase({ onBack }) {
               </div>
 
               {/* Повторы */}
-              <div className="bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-                <span className="text-[10.5px] font-semibold text-slate-400 block text-center mb-1.5">
+              <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+                <span className="text-[10px] font-semibold text-slate-400 block text-center mb-1">
                   Повторы
                 </span>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <button
                     type="button"
                     onClick={() => setReps(r => Math.max(1, (Number(r) || 0) - 1))}
@@ -468,24 +466,24 @@ export default function DesignSystemShowcase({ onBack }) {
                     inputMode="numeric"
                     value={reps}
                     onChange={(e) => handleNumberInput(setReps, e.target.value)}
-                    className="w-8 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
+                    className="w-7 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setReps(r => (Number(r) || 0) + 1)}
-                    className="w-9 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xs"
+                    className="w-9 h-7 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xs"
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                 </div>
               </div>
 
-              {/* Вес — ТЕПЕРЬ СТРОГО В ЦВЕТЕ text-slate-900 */}
-              <div className="bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-                <span className="text-[10.5px] font-semibold text-slate-400 block text-center mb-1.5">
+              {/* Вес */}
+              <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+                <span className="text-[10px] font-semibold text-slate-400 block text-center mb-1">
                   Вес (кг)
                 </span>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <button
                     type="button"
                     onClick={() => setWeight(w => Math.max(0, Math.round(((Number(w) || 0) - 2.5) * 10) / 10))}
@@ -499,12 +497,12 @@ export default function DesignSystemShowcase({ onBack }) {
                     value={weight}
                     placeholder="0"
                     onChange={(e) => handleNumberInput(setWeight, e.target.value)}
-                    className="w-9 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
+                    className="w-8 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setWeight(w => Math.round(((Number(w) || 0) + 2.5) * 10) / 10)}
-                    className="w-9 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xs"
+                    className="w-9 h-7 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xs"
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
@@ -514,7 +512,7 @@ export default function DesignSystemShowcase({ onBack }) {
             </div>
 
             {/* Быстрый выбор времени отдыха */}
-            <div className="pt-1 flex items-center justify-between">
+            <div className="pt-0.5 flex items-center justify-between">
               <span className="text-[10.5px] font-medium text-slate-400 flex items-center gap-1">
                 <Timer className="w-3 h-3 text-slate-400" />
                 <span>Отдых между сетами:</span>
@@ -541,13 +539,13 @@ export default function DesignSystemShowcase({ onBack }) {
             <input
               type="text"
               placeholder="Заметка тренера: локти под 45°, пауза в нижней точке 1 сек..."
-              className="w-full px-3 py-2 bg-white border border-slate-200/70 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 outline-none focus:border-blue-500"
+              className="w-full px-3 py-1.5 bg-white border border-slate-200/70 rounded-xl text-xs text-slate-700 placeholder:text-slate-400 outline-none focus:border-blue-500"
             />
           </div>
         </div>
 
-        {/* ================= 3. ЦЕНТР ПУШ-УВЕДОМЛЕНИЙ TELEGRAM (НОВЫЙ БЛОК) ================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-3">
+        {/* ================= 3. ЦЕНТР ПУШ-УВЕДОМЛЕНИЙ TELEGRAM ================= */}
+        <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-4 border border-white/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -572,12 +570,12 @@ export default function DesignSystemShowcase({ onBack }) {
               }}
               className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                 activePushPreview === 'workout'
-                  ? 'bg-blue-50/80 border-blue-300 text-blue-900 font-bold shadow-2xs'
+                  ? 'bg-blue-50/90 border-blue-300 text-blue-900 font-bold shadow-2xs'
                   : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
             >
               <span className="text-xs">🏋️ План дня</span>
-              <span className="text-[10px] text-slate-400 font-normal mt-1">Отправить тренировку</span>
+              <span className="text-[10px] text-slate-400 font-normal mt-1">Отправить план</span>
             </button>
 
             <button
@@ -588,7 +586,7 @@ export default function DesignSystemShowcase({ onBack }) {
               }}
               className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                 activePushPreview === 'reminder'
-                  ? 'bg-amber-50/80 border-amber-300 text-amber-900 font-bold shadow-2xs'
+                  ? 'bg-amber-50/90 border-amber-300 text-amber-900 font-bold shadow-2xs'
                   : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
             >
@@ -604,7 +602,7 @@ export default function DesignSystemShowcase({ onBack }) {
               }}
               className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                 activePushPreview === 'payment'
-                  ? 'bg-emerald-50/80 border-emerald-300 text-emerald-900 font-bold shadow-2xs'
+                  ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900 font-bold shadow-2xs'
                   : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
               }`}
             >
@@ -644,8 +642,8 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* ================= 4. РАЗДЕЛЫ УПРАВЛЕНИЯ ================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-2">
+        {/* ================= 4. РАЗДЕЛЫ УПРАВЛЕНИЯ (МЯГКИЕ ИКОНКИ) ================= */}
+        <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-4 border border-white/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-2">
           <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800">
               Разделы управления
@@ -723,7 +721,7 @@ export default function DesignSystemShowcase({ onBack }) {
         </div>
 
         {/* ================= 5. ДНЕЙ В НЕДЕЛЮ (1–7) И СХЕМА СПЛИТА ================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
+        <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-4 border border-white/80 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-800">
               Дней тренировок в неделю
@@ -739,7 +737,7 @@ export default function DesignSystemShowcase({ onBack }) {
                 onClick={() => setActiveDaysCount(d)}
                 className={`py-1.5 text-xs font-mono font-bold rounded-xl transition-all cursor-pointer ${
                   activeDaysCount === d 
-                    ? 'bg-[#165DFB] text-white shadow-xs' 
+                    ? 'bg-blue-600 text-white shadow-xs' 
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -775,12 +773,12 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* ================= 6. КНОПКА ДЕЙСТВИЯ ================= */}
+        {/* ================= 6. ОСНОВНАЯ КНОПКА (ГЛАССРЕШЕНИЕ С ГРАДИЕНТОМ) ================= */}
         <div className="space-y-2.5 pt-1">
           <button
             type="button"
             onClick={() => showToast('🎉 План тренировок успешно назначен ученику!')}
-            className="w-full py-3.5 px-5 bg-[#165DFB] hover:bg-[#1150DC] text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(22,93,251,0.25)] active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full py-3.5 px-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(37,99,235,0.25)] active:scale-[0.98] transition-all cursor-pointer"
           >
             <Zap className="w-4 h-4 fill-current text-white" />
             <span>Сохранить и отправить план в Telegram</span>
