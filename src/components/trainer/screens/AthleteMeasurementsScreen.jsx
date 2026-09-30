@@ -8,24 +8,23 @@ import {
   BellRing, 
   Check, 
   Activity, 
-  MessageSquare, 
   Send,
   Target,
   LineChart as ChartIcon,
-  ChevronRight
+  Sparkles,
+  Clock
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
 
 export default function AthleteMeasurementsScreen({ student, trainer, onBack }) {
   const [requestSent, setRequestSent] = useState(false);
-
-  // Выбранный анатомический параметр для интерактивного графика (по умолчанию Талия)
   const [selectedMetricKey, setSelectedMetricKey] = useState('waist');
 
   const fullName = student?.full_name || `${student?.first_name || ''} ${student?.last_name || ''}`.trim() || 'Атлет';
 
-  // Базовые параметры веса
+  // Базовые параметры
+  const heightCm = Number(student?.height || 178);
   const startWeight = Number(student?.weight || student?.start_weight || 75.0);
   const prevWeight = Number((startWeight - 2.8).toFixed(1));
   const currentWeight = Number(student?.current_weight || student?.weight || 71.5);
@@ -43,7 +42,7 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
   const prevDateFormatted = '15.09.2026';
   const currentDateFormatted = formatNumericDate(new Date());
 
-  // ЧИСТАЯ АНАТОМИЧЕСКАЯ МАТРИЦА (БЕЗ ДУБЛЯ ВЕСА ТЕЛА)
+  // Матрица анатомических замеров
   const measurementRows = [
     { key: 'waist', label: 'Талия (живот)', start: 86.0, prev: 82.5, current: Number(student?.waist || 80.0), unit: 'см' },
     { key: 'chest', label: 'Грудь', start: 101.0, prev: 99.5, current: Number(student?.chest || 99.0), unit: 'см' },
@@ -57,12 +56,24 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
     { key: 'calf_l', label: 'Левая икра', start: 38.0, prev: 37.5, current: Number(student?.calf_left || 37.0), unit: 'см' }
   ];
 
-  // Активная метрика для графика
+  // Расчёт пропорций и ИМТ
+  const startWaist = 86.0;
+  const currentWaist = Number(student?.waist || 80.0);
+  const startChest = 101.0;
+  const currentChest = Number(student?.chest || 99.0);
+  const startHips = 103.0;
+  const currentHips = Number(student?.hips || 97.5);
+
+  const startVTaper = (startChest / startWaist).toFixed(2);
+  const currentVTaper = (currentChest / currentWaist).toFixed(2);
+  const currentWHR = (currentWaist / currentHips).toFixed(2);
+  const currentBMI = (currentWeight / Math.pow(heightCm / 100, 2)).toFixed(1);
+
   const activeMetric = useMemo(() => {
     return measurementRows.find(m => m.key === selectedMetricKey) || measurementRows[0];
   }, [selectedMetricKey, measurementRows]);
 
-  // Генератор SVG кривой с защитой от наложения цифр
+  // Генератор SVG кривых
   const generateSvgChart = (p1, p2, p3, minVal, maxVal, width = 340, height = 115) => {
     const range = (maxVal - minVal) || 1;
     const getY = (val) => height - 22 - ((val - minVal) / range) * (height - 44);
@@ -95,17 +106,21 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
     return generateSvgChart(activeMetric.start, activeMetric.prev, activeMetric.current, min, max, 340, 105);
   }, [activeMetric]);
 
-  // Хронология с персональными комментариями тренера к КАЖДОМУ срезу
+  // Хронология с компактными комментариями
   const [timelineNotes, setTimelineNotes] = useState({
-    '0': 'Отличная динамика талии, сохраняем режим кардио.',
+    '0': 'Отличный темп, талия уменьшается без потери плечевого пояса.',
     '1': 'Добавлен белок в рацион, силовые в тяге растут.',
-    '2': 'Первичный антропометрический срез при старте.'
+    '2': 'Первичный антропометрический срез при входе.'
   });
-  const [savedNoteIdx, setSavedNoteIdx] = useState(null);
+  const [sentNoteIdx, setSentNoteIdx] = useState(null);
 
-  const handleSaveTimelineNote = async (idx) => {
-    setSavedNoteIdx(idx);
-    setTimeout(() => setSavedNoteIdx(null), 2000);
+  const quickChips = ['Отличный темп 🔥', 'Держим дефицит 🥗', 'Добавить кардио 🏃', 'Застой по весу ⚠️'];
+
+  const handleApplyChip = (idx, chipText) => {
+    setTimelineNotes(prev => ({
+      ...prev,
+      [idx]: prev[idx] ? `${prev[idx]} ${chipText}` : chipText
+    }));
   };
 
   const handleSendTimelineNote = (idx, dateTitle) => {
@@ -118,7 +133,10 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
 
     if (tgId) {
       sendTelegramMessage(tgId, text)
-        .then(() => alert(`✅ Комментарий к замеру ${dateTitle} отправлен подопечному!`))
+        .then(() => {
+          setSentNoteIdx(idx);
+          setTimeout(() => setSentNoteIdx(null), 2500);
+        })
         .catch(() => alert('Не удалось отправить. Откройте чат напрямую.'));
     } else {
       alert('Telegram ID атлета не найден.');
@@ -167,7 +185,7 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
 
       <div className="p-4 max-w-md mx-auto space-y-3.5">
 
-        {/* 2. ВИЗИТКА АТЛЕТА С ЦЕЛЬЮ СТРОГО В ОДНУ СТРОКУ */}
+        {/* 2. ВИЗИТКА АТЛЕТА С ЦЕЛЬЮ В ОДНУ СТРОКУ */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center font-bold text-slate-700 text-sm">
@@ -189,7 +207,7 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
             </div>
           </div>
 
-          {/* Плашка цели строго в одну строку без разрывов */}
+          {/* Плашка цели строго в одну строку */}
           <div className="px-3 py-2 bg-slate-50 border border-slate-200/70 rounded-xl flex items-center justify-between gap-2 text-[11px]">
             <div className="flex items-center gap-1.5 min-w-0 truncate">
               <Target className="w-3.5 h-3.5 text-slate-500 shrink-0" />
@@ -200,19 +218,27 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
               Ориентир: {targetWeight} кг
             </span>
           </div>
+
+          {/* Метка регулярности чек-апа */}
+          <div className="flex items-center justify-between text-[10.5px] text-slate-500 pt-0.5 px-0.5">
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-slate-400" />
+              <span>Последний срез: 14 дней назад</span>
+            </span>
+            <span className="font-medium text-[#1E60D5]">Чек-ап: по графику</span>
+          </div>
         </div>
 
-        {/* 3. КАРТОЧКА ДИНАМИКИ ВЕСА С ПОНЯТНЫМИ ПОДПИСЯМИ */}
+        {/* 3. КАРТОЧКА ДИНАМИКИ ВЕСА */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-1.5">
               <Scale className="w-4 h-4 text-slate-600 stroke-[2]" />
               <h3 className="text-xs font-bold text-slate-800">Контроль веса тела</h3>
             </div>
-            <span className="text-[10.5px] text-slate-400 font-mono">Динамика: Старт → Пред. → Сейчас</span>
+            <span className="text-[10.5px] text-slate-400 font-mono">Старт → Пред. → Сейчас</span>
           </div>
 
-          {/* 4 столбца с датами */}
           <div className="grid grid-cols-4 gap-1.5 text-center">
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/50">
               <span className="text-[9.5px] text-slate-400 block mb-0.5 font-medium">Старт</span>
@@ -243,7 +269,7 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
             </div>
           </div>
 
-          {/* SVG ТРЕНД-ГРАФИК ВЕСА БЕЗ НАЛОЖЕНИЯ ЦИФР */}
+          {/* ВЕКТОРНЫЙ ГРАФИК ВЕСА */}
           <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-2">
             <div className="flex items-center justify-between text-[11px]">
               <span className="font-semibold text-slate-700 flex items-center gap-1">
@@ -271,19 +297,16 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
                 <path d={weightChart.fillD} fill="url(#weightGrad)" />
                 <path d={weightChart.pathD} fill="none" stroke="#1E60D5" strokeWidth="2.5" strokeLinecap="round" />
 
-                {/* Точка 1: Старт */}
                 <circle cx={weightChart.x1} cy={weightChart.y1} r="4.5" fill="#64748B" stroke="#FFFFFF" strokeWidth="2" />
                 <text x={weightChart.x1} y={weightChart.y1 - 9} fontSize="10" fontWeight="bold" fill="#64748B" textAnchor="middle" fontFamily="monospace">
                   {startWeight}
                 </text>
 
-                {/* Точка 2: Прошлый срез */}
                 <circle cx={weightChart.x2} cy={weightChart.y2} r="4.5" fill="#3B82F6" stroke="#FFFFFF" strokeWidth="2" />
                 <text x={weightChart.x2} y={weightChart.y2 - 9} fontSize="10" fontWeight="bold" fill="#3B82F6" textAnchor="middle" fontFamily="monospace">
                   {prevWeight}
                 </text>
 
-                {/* Точка 3: Сейчас */}
                 <circle cx={weightChart.x3} cy={weightChart.y3} r="5" fill="#1E60D5" stroke="#FFFFFF" strokeWidth="2" />
                 <text x={weightChart.x3} y={weightChart.y3 - 9} fontSize="10.5" fontWeight="bold" fill="#1E60D5" textAnchor="middle" fontFamily="monospace">
                   {currentWeight}
@@ -308,12 +331,43 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
           </div>
         </div>
 
-        {/* 4. МАТРИЦА АНАТОМИЧЕСКИХ ЗАМЕРОВ С ГОРИЗОНТАЛЬНЫМ СВАЙПОМ */}
+        {/* 4. БИОМЕТРИЧЕСКИЕ ИНДЕКСЫ И ПРОПОРЦИИ ТЕЛА */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-slate-600 stroke-[2]" />
+              <h3 className="text-xs font-bold text-slate-800">Индексы пропорций и состава тела</h3>
+            </div>
+            <span className="text-[10.5px] text-slate-400 font-mono">Биометрия</span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
+              <span className="text-[10px] text-slate-400 block mb-0.5">V-конус (Грудь/Талия)</span>
+              <span className="font-mono font-bold text-slate-800 block">{startVTaper} → {currentVTaper}</span>
+              <span className="text-[9.5px] font-semibold text-emerald-700 mt-0.5 block">+ Прогресс конуса</span>
+            </div>
+
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
+              <span className="text-[10px] text-slate-400 block mb-0.5">WHTR (Талия/Бёдра)</span>
+              <span className="font-mono font-bold text-slate-800 block">{currentWHR}</span>
+              <span className="text-[9.5px] text-slate-500 mt-0.5 block">Идеал рельефа</span>
+            </div>
+
+            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
+              <span className="text-[10px] text-slate-400 block mb-0.5">ИМТ (BMI)</span>
+              <span className="font-mono font-bold text-slate-800 block">{currentBMI}</span>
+              <span className="text-[9.5px] text-slate-500 mt-0.5 block">Нормостеник</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. МАТРИЦА АНАТОМИЧЕСКИХ ЗАМЕРОВ С ГОРИЗОНТАЛЬНЫМ СКРОЛЛОМ */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3.5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h3 className="text-xs font-bold text-slate-800">Матрица анатомических замеров</h3>
-              <p className="text-[10px] text-slate-400 font-mono mt-0.5">Листайте таблицу вправо при необходимости →</p>
+              <p className="text-[10px] text-slate-400 font-mono mt-0.5">Скролл вправо для детального среза →</p>
             </div>
             <Activity className="w-4 h-4 text-slate-400" />
           </div>
@@ -364,14 +418,13 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
             </div>
             
             <p className="text-[10px] text-slate-400 text-center">
-              Кликните по любой строке ниже, чтобы отобразить динамику конкретной мышцы
+              Нажмите на строку ниже, чтобы посмотреть динамику обхвата
             </p>
           </div>
 
-          {/* ТАБЛИЦА С МЯГКИМ СКРОЛЛОМ ВПРАВО (БЕЗ НАЕЗДА ДРУГ НА ДРУГА) */}
+          {/* ТАБЛИЦА С МЯГКИМ СКРОЛЛОМ */}
           <div className="overflow-x-auto pb-1 -mx-2 px-2 no-scrollbar">
             <div className="min-w-[390px]">
-              {/* Шапка таблицы */}
               <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider pb-2 border-b border-slate-100 text-center">
                 <span className="col-span-4 text-left">Зона тела</span>
                 <span className="col-span-2">Старт</span>
@@ -380,7 +433,6 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
                 <span className="col-span-2 text-right">Итог (Δ)</span>
               </div>
 
-              {/* Строки таблицы */}
               <div className="divide-y divide-slate-100 text-xs font-mono">
                 {measurementRows.map((row) => {
                   const diff = (row.current - row.start).toFixed(1);
@@ -436,7 +488,7 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
           </div>
         </div>
 
-        {/* 5. ХРОНОЛОГИЯ С ПЕРСОНАЛЬНЫМ КОММЕНТАРИЕМ К КАЖДОМУ ЗАМЕРУ */}
+        {/* 6. ХРОНОЛОГИЯ С КОМПАКТНЫМ КОММЕНТАРИЕМ В ОДНУ СТРОКУ */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800">Хронология срезов и пометки наставника</h3>
@@ -470,58 +522,48 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
                   ))}
                 </div>
 
-                {/* Персональный комментарий тренера к этому замеру */}
-                <div className="pt-1.5 border-t border-slate-200/40 space-y-1.5">
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span className="font-semibold text-slate-600 flex items-center gap-1">
-                      <MessageSquare className="w-3 h-3 text-slate-400" />
-                      <span>Указание к этому замеру:</span>
-                    </span>
-                    {savedNoteIdx === idx && (
-                      <span className="text-emerald-600 font-bold">Сохранено</span>
-                    )}
-                  </div>
+                {/* Быстрые чипсы-шаблоны */}
+                <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-0.5">
+                  {quickChips.map((chip, cIdx) => (
+                    <button
+                      key={cIdx}
+                      type="button"
+                      onClick={() => handleApplyChip(idx, chip)}
+                      className="px-2 py-0.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 rounded-md text-[9.5px] font-medium whitespace-nowrap active:scale-95 transition-all cursor-pointer"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
 
+                {/* КОММЕНТАРИЙ ТРЕНЕРА СТРОГО В ОДНУ СТРОКУ */}
+                <div className="relative flex items-center">
                   <input
                     type="text"
                     value={timelineNotes[idx] || ''}
                     onChange={(e) => setTimelineNotes({ ...timelineNotes, [idx]: e.target.value })}
-                    placeholder="Например: снизить соль, добавить 10 мин кардио..."
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#1E60D5]"
+                    placeholder="Заметка к замеру..."
+                    className="w-full h-8 pl-3 pr-16 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#1E60D5]"
                   />
-
-                  <div className="flex justify-end gap-1.5 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => handleSaveTimelineNote(idx)}
-                      className="h-7 px-2.5 bg-slate-200/80 hover:bg-slate-300 text-slate-700 rounded-lg text-[10.5px] font-semibold transition-all cursor-pointer"
-                    >
-                      Сохранить
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSendTimelineNote(idx, item.date)}
-                      className="h-7 px-2.5 bg-[#1E60D5] hover:bg-blue-600 text-white rounded-lg text-[10.5px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
-                    >
-                      <Send className="w-2.5 h-2.5" />
-                      <span>В TG</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSendTimelineNote(idx, item.date)}
+                    className="absolute right-1 h-6 px-2.5 bg-[#1E60D5] hover:bg-blue-600 text-white rounded-md text-[10.5px] font-semibold inline-flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-2xs"
+                  >
+                    {sentNoteIdx === idx ? <Check className="w-3 h-3 text-white" /> : <Send className="w-3 h-3" />}
+                    <span>{sentNoteIdx === idx ? 'Ушло' : 'В TG'}</span>
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* 6. КНОПКА ЗАПРОСА ОБНОВЛЕНИЯ ЗАМЕРОВ В TELEGRAM */}
+        {/* 7. ФИРМЕННАЯ СИНЯЯ КНОПКА ЗАПРОСА В TELEGRAM (БЕЗ ЧЁРНОГО ЦВЕТА) */}
         <button
           type="button"
           onClick={handleRequestTelegram}
-          className={`w-full h-11 rounded-2xl text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs ${
-            requestSent 
-              ? 'bg-emerald-600 text-white' 
-              : 'bg-slate-900 hover:bg-black text-white active:scale-98'
-          }`}
+          className="w-full h-11 bg-[#1E60D5] hover:bg-blue-600 active:scale-98 text-white rounded-2xl text-xs font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
         >
           {requestSent ? <Check className="w-4 h-4" /> : <BellRing className="w-4 h-4" />}
           <span>{requestSent ? 'Запрос отправлен атлету в Telegram!' : 'Запросить новый замер тела в Telegram'}</span>
