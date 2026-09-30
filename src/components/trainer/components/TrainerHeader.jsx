@@ -106,8 +106,6 @@ export default function TrainerHeader({
 
   const calculateUnreadCount = () => {
     let count = 0;
-    const now = Date.now();
-    const TTL_48 = 48 * 60 * 60 * 1000;
 
     effectiveList.forEach(st => {
       const left = st.left_trainings !== undefined ? st.left_trainings : (st.remaining_workouts !== undefined ? st.remaining_workouts : 12);
@@ -143,63 +141,69 @@ export default function TrainerHeader({
   return (
     <>
       {/* ================= АККУРАТНАЯ СИММЕТРИЧНАЯ ШАПКА ================= */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 sticky top-0 z-40 select-none shadow-xs">
-        <div className="flex items-center justify-between max-w-md mx-auto w-full">
+      <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/70 px-4 py-3 sticky top-0 z-40 select-none shadow-2xs">
+        <div className="relative flex items-center justify-between max-w-md mx-auto w-full">
           
-          {/* Левая часть: кнопка вызова меню */}
-          <button
-            type="button"
-            onClick={() => setIsDrawerOpen(true)}
-            className="flex items-center gap-1.5 py-1.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
-            title="Открыть меню тренера"
-          >
-            <Menu className="w-4 h-4 text-white stroke-[2.2]" />
-            <span className="text-xs font-bold tracking-tight">Меню</span>
-          </button>
-
-          {/* Центр: Полное название CoachOS CRM */}
-          <div className="flex items-center gap-1.5">
-            <div className="w-7 h-7 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
-              <Dumbbell className="w-3.5 h-3.5 stroke-[2.2]" />
-            </div>
-            <h1 className="text-sm font-black text-slate-900 tracking-tight">
-              CoachOS CRM
-            </h1>
+          {/* Левая часть: кнопка вызова меню (Светлая!) */}
+          <div className="z-10 flex items-center">
+            <button
+              type="button"
+              onClick={() => setIsDrawerOpen(true)}
+              className="flex items-center gap-1.5 py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl active:scale-95 transition-all border border-slate-200/60 shadow-2xs cursor-pointer"
+              title="Открыть меню тренера"
+            >
+              <Menu className="w-4 h-4 text-slate-700 stroke-[2.2]" />
+              <span className="text-xs font-bold tracking-tight">Меню</span>
+            </button>
           </div>
 
-          {/* Правая часть: колокольчик с КРАСНЫМ КРУЖОЧКОМ (+1, +2) */}
-          <button
-            type="button"
-            onClick={() => handleMenuClick('notifications')}
-            className={`relative w-9 h-9 rounded-xl flex items-center justify-center border active:scale-90 transition-all cursor-pointer shrink-0 ${
-              unreadCount > 0 
-                ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-xs' 
-                : 'bg-slate-100 hover:bg-slate-200 border-slate-200/80 text-slate-700'
-            }`}
-            title="Открыть Центр уведомлений"
-          >
-            <Bell className={`w-4 h-4 stroke-[2.2] ${unreadCount > 0 ? 'text-rose-600 animate-bounce' : 'text-slate-700'}`} />
-            
-            {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white font-black text-[9.5px] flex items-center justify-center font-mono shadow-md border-2 border-white animate-pulse">
-                +{unreadCount}
-              </span>
-            )}
-          </button>
+          {/* Центр: СТРОГО ПО ЦЕНТРУ ЭКРАНА С ТОЧНОСТЬЮ ДО ПИКСЕЛЯ */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="flex items-center gap-1.5 pointer-events-auto">
+              <div className="w-7 h-7 rounded-xl bg-[#1E60D5] text-white flex items-center justify-center shadow-xs shrink-0">
+                <Dumbbell className="w-3.5 h-3.5 stroke-[2.2]" />
+              </div>
+              <h1 className="text-sm font-bold text-slate-900 tracking-tight">
+                CoachOS CRM
+              </h1>
+            </div>
+          </div>
+
+          {/* Правая часть: колокольчик с индикатором уведомлений */}
+          <div className="z-10 flex items-center">
+            <button
+              type="button"
+              onClick={() => handleMenuClick('notifications')}
+              className={`relative w-9 h-9 rounded-xl flex items-center justify-center border active:scale-90 transition-all cursor-pointer shrink-0 ${
+                unreadCount > 0 
+                  ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-xs' 
+                  : 'bg-slate-100 hover:bg-slate-200 border-slate-200/80 text-slate-700'
+              }`}
+              title="Открыть Центр уведомлений"
+            >
+              <Bell className={`w-4 h-4 stroke-[2.2] ${unreadCount > 0 ? 'text-rose-600 animate-bounce' : 'text-slate-700'}`} />
+              
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white font-bold text-[9.5px] flex items-center justify-center font-mono shadow-md border-2 border-white animate-pulse">
+                  +{unreadCount}
+                </span>
+              )}
+            </button>
+          </div>
 
         </div>
       </header>
 
-      {/* ================= БОКОВОЕ МЕНЮ (DRAWER) ================= */}
+      {/* ================= СВЕТЛОЕ БОКОВОЕ МЕНЮ (DRAWER) ================= */}
       {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-start select-none animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-xs flex justify-start select-none animate-in fade-in duration-150">
           <div className="w-[88%] max-w-sm bg-white h-full p-4 flex flex-col justify-between shadow-2xl overflow-y-auto">
             <div className="space-y-4">
               
-              {/* Шапка тренера в меню со статусом верификации */}
+              {/* Шапка тренера в меню */}
               <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs overflow-hidden">
+                  <div className="w-12 h-12 rounded-2xl bg-[#1E60D5] text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs overflow-hidden">
                     {trainer?.avatar_url || trainer?.photo_url ? (
                       <img src={trainer.avatar_url || trainer.photo_url} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -210,15 +214,15 @@ export default function TrainerHeader({
                     <p className="text-sm font-bold text-slate-900 truncate leading-snug">
                       {coachFullName}
                     </p>
-                    <p className="text-[11px] text-blue-600 font-mono mt-0.5">@{cleanUsername}</p>
+                    <p className="text-[11px] text-[#1E60D5] font-mono mt-0.5">@{cleanUsername}</p>
                     <div className="flex items-center gap-1.5 mt-1">
                       {isApproved ? (
-                        <span className="inline-flex items-center gap-1 text-[9.5px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
-                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" /> Верифицирован
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Верифицирован
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[9.5px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
-                          <Clock className="w-2.5 h-2.5 text-amber-600" /> На проверке
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
+                          <Clock className="w-3 h-3 text-amber-600" /> На проверке
                         </span>
                       )}
                     </div>
@@ -237,15 +241,15 @@ export default function TrainerHeader({
               {/* Плашка безопасности данных */}
               <div className="p-2.5 bg-emerald-50/70 border border-emerald-200/70 rounded-2xl flex items-center gap-2.5">
                 <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
-                <p className="text-[10px] text-emerald-900 leading-tight">
+                <p className="text-[10.5px] text-emerald-900 leading-tight">
                   <span className="font-bold">100% Конфиденциально:</span> данные базы учеников и финансы зашифрованы и доступны только вам.
                 </p>
               </div>
 
-              {/* 1. БЫСТРАЯ НАВИГАЦИЯ ПО CRM ТАБАМ */}
+              {/* 1. БЫСТРАЯ НАВИГАЦИЯ ПО CRM ТАБАМ (БЕЗ КАПСЛОКА) */}
               <div className="space-y-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Разделы CRM</p>
-                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                <p className="text-[11px] font-bold text-slate-500 px-1">Разделы CRM</p>
+                <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                   {[
                     { id: 'overview', label: 'Обзор KPI', icon: Dumbbell },
                     { id: 'students', label: 'Ученики', icon: Users },
@@ -268,7 +272,7 @@ export default function TrainerHeader({
                         }}
                         className={`p-2 rounded-xl text-left flex items-center gap-2 transition-all cursor-pointer ${
                           isCurrent 
-                            ? 'bg-blue-600 text-white font-semibold shadow-xs' 
+                            ? 'bg-[#1E60D5] text-white font-semibold shadow-xs' 
                             : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/60'
                         }`}
                       >
@@ -280,9 +284,9 @@ export default function TrainerHeader({
                 </div>
               </div>
 
-              {/* 2. ТАРИФЫ И ПРОДВИЖЕНИЕ */}
-              <div className="space-y-1.5 pt-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Тарифы и буст</p>
+              {/* 2. ТАРИФЫ И ПРОДВИЖЕНИЕ (БЕЗ КАПСЛОКА) */}
+              <div className="space-y-1.5 pt-1">
+                <p className="text-[11px] font-bold text-slate-500 px-1">Тарифы и продвижение</p>
 
                 <button
                   type="button"
@@ -307,21 +311,21 @@ export default function TrainerHeader({
                   className="w-full p-2.5 bg-blue-50/60 hover:bg-blue-100/70 border border-blue-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-blue-200 flex items-center justify-center text-[#1E60D5] shadow-xs">
                       <Rocket className="w-4 h-4" />
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-blue-950">Продвижение (Boost)</p>
-                      <p className="text-[10px] text-blue-600 font-medium">В залах Алматы и Онлайн по РК</p>
+                      <p className="text-[10px] text-[#1E60D5] font-medium">В залах Алматы и Онлайн по РК</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-blue-400" />
+                  <ChevronRight className="w-3.5 h-3.5 text-[#1E60D5]/70" />
                 </button>
               </div>
 
-              {/* 3. ИНСТРУМЕНТЫ ТРЕНЕРА */}
-              <div className="space-y-1.5 pt-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Инструменты тренера</p>
+              {/* 3. ИНСТРУМЕНТЫ ТРЕНЕРА (БЕЗ КАПСЛОКА) */}
+              <div className="space-y-1.5 pt-1">
+                <p className="text-[11px] font-bold text-slate-500 px-1">Инструменты тренера</p>
 
                 <button
                   type="button"
@@ -360,10 +364,10 @@ export default function TrainerHeader({
                 <button
                   type="button"
                   onClick={() => handleMenuClick('health_parq')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                  className="w-full p-2.5 bg-rose-50/50 hover:bg-rose-50 border border-rose-200/60 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-rose-200 flex items-center justify-center text-rose-600 shadow-xs">
                       <HeartPulse className="w-4 h-4" />
                     </div>
                     <div>
@@ -377,15 +381,15 @@ export default function TrainerHeader({
                 <button
                   type="button"
                   onClick={() => handleMenuClick('templates')}
-                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                  className="w-full p-2.5 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-200/60 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-xs">
                       <MessageSquare className="w-4 h-4" />
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-900">Шаблоны и Telegram-рассылка</p>
-                      <p className="text-[10px] text-emerald-600 font-medium">Отправка в личку Telegram от бота</p>
+                      <p className="text-[10px] text-emerald-700 font-medium">Отправка в личку Telegram от бота</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
@@ -419,16 +423,16 @@ export default function TrainerHeader({
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-900">Пригласить коллегу-тренера</p>
-                      <p className="text-[10px] text-blue-600 font-medium">+1 месяц Pro после первой оплаты</p>
+                      <p className="text-[10px] text-[#1E60D5] font-medium">+1 месяц Pro после первой оплаты</p>
                     </div>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
               </div>
 
-              {/* 4. НАСТРОЙКИ ПРОФИЛЯ */}
-              <div className="space-y-1.5 pt-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Настройки профиля</p>
+              {/* 4. НАСТРОЙКИ ПРОФИЛЯ (БЕЗ КАПСЛОКА) */}
+              <div className="space-y-1.5 pt-1">
+                <p className="text-[11px] font-bold text-slate-500 px-1">Настройки профиля</p>
 
                 <button
                   type="button"
@@ -453,7 +457,7 @@ export default function TrainerHeader({
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-blue-600 shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[#1E60D5] shadow-xs">
                       <ExternalLink className="w-4 h-4" />
                     </div>
                     <div>
@@ -465,9 +469,9 @@ export default function TrainerHeader({
                 </button>
               </div>
 
-              {/* 5. ТЕХПОДДЕРЖКА */}
-              <div className="space-y-1.5 pt-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Помощь и сервис</p>
+              {/* 5. ПОМОЩЬ И СЕРВИС */}
+              <div className="space-y-1.5 pt-1">
+                <p className="text-[11px] font-bold text-slate-500 px-1">Помощь и сервис</p>
 
                 <button
                   type="button"
@@ -489,7 +493,7 @@ export default function TrainerHeader({
             </div>
 
             {/* НИЖНИЙ БЛОК: ВОЗВРАТ В АТЛЕТА И ВЫХОД */}
-            <div className="space-y-2 pt-4 border-t border-slate-100">
+            <div className="space-y-2 pt-3 border-t border-slate-100">
               {onBack && (
                 <button
                   type="button"
@@ -501,7 +505,7 @@ export default function TrainerHeader({
                 </button>
               )}
 
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center gap-2 pt-0.5">
                 <button
                   type="button"
                   onClick={() => handleMenuClick('delete_account')}
