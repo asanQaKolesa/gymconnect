@@ -9,7 +9,6 @@ import {
   Menu, 
   CreditCard, 
   Rocket, 
-  Gift, 
   ChevronRight, 
   Clock, 
   Users, 
@@ -19,13 +18,11 @@ import {
   FileText, 
   Trash2, 
   QrCode, 
-  Shield, 
   HeartPulse, 
   Scale, 
   Headphones, 
   Settings, 
   Bell, 
-  Star, 
   Building2, 
   FileCheck2, 
   Inbox, 
@@ -51,7 +48,6 @@ export default function TrainerHeader({
   const [isDrawerOpen, setIsDrawerOpen] = useState(initialDrawerOpen);
   const [studentsList, setStudentsList] = useState([]);
 
-  // Чтение прочитанных уведомлений
   const [readNotifIds, setReadNotifIds] = useState(() => {
     try {
       const saved = localStorage.getItem('gymconnect_coach_read_notifs');
@@ -76,7 +72,6 @@ export default function TrainerHeader({
     }
   }, [initialDrawerOpen]);
 
-  // Блокировка скролла фона при открытом Drawer
   useEffect(() => {
     if (isDrawerOpen) {
       document.body.style.overflow = 'hidden';
@@ -95,7 +90,6 @@ export default function TrainerHeader({
   const isVerified = trainer?.verification_status === 'verified';
   const coachFullName = trainer?.full_name || `${trainer?.first_name || 'Тренер'} ${trainer?.last_name || ''}`.trim();
 
-  // Резервная загрузка подопечных
   useEffect(() => {
     async function loadBackupStudents() {
       if (students && students.length > 0) return;
@@ -133,7 +127,6 @@ export default function TrainerHeader({
 
   const calculateUnreadCount = () => {
     let count = 0;
-
     effectiveList.forEach(st => {
       const left = st.left_trainings !== undefined ? st.left_trainings : (st.remaining_workouts !== undefined ? st.remaining_workouts : 12);
       const checkinYesId = `checkin_yes_${st.id}`;
@@ -146,7 +139,6 @@ export default function TrainerHeader({
       if (left <= 2 && !readNotifIds.includes(lowBalId) && !deletedMap[lowBalId]) count++;
       if (st.payment_status === 'pending' && !readNotifIds.includes(debtId) && !deletedMap[debtId]) count++;
     });
-
     return count;
   };
 
@@ -159,7 +151,6 @@ export default function TrainerHeader({
       <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/70 px-4 py-3 sticky top-0 z-40 select-none shadow-2xs">
         <div className="relative flex items-center justify-between max-w-md mx-auto w-full">
           
-          {/* Левая часть: кнопка меню 36×36px */}
           <div className="z-10 flex items-center">
             <button
               type="button"
@@ -171,7 +162,6 @@ export default function TrainerHeader({
             </button>
           </div>
 
-          {/* Центр: строго по оси экрана */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="flex items-center gap-1.5 pointer-events-auto">
               <div className="w-7 h-7 rounded-xl bg-[#1E60D5] text-white flex items-center justify-center shadow-xs shrink-0">
@@ -183,7 +173,6 @@ export default function TrainerHeader({
             </div>
           </div>
 
-          {/* Правая часть: колокольчик уведомлений */}
           <div className="z-10 flex items-center">
             <button
               type="button"
@@ -430,7 +419,6 @@ export default function TrainerHeader({
                 <p className="text-[11px] font-bold text-slate-400 px-1">Клиентский сервис</p>
 
                 <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 space-y-2.5">
-                  {/* Входящие заявки */}
                   <div 
                     onClick={() => handleMenuClick('notifications')}
                     className="flex items-center justify-between cursor-pointer group"
@@ -453,7 +441,6 @@ export default function TrainerHeader({
                     )}
                   </div>
 
-                  {/* Микро-действия сервиса */}
                   <div className="pt-2 border-t border-slate-200/60 grid grid-cols-3 gap-1.5">
                     <button
                       type="button"
@@ -528,57 +515,63 @@ export default function TrainerHeader({
                 </div>
               </div>
 
-              {/* ================= 4. РАЗВИТИЕ ПРАКТИКИ (ТАРИФЫ + 3 КНОПКИ) ================= */}
+              {/* ================= 4. РАЗВИТИЕ ПРАКТИКИ: 3 ПОЛНОРАЗМЕРНЫЕ КАРТОЧКИ ================= */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-400 px-1">Развитие практики</p>
 
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 space-y-2.5">
-                  <div 
-                    onClick={() => handleMenuClick('subscription')}
-                    className="flex items-center justify-between cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
-                        <CreditCard className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Тарифы подписки</p>
-                        <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Управление планом CoachOS Pro</p>
-                      </div>
+                {/* 1. Тарифы подписки (+1 мес Pro встроено в описание) */}
+                <button
+                  type="button"
+                  onClick={() => handleMenuClick('subscription')}
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                      <CreditCard className="w-4 h-4" />
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Тарифы подписки Pro</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Управление CoachOS Pro • +1 мес. за коллегу</p>
+                    </div>
                   </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </button>
 
-                  {/* 3 кнопки: Продвижение, Онлайн-продукт, Реферал */}
-                  <div className="pt-2 border-t border-slate-200/60 grid grid-cols-3 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleMenuClick('promotion')}
-                      className="py-1.5 px-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-[10.5px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <Rocket className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span className="truncate">Продвижение</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleMenuClick('templates')}
-                      className="py-1.5 px-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-[10.5px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span className="truncate">Свой продукт</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleMenuClick('referral')}
-                      className="py-1.5 px-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-[10.5px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <Gift className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span className="truncate">+1 мес. Pro</span>
-                    </button>
+                {/* 2. Продвижение тренера */}
+                <button
+                  type="button"
+                  onClick={() => handleMenuClick('promotion')}
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                      <Rocket className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Продвижение тренера</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Поднятие в топ каталога клубов города</p>
+                    </div>
                   </div>
-                </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </button>
+
+                {/* 3. Создать свой продукт */}
+                <button
+                  type="button"
+                  onClick={() => handleMenuClick('templates')}
+                  className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Создать свой онлайн-продукт</p>
+                      <p className="text-[10.5px] text-slate-500 font-normal truncate mt-0.5">Платные марафоны, чек-листы и курсы</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </button>
               </div>
 
               {/* ================= 5. ПРАВОВОЙ БЛОК, СЕРВИС И КОММЬЮНИТИ ================= */}
