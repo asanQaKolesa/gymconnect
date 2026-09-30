@@ -10,21 +10,15 @@ import {
   Users, 
   Dumbbell, 
   Clock, 
-  FileText, 
-  DollarSign, 
-  Sparkles, 
   Search, 
   ShieldCheck, 
-  CheckCircle2, 
   Loader2, 
   X, 
   MapPin, 
-  Award, 
-  Globe2, 
-  FileCheck2, 
-  Crown,
-  Trophy,
-  Info
+  Crown, 
+  Trophy, 
+  Info, 
+  ChevronDown 
 } from 'lucide-react';
 import { supabase } from '../../../../supabaseClient';
 import * as GymsData from '../../../../data/almatyGyms';
@@ -60,18 +54,48 @@ export default function TrainerEditProfileModal({
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Флаг защиты от сброса формы фоновым опросом
+  const hasInitializedRef = useRef(false);
+
+  // Живой поиск клубов
   const [searchPrimaryGym, setSearchPrimaryGym] = useState('');
   const [isPrimaryDropdownOpen, setIsPrimaryDropdownOpen] = useState(false);
   
   const [searchSecondaryGym, setSearchSecondaryGym] = useState('');
   const [isSecondaryDropdownOpen, setIsSecondaryDropdownOpen] = useState(false);
 
-  const sportsTitlesList = [
-    'Мастер спорта (МС)',
-    'Кандидат в мастера спорта (КМС)',
-    'Мастер спорта международного класса (МСМК)',
-    'Чемпион / Призёр соревнований',
-    'Сертифицированный специалист'
+  // Выпадающие списки номинаций и званий
+  const [isDivisionDropdownOpen, setIsDivisionDropdownOpen] = useState(false);
+  const [customDivisionInput, setCustomDivisionInput] = useState('');
+  
+  const [isRankDropdownOpen, setIsRankDropdownOpen] = useState(false);
+  const [customRankInput, setCustomRankInput] = useState('');
+
+  // Международные соревновательные номинации
+  const defaultDivisions = [
+    "Men's Physique",
+    "Bikini",
+    "Classic Physique",
+    "Wellness",
+    "Bodybuilding",
+    "Figure / Бодифитнес",
+    "Fit-Model",
+    "Powerlifting (IPF / WRPF)",
+    "Streetlifting / Воркаут",
+    "CrossFit / Функционал",
+    "Армрестлинг"
+  ];
+
+  // Спортивные разряды и звания
+  const defaultRanks = [
+    "PRO Card (IFBB / NPC / WRPF Pro)",
+    "Мастер спорта международного класса (МСМК)",
+    "Мастер спорта (МС)",
+    "Кандидат в мастера спорта (КМС)",
+    "1-й взрослый разряд",
+    "Чемпион Республики Казахстан",
+    "Призёр чемпионата РК / Азии / Мира",
+    "Сертифицированный специалист"
   ];
 
   const specializationList = [
@@ -109,8 +133,9 @@ export default function TrainerEditProfileModal({
     bio: '',
     experience_years: 1,
 
-    // Спортивные звания и статус атлета
+    // Спортивный статус
     is_competing_athlete: false,
+    athletic_divisions: [],
     athletic_titles: [],
     sports_title_custom: '',
 
@@ -125,7 +150,7 @@ export default function TrainerEditProfileModal({
     has_free_trial: false,
     has_free_consultation: false,
 
-    // Все услуги отключены по умолчанию
+    // 5 услуг
     services_enabled: {
       personal: false,
       split: false,
@@ -161,9 +186,10 @@ export default function TrainerEditProfileModal({
     certificates_link: ''
   });
 
-  // Синхронизация данных с регистрацией
+  // Инициализация формы СТРОГО 1 раз при открытии окна
   useEffect(() => {
-    if (isOpen && trainer) {
+    if (isOpen && !hasInitializedRef.current && trainer) {
+      hasInitializedRef.current = true;
       const srv = safeParse(trainer.services_offered);
       const pub = safeParse(trainer.public_settings);
       const prc = safeParse(trainer.pricing);
@@ -179,6 +205,7 @@ export default function TrainerEditProfileModal({
         experience_years: Number(trainer.experience_years) || 1,
 
         is_competing_athlete: Boolean(trainer.is_competing_athlete),
+        athletic_divisions: Array.isArray(trainer.athletic_divisions) ? trainer.athletic_divisions : [],
         athletic_titles: Array.isArray(trainer.athletic_titles) ? trainer.athletic_titles : [],
         sports_title_custom: trainer.sports_title_custom || '',
 
@@ -229,6 +256,10 @@ export default function TrainerEditProfileModal({
         gym_contact: (trainer.gym_contact || '').replace(/^7/, '').slice(0, 10),
         certificates_link: trainer.certificates_link || ''
       });
+    }
+
+    if (!isOpen) {
+      hasInitializedRef.current = false;
     }
   }, [isOpen, trainer, cleanUsername]);
 
@@ -283,14 +314,48 @@ export default function TrainerEditProfileModal({
     });
   };
 
-  const toggleSportsTitle = (title) => {
+  const toggleDivision = (division) => {
     setEditForm(prev => {
-      const exists = prev.athletic_titles.includes(title);
+      const exists = prev.athletic_divisions.includes(division);
       const updated = exists 
-        ? prev.athletic_titles.filter(t => t !== title)
-        : [...prev.athletic_titles, title];
+        ? prev.athletic_divisions.filter(d => d !== division)
+        : [...prev.athletic_divisions, division];
+      return { ...prev, athletic_divisions: updated };
+    });
+  };
+
+  const handleAddCustomDivision = () => {
+    if (!customDivisionInput.trim()) return;
+    const val = customDivisionInput.trim();
+    if (!editForm.athletic_divisions.includes(val)) {
+      setEditForm(prev => ({
+        ...prev,
+        athletic_divisions: [...prev.athletic_divisions, val]
+      }));
+    }
+    setCustomDivisionInput('');
+  };
+
+  const toggleRank = (rank) => {
+    setEditForm(prev => {
+      const exists = prev.athletic_titles.includes(rank);
+      const updated = exists 
+        ? prev.athletic_titles.filter(r => r !== rank)
+        : [...prev.athletic_titles, rank];
       return { ...prev, athletic_titles: updated };
     });
+  };
+
+  const handleAddCustomRank = () => {
+    if (!customRankInput.trim()) return;
+    const val = customRankInput.trim();
+    if (!editForm.athletic_titles.includes(val)) {
+      setEditForm(prev => ({
+        ...prev,
+        athletic_titles: [...prev.athletic_titles, val]
+      }));
+    }
+    setCustomRankInput('');
   };
 
   const toggleService = (key) => {
@@ -348,6 +413,7 @@ export default function TrainerEditProfileModal({
         experience_years: Number(editForm.experience_years) || 1,
 
         is_competing_athlete: editForm.is_competing_athlete,
+        athletic_divisions: editForm.athletic_divisions,
         athletic_titles: editForm.athletic_titles,
         sports_title_custom: editForm.sports_title_custom.trim(),
 
@@ -438,16 +504,16 @@ export default function TrainerEditProfileModal({
   return (
     <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-150">
       
-      {/* 1. ШАПКА */}
+      {/* 1. ШАПКА: ТОЛЬКО ИКОНКА 36×36px БЕЗ ТЕКСТА «НАЗАД» + АБСОЛЮТНЫЙ ЦЕНТР */}
       <div className="shrink-0 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 px-4 py-3 relative flex items-center justify-between shadow-2xs">
         <div className="z-10 flex items-center">
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs active:scale-95 transition-all cursor-pointer border border-slate-200/60 shadow-2xs"
+            className="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center active:scale-90 transition-all cursor-pointer border border-slate-200/60 shadow-2xs"
+            title="Назад"
           >
-            <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
-            <span>Назад</span>
+            <ArrowLeft className="w-4 h-4 text-slate-600 stroke-[2.2]" />
           </button>
         </div>
 
@@ -457,7 +523,7 @@ export default function TrainerEditProfileModal({
           </h2>
         </div>
 
-        <div className="w-16 z-10" />
+        <div className="w-9 z-10" />
       </div>
 
       {/* 2. СКРОЛЛИРУЕМАЯ ОБЛАСТЬ */}
@@ -590,6 +656,7 @@ export default function TrainerEditProfileModal({
             />
           </div>
 
+          {/* Стаж работы */}
           <div className="pt-2 flex items-center justify-between border-t border-slate-100">
             <div>
               <p className="text-xs font-semibold text-slate-900">Опыт работы тренером</p>
@@ -617,28 +684,30 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 2. Спортивные звания и статус атлета (НОВЫЙ БЛОК) */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
+        {/* 2. СПОРТИВНЫЕ ЗВАНИЯ, НОМИНАЦИИ И РАЗРЯДЫ (ВЫПАДАЮЩИЕ СПИСКИ + СВОЙ ВАРИАНТ) */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3.5">
           <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-amber-500" />
               <h3 className="text-xs font-bold text-slate-800">
-                Спортивные звания и статус (опционально)
+                Спортивный статус и номинации (опционально)
               </h3>
             </div>
-            <span className="text-[9.5px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-              Регалии
+            <span className="text-[9.5px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md font-mono">
+              Pro Divisions
             </span>
           </div>
 
-          {/* Переключатель соревнующегося атлета */}
+          {/* Чекбокс: Выступающий атлет */}
           <div 
             onClick={() => setEditForm(prev => ({ ...prev, is_competing_athlete: !prev.is_competing_athlete }))}
             className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-200/80 cursor-pointer active:scale-99 transition-all"
           >
             <div className="pr-3">
               <p className="text-xs font-bold text-slate-900 leading-tight">Выступающий соревнующийся атлет</p>
-              <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug">Бодибилдинг, Менс Физик, Фитнес-бикини, Пауэрлифтинг</p>
+              <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug">
+                Действующий участник турниров и соревнований
+              </p>
             </div>
             <div className={`w-5 h-5 rounded-md flex items-center justify-center border shrink-0 transition-colors ${
               editForm.is_competing_athlete ? 'bg-[#1E60D5] border-[#1E60D5] text-white' : 'bg-white border-slate-300'
@@ -647,36 +716,176 @@ export default function TrainerEditProfileModal({
             </div>
           </div>
 
-          {/* Быстрые чипсы званий */}
-          <div className="space-y-1 pt-1">
-            <span className="text-[10.5px] font-semibold text-slate-500 block mb-1">Спортивные разряды:</span>
-            {sportsTitlesList.map(title => {
-              const isSelected = editForm.athletic_titles.includes(title);
-              return (
-                <button
-                  key={title}
-                  type="button"
-                  onClick={() => toggleSportsTitle(title)}
-                  className={`w-full p-2 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
-                    isSelected 
-                      ? 'bg-blue-50 text-[#1E60D5] border-blue-200 shadow-2xs font-bold' 
-                      : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>{title}</span>
-                  {isSelected && <Check className="w-4 h-4 text-[#1E60D5] stroke-[2.5]" />}
-                </button>
-              );
-            })}
+          {/* ВЫПАДАЮЩИЙ СПИСОК 1: НОМИНАЦИИ СОРЕВНОВАНИЙ */}
+          <div>
+            <label className="text-[10.5px] font-semibold text-slate-500 block mb-1">
+              Номинация соревнований (Division):
+            </label>
+            
+            {editForm.athletic_divisions.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {editForm.athletic_divisions.map((div, i) => (
+                  <span 
+                    key={i} 
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-50 text-[#1E60D5] border border-blue-200 text-xs font-semibold"
+                  >
+                    <span>{div}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => toggleDivision(div)}
+                      className="hover:text-rose-600 p-0.5 cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="relative">
+              <div 
+                onClick={() => setIsDivisionDropdownOpen(!isDivisionDropdownOpen)}
+                className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between cursor-pointer active:scale-99 transition-all"
+              >
+                <span className="text-xs font-medium text-slate-700">
+                  {editForm.athletic_divisions.length > 0 
+                    ? `Выбрано номинаций: ${editForm.athletic_divisions.length}` 
+                    : 'Выберите номинацию из списка...'}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isDivisionDropdownOpen ? 'rotate-180' : ''}`} />
+              </div>
+
+              {isDivisionDropdownOpen && (
+                <div className="mt-1.5 p-2 bg-white border border-slate-200 rounded-2xl shadow-xl space-y-1.5 animate-in fade-in z-30">
+                  <div className="max-h-48 overflow-y-auto divide-y divide-slate-100">
+                    {defaultDivisions.map((div, idx) => {
+                      const isSelected = editForm.athletic_divisions.includes(div);
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => toggleDivision(div)}
+                          className={`p-2 text-xs cursor-pointer flex items-center justify-between hover:bg-blue-50 rounded-lg ${
+                            isSelected ? 'font-bold text-[#1E60D5] bg-blue-50/50' : 'text-slate-700'
+                          }`}
+                        >
+                          <span>{div}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-[#1E60D5]" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="Свой вариант номинации..."
+                      value={customDivisionInput}
+                      onChange={e => setCustomDivisionInput(e.target.value)}
+                      className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomDivision}
+                      className="px-3 py-2 bg-[#1E60D5] text-white rounded-xl text-xs font-bold active:scale-95 cursor-pointer"
+                    >
+                      Добавить
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* ВЫПАДАЮЩИЙ СПИСОК 2: СПОРТИВНЫЕ РАЗРЯДЫ И ЗВАНИЯ */}
           <div>
-            <label className="text-[10.5px] font-semibold text-slate-500 block mb-1">Своё звание или титул</label>
+            <label className="text-[10.5px] font-semibold text-slate-500 block mb-1">
+              Спортивные разряды и звания:
+            </label>
+
+            {editForm.athletic_titles.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {editForm.athletic_titles.map((rank, i) => (
+                  <span 
+                    key={i} 
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 text-xs font-semibold"
+                  >
+                    <span>{rank}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => toggleRank(rank)}
+                      className="hover:text-rose-600 p-0.5 cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="relative">
+              <div 
+                onClick={() => setIsRankDropdownOpen(!isRankDropdownOpen)}
+                className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between cursor-pointer active:scale-99 transition-all"
+              >
+                <span className="text-xs font-medium text-slate-700">
+                  {editForm.athletic_titles.length > 0 
+                    ? `Выбрано званий: ${editForm.athletic_titles.length}` 
+                    : 'Выберите разряд или звание...'}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isRankDropdownOpen ? 'rotate-180' : ''}`} />
+              </div>
+
+              {isRankDropdownOpen && (
+                <div className="mt-1.5 p-2 bg-white border border-slate-200 rounded-2xl shadow-xl space-y-1.5 animate-in fade-in z-30">
+                  <div className="max-h-48 overflow-y-auto divide-y divide-slate-100">
+                    {defaultRanks.map((rank, idx) => {
+                      const isSelected = editForm.athletic_titles.includes(rank);
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => toggleRank(rank)}
+                          className={`p-2 text-xs cursor-pointer flex items-center justify-between hover:bg-amber-50 rounded-lg ${
+                            isSelected ? 'font-bold text-amber-900 bg-amber-50/50' : 'text-slate-700'
+                          }`}
+                        >
+                          <span>{rank}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-amber-600" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="Свой спортивный разряд..."
+                      value={customRankInput}
+                      onChange={e => setCustomRankInput(e.target.value)}
+                      className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomRank}
+                      className="px-3 py-2 bg-[#1E60D5] text-white rounded-xl text-xs font-bold active:scale-95 cursor-pointer"
+                    >
+                      Добавить
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Авторский титул отдельной строкой */}
+          <div>
+            <label className="text-[10.5px] font-semibold text-slate-500 block mb-1">
+              Авторский титул или чемпионство (отдельной строкой):
+            </label>
             <input
               type="text"
               value={editForm.sports_title_custom}
               onChange={e => setEditForm({ ...editForm, sports_title_custom: e.target.value })}
-              placeholder="Например: Абсолютный чемпион Алматы 2025"
+              placeholder="Например: Абсолютный чемпион Almaty Cup 2025, Рекордсмен РК"
               className="w-full p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:bg-white focus:border-[#1E60D5]"
             />
           </div>
@@ -840,7 +1049,7 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 5. Привлечение атлетов и каталог (ПЛАШКА В 1 СТРОКУ, ГАЛОЧКИ ПО УМОЛЧАНИЮ ВЫКЛЮЧЕНЫ) */}
+        {/* 5. Привлечение атлетов и каталог */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
             <div>
@@ -851,7 +1060,7 @@ export default function TrainerEditProfileModal({
             </div>
           </div>
 
-          {/* Лаконичная плашка ровно в 1 строку без съезжающего текста */}
+          {/* Плашка ровно в 1 строку */}
           <div className="p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex items-center gap-2">
             <Crown className="w-4 h-4 text-amber-600 shrink-0" />
             <p className="text-[11px] text-amber-900 font-bold leading-snug truncate">
@@ -907,7 +1116,7 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 6. ПРЕЙСКУРАНТ ТРЕНИРОВОК И УСЛУГ — СТРОГО 2 СТРОКИ, ДЛИТЕЛЬНОСТЬ В КАЖДОЙ */}
+        {/* 6. ПРЕЙСКУРАНТ ТРЕНИРОВОК И УСЛУГ (5 УСЛУГ, ЕДИНЫЙ СТИЛЬ В 2 СТРОКИ, ДЛИТЕЛЬНОСТЬ В КАЖДОЙ) */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3.5">
           <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800">
@@ -1172,7 +1381,7 @@ export default function TrainerEditProfileModal({
             )}
           </div>
 
-          {/* 5. Онлайн-консультация (без выбивающегося ярлыка "Продукт") */}
+          {/* 5. Онлайн-консультация */}
           <div className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
             <div 
               onClick={() => toggleService('consultation')}
@@ -1257,7 +1466,7 @@ export default function TrainerEditProfileModal({
           </div>
         </div>
 
-        {/* 8. Подтверждение дипломов и верификация (С ПОНЯТНОЙ ПЛАШКОЙ К ДИСКУ) */}
+        {/* 8. Подтверждение дипломов и верификация */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
@@ -1271,7 +1480,6 @@ export default function TrainerEditProfileModal({
             </p>
           </div>
 
-          {/* Плашка с примечанием для онлайн-диска */}
           <div className="p-3 bg-blue-50/70 border border-blue-200/70 rounded-2xl flex items-start gap-2.5">
             <Info className="w-4 h-4 text-[#1E60D5] shrink-0 mt-0.5" />
             <p className="text-[11px] text-blue-950 leading-relaxed font-medium">
