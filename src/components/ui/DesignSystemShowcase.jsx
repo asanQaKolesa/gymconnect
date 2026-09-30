@@ -4,6 +4,7 @@ import {
   Dumbbell, 
   Users, 
   Flame, 
+  Calendar, 
   ArrowLeft, 
   DollarSign, 
   Zap, 
@@ -20,7 +21,12 @@ import {
   ExternalLink, 
   ClipboardList, 
   Trash2,
-  ChevronDown
+  ChevronDown,
+  Send,
+  Timer,
+  Tag,
+  PenTool,
+  MessageCircle
 } from 'lucide-react';
 
 export default function DesignSystemShowcase({ onBack }) {
@@ -30,31 +36,66 @@ export default function DesignSystemShowcase({ onBack }) {
   // База упражнений по группам мышц для интерактивного выбора
   const muscleGroups = ['Грудь', 'Спина', 'Ноги', 'Плечи', 'Руки', 'Пресс и кор'];
   const exercisesByMuscle = {
-    'Грудь': ['Жим штанги на наклонной скамье', 'Жим гантелей лежа', 'Сведение в кроссовере', 'Отжимания на брусьях'],
-    'Спина': ['Тяга верхнего блока к груди', 'Подтягивания широким хватом', 'Тяга штанги в наклоне', 'Горизонтальная тяга'],
-    'Ноги': ['Приседания со штангой', 'Жим ногами в платформе', 'Болгарские выпады', 'Румынская тяга'],
-    'Плечи': ['Жим штанги стоя (Армейский)', 'Махи гантелями в стороны', 'Тяга к подбородку', 'Махи в наклоне'],
-    'Руки': ['Подъем штанги на бицепс', 'Французский жим лежа', 'Молотковые сгибания', 'Разгибания в блоке'],
-    'Пресс и кор': ['Скручивания на наклонной', 'Подъем ног в висе', 'Планка на локтях', 'Вакуум живота']
+    'Грудь': [
+      { name: 'Жим штанги на наклонной скамье', equipment: 'Штанга' },
+      { name: 'Жим гантелей на горизонтальной', equipment: 'Гантели' },
+      { name: 'Сведение в кроссовере на блоках', equipment: 'Блок' },
+      { name: 'Отжимания на брусьях', equipment: 'Свой вес' }
+    ],
+    'Спина': [
+      { name: 'Тяга верхнего блока к груди', equipment: 'Блок' },
+      { name: 'Подтягивания широким хватом', equipment: 'Свой вес' },
+      { name: 'Тяга штанги в наклоне', equipment: 'Штанга' },
+      { name: 'Горизонтальная тяга блока', equipment: 'Блок' }
+    ],
+    'Ноги': [
+      { name: 'Приседания со штангой', equipment: 'Штанга' },
+      { name: 'Жим ногами в платформе', equipment: 'Тренажер' },
+      { name: 'Болгарские сплит-приседания', equipment: 'Гантели' },
+      { name: 'Румынская тяга', equipment: 'Штанга' }
+    ],
+    'Плечи': [
+      { name: 'Жим штанги стоя (Армейский)', equipment: 'Штанга' },
+      { name: 'Махи гантелями в стороны', equipment: 'Гантели' },
+      { name: 'Тяга каната к лицу (Face Pull)', equipment: 'Блок' }
+    ],
+    'Руки': [
+      { name: 'Подъем штанги на бицепс', equipment: 'Штанга' },
+      { name: 'Французский жим лежа', equipment: 'EZ-гриф' },
+      { name: 'Молотковые сгибания', equipment: 'Гантели' }
+    ],
+    'Пресс и кор': [
+      { name: 'Скручивания на наклонной скамье', equipment: 'Свой вес' },
+      { name: 'Подъем ног в висе на турнике', equipment: 'Свой вес' },
+      { name: 'Классическая планка на локтях', equipment: 'Время' }
+    ]
   };
 
   // Стейты раскрытия карточек выбора
   const [selectedMuscle, setSelectedMuscle] = useState('Грудь');
   const [selectedExercise, setSelectedExercise] = useState('Жим штанги на наклонной скамье');
+  const [selectedEquipment, setSelectedEquipment] = useState('Штанга');
   const [isMuscleDropdownOpen, setIsMuscleDropdownOpen] = useState(false);
   const [isExerciseDropdownOpen, setIsExerciseDropdownOpen] = useState(false);
+  const [isCustomExerciseMode, setIsCustomExerciseMode] = useState(false);
+  const [customExerciseName, setCustomExerciseName] = useState('');
 
-  // Параметры нагрузки (Сеты, повторы, вес)
+  // Параметры нагрузки (Сеты, повторы, вес) — все в едином цвете
   const [sets, setSets] = useState(4);
   const [reps, setReps] = useState(10);
   const [weight, setWeight] = useState(60);
+  const [restTime, setRestTime] = useState(90); // секунды отдыха
   
   const [searchQuery, setSearchQuery] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
   const [toastText, setToastText] = useState(null);
   
+  // Модалка анкеты и раскрытие плана
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isWorkoutPlanOpen, setIsWorkoutPlanOpen] = useState(false);
+
+  // Стейт превью пуш-уведомления Telegram
+  const [activePushPreview, setActivePushPreview] = useState('workout');
 
   const showToast = (text) => {
     setToastText(text);
@@ -108,11 +149,11 @@ export default function DesignSystemShowcase({ onBack }) {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-sm font-bold text-slate-900 tracking-tight">CoachOS Design System</h1>
-              <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/70">
-                v3.4
+              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/70">
+                v3.5 Final
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 font-normal mt-0.5">Премиальный интерфейс тренера</p>
+            <p className="text-[11px] text-slate-500 font-normal mt-0.5">Выверенный баланс типографики и степперов</p>
           </div>
         </div>
 
@@ -125,15 +166,15 @@ export default function DesignSystemShowcase({ onBack }) {
 
         {/* ================= 1. КАРТОЧКА АТЛЕТА В РАСПИСАНИИ ================= */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h3 className="text-xs font-bold text-slate-800">
                 Расписание на сегодня
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Быстрое действие и просмотр плана</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Вся информация в одну чистую строку без зала</p>
             </div>
 
-            <span className="text-[11px] font-semibold text-slate-700 bg-slate-100/90 border border-slate-200/50 px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-2xs">
+            <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
               <span>18:30</span>
             </span>
@@ -147,12 +188,11 @@ export default function DesignSystemShowcase({ onBack }) {
               className="flex items-center justify-between gap-3 cursor-pointer group active:opacity-75 transition-opacity"
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-sm shadow-blue-600/20">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-sm shadow-blue-600/20">
                   АК
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  {/* Имя + Баланс в одну линию */}
                   <div className="flex items-center gap-2">
                     <h4 className="text-[13.5px] font-bold text-slate-900 truncate">
                       Асанали Кусайынов
@@ -162,25 +202,23 @@ export default function DesignSystemShowcase({ onBack }) {
                     </span>
                   </div>
 
-                  {/* Микро-чип цели + статус */}
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10.5px] font-semibold text-blue-800 bg-blue-50 border border-blue-200/60 px-2 py-0.5 rounded-md shrink-0">
+                    <span className="text-[10.5px] font-semibold text-blue-800 bg-blue-50/90 border border-blue-200/60 px-2 py-0.5 rounded-md shrink-0">
                       Набор массы
                     </span>
                     <span className="text-[11px] text-slate-400 font-medium">
-                      В зале сегодня
+                      Слот 18:30
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Иконка перехода в анкету */}
               <div className="shrink-0 w-8 h-8 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-colors shadow-2xs">
                 <ExternalLink className="w-3.5 h-3.5" />
               </div>
             </div>
 
-            {/* ЯРУС 2: Панель действий в нижней строке */}
+            {/* ЯРУС 2: Панель действий */}
             <div className="pt-2.5 border-t border-slate-200/70 flex items-center gap-2">
               <button
                 type="button"
@@ -215,7 +253,7 @@ export default function DesignSystemShowcase({ onBack }) {
                       setIsCompleted(true);
                       showToast('✅ Тренировка проведена • Списано 1 занятие');
                     }}
-                    className="w-full py-2.5 px-3 bg-[#165DFB] hover:bg-[#1150DC] text-white rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-blue-600/25"
+                    className="w-full py-2.5 px-3.5 bg-[#165DFB] hover:bg-[#1150DC] text-white rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-blue-600/25"
                   >
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                     <span>Проведено</span>
@@ -244,14 +282,14 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* ================= 2. КАРТОЧКА УПРАЖНЕНИЯ: УДОБНЫЕ КРУПНЫЕ СТЕППЕРЫ ================= */}
+        {/* ================= 2. КАРТОЧКА УПРАЖНЕНИЯ: ШИРОКИЕ СТЕППЕРЫ + СНАРЯД + ОТДЫХ ================= */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h3 className="text-xs font-bold text-slate-800">
                 Карточка упражнения и нагрузки
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Крупные кнопки с шагом подходов и веса</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Широкие степперы • единый цвет цифр</p>
             </div>
             
             <button 
@@ -265,11 +303,12 @@ export default function DesignSystemShowcase({ onBack }) {
 
           <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/70 space-y-3">
             
-            {/* РАСКРЫВАЮЩИЙСЯ БЛОК 1: Группа мышц */}
+            {/* Группа мышц */}
             <div>
-              <span className="text-[11px] font-semibold text-slate-500 block mb-1">
-                Группа мышц:
-              </span>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-semibold text-slate-500">Группа мышц:</span>
+                <span className="text-[10px] text-slate-400 font-medium">6 зон</span>
+              </div>
               <div className="relative">
                 <button
                   type="button"
@@ -294,8 +333,11 @@ export default function DesignSystemShowcase({ onBack }) {
                         type="button"
                         onClick={() => {
                           setSelectedMuscle(mg);
-                          setSelectedExercise(exercisesByMuscle[mg]?.[0] || 'Новое упражнение');
+                          const firstEx = exercisesByMuscle[mg]?.[0];
+                          setSelectedExercise(firstEx?.name || 'Новое упражнение');
+                          setSelectedEquipment(firstEx?.equipment || 'Штанга');
                           setIsMuscleDropdownOpen(false);
+                          setIsCustomExerciseMode(false);
                         }}
                         className={`p-2 rounded-xl text-xs font-semibold text-left transition-all cursor-pointer ${
                           selectedMuscle === mg ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
@@ -309,47 +351,73 @@ export default function DesignSystemShowcase({ onBack }) {
               </div>
             </div>
 
-            {/* РАСКРЫВАЮЩИЙСЯ БЛОК 2: Название упражнения */}
+            {/* Название упражнения + тег снаряда */}
             <div>
-              <span className="text-[11px] font-semibold text-slate-500 block mb-1">
-                Упражнение:
-              </span>
-              <div className="relative">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-semibold text-slate-500">Упражнение:</span>
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsExerciseDropdownOpen(!isExerciseDropdownOpen);
-                    setIsMuscleDropdownOpen(false);
-                  }}
-                  className="w-full py-2 px-3 bg-white border border-slate-200/80 rounded-xl text-xs font-bold text-slate-800 flex items-center justify-between active:scale-98 transition-all cursor-pointer shadow-2xs text-left"
+                  onClick={() => setIsCustomExerciseMode(!isCustomExerciseMode)}
+                  className="text-[10.5px] font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
                 >
-                  <span className="truncate pr-2">{selectedExercise}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${isExerciseDropdownOpen ? 'rotate-180' : ''}`} />
+                  <PenTool className="w-3 h-3" />
+                  <span>{isCustomExerciseMode ? 'Выбрать из базы' : '+ Своё название'}</span>
                 </button>
-
-                {isExerciseDropdownOpen && (
-                  <div className="mt-1.5 p-1.5 bg-white border border-slate-200 rounded-2xl shadow-lg space-y-0.5 animate-in fade-in z-20 max-h-48 overflow-y-auto">
-                    {(exercisesByMuscle[selectedMuscle] || []).map(exName => (
-                      <button
-                        key={exName}
-                        type="button"
-                        onClick={() => {
-                          setSelectedExercise(exName);
-                          setIsExerciseDropdownOpen(false);
-                        }}
-                        className={`w-full p-2 rounded-xl text-xs font-semibold text-left transition-all cursor-pointer truncate ${
-                          selectedExercise === exName ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
-                        }`}
-                      >
-                        {exName}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
+
+              {isCustomExerciseMode ? (
+                <input
+                  type="text"
+                  value={customExerciseName}
+                  onChange={(e) => setCustomExerciseName(e.target.value)}
+                  placeholder="Введите авторское название упражнения..."
+                  className="w-full px-3 py-2 bg-white border border-blue-400 rounded-xl text-xs font-bold text-slate-900 outline-none shadow-2xs"
+                />
+              ) : (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExerciseDropdownOpen(!isExerciseDropdownOpen);
+                      setIsMuscleDropdownOpen(false);
+                    }}
+                    className="w-full py-2 px-3 bg-white border border-slate-200/80 rounded-xl text-xs font-bold text-slate-800 flex items-center justify-between active:scale-98 transition-all cursor-pointer shadow-2xs text-left"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className="truncate">{selectedExercise}</span>
+                      <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md shrink-0">
+                        {selectedEquipment}
+                      </span>
+                    </div>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${isExerciseDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {isExerciseDropdownOpen && (
+                    <div className="mt-1.5 p-1.5 bg-white border border-slate-200 rounded-2xl shadow-lg space-y-0.5 animate-in fade-in z-20 max-h-48 overflow-y-auto">
+                      {(exercisesByMuscle[selectedMuscle] || []).map(item => (
+                        <button
+                          key={item.name}
+                          type="button"
+                          onClick={() => {
+                            setSelectedExercise(item.name);
+                            setSelectedEquipment(item.equipment);
+                            setIsExerciseDropdownOpen(false);
+                          }}
+                          className={`w-full p-2 rounded-xl text-xs font-semibold text-left transition-all cursor-pointer flex items-center justify-between ${
+                            selectedExercise === item.name ? 'bg-blue-50 text-blue-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <span className="truncate">{item.name}</span>
+                          <span className="text-[9.5px] text-slate-400 font-mono ml-2 shrink-0">{item.equipment}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* СТЕППЕРЫ: КРУПНЫЕ КНОПКИ ДЛЯ ПАЛЬЦЕВ (34×34px) */}
+            {/* СТЕППЕРЫ: ГОРИЗОНТАЛЬНО ШИРОКИЕ (w-9 h-7) + ЕДИНЫЙ ЧЁРНЫЙ ЦВЕТ ЦИФР */}
             <div className="grid grid-cols-3 gap-2.5 pt-1">
               
               {/* Сеты */}
@@ -361,9 +429,9 @@ export default function DesignSystemShowcase({ onBack }) {
                   <button
                     type="button"
                     onClick={() => setSets(s => Math.max(1, (Number(s) || 0) - 1))}
-                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm flex items-center justify-center active:scale-85 transition-transform cursor-pointer shadow-2xs"
+                    className="w-9 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
                   >
-                    <Minus className="w-4 h-4 stroke-[2.5]" />
+                    <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                   <input
                     type="text"
@@ -375,9 +443,9 @@ export default function DesignSystemShowcase({ onBack }) {
                   <button
                     type="button"
                     onClick={() => setSets(s => (Number(s) || 0) + 1)}
-                    className="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm flex items-center justify-center active:scale-85 transition-transform cursor-pointer shadow-xs"
+                    className="w-9 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xs"
                   >
-                    <Plus className="w-4 h-4 stroke-[2.5]" />
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                 </div>
               </div>
@@ -391,9 +459,9 @@ export default function DesignSystemShowcase({ onBack }) {
                   <button
                     type="button"
                     onClick={() => setReps(r => Math.max(1, (Number(r) || 0) - 1))}
-                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm flex items-center justify-center active:scale-85 transition-transform cursor-pointer shadow-2xs"
+                    className="w-9 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
                   >
-                    <Minus className="w-4 h-4 stroke-[2.5]" />
+                    <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                   <input
                     type="text"
@@ -405,14 +473,14 @@ export default function DesignSystemShowcase({ onBack }) {
                   <button
                     type="button"
                     onClick={() => setReps(r => (Number(r) || 0) + 1)}
-                    className="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm flex items-center justify-center active:scale-85 transition-transform cursor-pointer shadow-xs"
+                    className="w-9 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xs"
                   >
-                    <Plus className="w-4 h-4 stroke-[2.5]" />
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                 </div>
               </div>
 
-              {/* Вес */}
+              {/* Вес — ТЕПЕРЬ СТРОГО В ЦВЕТЕ text-slate-900 */}
               <div className="bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
                 <span className="text-[10.5px] font-semibold text-slate-400 block text-center mb-1.5">
                   Вес (кг)
@@ -421,9 +489,9 @@ export default function DesignSystemShowcase({ onBack }) {
                   <button
                     type="button"
                     onClick={() => setWeight(w => Math.max(0, Math.round(((Number(w) || 0) - 2.5) * 10) / 10))}
-                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm flex items-center justify-center active:scale-85 transition-transform cursor-pointer shadow-2xs"
+                    className="w-9 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
                   >
-                    <Minus className="w-4 h-4 stroke-[2.5]" />
+                    <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                   <input
                     type="text"
@@ -431,18 +499,42 @@ export default function DesignSystemShowcase({ onBack }) {
                     value={weight}
                     placeholder="0"
                     onChange={(e) => handleNumberInput(setWeight, e.target.value)}
-                    className="w-10 text-center text-sm font-extrabold font-mono text-blue-600 bg-transparent outline-none"
+                    className="w-9 text-center text-sm font-bold font-mono text-slate-900 bg-transparent outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setWeight(w => Math.round(((Number(w) || 0) + 2.5) * 10) / 10)}
-                    className="w-8 h-8 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center active:scale-85 transition-transform cursor-pointer shadow-xs"
+                    className="w-9 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xs"
                   >
-                    <Plus className="w-4 h-4 stroke-[2.5]" />
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                 </div>
               </div>
 
+            </div>
+
+            {/* Быстрый выбор времени отдыха */}
+            <div className="pt-1 flex items-center justify-between">
+              <span className="text-[10.5px] font-medium text-slate-400 flex items-center gap-1">
+                <Timer className="w-3 h-3 text-slate-400" />
+                <span>Отдых между сетами:</span>
+              </span>
+              <div className="flex items-center gap-1">
+                {[60, 90, 120].map(sec => (
+                  <button
+                    key={sec}
+                    type="button"
+                    onClick={() => setRestTime(sec)}
+                    className={`px-2 py-0.5 rounded-lg text-[10.5px] font-mono font-bold transition-all cursor-pointer ${
+                      restTime === sec
+                        ? 'bg-slate-900 text-white shadow-2xs'
+                        : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-100'
+                    }`}
+                  >
+                    {sec}с
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Заметка по технике для атлета */}
@@ -454,7 +546,105 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* ================= 3. РАЗДЕЛЫ УПРАВЛЕНИЯ ================= */}
+        {/* ================= 3. ЦЕНТР ПУШ-УВЕДОМЛЕНИЙ TELEGRAM (НОВЫЙ БЛОК) ================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div>
+              <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Send className="w-3.5 h-3.5 text-blue-600" />
+                <span>Быстрые пуши ученику в Telegram</span>
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Мгновенные триггеры бота @gymconnect_ala_bot</p>
+            </div>
+
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+              Live Bot
+            </span>
+          </div>
+
+          {/* 3 кнопки быстрых сценариев */}
+          <div className="grid grid-cols-3 gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setActivePushPreview('workout');
+                showToast('Пуш: «План на сегодня назначен» отправлен!');
+              }}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                activePushPreview === 'workout'
+                  ? 'bg-blue-50/80 border-blue-300 text-blue-900 font-bold shadow-2xs'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <span className="text-xs">🏋️ План дня</span>
+              <span className="text-[10px] text-slate-400 font-normal mt-1">Отправить тренировку</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActivePushPreview('reminder');
+                showToast('Пуш: «Напоминание о тренировке» отправлено!');
+              }}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                activePushPreview === 'reminder'
+                  ? 'bg-amber-50/80 border-amber-300 text-amber-900 font-bold shadow-2xs'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <span className="text-xs">⏰ Напоминание</span>
+              <span className="text-[10px] text-slate-400 font-normal mt-1">Жду через 30 мин</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActivePushPreview('payment');
+                showToast('Пуш: «Продление абонемента» отправлено!');
+              }}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                activePushPreview === 'payment'
+                  ? 'bg-emerald-50/80 border-emerald-300 text-emerald-900 font-bold shadow-2xs'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <span className="text-xs">💳 Оплата</span>
+              <span className="text-[10px] text-slate-400 font-normal mt-1">Осталось 1 занятие</span>
+            </button>
+          </div>
+
+          {/* Превью сообщения Telegram */}
+          <div className="p-3 bg-slate-100/90 rounded-2xl border border-slate-200/80 space-y-1.5">
+            <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono border-b border-slate-200 pb-1">
+              <span>Сообщение в боте ученика:</span>
+              <span>@gymconnect_ala_bot</span>
+            </div>
+
+            {activePushPreview === 'workout' && (
+              <p className="text-[11.5px] text-slate-800 leading-snug">
+                🏋️ <b>Ваш тренер обновил план тренировок!</b><br />
+                День 1: Грудь и Трицепс (3 упр., 60 кг).<br />
+                <span className="text-blue-600 font-semibold">Откройте приложение для просмотра подходов.</span>
+              </p>
+            )}
+
+            {activePushPreview === 'reminder' && (
+              <p className="text-[11.5px] text-slate-800 leading-snug">
+                ⏰ <b>Напоминание о тренировке!</b><br />
+                Жду тебя сегодня в зале к 18:30. Не опаздывай, разомнись перед базой! 💪
+              </p>
+            )}
+
+            {activePushPreview === 'payment' && (
+              <p className="text-[11.5px] text-slate-800 leading-snug">
+                💳 <b>Продление абонемента</b><br />
+                У вас осталось 1 занятие в текущем блоке. Продлите тренировки, чтобы сохранить график и время!
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* ================= 4. РАЗДЕЛЫ УПРАВЛЕНИЯ ================= */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-2">
           <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800">
@@ -464,7 +654,6 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
 
           <div className="divide-y divide-slate-100">
-            {/* База атлетов */}
             <div 
               onClick={() => showToast('Открыта база учеников')}
               className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
@@ -481,7 +670,6 @@ export default function DesignSystemShowcase({ onBack }) {
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
             </div>
 
-            {/* Касса */}
             <div 
               onClick={() => showToast('Открыта касса')}
               className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
@@ -500,7 +688,6 @@ export default function DesignSystemShowcase({ onBack }) {
               </span>
             </div>
 
-            {/* Streak */}
             <div 
               onClick={() => showToast('Стрик дисциплины: 44 недели')}
               className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
@@ -517,7 +704,6 @@ export default function DesignSystemShowcase({ onBack }) {
               <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
             </div>
 
-            {/* Ограничения PAR-Q */}
             <div 
               onClick={() => showToast('Внимание: у атлета есть травмы')}
               className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
@@ -536,8 +722,8 @@ export default function DesignSystemShowcase({ onBack }) {
           </div>
         </div>
 
-        {/* ================= 4. ДНЕЙ В НЕДЕЛЮ (1–7) И СХЕМА СПЛИТА ================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-3">
+        {/* ================= 5. ДНЕЙ В НЕДЕЛЮ (1–7) И СХЕМА СПЛИТА ================= */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/70 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-800">
               Дней тренировок в неделю
@@ -551,9 +737,9 @@ export default function DesignSystemShowcase({ onBack }) {
                 key={d}
                 type="button"
                 onClick={() => setActiveDaysCount(d)}
-                className={`py-2 text-xs font-mono font-bold rounded-xl transition-all cursor-pointer ${
+                className={`py-1.5 text-xs font-mono font-bold rounded-xl transition-all cursor-pointer ${
                   activeDaysCount === d 
-                    ? 'bg-blue-600 text-white shadow-xs' 
+                    ? 'bg-[#165DFB] text-white shadow-xs' 
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -586,32 +772,6 @@ export default function DesignSystemShowcase({ onBack }) {
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-
-        {/* ================= 5. ПОИСК ПО БАЗЕ ================= */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-[0_2px_14px_rgba(0,0,0,0.03)] space-y-2">
-          <h3 className="text-xs font-bold text-slate-800">
-            Поиск по базе
-          </h3>
-          <div className="relative flex items-center">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
-            <input 
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Имя атлета или название упражнения..."
-              className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-blue-600 transition-all placeholder:text-slate-400"
-            />
-            {searchQuery && (
-              <button 
-                type="button" 
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
         </div>
 
