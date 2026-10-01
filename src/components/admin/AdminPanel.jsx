@@ -1,5 +1,6 @@
 // src/components/admin/AdminPanel.jsx
 import React, { useState, useEffect } from 'react';
+import { showConfirm } from '../../utils/uiUtils';
 import { supabase } from '../../supabaseClient';
 import { 
   ShieldCheck, 
@@ -178,7 +179,7 @@ export default function AdminPanel({ onBack }) {
   };
 
   const handleDelete = async (id, name) => {
-    if (!window.confirm(`Удалить атлета ${name} из базы данных?`)) return;
+    if (!await showConfirm(`Удалить атлета ${name} из базы данных?`)) return;
 
     const { error } = await supabase.from('profiles').delete().eq('id', id);
     if (error) {
@@ -189,7 +190,7 @@ export default function AdminPanel({ onBack }) {
   };
 
   const handleDeleteTrainer = async (id, name) => {
-    if (!window.confirm(`Удалить тренера ${name} из базы партнёров?`)) return;
+    if (!await showConfirm(`Удалить тренера ${name} из базы партнёров?`)) return;
 
     const { error } = await supabase.from('trainer_profiles').delete().eq('id', id);
     if (error) {

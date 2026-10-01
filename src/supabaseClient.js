@@ -1,7 +1,11 @@
 // src/supabaseClient.js
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://qkcknohwkgcsxduweoyv.supabase.co'; // твой URL из панели Supabase
-const supabaseKey = 'sb_publishable_W9T-xstG7unSUljmq3dJDQ_yX723gKP'; // твой новый Publishable key
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("Missing Supabase URL or Key in environment variables.");
+}
 
 export const supabase = createClient(supabaseUrl, supabaseKey);

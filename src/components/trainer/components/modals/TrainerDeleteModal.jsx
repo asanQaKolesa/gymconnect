@@ -1,13 +1,14 @@
 // src/components/trainer/components/modals/TrainerDeleteModal.jsx
 import React from 'react';
 import { ArrowLeft, AlertCircle, Trash2 } from 'lucide-react';
+import { showConfirm } from '../../../../utils/uiUtils';
 import { supabase } from '../../../../supabaseClient';
 
 export default function TrainerDeleteModal({ isOpen, onClose, cleanUsername, onDeleted }) {
   if (!isOpen) return null;
 
   const handleDeleteCoachAccount = async () => {
-    const confirmation = window.confirm(
+    const confirmation = await showConfirm(
       'Вы уверены, что хотите деактивировать тренерский профиль? Все данные подопечных и визитка станут недоступны.'
     );
     if (!confirmation) return;

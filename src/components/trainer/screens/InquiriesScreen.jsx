@@ -143,7 +143,7 @@ export default function InquiriesScreen({ trainer, onBack, onRefresh }) {
     setProcessingId(selectedLeadForSchedule.id);
 
     try {
-      await supabase
+      const { error: errorLead } = await supabase
         .from('trainer_leads')
         .update({ 
           status: 'scheduled',
@@ -152,6 +152,7 @@ export default function InquiriesScreen({ trainer, onBack, onRefresh }) {
           gym_name: scheduleSlot.gym
         })
         .eq('id', selectedLeadForSchedule.id);
+      if (errorLead) throw errorLead;
 
       setLeads(prev => prev.map(l => l.id === selectedLeadForSchedule.id ? { 
         ...l, 
@@ -173,10 +174,11 @@ export default function InquiriesScreen({ trainer, onBack, onRefresh }) {
   const handleReject = async (leadId) => {
     setProcessingId(leadId);
     try {
-      await supabase
+      const { error: errorLead } = await supabase
         .from('trainer_leads')
         .update({ status: 'rejected' })
         .eq('id', leadId);
+      if (errorLead) throw errorLead;
 
       setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: 'rejected' } : l));
       if (onRefresh) onRefresh();

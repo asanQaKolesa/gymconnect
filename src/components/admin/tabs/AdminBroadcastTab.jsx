@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Check
 } from 'lucide-react';
+import { showConfirm } from '../../../utils/uiUtils';
 import { supabase } from '../../../supabaseClient';
 import { escapeHtml } from '../../../utils/telegramNotifications';
 
@@ -186,7 +187,7 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
       return;
     }
 
-    const confirmSend = window.confirm(
+    const confirmSend = await showConfirm(
       `Запустить рассылку в Telegram для ${recipientsList.length} пользователей?`
     );
     if (!confirmSend) return;
@@ -245,7 +246,7 @@ export default function AdminBroadcastTab({ profiles = [], trainers = [] }) {
       return;
     }
 
-    const confirmPurge = window.confirm(
+    const confirmPurge = await showConfirm(
       `Стереть из Telegram все ${trackedList.length} отправленных сообщений бота прямо сейчас?`
     );
     if (!confirmPurge) return;

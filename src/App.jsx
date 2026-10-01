@@ -1,6 +1,7 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
+import { useAppContext } from './AppContext';
 import HomeTab from './components/home/HomeTab';
 import ReviewsTab from './components/reviews/ReviewsTab';
 import GymBroTab from './components/gymbro/GymBroTab';
@@ -44,29 +45,7 @@ export default function App() {
   const [isTrainerRegistering, setIsTrainerRegistering] = useState(false);
 
   // Стейт профиля атлета
-  const [userProfile, setUserProfile] = useState(() => {
-    try {
-      const saved = localStorage.getItem('gymconnect_user_profile');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  // Флаг регистрации
-  const [isRegistered, setIsRegistered] = useState(() => {
-    return localStorage.getItem('gymconnect_profile_filled') === 'true';
-  });
-
-  // Флаг принятия правовых актов
-  const [hasAcceptedLegal, setHasAcceptedLegal] = useState(() => {
-    return localStorage.getItem('gymconnect_legal_accepted') === 'true';
-  });
-
-  // Выбранный язык
-  const [language, setLanguage] = useState(() => {
-    return localStorage.getItem('gymconnect_language') || null;
-  });
+  const { userProfile, isRegistered, hasAcceptedLegal, language, updateUserProfile, acceptLegal, setAppLanguage } = useAppContext();
 
   // Активная вкладка
   const [activeTab, setActiveTab] = useState(() => {
@@ -179,27 +158,27 @@ export default function App() {
             localStorage.removeItem('gymconnect_pending_coach');
           }
 
-          setUserProfile(updatedData);
-          setIsRegistered(true);
+          updateUserProfile(updatedData);
+
 
           if (updatedData.legal_accepted) {
-            setHasAcceptedLegal(true);
-            localStorage.setItem('gymconnect_legal_accepted', 'true');
+            acceptLegal();
+
           }
 
           if (updatedData.language) {
-            setLanguage(updatedData.language);
-            localStorage.setItem('gymconnect_language', updatedData.language);
+            setAppLanguage(updatedData.language);
+
           }
 
-          localStorage.setItem('gymconnect_profile_filled', 'true');
-          localStorage.setItem('gymconnect_user_profile', JSON.stringify(updatedData));
+
+
         } else if (!data && !error) {
-          setIsRegistered(false);
-          setUserProfile(null);
-          setHasAcceptedLegal(false);
-          localStorage.removeItem('gymconnect_profile_filled');
-          localStorage.removeItem('gymconnect_user_profile');
+
+          updateUserProfile(null);
+
+
+
         }
       } catch (e) {
         console.warn('Фоновая аутентификация Telegram: работаем из кэша', e);
@@ -251,8 +230,8 @@ export default function App() {
   };
 
   const handleSelectLanguage = async (lang) => {
-    setLanguage(lang);
-    localStorage.setItem('gymconnect_language', lang);
+    setAppLanguage(lang);
+
 
     if (userProfile?.telegram_id) {
       await supabase
@@ -263,42 +242,46 @@ export default function App() {
   };
 
   const handleRegistrationComplete = (newProfile) => {
-    setIsRegistered(true);
-    setUserProfile(newProfile);
-    localStorage.setItem('gymconnect_profile_filled', 'true');
+
+    updateUserProfile(newProfile);
+
     if (newProfile?.legal_accepted) {
-      setHasAcceptedLegal(true);
+      acceptLegal();
       setActiveTab('profile');
     }
   };
 
   const handleLegalAccepted = () => {
-    setHasAcceptedLegal(true);
-    localStorage.setItem('gymconnect_legal_accepted', 'true');
+    acceptLegal();
+
     setActiveTab('profile');
   };
 
-  const handleLogout = () => {
-    if (window.confirm('Вы действительно хотите выйти из своего профиля?')) {
+  const handleLogout = async () => {
+    const { showConfirm } = await import('./utils/uiUtils');
+    const agreed = await showConfirm('Вы действительно хотите выйти из своего профиля?');
+    if (agreed) {
       localStorage.clear();
-      setIsRegistered(false);
-      setUserProfile(null);
-      setLanguage(null);
-      setHasAcceptedLegal(false);
+
+      updateUserProfile(null);
+      setAppLanguage(null);
+
       window.location.reload();
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (window.confirm('Вы уверены, что хотите безвозвратно удалить свой профиль?')) {
+    const { showConfirm } = await import('./utils/uiUtils');
+    const agreed = await showConfirm('Вы уверены, что хотите безвозвратно удалить свой профиль?');
+    if (agreed) {
       if (userProfile?.id) {
         await supabase.from('profiles').delete().eq('id', userProfile.id);
       }
       localStorage.clear();
-      setIsRegistered(false);
-      setUserProfile(null);
-      setLanguage(null);
-      setHasAcceptedLegal(false);
+
+      updateUserProfile(null);
+      setAppLanguage(null);
+
       window.location.reload();
     }
   };
