@@ -92,10 +92,11 @@ export default function AthleteDetailScreen({
   const handleChangeStatus = async (newStatus) => {
     setActionLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({ status: newStatus })
         .eq('id', currentStudent.id);
+      if (error) throw error;
 
       setCurrentStudent(prev => ({ ...prev, status: newStatus }));
       setIsEditingStatus(false);
@@ -111,10 +112,11 @@ export default function AthleteDetailScreen({
     if (currentStudent.payment_status === statusVal) return;
     setActionLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({ payment_status: statusVal })
         .eq('id', currentStudent.id);
+      if (error) throw error;
 
       setCurrentStudent(prev => ({ ...prev, payment_status: statusVal }));
 
@@ -136,10 +138,11 @@ export default function AthleteDetailScreen({
     const updated = Math.max(0, leftTrainings + delta);
     setActionLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({ left_trainings: updated, remaining_workouts: updated })
         .eq('id', currentStudent.id);
+      if (error) throw error;
 
       setCurrentStudent(prev => ({ ...prev, left_trainings: updated, remaining_workouts: updated }));
       if (onUpdate) onUpdate();
@@ -154,7 +157,7 @@ export default function AthleteDetailScreen({
     setActionLoading(true);
     const updated = leftTrainings + 12;
     try {
-      await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({ 
           left_trainings: updated, 
@@ -164,6 +167,7 @@ export default function AthleteDetailScreen({
           status: 'active'
         })
         .eq('id', currentStudent.id);
+      if (error) throw error;
 
       setCurrentStudent(prev => ({ 
         ...prev, 
@@ -206,7 +210,7 @@ export default function AthleteDetailScreen({
   const handleSavePlanSettings = async () => {
     setActionLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({
           monthly_price: Number(editPrice) || 70000,
@@ -216,6 +220,7 @@ export default function AthleteDetailScreen({
           package_type: editFormat
         })
         .eq('id', currentStudent.id);
+      if (error) throw error;
 
       setCurrentStudent(prev => ({
         ...prev,
