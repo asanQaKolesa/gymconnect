@@ -1,10 +1,10 @@
 // src/components/trainer/screens/AthleteMeasurementsScreen.jsx
 import React, { useState, useMemo } from 'react';
-import { 
-  ArrowLeft, 
-  TrendingDown, 
-  TrendingUp, 
-  Scale, 
+import {
+  ArrowLeft,
+  TrendingDown,
+  TrendingUp,
+Scale,
   BellRing, 
   Check, 
   Activity, 
@@ -22,6 +22,11 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
   const [selectedMetricKey, setSelectedMetricKey] = useState('waist');
 
   const fullName = student?.full_name || `${student?.first_name || ''} ${student?.last_name || ''}`.trim() || 'Атлет';
+
+  // Проверка на количество замеров (empty state)
+  const hasMeasurements = student?.waist || student?.chest || student?.hips || student?.weight;
+  // Мы также можем проверять наличие истории замеров (не менее двух), но пока проверяем хоть какие-то данные.
+
 
   // Базовые параметры с безопасными дефолтами
   const heightCm = Number(student?.height) > 0 ? Number(student.height) : 178;
@@ -68,10 +73,34 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
   const currentChest = Number(student?.chest) || 99.0;
   const currentHips = Number(student?.hips) || 97.5;
 
-  const startVTaper = startWaist > 0 ? (startChest / startWaist).toFixed(2) : '1.17';
-  const currentVTaper = currentWaist > 0 ? (currentChest / currentWaist).toFixed(2) : '1.24';
-  const currentWHR = currentHips > 0 ? (currentWaist / currentHips).toFixed(2) : '0.82';
-  const currentBMI = heightCm > 0 ? (currentWeight / Math.pow(heightCm / 100, 2)).toFixed(1) : '22.6';
+
+  const heightM = heightCm > 0 ? heightCm / 100 : 0;
+
+  // BMI
+  const startBMI = heightM > 0 && startWeight > 0 ? (startWeight / (heightM * heightM)).toFixed(1) : '—';
+  const currentBMI = heightM > 0 && currentWeight > 0 ? (currentWeight / (heightM * heightM)).toFixed(1) : '—';
+  const getBmiStatus = (bmi) => {
+    if (bmi === '—') return 'Нет данных';
+    const b = Number(bmi);
+    if (b < 18.5) return 'Дефицит';
+    if (b >= 18.5 && b <= 24.9) return 'Норма';
+    return 'Избыток';
+  };
+  const bmiStatus = getBmiStatus(currentBMI);
+
+  // WHtR (Waist-to-Height Ratio)
+  const currentWHtR = heightCm > 0 && currentWaist > 0 ? (currentWaist / heightCm).toFixed(2) : '—';
+  const whtrStatus = currentWHtR === '—' ? 'Нет данных' : (Number(currentWHtR) < 0.5 ? 'Здоровая норма' : 'Выше нормы');
+
+  // V-Taper (Shoulders/Waist) -> We use Shoulders if available, else fallback to Chest
+  const currentShoulders = Number(student?.shoulders) || currentChest; // Fallback to chest if shoulders not in DB
+  const currentVTaper = currentWaist > 0 && currentShoulders > 0 ? (currentShoulders / currentWaist).toFixed(2) : '—';
+  const vtaperStatus = currentVTaper === '—' ? 'Нет данных' : (Number(currentVTaper) >= 1.6 ? 'Идеальный конус' : 'Цель ~1.61');
+
+  // Chest/Waist
+  const chestWaistRatio = currentWaist > 0 && currentChest > 0 ? (currentChest / currentWaist).toFixed(2) : '—';
+  const chestWaistStatus = chestWaistRatio === '—' ? 'Нет данных' : 'Пропорции торса';
+
 
   const activeMetric = useMemo(() => {
     return measurementRows.find(m => m.key === selectedMetricKey) || measurementRows[0];
@@ -224,6 +253,26 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
     }
   ];
 
+  if (!hasMeasurements) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
+        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+          <Activity className="w-8 h-8 text-slate-400" />
+        </div>
+        <h2 className="text-base font-semibold text-slate-800 mb-2">Замеров пока нет</h2>
+        <p className="text-sm text-slate-500 mb-6 max-w-xs">
+          Внесите первый замер, чтобы увидеть динамику и индексы
+        </p>
+        <button
+          onClick={onBack}
+          className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-sm font-semibold transition-colors"
+        >
+          Вернуться назад
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 select-none pb-28">
       
@@ -298,7 +347,7 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-1.5">
               <Scale className="w-4 h-4 text-slate-600 stroke-[2]" />
-              <h3 className="text-xs font-bold text-slate-800">Контроль веса тела</h3>
+              <h3 className="text-xs font-semibold text-slate-800">Контроль веса тела</h3>
             </div>
             <span className="text-[10.5px] text-slate-400 font-mono">Старт → Пред. → Сейчас</span>
           </div>
@@ -400,28 +449,34 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-slate-600 stroke-[2]" />
-              <h3 className="text-xs font-bold text-slate-800">Индексы пропорций и состава тела</h3>
+              <h3 className="text-xs font-semibold text-slate-800">Индексы пропорций и состава тела</h3>
             </div>
             <span className="text-[10.5px] text-slate-400 font-mono">Биометрия</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 text-center text-xs">
-            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
-              <span className="text-[10px] text-slate-400 block mb-0.5">V-конус (Грудь/Талия)</span>
-              <span className="font-mono font-bold text-slate-800 block">{startVTaper} → {currentVTaper}</span>
-              <span className="text-[9.5px] font-semibold text-emerald-700 mt-0.5 block">+ Прогресс конуса</span>
+          <div className="grid grid-cols-2 gap-2 text-left">
+            <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 shadow-sm flex flex-col justify-between">
+              <span className="text-xs text-neutral-400 font-medium mb-1">ИМТ (BMI)</span>
+              <span className="text-lg font-semibold text-white block mb-0.5">{currentBMI}</span>
+              <span className="text-[10px] text-slate-500 block">{bmiStatus}</span>
             </div>
 
-            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
-              <span className="text-[10px] text-slate-400 block mb-0.5">WHTR (Талия/Бёдра)</span>
-              <span className="font-mono font-bold text-slate-800 block">{currentWHR}</span>
-              <span className="text-[9.5px] text-slate-500 mt-0.5 block">Идеал рельефа</span>
+            <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 shadow-sm flex flex-col justify-between">
+              <span className="text-xs text-neutral-400 font-medium mb-1">WHtR (Талия/Рост)</span>
+              <span className="text-lg font-semibold text-white block mb-0.5">{currentWHtR}</span>
+              <span className="text-[10px] text-slate-500 block">{whtrStatus}</span>
             </div>
 
-            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
-              <span className="text-[10px] text-slate-400 block mb-0.5">ИМТ (BMI)</span>
-              <span className="font-mono font-bold text-slate-800 block">{currentBMI}</span>
-              <span className="text-[9.5px] text-slate-500 mt-0.5 block">Нормостеник</span>
+            <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 shadow-sm flex flex-col justify-between">
+              <span className="text-xs text-neutral-400 font-medium mb-1">V-конус (Плечи/Талия)</span>
+              <span className="text-lg font-semibold text-white block mb-0.5">{currentVTaper}</span>
+              <span className="text-[10px] text-slate-500 block">{vtaperStatus}</span>
+            </div>
+
+            <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 shadow-sm flex flex-col justify-between">
+              <span className="text-xs text-neutral-400 font-medium mb-1">Грудь/Талия</span>
+              <span className="text-lg font-semibold text-white block mb-0.5">{chestWaistRatio}</span>
+              <span className="text-[10px] text-slate-500 block">{chestWaistStatus}</span>
             </div>
           </div>
         </div>
@@ -430,7 +485,7 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3.5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
-              <h3 className="text-xs font-bold text-slate-800">Матрица анатомических замеров</h3>
+              <h3 className="text-xs font-semibold text-slate-800">Матрица анатомических замеров</h3>
               <p className="text-[10px] text-slate-400 font-mono mt-0.5">Скролл вправо для детального среза →</p>
             </div>
             <Activity className="w-4 h-4 text-slate-400" />
@@ -489,10 +544,9 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
           {/* ТАБЛИЦА С МЯГКИМ СКРОЛЛОМ */}
           <div className="overflow-x-auto pb-1 -mx-2 px-2 no-scrollbar">
             <div className="min-w-[390px]">
-              <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider pb-2 border-b border-slate-100 text-center">
+              <div className="grid grid-cols-10 gap-2 text-[10px] font-medium text-slate-400 uppercase tracking-wider pb-2 border-b border-slate-100 text-center">
                 <span className="col-span-4 text-left">Зона тела</span>
                 <span className="col-span-2">Старт</span>
-                <span className="col-span-2">Прошлый</span>
                 <span className="col-span-2">Сейчас</span>
                 <span className="col-span-2 text-right">Итог (Δ)</span>
               </div>
@@ -503,18 +557,34 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
                   const numDiff = Number(diff);
                   const isSelected = selectedMetricKey === row.key;
 
+                  // Define arrow and color based on metric type (fat vs muscle)
+                  const isFatMetric = row.key === 'waist' || row.key === 'hips' || row.key === 'neck';
+                  let deltaColor = 'text-slate-500';
+                  let deltaBg = 'bg-slate-100';
+                  let ArrowIcon = null;
+
+                  if (numDiff < 0) {
+                    deltaColor = isFatMetric ? 'text-emerald-700' : 'text-rose-600';
+                    deltaBg = isFatMetric ? 'bg-emerald-50' : 'bg-rose-50';
+                    ArrowIcon = TrendingDown;
+                  } else if (numDiff > 0) {
+                    deltaColor = isFatMetric ? 'text-rose-600' : 'text-emerald-700';
+                    deltaBg = isFatMetric ? 'bg-rose-50' : 'bg-emerald-50';
+                    ArrowIcon = TrendingUp;
+                  }
+
                   return (
                     <div 
                       key={row.key}
                       onClick={() => setSelectedMetricKey(row.key)}
-                      className={`grid grid-cols-12 gap-2 py-2.5 items-center text-center cursor-pointer transition-colors rounded-xl px-2 ${
+                      className={`grid grid-cols-10 gap-2 py-2.5 items-center text-center cursor-pointer transition-colors rounded-xl px-2 ${
                         isSelected 
                           ? 'bg-blue-50/90 border border-blue-200' 
                           : 'hover:bg-slate-50'
                       }`}
                     >
                       <span className={`col-span-4 text-left font-sans text-[11.5px] truncate ${
-                        isSelected ? 'font-bold text-[#1E60D5]' : 'font-medium text-slate-700'
+                        isSelected ? 'font-semibold text-[#1E60D5]' : 'font-medium text-slate-700'
                       }`}>
                         {row.label}
                       </span>
@@ -523,25 +593,16 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
                         {row.start} {row.unit}
                       </span>
 
-                      <span className="col-span-2 text-slate-500 text-[11px] whitespace-nowrap">
-                        {row.prev} {row.unit}
-                      </span>
-
                       <span className={`col-span-2 text-[11px] whitespace-nowrap ${
-                        isSelected ? 'font-bold text-[#1E60D5]' : 'font-bold text-slate-800'
+                        isSelected ? 'font-bold text-[#1E60D5]' : 'font-semibold text-slate-800'
                       }`}>
                         {row.current} {row.unit}
                       </span>
 
-                      <div className="col-span-2 text-right whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded-md font-bold text-[10.5px] inline-block ${
-                          numDiff < 0 
-                            ? 'bg-emerald-50 text-emerald-700' 
-                            : numDiff > 0 
-                              ? 'bg-blue-50 text-[#1E60D5]' 
-                              : 'bg-slate-100 text-slate-500'
-                        }`}>
-                          {numDiff > 0 ? `+${diff}` : diff}
+                      <div className="col-span-2 text-right whitespace-nowrap flex justify-end">
+                        <span className={`px-1.5 py-0.5 rounded-md font-semibold text-[10.5px] inline-flex items-center gap-0.5 ${deltaBg} ${deltaColor}`}>
+                          {ArrowIcon && <ArrowIcon className="w-3 h-3" />}
+                          {Math.abs(numDiff).toFixed(1)}
                         </span>
                       </div>
                     </div>
@@ -555,7 +616,7 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
         {/* 6. ХРОНОЛОГИЯ С КОМПАКТНЫМ КОММЕНТАРИЕМ В ОДНУ СТРОКУ */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <h3 className="text-xs font-bold text-slate-800">Хронология срезов и пометки наставника</h3>
+            <h3 className="text-xs font-semibold text-slate-800">Хронология срезов и пометки наставника</h3>
             <span className="text-[10.5px] text-slate-400 font-mono">Архив замеров</span>
           </div>
 
