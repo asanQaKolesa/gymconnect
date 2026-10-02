@@ -1,254 +1,649 @@
+// src/components/trainer/tabs/WorkoutsTab.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { 
+  Dumbbell, 
   Plus, 
+  Trash2, 
   CheckCircle2, 
+  Activity, 
+  Flame, 
+  Calendar, 
+  Sparkles, 
   Save, 
+  ExternalLink,
+  ChevronDown,
+  ShieldAlert,
   Zap
 } from 'lucide-react';
 import StudentDetailModal from '../components/StudentDetailModal';
 
-// Builder Components
-import StudentSelectorHeader from '../builder/StudentSelectorHeader';
-import SplitDaysTabs from '../builder/SplitDaysTabs';
-import ExerciseCardItem from '../builder/ExerciseCardItem';
-import ExerciseSearchModal from '../builder/ExerciseSearchModal';
-
-export default function WorkoutsTab({ students = [], onUpdate }) {
-  // 1. Selector State
-  const activeStudents = students.filter(s => {
+export default function WorkoutsTab({ students = [], onUpdate, onSelectStudent }) {
+  const isStudentActive = (s) => {
+    if (!s) return false;
     const st = (s.status || '').toLowerCase().trim();
     return st !== 'left' && st !== 'archived';
-  });
+  };
+
+  const activeStudents = students.filter(isStudentActive);
   const [selectedStudentId, setSelectedStudentId] = useState(activeStudents[0]?.id || '');
   const [selectedStudentForModal, setSelectedStudentForModal] = useState(null);
-
-  // 2. Builder State
-  const [daysCount, setDaysCount] = useState(3);
-  const [activeDayIndex, setActiveDayIndex] = useState(0);
-  const [daysWorkouts, setDaysWorkouts] = useState([
-    { title: 'День 1', exercises: [] },
-    { title: 'День 2', exercises: [] },
-    { title: 'День 3', exercises: [] }
-  ]);
-
+  
+  // Параметры программы
+  const [workoutType, setWorkoutType] = useState('fullbody');
+  const [frequency, setFrequency] = useState(3);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [warmup, setWarmup] = useState('Суставная разминка 10 мин');
+  const [contraindications, setContraindications] = useState('Без осевой нагрузки');
 
-  // Load from LocalStorage when student changes
+  // База упражнений по группам мышц
+  const exerciseDatabase = {
+    'Грудь': ['Жим лежа со штангой', 'Жим гантелей на наклонной', 'Сведение рук в кроссовере', 'Отжимания на брусьях'],
+    'Спина': ['Подтягивания на перекладине', 'Тяга верхнего блока', 'Тяга штанги в наклоне', 'Горизонтальная тяга'],
+    'Ноги': ['Приседания со штангой', 'Жим ногами в платформе', 'Болгарские выпады', 'Румынская тяга', 'Сгибание ног'],
+    'Плечи': ['Жим штанги стоя (Армейский)', 'Махи гантелями в стороны', 'Протяжка к подбородку', 'Махи в наклоне'],
+    'Руки': ['Подъем штанги на бицепс', 'Французский жим лежа', 'Сгибание рук с гантелями', 'Разгибания в блоке'],
+    'Пресс': ['Скручивания на полу', 'Подъем ног в висе', 'Планка', 'Русские скручивания']
+  };
+
+  const [daysWorkouts, setDaysWorkouts] = useState({
+    1: { title: 'День 1: Верх тела (Грудь + Спина)', exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 10, weight: 60 }] },
+    2: { title: 'День 2: Низ тела (Ноги + Пресс)', exercises: [{ muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 10, weight: 50 }] },
+    3: { title: 'День 3: Плечи и Руки', exercises: [{ muscleGroup: 'Плечи', name: 'Жим штанги стоя (Армейский)', sets: 3, reps: 12, weight: 30 }] }
+  });
+
+  const [activeDay, setActiveDay] = useState(1);
+
   useEffect(() => {
-    if (!selectedStudentId) return;
-    try {
-      const draft = localStorage.getItem(`gymconnect_builder_draft_${selectedStudentId}`);
-      if (draft) {
-        const parsed = JSON.parse(draft);
-        if (parsed.daysCount) setDaysCount(parsed.daysCount);
-        if (parsed.daysWorkouts) setDaysWorkouts(parsed.daysWorkouts);
-      } else {
-        // Reset to default
-        setDaysCount(3);
-        setDaysWorkouts([
-          { title: 'День 1', exercises: [] },
-          { title: 'День 2', exercises: [] },
-          { title: 'День 3', exercises: [] }
-        ]);
-      }
-    } catch (e) {
-      console.error('Error loading draft', e);
+    if (activeStudents.length > 0 && !selectedStudentId) {
+      setSelectedStudentId(activeStudents[0].id);
     }
-  }, [selectedStudentId]);
-
-  // Save to LocalStorage when builder state changes
-  useEffect(() => {
-    if (!selectedStudentId) return;
-    try {
-      const draft = JSON.stringify({ daysCount, daysWorkouts });
-      localStorage.setItem(`gymconnect_builder_draft_${selectedStudentId}`, draft);
-    } catch (e) {
-      console.error('Error saving draft', e);
+    const current = activeStudents.find(s => s.id === selectedStudentId);
+    if (current?.assigned_program && typeof current.assigned_program === 'object') {
+      const prog = current.assigned_program;
+      if (prog.days) setDaysWorkouts(prog.days);
+      if (prog.frequency) setFrequency(prog.frequency);
+      if (prog.workoutType) setWorkoutType(prog.workoutType);
+      if (prog.warmup) setWarmup(prog.warmup);
+      if (prog.contraindications) setContraindications(prog.contraindications);
     }
-  }, [daysCount, daysWorkouts, selectedStudentId]);
+    setSaveSuccess(false);
+  }, [selectedStudentId, activeStudents]);
 
-  const handleSelectExercise = (exDb) => {
-    const newExercise = {
-      id: Date.now().toString(),
-      dbId: exDb.id,
-      name: exDb.nameRu,
-      muscleGroup: exDb.muscleGroup,
-      setsList: [{ weight: 0, reps: 10, rest: '90s' }],
-      notes: ''
-    };
-
-    setDaysWorkouts(prev => {
-      const nw = [...prev];
-      if (!nw[activeDayIndex]) return prev;
-      nw[activeDayIndex] = {
-        ...nw[activeDayIndex],
-        exercises: [...nw[activeDayIndex].exercises, newExercise]
+  const handleFrequencyChange = (newFreq) => {
+    setFrequency(newFreq);
+    const updatedDays = {};
+    for (let i = 1; i <= newFreq; i++) {
+      updatedDays[i] = daysWorkouts[i] || {
+        title: `День ${i}: Тренировка ${i}`,
+        exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 3, reps: 10, weight: 40 }]
       };
-      return nw;
+    }
+    setDaysWorkouts(updatedDays);
+    if (activeDay > newFreq) setActiveDay(1);
+  };
+
+  const handleAddExerciseToCurrentDay = () => {
+    const currentExercises = daysWorkouts[activeDay]?.exercises || [];
+    setDaysWorkouts({
+      ...daysWorkouts,
+      [activeDay]: {
+        ...daysWorkouts[activeDay],
+        exercises: [...currentExercises, { muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 3, reps: 10, weight: 40 }]
+      }
     });
   };
 
-  const handleUpdateExercise = (exIndex, updatedEx) => {
-    setDaysWorkouts(prev => {
-      const nw = [...prev];
-      nw[activeDayIndex].exercises[exIndex] = updatedEx;
-      return nw;
+  const handleExerciseChange = (index, field, value) => {
+    const currentExercises = [...daysWorkouts[activeDay].exercises];
+    currentExercises[index][field] = value;
+    
+    if (field === 'muscleGroup') {
+      currentExercises[index]['name'] = exerciseDatabase[value]?.[0] || '';
+    }
+
+    setDaysWorkouts({
+      ...daysWorkouts,
+      [activeDay]: {
+        ...daysWorkouts[activeDay],
+        exercises: currentExercises
+      }
     });
   };
 
-  const handleRemoveExercise = (exIndex) => {
-    setDaysWorkouts(prev => {
-      const nw = [...prev];
-      nw[activeDayIndex].exercises = nw[activeDayIndex].exercises.filter((_, i) => i !== exIndex);
-      return nw;
+  // 🛡️ Защищённый ввод чисел: решает проблему залипания нуля ("040")
+  const handleNumberInputChange = (index, field, rawValue) => {
+    if (rawValue === '' || rawValue === undefined) {
+      handleExerciseChange(index, field, '');
+      return;
+    }
+    const clean = String(rawValue).replace(',', '.').replace(/[^0-9.]/g, '');
+    const parsed = parseFloat(clean);
+    handleExerciseChange(index, field, isNaN(parsed) ? '' : parsed);
+  };
+
+  // ⚡ Интерактивный степпер + / - с контролем минимума
+  const adjustExerciseVal = (index, field, delta, min = 0) => {
+    const currentExercises = [...daysWorkouts[activeDay].exercises];
+    const currentVal = Number(currentExercises[index][field]) || 0;
+    const nextVal = Math.max(min, Math.round((currentVal + delta) * 10) / 10);
+    currentExercises[index][field] = nextVal;
+    
+    setDaysWorkouts({
+      ...daysWorkouts,
+      [activeDay]: {
+        ...daysWorkouts[activeDay],
+        exercises: currentExercises
+      }
     });
+  };
+
+  const handleRemoveExercise = (index) => {
+    const currentExercises = daysWorkouts[activeDay].exercises.filter((_, i) => i !== index);
+    setDaysWorkouts({
+      ...daysWorkouts,
+      [activeDay]: {
+        ...daysWorkouts[activeDay],
+        exercises: currentExercises
+      }
+    });
+  };
+
+  const applyPresetTemplate = (presetKey) => {
+    if (presetKey === 'fullbody3') {
+      setFrequency(3);
+      setWorkoutType('fullbody');
+      setDaysWorkouts({
+        1: { title: 'День 1: Full Body (Сила A)', exercises: [
+          { muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 8, weight: 60 },
+          { muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 8, weight: 60 },
+          { muscleGroup: 'Спина', name: 'Тяга верхнего блока', sets: 4, reps: 10, weight: 50 }
+        ]},
+        2: { title: 'День 2: Full Body (Гипертрофия B)', exercises: [
+          { muscleGroup: 'Ноги', name: 'Жим ногами в платформе', sets: 4, reps: 12, weight: 100 },
+          { muscleGroup: 'Плечи', name: 'Жим штанги стоя (Армейский)', sets: 4, reps: 10, weight: 35 },
+          { muscleGroup: 'Спина', name: 'Горизонтальная тяга', sets: 3, reps: 12, weight: 45 }
+        ]},
+        3: { title: 'День 3: Full Body (Объем C)', exercises: [
+          { muscleGroup: 'Ноги', name: 'Румынская тяга', sets: 4, reps: 10, weight: 55 },
+          { muscleGroup: 'Грудь', name: 'Жим гантелей на наклонной', sets: 3, reps: 12, weight: 22 },
+          { muscleGroup: 'Руки', name: 'Подъем штанги на бицепс', sets: 3, reps: 12, weight: 25 }
+        ]}
+      });
+    } else if (presetKey === 'split_upper_lower') {
+      setFrequency(4);
+      setWorkoutType('split');
+      setDaysWorkouts({
+        1: { title: 'День 1: Верх (Тяжелый)', exercises: [{ muscleGroup: 'Грудь', name: 'Жим лежа со штангой', sets: 4, reps: 8, weight: 70 }] },
+        2: { title: 'День 2: Низ (Тяжелый)', exercises: [{ muscleGroup: 'Ноги', name: 'Приседания со штангой', sets: 4, reps: 8, weight: 70 }] },
+        3: { title: 'День 3: Верх (Многоповторный)', exercises: [{ muscleGroup: 'Спина', name: 'Тяга верхнего блока', sets: 4, reps: 12, weight: 50 }] },
+        4: { title: 'День 4: Низ (Многоповторный)', exercises: [{ muscleGroup: 'Ноги', name: 'Болгарские выпады', sets: 3, reps: 12, weight: 14 }] }
+      });
+    }
   };
 
   const handleSaveProgram = async () => {
-    if (!selectedStudentId) return;
+    if (!selectedStudentId) {
+      alert('Выберите ученика!');
+      return;
+    }
+
     setSaving(true);
     setSaveSuccess(false);
 
     try {
-      const payload = {
-        type: 'program',
-        date: new Date().toISOString(),
-        daysCount,
-        daysWorkouts
+      // Нормализуем пустые значения перед сохранением
+      const normalizedDays = {};
+      Object.keys(daysWorkouts).forEach(d => {
+        normalizedDays[d] = {
+          ...daysWorkouts[d],
+          exercises: (daysWorkouts[d].exercises || []).map(ex => ({
+            ...ex,
+            sets: Number(ex.sets) || 3,
+            reps: Number(ex.reps) || 10,
+            weight: Number(ex.weight) || 0
+          }))
+        };
+      });
+
+      const programPayload = {
+        days: normalizedDays,
+        frequency,
+        workoutType,
+        warmup,
+        contraindications,
+        updated_at: new Date().toISOString()
       };
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('fitness_data')
-        .eq('id', selectedStudentId)
-        .single();
-
-      let currentData = profile?.fitness_data || {};
-      let updates = [...(currentData.updates || []), payload];
 
       const { error } = await supabase
         .from('profiles')
-        .update({ fitness_data: { ...currentData, updates, currentProgram: payload } })
+        .update({ assigned_program: programPayload })
         .eq('id', selectedStudentId);
 
       if (error) throw error;
 
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-
-      localStorage.removeItem(`gymconnect_builder_draft_${selectedStudentId}`);
-
+      setTimeout(() => setSaveSuccess(false), 2500);
+      if (onUpdate) onUpdate();
     } catch (err) {
-      console.error('Ошибка при сохранении:', err);
-      alert('Ошибка при сохранении программы');
+      alert('Ошибка сохранения программы: ' + err.message);
     } finally {
       setSaving(false);
     }
   };
 
-  if (activeStudents.length === 0) {
-    return (
-      <div className="p-6 text-center text-neutral-400">
-        У вас пока нет активных учеников для назначения программы.
-      </div>
-    );
-  }
-
-  const currentDay = daysWorkouts[activeDayIndex] || { exercises: [] };
+  const currentStudent = activeStudents.find(s => s.id === selectedStudentId);
 
   return (
-    <div className="h-full bg-black flex flex-col">
-      {/* Selector Header */}
-      <StudentSelectorHeader
-        students={activeStudents}
-        selectedStudentId={selectedStudentId}
-        onSelectStudent={setSelectedStudentId}
-        onOpenProfile={(student) => setSelectedStudentForModal(student)}
-      />
+    <div className="space-y-3 select-none pb-28 text-xs">
+      
+      {/* 1. Карточка выбора подопечного и готовых схем */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-3.5 shadow-xs space-y-2.5">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Dumbbell className="w-3.5 h-3.5 stroke-[2.2]" />
+            </div>
+            <div>
+              <h3 className="font-bold text-xs text-slate-900 leading-tight">Программа тренировок</h3>
+              <p className="text-[10px] text-slate-400">Назначение плана подопечному</p>
+            </div>
+          </div>
 
-      <div className="flex-1 overflow-y-auto pb-24">
-        {/* Split Tabs */}
-        <SplitDaysTabs
-          daysCount={daysCount}
-          setDaysCount={setDaysCount}
-          activeDayIndex={activeDayIndex}
-          setActiveDayIndex={setActiveDayIndex}
-          daysWorkouts={daysWorkouts}
-          setDaysWorkouts={setDaysWorkouts}
+          {currentStudent && (
+            <button
+              type="button"
+              onClick={() => setSelectedStudentForModal(currentStudent)}
+              className="text-[10.5px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 active:scale-95 cursor-pointer"
+            >
+              <span>Вся анкета</span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+
+        {/* Выбор подопечного с аккуратным Apple-селектором */}
+        <div>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+            Подопечный атлет *
+          </label>
+          <div className="relative">
+            <select
+              value={selectedStudentId}
+              onChange={(e) => setSelectedStudentId(e.target.value)}
+              className="w-full appearance-none pl-3 pr-8 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-blue-600 focus:bg-white transition-all truncate"
+            >
+              {activeStudents.length > 0 ? (
+                activeStudents.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.first_name} {s.last_name || ''} ({s.goal || 'Тонус'}) • {s.gym ? s.gym.split('|')[0] : 'Зал'}
+                  </option>
+                ))
+              ) : (
+                <option value="">Нет активных учеников</option>
+              )}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Готовые схемы сплитов */}
+        <div className="pt-0.5">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+            Готовые схемы сплитов:
+          </span>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => applyPresetTemplate('fullbody3')}
+              className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-left text-[11px] font-semibold text-slate-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span className="truncate">Full Body (3 дня)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => applyPresetTemplate('split_upper_lower')}
+              className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-left text-[11px] font-semibold text-slate-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span className="truncate">Сплит Верх / Низ (4 дня)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Параметры сплита, разминка и ограничения */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-3.5 shadow-xs space-y-2.5">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+              Формат тренировок
+            </label>
+            <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setWorkoutType('fullbody')}
+                className={`py-1 text-[11px] font-semibold rounded-lg transition-all ${
+                  workoutType === 'fullbody' ? 'bg-white text-blue-600 shadow-2xs font-bold' : 'text-slate-600'
+                }`}
+              >
+                Full Body
+              </button>
+              <button
+                type="button"
+                onClick={() => setWorkoutType('split')}
+                className={`py-1 text-[11px] font-semibold rounded-lg transition-all ${
+                  workoutType === 'split' ? 'bg-white text-blue-600 shadow-2xs font-bold' : 'text-slate-600'
+                }`}
+              >
+                Split
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+              Дней в неделю
+            </label>
+            <div className="grid grid-cols-4 gap-1">
+              {[2, 3, 4, 5].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => handleFrequencyChange(num)}
+                  className={`py-1 rounded-xl font-bold border transition-all text-center text-xs ${
+                    frequency === num 
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-2xs' 
+                      : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Разминка и ограничения — без обрезки текста */}
+        <div className="space-y-2 pt-1 border-t border-slate-100">
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1">
+              <Activity className="w-3 h-3 text-blue-500" />
+              <span>Разминка перед тренировкой</span>
+            </label>
+            <input 
+              type="text"
+              value={warmup}
+              onChange={(e) => setWarmup(e.target.value)}
+              placeholder="Суставная разминка, МФР ролл, кардио 7-10 мин..."
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-blue-600 focus:bg-white transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-rose-500 uppercase tracking-wider flex items-center gap-1 mb-1">
+              <ShieldAlert className="w-3 h-3 text-rose-500" />
+              <span>Ограничения по здоровью (PAR-Q)</span>
+            </label>
+            <input 
+              type="text"
+              value={contraindications}
+              onChange={(e) => setContraindications(e.target.value)}
+              placeholder="Без осевой нагрузки, исключить глубокий присед..."
+              className="w-full px-3 py-2 bg-rose-50/60 border border-rose-200/70 rounded-xl text-xs font-semibold text-rose-900 outline-none focus:border-rose-400 focus:bg-white transition-all"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Упражнения текущего дня */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-3.5 shadow-xs space-y-2.5">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <span className="text-xs font-bold text-slate-900">Упражнения и нагрузки</span>
+          
+          <button 
+            type="button"
+            onClick={handleAddExerciseToCurrentDay}
+            className="text-[11px] text-blue-600 font-bold flex items-center gap-1 active:scale-95 cursor-pointer hover:text-blue-700"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Добавить</span>
+          </button>
+        </div>
+
+        {/* Переключатель активного дня */}
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+          {Array.from({ length: frequency }, (_, i) => i + 1).map((dayNum) => (
+            <button
+              key={dayNum}
+              type="button"
+              onClick={() => setActiveDay(dayNum)}
+              className={`py-1 px-3 rounded-xl font-semibold transition-all text-xs shrink-0 cursor-pointer ${
+                activeDay === dayNum 
+                  ? 'bg-blue-600 text-white shadow-2xs font-bold' 
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              День {dayNum}
+            </button>
+          ))}
+        </div>
+
+        {/* Название тренировочного дня */}
+        <input 
+          type="text"
+          value={daysWorkouts[activeDay]?.title || ''}
+          onChange={(e) => {
+            const updated = { ...daysWorkouts };
+            updated[activeDay].title = e.target.value;
+            setDaysWorkouts(updated);
+          }}
+          placeholder={`Название Дня ${activeDay}`}
+          className="w-full px-3 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-blue-600 focus:bg-white transition-all"
         />
 
-        {/* Exercises List */}
-        <div className="p-4 space-y-4">
-          {currentDay.exercises.length === 0 ? (
-            <div className="text-center py-10 bg-neutral-900 border border-neutral-800 rounded-2xl border-dashed">
-              <Zap className="w-8 h-8 text-neutral-600 mx-auto mb-2" />
-              <p className="text-sm text-neutral-400">В этот день пока нет упражнений</p>
-              <p className="text-xs text-neutral-500 mt-1">Добавьте первое упражнение из базы</p>
-            </div>
-          ) : (
-            currentDay.exercises.map((ex, idx) => (
-              <ExerciseCardItem
-                key={ex.id}
-                exercise={ex}
-                index={idx}
-                onUpdate={handleUpdateExercise}
-                onRemove={handleRemoveExercise}
-              />
-            ))
-          )}
+        {/* Карточки упражнений со степперами и чипсами весов */}
+        <div className="space-y-2.5 pt-0.5">
+          {(daysWorkouts[activeDay]?.exercises || []).map((ex, index) => {
+            const currentMuscle = ex.muscleGroup || 'Грудь';
+            const availableExercises = exerciseDatabase[currentMuscle] || [];
 
-          <button
-            onClick={() => setIsSearchModalOpen(true)}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Добавить упражнение
-          </button>
+            return (
+              <div key={index} className="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5">
+                
+                {/* Выбор группы мышц и названия упражнения */}
+                <div className="flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    <div className="w-[35%] relative shrink-0">
+                      <select
+                        value={currentMuscle}
+                        onChange={(e) => handleExerciseChange(index, 'muscleGroup', e.target.value)}
+                        className="w-full appearance-none pl-2.5 pr-5 py-1.5 bg-white border border-slate-200/80 rounded-xl text-xs font-bold text-blue-700 outline-none truncate"
+                      >
+                        {Object.keys(exerciseDatabase).map((mg, i) => (
+                          <option key={i} value={mg}>{mg}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+
+                    <div className="flex-1 relative min-w-0">
+                      <select
+                        value={ex.name}
+                        onChange={(e) => handleExerciseChange(index, 'name', e.target.value)}
+                        className="w-full appearance-none pl-2.5 pr-5 py-1.5 bg-white border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-800 outline-none truncate"
+                      >
+                        {availableExercises.map((item, i) => (
+                          <option key={i} value={item}>{item}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {daysWorkouts[activeDay].exercises.length > 1 && (
+                    <button 
+                      type="button"
+                      onClick={() => handleRemoveExercise(index)}
+                      className="p-1.5 text-slate-300 hover:text-rose-600 transition-colors shrink-0 active:scale-90"
+                      title="Удалить упражнение"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* 3 интерактивных блока со степперами + / - */}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  
+                  {/* Подходы */}
+                  <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+                    <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Подходы
+                    </span>
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => adjustExerciseVal(index, 'sets', -1, 1)}
+                        className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs active:scale-90 transition-all cursor-pointer"
+                      >
+                        -
+                      </button>
+                      <input 
+                        type="text"
+                        inputMode="numeric"
+                        value={ex.sets ?? ''}
+                        onChange={(e) => handleNumberInputChange(index, 'sets', e.target.value)}
+                        className="w-8 text-center text-xs font-extrabold font-mono text-slate-900 bg-transparent outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => adjustExerciseVal(index, 'sets', 1, 1)}
+                        className="w-6 h-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center justify-center text-xs active:scale-90 transition-all cursor-pointer shadow-2xs"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Повторы */}
+                  <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+                    <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Повторы
+                    </span>
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => adjustExerciseVal(index, 'reps', -1, 1)}
+                        className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs active:scale-90 transition-all cursor-pointer"
+                      >
+                        -
+                      </button>
+                      <input 
+                        type="text"
+                        inputMode="numeric"
+                        value={ex.reps ?? ''}
+                        onChange={(e) => handleNumberInputChange(index, 'reps', e.target.value)}
+                        className="w-8 text-center text-xs font-extrabold font-mono text-slate-900 bg-transparent outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => adjustExerciseVal(index, 'reps', 1, 1)}
+                        className="w-6 h-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center justify-center text-xs active:scale-90 transition-all cursor-pointer shadow-2xs"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Вес (кг) */}
+                  <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+                    <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Вес (кг)
+                    </span>
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => adjustExerciseVal(index, 'weight', -2.5, 0)}
+                        className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs active:scale-90 transition-all cursor-pointer"
+                      >
+                        -
+                      </button>
+                      <input 
+                        type="text"
+                        inputMode="decimal"
+                        value={ex.weight ?? ''}
+                        onChange={(e) => handleNumberInputChange(index, 'weight', e.target.value)}
+                        className="w-10 text-center text-xs font-extrabold font-mono text-blue-600 bg-transparent outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => adjustExerciseVal(index, 'weight', 2.5, 0)}
+                        className="w-6 h-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center justify-center text-xs active:scale-90 transition-all cursor-pointer shadow-2xs"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Быстрая прибавка веса блинами: +2.5, +5, +10 кг */}
+                <div className="flex items-center justify-between pt-0.5">
+                  <span className="text-[9.5px] text-slate-400 font-semibold">Быстрый вес:</span>
+                  <div className="flex items-center gap-1">
+                    {[2.5, 5, 7.5, 10].map(addVal => (
+                      <button
+                        key={addVal}
+                        type="button"
+                        onClick={() => adjustExerciseVal(index, 'weight', addVal, 0)}
+                        className="px-2 py-0.5 bg-white hover:bg-blue-50 hover:text-blue-700 text-slate-600 rounded-lg text-[10px] font-mono font-bold border border-slate-200/80 active:scale-90 transition-all cursor-pointer shadow-2xs"
+                      >
+                        +{addVal}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            );
+          })}
         </div>
-      </div>
 
-      {/* Save Footer */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-neutral-900 border-t border-neutral-800 pb-[calc(1rem+env(safe-area-inset-bottom))] z-20">
-        <div className="max-w-md mx-auto flex items-center justify-between gap-4">
+        {/* Кнопка сохранения программы */}
+        <div className="pt-2 flex items-center justify-between border-t border-slate-100">
           {saveSuccess ? (
-            <span className="text-emerald-500 text-xs font-bold flex items-center gap-1">
-              <CheckCircle2 className="w-4 h-4" />
-              Программа назначена!
+            <span className="text-emerald-600 text-xs font-bold flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>План назначен!</span>
             </span>
           ) : (
-            <span className="text-neutral-500 text-xs">
-              Автосохранение черновика...
-            </span>
+            <span className="text-slate-400 text-[10px]">Синхронизируется с учеником</span>
           )}
 
           <button
-            onClick={handleSaveProgram}
+            type="button"
             disabled={saving}
-            className="px-6 py-2.5 bg-white text-black hover:bg-neutral-200 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors disabled:opacity-50"
+            onClick={handleSaveProgram}
+            className="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer disabled:opacity-50"
           >
-            <Save className="w-4 h-4" />
-            {saving ? 'Сохранение...' : 'Отправить ученику'}
+            <Save className="w-3.5 h-3.5" />
+            <span>{saving ? '...' : 'Сохранить программу'}</span>
           </button>
         </div>
       </div>
 
-      {/* Modals */}
-      <ExerciseSearchModal
-        isOpen={isSearchModalOpen}
-        onClose={() => setIsSearchModalOpen(false)}
-        onSelectExercise={handleSelectExercise}
-      />
-
+      {/* Полноэкранный профиль ученика */}
       <StudentDetailModal 
         isOpen={Boolean(selectedStudentForModal)}
         onClose={() => setSelectedStudentForModal(null)}
         student={selectedStudentForModal}
         onUpdate={onUpdate}
       />
+
     </div>
   );
 }
