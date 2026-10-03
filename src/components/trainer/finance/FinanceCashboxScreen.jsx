@@ -13,9 +13,13 @@ import {
   X,
   Search,
   ArrowUpRight,
-  TrendingDown
+  TrendingDown,
+  Building,
+  Save,
+  Wallet,
+  ExternalLink,
+  ChevronDown
 } from 'lucide-react';
-import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
 
 export default function FinanceCashboxScreen({ 
   students = [], 
@@ -23,16 +27,38 @@ export default function FinanceCashboxScreen({
   onBack, 
   onUpdate 
 }) {
-  const [activeTab, setActiveTab] = useState('invoices'); // 'invoices' | 'history'
+  const [activeTab, setActiveTab] = useState('invoices'); // 'invoices' | 'history' | 'requisites'
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [copiedInvoiceId, setCopiedInvoiceId] = useState(null);
-  const [sendingInvoiceId, setSendingInvoiceId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const coachName = trainer?.full_name || trainer?.first_name || 'Наставник';
-  const coachPhone = trainer?.phone ? String(trainer.phone).replace(/\D/g, '') : '';
-  const cleanPhone = coachPhone.startsWith('7') ? coachPhone : `7${coachPhone}`;
+  // 1. Реквизиты тренера (редактируемые в отдельной вкладке и сохраняемые в памяти)
+  const [trainerRequisites, setTrainerRequisites] = useState(() => {
+    try {
+      const saved = localStorage.getItem('gymconnect_coach_requisites');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    const defaultPhone = trainer?.phone ? String(trainer.phone).replace(/\D/g, '') : '';
+    return {
+      phone: defaultPhone.startsWith('7') ? defaultPhone : (defaultPhone ? `7${defaultPhone}` : '77011234567'),
+      bankCard: '4400 4301 2345 6789',
+      recipientName: trainer?.full_name || trainer?.first_name || 'Наставник',
+      bankName: 'Банковский перевод / По номеру'
+    };
+  });
+  const [reqSavedFeedback, setReqSavedFeedback] = useState(false);
 
+  const handleSaveRequisites = (e) => {
+    e.preventDefault();
+    try {
+      localStorage.setItem('gymconnect_coach_requisites', JSON.stringify(trainerRequisites));
+      setReqSavedFeedback(true);
+      setTimeout(() => setReqSavedFeedback(false), 2500);
+    } catch (err) {}
+  };
+
+  // 2. Выставленные счета
   const [invoices, setInvoices] = useState(() => {
     try {
       const saved = localStorage.getItem('gymconnect_coach_invoices');
@@ -47,17 +73,19 @@ export default function FinanceCashboxScreen({
         studentId: st.id,
         studentName: st.full_name || `${st.first_name || 'Атлет'} ${st.last_name || ''}`.trim(),
         username: st.username || st.telegram_username,
-        telegramId: st.telegram_id,
+        phone: st.phone || st.whatsapp,
         amount,
         workoutsCount: Number(st.total_trainings) || 12,
-        status: isPaid ? 'paid' : (i === 1 ? 'pending' : 'overdue'),
-        createdAt: new Date(Date.now() - (i + 1) * 3600000 * 24).toISOString(),
-        dueDate: new Date(Date.now() + (3 - i) * 3600000 * 24).toISOString(),
-        method: isPaid ? 'Kaspi Pay' : null
+        format: st.training_format || st.package_type || 'Индивидуально',
+        status: isPaid ? 'paid' : (i === 1 ? 'pending' : 'rejected'),
+        createdAt: new Date(Date.now() - (i + 1) * 86400000).toISOString(),
+        dueDate: new Date(Date.now() + (4 - i) * 86400000).toISOString(),
+        customNote: 'Продление блока тренировок'
       };
     });
   });
 
+  // 3. Кассовая лента (поступления и расходы)
   const [receipts, setReceipts] = useState(() => {
     try {
       const saved = localStorage.getItem('gymconnect_coach_receipts');
@@ -67,41 +95,35 @@ export default function FinanceCashboxScreen({
     return [
       {
         id: 'rec-1',
-        studentName: students[0]?.full_name || 'Алихан Смаилов',
+        title: students[0]?.full_name || 'Алихан Смаилов',
         amount: 70000,
-        type: 'subscription',
+        type: 'income',
+        category: 'Оплата абонемента',
         desc: 'Блок на 12 тренировок (Индивидуально)',
-        method: 'Kaspi Pay',
         date: new Date(Date.now() - 3600000 * 18).toISOString()
       },
       {
         id: 'rec-2',
-        studentName: students[1]?.full_name || 'Данияр Сериков',
-        amount: 80000,
-        type: 'subscription',
-        desc: 'Пакет на 12 тренировок (Сплит)',
-        method: 'Kaspi Перевод',
-        date: new Date(Date.now() - 3600000 * 50).toISOString()
+        title: 'Аренда тренажерного зала',
+        amount: -45000,
+        type: 'expense',
+        category: 'Аренда зала',
+        desc: 'Авансовый платеж за аренду зала',
+        date: new Date(Date.now() - 3600000 * 48).toISOString()
       },
       {
         id: 'rec-3',
-        studentName: 'Клубная аренда зала',
-        amount: -45000,
-        type: 'expense',
-        desc: 'Оплата аренды тренажерного зала',
-        method: 'Безналичный расчет',
-        date: new Date(Date.now() - 3600000 * 96).toISOString()
+        title: students[1]?.full_name || 'Данияр Сериков',
+        amount: 80000,
+        type: 'income',
+        category: 'Оплата абонемента',
+        desc: 'Пакет на 12 занятий (Сплит)',
+        date: new Date(Date.now() - 3600000 * 72).toISOString()
       }
     ];
   });
 
-  const [invoiceForm, setInvoiceForm] = useState({
-    studentId: students[0]?.id || '',
-    amount: 70000,
-    workoutsCount: 12,
-    customNote: 'Продление абонемента на 12 тренировок'
-  });
-
+  // Синхронизация с хранилищем
   useEffect(() => {
     try {
       localStorage.setItem('gymconnect_coach_invoices', JSON.stringify(invoices));
@@ -116,96 +138,130 @@ export default function FinanceCashboxScreen({
 
   const formatMoney = (n) => `${Number(n || 0).toLocaleString('ru-RU')} ₸`;
 
-  const totalInvoicedPending = useMemo(() => {
+  // Форма нового счёта
+  const [invoiceForm, setInvoiceForm] = useState({
+    studentId: students[0]?.id || '',
+    amount: 70000,
+    workoutsCount: 12,
+    customNote: 'Продление абонемента на 12 занятий'
+  });
+
+  // Форма нового расхода
+  const [expenseForm, setExpenseForm] = useState({
+    title: '',
+    category: 'Аренда зала',
+    amount: 30000,
+    desc: ''
+  });
+
+  const totalPendingAmount = useMemo(() => {
     return invoices
-      .filter(inv => inv.status === 'pending' || inv.status === 'overdue')
-      .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+      .filter(i => i.status === 'pending')
+      .reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
   }, [invoices]);
 
+  // Добавление нового счёта
   const handleCreateInvoice = (e) => {
     e.preventDefault();
     const st = students.find(s => s.id === invoiceForm.studentId);
     if (!st) return;
 
-    const newInvoice = {
+    const newInv = {
       id: `inv-${Date.now()}`,
       studentId: st.id,
       studentName: st.full_name || `${st.first_name || 'Атлет'} ${st.last_name || ''}`.trim(),
       username: st.username || st.telegram_username,
-      telegramId: st.telegram_id,
+      phone: st.phone || st.whatsapp,
       amount: Number(invoiceForm.amount) || 70000,
       workoutsCount: Number(invoiceForm.workoutsCount) || 12,
+      format: st.training_format || st.package_type || 'Индивидуально',
       status: 'pending',
       createdAt: new Date().toISOString(),
       dueDate: new Date(Date.now() + 5 * 86400000).toISOString(),
       customNote: invoiceForm.customNote
     };
 
-    setInvoices([newInvoice, ...invoices]);
+    setInvoices([newInv, ...invoices]);
     setIsInvoiceModalOpen(false);
+
+    // Сразу открыть диалог отправки в Telegram
+    handleSendViaTelegram(newInv);
   };
 
-  const handleMarkAsPaid = (invoiceId) => {
-    const inv = invoices.find(i => i.id === invoiceId);
-    if (!inv) return;
+  // Добавление расхода тренера
+  const handleAddExpense = (e) => {
+    e.preventDefault();
+    if (!expenseForm.title.trim()) return;
 
-    const updatedInvoices = invoices.map(i => {
+    const newExp = {
+      id: `rec-exp-${Date.now()}`,
+      title: expenseForm.title.trim(),
+      amount: -Math.abs(Number(expenseForm.amount) || 0),
+      type: 'expense',
+      category: expenseForm.category,
+      desc: expenseForm.desc.trim() || expenseForm.category,
+      date: new Date().toISOString()
+    };
+
+    setReceipts([newExp, ...receipts]);
+    setIsExpenseModalOpen(false);
+    setExpenseForm({ title: '', category: 'Аренда зала', amount: 30000, desc: '' });
+  };
+
+  // Смена статуса счёта
+  const handleUpdateInvoiceStatus = (invoiceId, newStatus) => {
+    const target = invoices.find(i => i.id === invoiceId);
+    if (!target) return;
+
+    const updated = invoices.map(i => {
       if (i.id === invoiceId) {
-        return { ...i, status: 'paid', method: 'Kaspi Pay' };
+        return { ...i, status: newStatus };
       }
       return i;
     });
+    setInvoices(updated);
 
-    setInvoices(updatedInvoices);
-
-    const newReceipt = {
-      id: `rec-${Date.now()}`,
-      studentName: inv.studentName,
-      amount: inv.amount,
-      type: 'subscription',
-      desc: `Оплата счёта: ${inv.workoutsCount} занятий`,
-      method: 'Kaspi Pay',
-      date: new Date().toISOString()
-    };
-    setReceipts([newReceipt, ...receipts]);
+    // Если счёт перевели в «Оплачен», автоматически фиксируем приход в кассовую ленту
+    if (newStatus === 'paid' && target.status !== 'paid') {
+      const autoReceipt = {
+        id: `rec-auto-${Date.now()}`,
+        title: target.studentName,
+        amount: target.amount,
+        type: 'income',
+        category: 'Оплата счёта',
+        desc: `${target.workoutsCount} занятий • ${target.format}`,
+        date: new Date().toISOString()
+      };
+      setReceipts([autoReceipt, ...receipts]);
+    }
 
     if (onUpdate) onUpdate();
   };
 
-  const getReminderText = (inv) => {
-    return `🧾 <b>Счёт на оплату тренировок GymConnect</b>\n\nАтлет: <b>${escapeHtml(inv.studentName)}</b>\nПакет: <b>${inv.workoutsCount} персональных тренировок</b>\nК оплате: <b>${formatMoney(inv.amount)}</b>\n\nРеквизиты Kaspi:\n📱 <b>+${cleanPhone || '77000000000'}</b> (${escapeHtml(coachName)})\n\n<i>После оплаты отправьте квитанцию в этот чат для продления графика.</i>`;
+  // Шаблон текста счёта с динамическими реквизитами
+  const generateInvoiceMessage = (inv) => {
+    return `Здравствуйте, ${inv.studentName}!\n\nВыставляю счёт на персональные тренировки в GymConnect:\n• Пакет: ${inv.workoutsCount} занятий (${inv.format})\n• Сумма к оплате: ${formatMoney(inv.amount)}\n\nРеквизиты для перевода:\n📱 Номер телефона: +${trainerRequisites.phone}\n💳 Номер карты: ${trainerRequisites.bankCard}\nПолучатель: ${trainerRequisites.recipientName}\n\nПосле перевода отправьте, пожалуйста, квитанцию в этот чат. Спасибо!`;
   };
 
-  const handleRemindViaTelegram = async (inv) => {
-    setSendingInvoiceId(inv.id);
-    const text = getReminderText(inv);
+  // Прямой переход в личку Telegram с предзаполненным шаблоном
+  const handleSendViaTelegram = (inv) => {
+    const rawText = generateInvoiceMessage(inv);
+    const cleanNick = (inv.username || '').replace('@', '').trim();
 
-    if (inv.telegramId) {
-      try {
-        const res = await sendTelegramMessage(String(inv.telegramId), text, 'HTML');
-        if (res && res.ok) {
-          alert(`✅ Счёт успешно отправлен в Telegram ученику ${inv.studentName}!`);
-        } else {
-          navigator.clipboard.writeText(text.replace(/<[^>]*>/g, ''));
-          alert(`Текст счёта скопирован для отправки в личку @${inv.username || ''}`);
-        }
-      } catch (e) {
-        navigator.clipboard.writeText(text.replace(/<[^>]*>/g, ''));
-        alert(`Текст счёта скопирован в буфер обмена.`);
-      }
-    } else if (inv.username) {
-      navigator.clipboard.writeText(text.replace(/<[^>]*>/g, ''));
-      window.open(`https://t.me/${inv.username.replace('@', '')}`, '_blank');
+    if (cleanNick) {
+      window.open(`https://t.me/${cleanNick}?text=${encodeURIComponent(rawText)}`, '_blank');
+    } else if (inv.phone) {
+      const digits = String(inv.phone).replace(/\D/g, '');
+      const validPhone = digits.startsWith('7') ? digits : `7${digits}`;
+      window.open(`https://wa.me/${validPhone}?text=${encodeURIComponent(rawText)}`, '_blank');
     } else {
-      navigator.clipboard.writeText(text.replace(/<[^>]*>/g, ''));
-      alert('Текст счёта скопирован в буфер обмена.');
+      navigator.clipboard.writeText(rawText);
+      alert('У атлета не указан Telegram. Текст счёта скопирован в буфер обмена.');
     }
-    setSendingInvoiceId(null);
   };
 
-  const handleCopyInvoiceText = (inv) => {
-    const raw = getReminderText(inv).replace(/<[^>]*>/g, '');
-    navigator.clipboard.writeText(raw);
+  const handleCopyTextOnly = (inv) => {
+    navigator.clipboard.writeText(generateInvoiceMessage(inv));
     setCopiedInvoiceId(inv.id);
     setTimeout(() => setCopiedInvoiceId(null), 2000);
   };
@@ -218,7 +274,8 @@ export default function FinanceCashboxScreen({
 
   return (
     <div className="min-h-screen bg-[#F2F2F7] text-slate-900 select-none pb-28">
-      {/* 1. ВЕРХНИЙ БАР */}
+      
+      {/* 1. ВЕРХНИЙ БАР (ЧИСТЫЙ МОНОХРОМ) */}
       <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 px-4 py-3 shadow-2xs">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <button
@@ -232,90 +289,98 @@ export default function FinanceCashboxScreen({
 
           <div className="text-center">
             <h1 className="text-xs font-bold text-slate-900">Касса и Счета</h1>
-            <p className="text-[10px] text-slate-400 font-medium">Kaspi Pay интеграция</p>
+            <p className="text-[10px] text-slate-400 font-medium">Безналичные расчёты и расходы</p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsInvoiceModalOpen(true)}
-            className="w-8 h-8 rounded-xl bg-[#1E60D5] hover:bg-blue-700 text-white flex items-center justify-center active:scale-95 transition-all shadow-xs cursor-pointer"
-            title="Выставить счёт"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-          </button>
+          <div className="w-8" />
         </div>
 
-        {/* Переключатель табов */}
-        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl mt-3 max-w-md mx-auto border border-slate-200/80">
+        {/* 3 вкладки без лишних ярких цветов */}
+        <div className="grid grid-cols-3 p-1 bg-slate-100 rounded-2xl mt-3 max-w-md mx-auto border border-slate-200/80">
           <button
             type="button"
             onClick={() => setActiveTab('invoices')}
-            className={`py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer ${
               activeTab === 'invoices' 
                 ? 'bg-white text-slate-900 shadow-2xs font-bold' 
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <CreditCard className="w-3.5 h-3.5 text-[#1E60D5]" />
+            <CreditCard className="w-3.5 h-3.5 text-slate-700" />
             <span>Счета ({invoices.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('history')}
-            className={`py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer ${
               activeTab === 'history' 
                 ? 'bg-white text-slate-900 shadow-2xs font-bold' 
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Receipt className="w-3.5 h-3.5 text-slate-600" />
-            <span>Кассовая лента</span>
+            <Receipt className="w-3.5 h-3.5 text-slate-700" />
+            <span>Лента кассы</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('requisites')}
+            className={`py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              activeTab === 'requisites' 
+                ? 'bg-white text-slate-900 shadow-2xs font-bold' 
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Wallet className="w-3.5 h-3.5 text-slate-700" />
+            <span>Реквизиты</span>
           </button>
         </div>
       </div>
 
       <div className="p-3.5 max-w-md mx-auto space-y-3.5">
-        {/* ПЛАШКА ОЖИДАЕМЫХ СРЕДСТВ */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div className="space-y-0.5">
-            <span className="text-[11px] text-slate-400 font-medium block">
-              Ждут оплаты по счетам
-            </span>
-            <span className="text-lg font-bold text-amber-600 font-mono block">
-              {formatMoney(totalInvoicedPending)}
-            </span>
-          </div>
 
-          <button
-            type="button"
-            onClick={() => setIsInvoiceModalOpen(true)}
-            className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition-all active:scale-95 flex items-center gap-1.5 border border-slate-200 cursor-pointer shadow-2xs"
-          >
-            <Plus className="w-3.5 h-3.5 text-[#1E60D5]" />
-            <span>Выставить счёт</span>
-          </button>
-        </div>
-
-        {/* ВКЛАДКА 1: ВЫСТАВЛЕННЫЕ СЧЕТА */}
+        {/* ================= ВКЛАДКА 1: ВЫСТАВЛЕННЫЕ СЧЕТА ================= */}
         {activeTab === 'invoices' && (
           <div className="space-y-3">
+            {/* Карточка ожидающих платежей и кнопка выставления */}
+            <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                  Ждут оплаты
+                </span>
+                <span className="text-lg font-bold text-slate-900 font-mono block mt-0.5">
+                  {formatMoney(totalPendingAmount)}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsInvoiceModalOpen(true)}
+                className="py-2.5 px-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <span>Выставить счёт</span>
+              </button>
+            </div>
+
             {/* Поиск */}
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Поиск счёта по атлету..."
+                placeholder="Поиск по имени атлета или никнейму..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200/80 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#1E60D5] shadow-2xs"
+                className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200/80 rounded-2xl text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400 shadow-2xs"
               />
             </div>
 
+            {/* Список счетов */}
             <div className="space-y-2.5">
               {filteredInvoices.map((inv) => {
                 const isPaid = inv.status === 'paid';
-                const isOverdue = inv.status === 'overdue';
+                const isRejected = inv.status === 'rejected';
 
                 return (
                   <div
@@ -335,7 +400,7 @@ export default function FinanceCashboxScreen({
                           )}
                         </div>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          {inv.workoutsCount} тренировок • Срок: до {new Date(inv.dueDate).toLocaleDateString('ru-RU')}
+                          {inv.workoutsCount} занятий ({inv.format}) • До {new Date(inv.dueDate).toLocaleDateString('ru-RU')}
                         </p>
                       </div>
 
@@ -343,51 +408,50 @@ export default function FinanceCashboxScreen({
                         <span className="text-xs font-mono font-bold text-slate-900 block">
                           {formatMoney(inv.amount)}
                         </span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-1 ${
-                          isPaid 
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                            : isOverdue
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}>
-                          {isPaid ? 'Оплачен' : isOverdue ? 'Просрочен' : 'Ожидает оплаты'}
-                        </span>
+                        
+                        {/* Селектор статуса счёта */}
+                        <div className="relative inline-block mt-1">
+                          <select
+                            value={inv.status}
+                            onChange={(e) => handleUpdateInvoiceStatus(inv.id, e.target.value)}
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border appearance-none pr-5 outline-none cursor-pointer ${
+                              isPaid 
+                                ? 'bg-slate-100 text-slate-800 border-slate-300' 
+                                : isRejected
+                                  ? 'bg-slate-100 text-slate-500 border-slate-300 line-through'
+                                  : 'bg-slate-900 text-white border-slate-900'
+                            }`}
+                          >
+                            <option value="pending">Ожидает оплаты</option>
+                            <option value="paid">Оплачен</option>
+                            <option value="rejected">Отклонён</option>
+                          </select>
+                          <ChevronDown className="w-3 h-3 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+                        </div>
                       </div>
                     </div>
 
-                    {/* Панель действий */}
+                    {/* Кнопка отправки напрямую в Telegram */}
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          disabled={sendingInvoiceId === inv.id}
-                          onClick={() => handleRemindViaTelegram(inv)}
-                          className="py-1.5 px-2.5 bg-blue-50 hover:bg-blue-100 text-[#1E60D5] border border-blue-200 rounded-xl text-[11px] font-semibold transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
-                        >
-                          <Send className="w-3 h-3" />
-                          <span>В Telegram</span>
-                        </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSendViaTelegram(inv)}
+                        className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-xl text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                        title="Открыть чат в Telegram с готовым текстом"
+                      >
+                        <Send className="w-3 h-3 text-slate-700" />
+                        <span>Открыть диалог в Telegram</span>
+                        <ExternalLink className="w-3 h-3 text-slate-400 ml-0.5" />
+                      </button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleCopyInvoiceText(inv)}
-                          className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-semibold transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
-                          title="Скопировать реквизиты"
-                        >
-                          {copiedInvoiceId === inv.id ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                        </button>
-                      </div>
-
-                      {!isPaid && (
-                        <button
-                          type="button"
-                          onClick={() => handleMarkAsPaid(inv.id)}
-                          className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-2xs"
-                        >
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>Получил оплату</span>
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleCopyTextOnly(inv)}
+                        className="py-2 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-semibold transition-all active:scale-95 flex items-center gap-1 cursor-pointer border border-slate-200 shadow-2xs"
+                        title="Скопировать текст счёта"
+                      >
+                        {copiedInvoiceId === inv.id ? <Check className="w-3.5 h-3.5 text-slate-900" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
                     </div>
                   </div>
                 );
@@ -396,61 +460,149 @@ export default function FinanceCashboxScreen({
           </div>
         )}
 
-        {/* ВКЛАДКА 2: ИСТОРИЯ ПОСТУПЛЕНИЙ */}
+        {/* ================= ВКЛАДКА 2: КАССОВАЯ ЛЕНТА И РАСХОДЫ ================= */}
         {activeTab === 'history' && (
-          <div className="space-y-2.5">
-            {receipts.map((rec) => {
-              const isPositive = rec.amount > 0;
-              return (
-                <div
-                  key={rec.id}
-                  className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                      isPositive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
-                    }`}>
-                      {isPositive ? <ArrowUpRight className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+          <div className="space-y-3">
+            {/* Кнопка добавления расхода */}
+            <div className="flex items-center justify-between bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs">
+              <div>
+                <span className="text-xs font-bold text-slate-900 block">Учёт расходов тренера</span>
+                <span className="text-[10.5px] text-slate-400">Аренда зала, инвентарь, реклама и налоги</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsExpenseModalOpen(true)}
+                className="py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Расход</span>
+              </button>
+            </div>
+
+            {/* Лента транзакций */}
+            <div className="space-y-2">
+              {receipts.map((rec) => {
+                const isIncome = rec.amount > 0;
+
+                return (
+                  <div
+                    key={rec.id}
+                    className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-slate-100 border border-slate-200 text-slate-700">
+                        {isIncome ? <ArrowUpRight className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                      </div>
+
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-slate-900 truncate">
+                          {rec.title}
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 truncate">
+                          {rec.desc || rec.category}
+                        </p>
+                      </div>
                     </div>
 
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900">
-                        {rec.studentName}
-                      </h4>
-                      <p className="text-[11px] text-slate-500 leading-snug">
-                        {rec.desc} • {rec.method}
-                      </p>
+                    <div className="text-right shrink-0">
+                      <span className={`text-xs font-mono font-bold block ${isIncome ? 'text-slate-900' : 'text-slate-500'}`}>
+                        {isIncome ? `+${formatMoney(rec.amount)}` : formatMoney(rec.amount)}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {new Date(rec.date).toLocaleDateString('ru-RU')}
+                      </span>
                     </div>
                   </div>
-
-                  <div className="text-right shrink-0">
-                    <span className={`text-xs font-mono font-bold block ${isPositive ? 'text-emerald-700' : 'text-slate-800'}`}>
-                      {isPositive ? `+${formatMoney(rec.amount)}` : formatMoney(rec.amount)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {new Date(rec.date).toLocaleDateString('ru-RU')}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
+
+        {/* ================= ВКЛАДКА 3: РЕКВИЗИТЫ ТРЕНЕРА ================= */}
+        {activeTab === 'requisites' && (
+          <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
+            <div className="border-b border-slate-100 pb-2">
+              <h3 className="text-xs font-bold text-slate-900">Реквизиты для приёма переводов</h3>
+              <p className="text-[10.5px] text-slate-400 mt-0.5">
+                Эти данные будут автоматически подставляться в шаблон счёта при отправке ученику
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveRequisites} className="space-y-3.5 text-xs">
+              <div>
+                <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">
+                  Номер телефона для перевода (+7):
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={trainerRequisites.phone}
+                  onChange={e => setTrainerRequisites({ ...trainerRequisites, phone: e.target.value.replace(/\D/g, '') })}
+                  placeholder="77011234567"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono font-bold outline-none focus:border-slate-400 focus:bg-white transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">
+                  Номер банковской карты:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={trainerRequisites.bankCard}
+                  onChange={e => setTrainerRequisites({ ...trainerRequisites, bankCard: e.target.value })}
+                  placeholder="4400 4301 2345 6789"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono font-bold outline-none focus:border-slate-400 focus:bg-white transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">
+                  Имя и фамилия получателя:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={trainerRequisites.recipientName}
+                  onChange={e => setTrainerRequisites({ ...trainerRequisites, recipientName: e.target.value })}
+                  placeholder="Данияр С."
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold outline-none focus:border-slate-400 focus:bg-white transition-all"
+                />
+              </div>
+
+              {reqSavedFeedback && (
+                <div className="p-2.5 bg-slate-100 border border-slate-300 rounded-xl text-slate-900 text-[11px] font-semibold flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-slate-900" />
+                  <span>Реквизиты сохранены и применены ко всем счетам!</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>Сохранить реквизиты</span>
+              </button>
+            </form>
+          </div>
+        )}
+
       </div>
 
-      {/* МОДАЛЬНОЕ ОКНО ВЫСТАВЛЕНИЯ СЧЁТА */}
+      {/* МОДАЛКА ВЫСТАВЛЕНИЯ СЧЁТА */}
       {isInvoiceModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 w-full max-w-md p-5 space-y-4 shadow-xl animate-in slide-in-from-bottom duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-[#1E60D5]" />
-                <h3 className="text-xs font-bold text-slate-900">Выставить счёт на оплату</h3>
-              </div>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <h3 className="text-xs font-bold text-slate-900">Выставить счёт на оплату</h3>
               <button
                 type="button"
                 onClick={() => setIsInvoiceModalOpen(false)}
-                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600"
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -464,7 +616,7 @@ export default function FinanceCashboxScreen({
                 <select
                   value={invoiceForm.studentId}
                   onChange={e => setInvoiceForm({ ...invoiceForm, studentId: e.target.value })}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-[#1E60D5] font-semibold"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none font-semibold"
                 >
                   {students.map(s => (
                     <option key={s.id} value={s.id}>
@@ -477,14 +629,14 @@ export default function FinanceCashboxScreen({
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">
-                    Сумма счёта (₸):
+                    Сумма (₸):
                   </label>
                   <input
                     type="number"
                     step="5000"
                     value={invoiceForm.amount}
                     onChange={e => setInvoiceForm({ ...invoiceForm, amount: Number(e.target.value) })}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-900 font-bold outline-none focus:border-[#1E60D5]"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-900 font-bold outline-none"
                   />
                 </div>
 
@@ -496,7 +648,7 @@ export default function FinanceCashboxScreen({
                     type="number"
                     value={invoiceForm.workoutsCount}
                     onChange={e => setInvoiceForm({ ...invoiceForm, workoutsCount: Number(e.target.value) })}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-900 font-bold outline-none focus:border-[#1E60D5]"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-900 font-bold outline-none"
                   />
                 </div>
               </div>
@@ -510,25 +662,104 @@ export default function FinanceCashboxScreen({
                   value={invoiceForm.customNote}
                   onChange={e => setInvoiceForm({ ...invoiceForm, customNote: e.target.value })}
                   placeholder="Блок на 12 тренировок"
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-[#1E60D5]"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none"
                 />
               </div>
 
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
-                <span className="text-slate-900 font-bold block">Реквизиты тренера:</span>
-                <p>Kaspi: +{cleanPhone || '77000000000'} ({coachName})</p>
+                <span className="text-slate-900 font-bold block">Привязанные реквизиты перевода:</span>
+                <p>Телефон: +{trainerRequisites.phone} • Получатель: {trainerRequisites.recipientName}</p>
+                <p className="font-mono text-[10.5px] text-slate-500">Карта: {trainerRequisites.bankCard}</p>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3.5 bg-[#1E60D5] hover:bg-blue-700 text-white rounded-2xl text-xs font-bold active:scale-95 transition-all shadow-md shadow-blue-600/25 cursor-pointer"
+                className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer flex items-center justify-center gap-2"
               >
-                Сформировать счёт и отправить
+                <Send className="w-4 h-4" />
+                <span>Сформировать и открыть Telegram</span>
               </button>
             </form>
           </div>
         </div>
       )}
+
+      {/* МОДАЛКА ДОБАВЛЕНИЯ РАСХОДА */}
+      {isExpenseModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 w-full max-w-md p-5 space-y-4 shadow-xl animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <h3 className="text-xs font-bold text-slate-900">Зафиксировать расход тренера</h3>
+              <button
+                type="button"
+                onClick={() => setIsExpenseModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddExpense} className="space-y-3.5 text-xs">
+              <div>
+                <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">
+                  Категория расхода:
+                </label>
+                <select
+                  value={expenseForm.category}
+                  onChange={e => {
+                    const cat = e.target.value;
+                    setExpenseForm({ ...expenseForm, category: cat, title: cat });
+                  }}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold outline-none"
+                >
+                  <option value="Аренда зала">Аренда зала (клубная ставка)</option>
+                  <option value="Спортивный инвентарь">Спортивный инвентарь / лямки / магнезия</option>
+                  <option value="Спортпит и вода">Спортпит / шейкеры / вода для клиентов</option>
+                  <option value="Реклама и продвижение">Реклама и продвижение</option>
+                  <option value="Налоги и комиссии">Налоги и комиссии переводов</option>
+                  <option value="Прочее">Прочее</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">
+                  Название расхода:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={expenseForm.title}
+                  onChange={e => setExpenseForm({ ...expenseForm, title: e.target.value })}
+                  placeholder="Оплата аренды за текущий месяц"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10.5px] font-semibold text-slate-600 block mb-1">
+                  Сумма расхода (₸):
+                </label>
+                <input
+                  type="number"
+                  required
+                  step="1000"
+                  value={expenseForm.amount}
+                  onChange={e => setExpenseForm({ ...expenseForm, amount: Number(e.target.value) })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-900 font-bold outline-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer"
+              >
+                Внести в отчёт расходов
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
