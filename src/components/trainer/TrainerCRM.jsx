@@ -15,6 +15,7 @@ import AddStudentModal from './components/AddStudentModal';
 import InquiriesScreen from './screens/InquiriesScreen';
 import AthletesScreen from './screens/AthletesScreen';
 import AthleteDetailScreen from './screens/AthleteDetailScreen';
+import TrainerProductsLaunchScreen from './screens/TrainerProductsLaunchScreen';
 
 // Все полноэкранные страницы меню
 import TrainerSubscriptionModal from './components/modals/TrainerSubscriptionModal';
@@ -295,11 +296,27 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   }
 
   if (activeScreen === 'public_card') {
-    return <TrainerPublicCardModal isOpen={true} onClose={handleCloseScreenToMenu} onEditClick={() => setActiveScreen('edit_profile')} trainer={trainerData} cleanUsername={trainerData?.username || trainerUsername} />;
+    return (
+      <TrainerPublicCardModal 
+        isOpen={true} 
+        onClose={handleCloseScreenToMenu} 
+        onEditClick={() => setActiveScreen('edit_profile')} 
+        trainer={trainerData} 
+        cleanUsername={trainerData?.username || trainerUsername} 
+      />
+    );
   }
 
   if (activeScreen === 'edit_profile') {
-    return <TrainerEditProfileModal isOpen={true} onClose={handleCloseScreenToMenu} trainer={trainerData} cleanUsername={trainerData?.username || trainerUsername} onSaved={() => refreshTrainerData(false)} />;
+    return (
+      <TrainerEditProfileModal 
+        isOpen={true} 
+        onClose={handleCloseScreenToMenu} 
+        trainer={trainerData} 
+        cleanUsername={trainerData?.username || trainerUsername} 
+        onSaved={() => refreshTrainerData(false)} 
+      />
+    );
   }
 
   if (activeScreen === 'client_rules') {
@@ -307,7 +324,7 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
   }
 
   if (activeScreen === 'health_parq') {
-    return <TrainerHealthParqModal isOpen={true} onClose={handleCloseScreenToMenu} studentsList={students} />;
+    return <TrainerHealthParqModal isOpen={true} onClose={handleCloseScreenToMenu} studentsList={students} trainerProfile={trainerData} />;
   }
 
   if (activeScreen === 'templates') {
@@ -334,7 +351,18 @@ export default function TrainerCRM({ trainerUsername, onLogout, onBack }) {
     return <TrainerQrModal isOpen={true} onClose={handleCloseScreenToMenu} coachName={trainerData?.full_name || trainerData?.first_name || 'Тренер'} cleanUsername={trainerData?.username || trainerUsername} />;
   }
 
-  // 5. Основной дашборд CRM
+  // 5. Запуск цифровых продуктов тренера под ключ (GymConnect Launch Studio)
+  if (activeScreen === 'launch_studio') {
+    return (
+      <TrainerProductsLaunchScreen
+        trainer={trainerData}
+        onBack={handleCloseScreenToMenu}
+        onNavigateToPreview={() => setActiveScreen('public_card')}
+      />
+    );
+  }
+
+  // 6. Основной дашборд CRM
   const activeStudentsCount = students.filter(s => s.status === 'active' || !s.status).length;
   const pausedStudentsCount = students.filter(s => s.status === 'paused').length;
   const leftStudentsCount = students.filter(s => s.status === 'left').length;
