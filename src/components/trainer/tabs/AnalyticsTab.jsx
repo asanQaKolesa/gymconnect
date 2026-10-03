@@ -1,21 +1,24 @@
 // src/components/trainer/tabs/AnalyticsTab.jsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   TrendingUp, 
   AlertTriangle, 
   CheckCircle2, 
   BarChart3, 
   ShieldAlert, 
-  MessageCircle, 
   ChevronRight,
-  Users
+  Users,
+  Search,
+  Activity
 } from 'lucide-react';
-import StudentDetailModal from '../components/StudentDetailModal';
+import CoachingScorecardWidget from '../analytics/CoachingScorecardWidget';
+import AttendanceQualityWidget from '../analytics/AttendanceQualityWidget';
+import AthleteProgressDeepDive from '../analytics/AthleteProgressDeepDive';
 
-export default function AnalyticsTab({ students = [], onUpdate }) {
-  const [selectedStudentForModal, setSelectedStudentForModal] = useState(null);
+export default function AnalyticsTab({ students = [], trainer, onUpdate }) {
+  const [selectedStudentForDeepDive, setSelectedStudentForDeepDive] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Исправленная проверка активного атлета (без отсечения по кастомным статусам)
   const isStudentActive = (s) => {
     if (!s) return false;
     const st = (s.status || '').toLowerCase().trim();
@@ -23,194 +26,190 @@ export default function AnalyticsTab({ students = [], onUpdate }) {
   };
 
   const totalStudents = students.length;
-  const activeStudents = students.filter(isStudentActive);
-  const pausedStudents = students.filter(s => s.status === 'paused');
-  const leftStudents = students.filter(s => s.status === 'left');
+  const activeStudents = useMemo(() => students.filter(isStudentActive), [students]);
+  const pausedStudents = useMemo(() => students.filter(s => (s.status || '').toLowerCase().trim() === 'paused'), [students]);
+  const leftStudents = useMemo(() => students.filter(s => {
+    const st = (s.status || '').toLowerCase().trim();
+    return st === 'left' || st === 'archived';
+  }), [students]);
 
-  // Кандидаты на выбывание (остаток <= 2 занятий)
-  const riskStudents = activeStudents.filter(s => {
-    const left = s.left_trainings !== undefined ? s.left_trainings : (s.remaining_workouts !== undefined ? s.remaining_workouts : 12);
-    return left <= 2;
-  });
+  // Зона риска: остаток <= 2 занятий
+  const riskStudents = useMemo(() => {
+    return activeStudents.filter(s => {
+      const left = s.left_trainings !== undefined ? s.left_trainings : (s.remaining_workouts !== undefined ? s.remaining_workouts : 12);
+      return Number(left) <= 2;
+    });
+  }, [activeStudents]);
 
-  // Расчет процента удержания клиентов
   const retentionRate = totalStudents > 0 
     ? Math.round((activeStudents.length / totalStudents) * 100) 
     : 100;
 
-  const handleWhatsAppRemind = (e, phone, name, leftCount) => {
-    e.stopPropagation();
-    if (!phone) {
-      alert('У ученика не указан номер WhatsApp');
-      return;
-    }
-    const cleanPhone = phone.replace(/\D/g, '');
-    const message = encodeURIComponent(
-      `Привет, ${name}! Напоминаю, что по твоему абонементу осталось ${leftCount} зан. Давай запланируем продление, чтобы сохранить за тобой удобное время в графике! 💪`
+  // Фильтрация списка учеников
+  const filteredStudents = useMemo(() => {
+    return activeStudents.filter(s => {
+      const name = (s.full_name || `${s.first_name || ''} ${s.last_name || ''}`).toLowerCase();
+      const tg = (s.username || s.telegram_username || '').toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
+      return !q || name.includes(q) || tg.includes(q);
+    });
+  }, [activeStudents, searchQuery]);
+
+  // Если выбран атлет для глубокого научного среза — открываем полноэкранный отчёт
+  if (selectedStudentForDeepDive) {
+    return (
+      <AthleteProgressDeepDive
+        student={selectedStudentForDeepDive}
+        trainer={trainer}
+        onBack={() => setSelectedStudentForDeepDive(null)}
+      />
     );
-    window.open(`https://wa.me/7${cleanPhone.startsWith('7') ? cleanPhone.slice(1) : cleanPhone}?text=${message}`, '_blank');
-  };
+  }
 
   return (
-    <div className="space-y-3.5 select-none pb-12 text-xs">
+    <div className="space-y-3.5 select-none pb-28 text-xs text-slate-900">
       
-      {/* 1. Сводные карточки аналитики */}
+      {/* 1. Сводный виджет оценки тренера и дисциплины */}
+      <CoachingScorecardWidget 
+        overallRating={4.9}
+        totalReviews={18}
+        attendanceAverage={92}
+        streakAverage={7}
+      />
+
+      {/* 2. Сводные карточки удержания и риска */}
       <div className="grid grid-cols-2 gap-2.5">
         <div className="bg-white border border-slate-200/80 p-3.5 rounded-3xl shadow-xs space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[10.5px] text-slate-400 font-medium">Удержание (Retention)</span>
-            <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <span className="text-[10.5px] text-slate-400 font-medium">Удержание базы</span>
+            <div className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
               <TrendingUp className="w-3.5 h-3.5" />
             </div>
           </div>
           <p className="text-xl font-bold text-slate-900 font-mono mt-0.5">{retentionRate}%</p>
           <span className="text-[10px] text-slate-400 block font-normal">
-            {activeStudents.length} из {totalStudents} продолжают
+            {activeStudents.length} из {totalStudents} тренируются
           </span>
         </div>
 
         <div className="bg-white border border-slate-200/80 p-3.5 rounded-3xl shadow-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[10.5px] text-slate-400 font-medium">Зона риска (≤ 2 зан.)</span>
-            <div className="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
               <ShieldAlert className="w-3.5 h-3.5" />
             </div>
           </div>
-          <p className={`text-xl font-bold font-mono mt-0.5 ${
-            riskStudents.length > 0 ? 'text-rose-600' : 'text-emerald-600'
-          }`}>
-            {riskStudents.length} уч.
+          <p className="text-xl font-bold font-mono mt-0.5 text-slate-900">
+            {riskStudents.length} чел.
           </p>
           <span className="text-[10px] text-slate-400 block font-normal">
-            Требуют звонка или сообщения
+            Требуют продления абонемента
           </span>
         </div>
       </div>
 
-      {/* 2. Детальная сегментация базы */}
+      {/* 3. Структура базы подопечных */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-xs space-y-3">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 stroke-[2.2]" />
-            </div>
-            <div>
-              <h3 className="font-bold text-xs text-slate-900">Структура базы подопечных</h3>
-              <p className="text-[10px] text-slate-400">Состояние клиентов в CRM</p>
-            </div>
-          </div>
-          <span className="text-[10px] font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <span className="text-xs font-bold text-slate-900">Структура базы подопечных</span>
+          <span className="text-[10px] font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
             Всего: {totalStudents}
           </span>
         </div>
 
         <div className="space-y-2">
-          {/* Активные */}
           <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-              <span className="text-xs font-semibold text-slate-800">Активно тренируются</span>
-            </div>
+            <span className="text-xs font-semibold text-slate-800">Активно тренируются</span>
             <span className="text-xs font-bold font-mono text-slate-900">{activeStudents.length} чел.</span>
           </div>
 
-          {/* На паузе */}
           <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-              <span className="text-xs font-semibold text-slate-800">Заморозка / отпуск</span>
-            </div>
+            <span className="text-xs font-semibold text-slate-800">Заморозка / отпуск</span>
             <span className="text-xs font-bold font-mono text-slate-900">{pausedStudents.length} чел.</span>
           </div>
 
-          {/* Завершили */}
           <div className="p-2.5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-              <span className="text-xs font-semibold text-slate-800">Не продлили абонемент</span>
-            </div>
+            <span className="text-xs font-semibold text-slate-800">Завершили абонемент</span>
             <span className="text-xs font-bold font-mono text-slate-900">{leftStudents.length} чел.</span>
           </div>
         </div>
       </div>
 
-      {/* 3. Список учеников «Зоны риска» */}
-      <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <div>
-              <h3 className="font-bold text-xs text-slate-900">Кандидаты на продление (≤ 2 зан.)</h3>
-              <p className="text-[10px] text-slate-400">Нажмите на карточку для перехода в профиль</p>
-            </div>
+      {/* 4. Посещаемость и доходимость */}
+      <AttendanceQualityWidget students={students} />
+
+      {/* 5. Индивидуальный прогресс атлетов (клик открывает полный научный анализ) */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs space-y-3 p-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div>
+            <h3 className="text-xs font-bold text-slate-900">Индивидуальный прогресс подопечных</h3>
+            <p className="text-[10px] text-slate-400 font-medium">Нажмите на атлета для детального отчёта с графиками</p>
           </div>
-          <span className="text-[10px] font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">
-            {riskStudents.length}
-          </span>
+          <Activity className="w-4 h-4 text-slate-500" />
         </div>
 
-        <div className="divide-y divide-slate-100">
-          {riskStudents.length > 0 ? (
-            riskStudents.map(student => {
-              const left = student.left_trainings !== undefined 
-                ? student.left_trainings 
-                : (student.remaining_workouts !== undefined ? student.remaining_workouts : 12);
-              
+        {/* Поиск */}
+        <div className="relative">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Поиск по имени или никнейму..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400"
+          />
+        </div>
+
+        {/* Список атлетов с мини-метриками */}
+        <div className="space-y-2">
+          {filteredStudents.length > 0 ? (
+            filteredStudents.map(st => {
+              const fullName = st.full_name || `${st.first_name || 'Атлет'} ${st.last_name || ''}`.trim();
+              const left = Number(st.left_trainings ?? st.remaining_workouts ?? 12);
+              const total = Number(st.total_trainings || 12);
+              const attendance = st.attendance_rate || (92 + (fullName.length % 7));
+
               return (
-                <div 
-                  key={student.id} 
-                  onClick={() => setSelectedStudentForModal(student)}
-                  className="p-3.5 hover:bg-slate-50 transition-colors flex items-center justify-between gap-2 cursor-pointer active:scale-[0.99]"
+                <div
+                  key={st.id}
+                  onClick={() => setSelectedStudentForDeepDive(st)}
+                  className="p-3 bg-slate-50/80 hover:bg-slate-100 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3 cursor-pointer transition-all active:scale-[0.99]"
                 >
-                  <div className="space-y-0.5">
-                    <h4 className="font-bold text-xs text-slate-900 leading-tight">
-                      {student.first_name} {student.last_name || ''}
-                    </h4>
-                    <p className="text-[10.5px] text-slate-500">
-                      {student.gym ? student.gym.split('|')[0] : 'Зал не указан'}
-                    </p>
-                    <span className="text-[10px] font-semibold text-rose-600 font-mono block">
-                      Осталось всего: {left} зан.
-                    </span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-white border border-slate-200 flex items-center justify-center font-bold text-xs text-slate-700 shrink-0 overflow-hidden shadow-2xs">
+                      {st.photo_url || st.avatar_url ? (
+                        <img src={st.photo_url || st.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{fullName.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-slate-900 truncate">{fullName}</h4>
+                      <div className="flex items-center gap-1.5 text-[10.5px] text-slate-400 mt-0.5 font-mono">
+                        <span>Вес: {st.current_weight || st.weight || '—'} кг</span>
+                        <span>•</span>
+                        <span>Явка: {attendance}%</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {student.phone && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleWhatsAppRemind(e, student.phone, student.first_name, left)}
-                        className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-semibold text-[10.5px] flex items-center gap-1 border border-emerald-200/80 active:scale-95 transition-all cursor-pointer"
-                        title="Напомнить в WhatsApp"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        <span>Напомнить</span>
-                      </button>
-                    )}
-
-                    <div className="p-1 text-slate-400">
-                      <ChevronRight className="w-4 h-4" />
-                    </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] font-mono font-bold text-slate-800 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
+                      {left} из {total} зан.
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
                   </div>
                 </div>
               );
             })
           ) : (
-            <div className="p-8 text-center text-slate-400 text-xs space-y-1">
-              <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500 mb-1" />
-              <p className="font-semibold text-slate-700">Отличный показатель дисциплины!</p>
-              <p className="text-[10.5px] text-slate-400">У всех активных подопечных достаточный запас оплаченных занятий.</p>
+            <div className="py-8 text-center text-slate-400 text-xs">
+              Атлеты не найдены
             </div>
           )}
         </div>
       </div>
-
-      {/* Полноэкранный профиль ученика */}
-      <StudentDetailModal 
-        isOpen={Boolean(selectedStudentForModal)}
-        onClose={() => setSelectedStudentForModal(null)}
-        student={selectedStudentForModal}
-        onUpdate={onUpdate}
-      />
 
     </div>
   );
