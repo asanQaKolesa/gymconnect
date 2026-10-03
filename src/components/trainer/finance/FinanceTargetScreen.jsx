@@ -5,9 +5,7 @@ import {
   Target, 
   Users, 
   Clock, 
-  TrendingUp, 
-  CheckCircle2, 
-  Sparkles 
+  Check 
 } from 'lucide-react';
 
 export default function FinanceTargetScreen({ trainer, onBack }) {
@@ -49,32 +47,24 @@ export default function FinanceTargetScreen({ trainer, onBack }) {
     if (daily <= 3.5) {
       return { 
         status: 'Лёгкая нагрузка', 
-        color: 'text-emerald-700', 
-        bg: 'bg-emerald-50 border-emerald-200',
-        desc: 'Комфортный график, много времени на отдых и личные тренировки.' 
+        desc: 'Комфортный график, свободное время на отдых и личные тренировки.' 
       };
     }
     if (daily <= 5.5) {
       return { 
         status: 'Оптимальный баланс', 
-        color: 'text-blue-700', 
-        bg: 'bg-blue-50 border-blue-200',
-        desc: 'Золотой стандарт загрузки профессионального тренера в клубе.' 
+        desc: 'Золотой стандарт загрузки профессионального тренера в зале.' 
       };
     }
     if (daily <= 7.5) {
       return { 
         status: 'Плотный график', 
-        color: 'text-amber-800', 
-        bg: 'bg-amber-50 border-amber-200',
-        desc: 'Высокая интенсивность. Рекомендуется переводить часть клиентов в сплит-пары.' 
+        desc: 'Высокая интенсивность. Рекомендуется объединять клиентов в сплит-пары.' 
       };
     }
     return { 
-      status: 'Перегрузка (Выгорание)', 
-      color: 'text-rose-700', 
-      bg: 'bg-rose-50 border-rose-200',
-      desc: 'Более 8 тренировок в день. Необходимо поднять чек за блок занятий!' 
+      status: 'Перегрузка', 
+      desc: 'Более 8 часов у помоста в день. Рекомендуется поднять чек за блок занятий.' 
     };
   }, [dailyWorkoutsAt5Days]);
 
@@ -83,7 +73,7 @@ export default function FinanceTargetScreen({ trainer, onBack }) {
 
   return (
     <div className="min-h-screen bg-[#F2F2F7] text-slate-900 select-none pb-28">
-      {/* ШАПКА */}
+      {/* 1. ШАПКА */}
       <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 px-4 py-3 shadow-2xs">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <button
@@ -105,12 +95,13 @@ export default function FinanceTargetScreen({ trainer, onBack }) {
       </div>
 
       <div className="p-3.5 max-w-md mx-auto space-y-3.5">
+        
         {/* КАРТОЧКА ГЛАВНОЙ ЦЕЛИ */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-[#1E60D5]" />
-              <h3 className="text-xs font-bold text-slate-900">Желаемый чистый доход в месяц</h3>
+              <Target className="w-4 h-4 text-slate-700" />
+              <h3 className="text-xs font-bold text-slate-900">Целевой чистый доход в месяц</h3>
             </div>
             <span className="text-[10px] text-slate-400 font-mono">₸ / месяц</span>
           </div>
@@ -121,7 +112,7 @@ export default function FinanceTargetScreen({ trainer, onBack }) {
               step="50000"
               value={targetIncome}
               onChange={e => setTargetIncome(Number(e.target.value))}
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-lg font-mono font-bold text-slate-900 text-center outline-none focus:border-[#1E60D5] focus:bg-white transition-all"
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-lg font-mono font-bold text-slate-900 text-center outline-none focus:border-slate-400 focus:bg-white transition-all"
             />
 
             <div className="flex items-center justify-center gap-1.5 flex-wrap">
@@ -132,7 +123,7 @@ export default function FinanceTargetScreen({ trainer, onBack }) {
                   onClick={() => setTargetIncome(val)}
                   className={`px-2.5 py-1 rounded-xl text-[10.5px] font-mono transition-all cursor-pointer ${
                     targetIncome === val 
-                      ? 'bg-[#1E60D5] text-white font-bold shadow-2xs' 
+                      ? 'bg-slate-900 text-white font-bold shadow-2xs' 
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -143,7 +134,7 @@ export default function FinanceTargetScreen({ trainer, onBack }) {
           </div>
         </div>
 
-        {/* НАСТРОЙКИ ЧЕКА И АРЕНДЫ */}
+        {/* ВВОДНЫЕ ПАРАМЕТРЫ ЧЕКА И АРЕНДЫ */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <h4 className="text-xs font-bold text-slate-900 border-b border-slate-100 pb-2">
             Вводные параметры тарифов
@@ -159,7 +150,7 @@ export default function FinanceTargetScreen({ trainer, onBack }) {
                 step="5000"
                 value={personalPrice}
                 onChange={e => setPersonalPrice(Number(e.target.value))}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-900 font-bold text-xs outline-none focus:border-[#1E60D5]"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-900 font-bold text-xs outline-none"
               />
             </div>
 
@@ -172,20 +163,20 @@ export default function FinanceTargetScreen({ trainer, onBack }) {
                 step="10000"
                 value={rentCost}
                 onChange={e => setRentCost(Number(e.target.value))}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-900 font-bold text-xs outline-none focus:border-[#1E60D5]"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-900 font-bold text-xs outline-none"
               />
             </div>
           </div>
         </div>
 
-        {/* ДЕКОМПОЗИЦИЯ ВОРОНКИ ПОДОПЕЧНЫХ */}
+        {/* НЕОБХОДИМАЯ БАЗА ПОДОПЕЧНЫХ */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-[#1E60D5]" />
+              <Users className="w-4 h-4 text-slate-700" />
               <span>Необходимая база подопечных</span>
             </span>
-            <span className="text-[11px] font-mono text-[#1E60D5] font-bold">
+            <span className="text-[11px] font-mono text-slate-900 font-bold">
               {athletesNeeded} атлетов
             </span>
           </div>
@@ -217,11 +208,11 @@ export default function FinanceTargetScreen({ trainer, onBack }) {
           </div>
         </div>
 
-        {/* АНАЛИЗ ЧАСОВОЙ НАГРУЗКИ В ЗАЛЕ */}
-        <div className={`p-4 rounded-3xl border space-y-2 ${workloadLevel.bg}`}>
+        {/* НАГРУЗКА В ЗАЛЕ */}
+        <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
           <div className="flex items-center justify-between">
-            <span className={`text-xs font-bold ${workloadLevel.color} flex items-center gap-1.5`}>
-              <Clock className="w-4 h-4" />
+            <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-slate-700" />
               <span>{workloadLevel.status}</span>
             </span>
             <span className="text-xs font-mono font-bold text-slate-900">
@@ -229,10 +220,11 @@ export default function FinanceTargetScreen({ trainer, onBack }) {
             </span>
           </div>
 
-          <p className="text-[11px] text-slate-700 leading-snug">
+          <p className="text-[11px] text-slate-500 leading-snug">
             {workloadLevel.desc} При 5-дневной неделе это <b>{weeklyWorkouts} тренировок в неделю</b>.
           </p>
         </div>
+
       </div>
     </div>
   );
