@@ -22,11 +22,13 @@ import {
   Utensils,
   Flame,
   Droplet,
-  Pill
+  Pill,
+  FileText
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { sendTrainerAttendanceNotification } from '../../utils/telegramNotifications';
 import TrainersCatalogPage from '../home/TrainersCatalogPage';
+import ClientRulesAgreementModal from './ClientRulesAgreementModal';
 
 export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, onUpdate }) {
   const [athleteData, setAthleteData] = useState(initialUser || {});
@@ -34,6 +36,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const [activeTab, setActiveTab] = useState('program'); // 'program' | 'nutrition' | 'finance' | 'coach'
   const [trainerData, setTrainerData] = useState(null);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
 
   const [selectedDay, setSelectedDay] = useState(1);
 
@@ -304,11 +307,13 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const coachPhone = trainerData?.phone ? String(trainerData.phone).replace(/\D/g, '') : '';
   const coachUsername = trainerData?.username ? String(trainerData.username).replace('@', '').trim() : cleanTrainerUsername;
 
+  const isRulesAccepted = Boolean(athleteData?.rules_accepted);
+
   return (
     <div className="min-h-screen w-full bg-[#F2F2F7] flex flex-col select-none animate-in fade-in duration-150">
       
       {/* Шапка */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 shadow-xs">
         <div className="max-w-md mx-auto flex items-center justify-between gap-2">
           <button
             type="button"
@@ -415,6 +420,39 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                   <span>{coachShift?.text || 'График уточняется'}</span>
                 </span>
               </div>
+            </div>
+
+            {/* БЛОК РЕГЛАМЕНТА И ПРАВИЛ ВЗАИМОДЕЙСТВИЯ */}
+            <div className="bg-white rounded-3xl p-3.5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                  isRulesAccepted ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
+                }`}>
+                  <FileText className="w-4 h-4 stroke-[2]" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-slate-900 block truncate">
+                    Регламент и правила отмен
+                  </span>
+                  <span className="text-[10px] text-slate-400 block truncate">
+                    {isRulesAccepted 
+                      ? `Принят ${athleteData?.rules_accepted_at ? new Date(athleteData.rules_accepted_at).toLocaleDateString('ru-RU') : ''}` 
+                      : 'Требуется подтверждение условий'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsRulesModalOpen(true)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0 border shadow-2xs ${
+                  isRulesAccepted 
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                    : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-blue-500/20'
+                }`}
+              >
+                {isRulesAccepted ? 'Принят ✓' : 'Ознакомиться →'}
+              </button>
             </div>
 
             {/* 4 ТАБА В СТИЛЕ APPLE HIG: Программа • Питание • Абонемент • О тренере */}
@@ -887,6 +925,19 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
         )}
 
       </main>
+
+      {/* МОДАЛКА ОЗНАКОМЛЕНИЯ И СОГЛАСИЯ С РЕГЛАМЕНТОМ ТРЕНИРОВОК */}
+      <ClientRulesAgreementModal
+        isOpen={isRulesModalOpen}
+        onClose={() => setIsRulesModalOpen(false)}
+        trainerName={trainerData?.full_name || `${trainerData?.first_name || 'Тренер'} ${trainerData?.last_name || ''}`.trim() || 'Ваш наставник'}
+        trainerRules={trainerData?.client_rules}
+        userProfile={athleteData}
+        onAgreementSuccess={() => {
+          fetchFreshProfile(false);
+          if (onUpdate) onUpdate();
+        }}
+      />
 
     </div>
   );
