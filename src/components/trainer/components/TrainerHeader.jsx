@@ -284,7 +284,7 @@ export default function TrainerHeader({
                     <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0" />
                   </div>
 
-                  {/* Входящие заявки (перенесены сюда — к операционной работе) */}
+                  {/* Входящие заявки */}
                   <div
                     onClick={() => handleMenuClick('notifications')}
                     className="py-2.5 flex items-center justify-between gap-3 cursor-pointer group active:opacity-70 transition-opacity"
@@ -438,7 +438,7 @@ export default function TrainerHeader({
                 </div>
               </div>
 
-              {/* ================= 2. СЕРВИС И РЕГЛАМЕНТЫ АТЛЕТОВ (ЧИСТАЯ СТРУКТУРА) ================= */}
+              {/* ================= 2. СЕРВИС И РЕГЛАМЕНТЫ АТЛЕТОВ ================= */}
               <div className="space-y-1.5 pt-1">
                 <p className="text-[11px] font-bold text-slate-400 px-1">Сервис и регламенты атлетов</p>
                 <div className="divide-y divide-slate-100 bg-slate-50/70 border border-slate-200/80 rounded-2xl overflow-hidden px-3">
@@ -584,14 +584,15 @@ export default function TrainerHeader({
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
 
+                {/* ПУНКТ: ЗАПУСК СВОЕГО ОНЛАЙН-ПРОДУКТА (LAUNCH STUDIO) */}
                 <button
                   type="button"
-                  onClick={() => handleMenuClick('templates')}
+                  onClick={() => handleMenuClick('launch_studio')}
                   className="w-full p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl flex items-center justify-between text-left active:scale-98 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
                     <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-xs shrink-0">
-                      <Sparkles className="w-4 h-4" />
+                      <Sparkles className="w-4 h-4 text-[#1E60D5]" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">Создать свой онлайн-продукт</p>
