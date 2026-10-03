@@ -13,16 +13,20 @@ import {
   Check, 
   Building,
   Video,
-  Users
+  Users,
+  Plus,
+  Rocket
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../utils/telegramNotifications';
+import TrainerDigitalProductCard from './TrainerDigitalProductCard';
 
 export default function TrainerPublicDetailPage({ 
   trainer, 
   onBack, 
   userProfile, 
   onLinkedSuccess,
+  onOpenLaunchStudio,
   isPreviewMode = false 
 }) {
   const [bioExpanded, setBioExpanded] = useState(false);
@@ -44,18 +48,56 @@ export default function TrainerPublicDetailPage({
   const blockCount = Number(pricing.personal_count) || 12;
   const pricePerSessionInBlock = Math.round(blockPrice / (blockCount || 1));
 
-  // Пакет 8 занятий
   const block8Price = Math.round(blockPrice * (8 / 12));
   const pricePerSessionInBlock8 = Math.round(block8Price / 8);
 
-  // Бонусы
   const hasTrial = Boolean(trainer.has_free_trial);
   const hasConsultation = Boolean(trainer.has_free_consultation);
 
-  // Специализации
   const specs = Array.isArray(trainer.specializations) && trainer.specializations.length > 0
     ? trainer.specializations
     : (typeof trainer.specialization === 'string' ? trainer.specialization.split(',').map(s => s.trim()) : ['Силовой тренинг', 'Тонус', 'Рекомпозиция']);
+
+  // Цифровые инфопродукты тренера (дефолтные демонстрационные материалы наставника)
+  const digitalProducts = Array.isArray(trainer.digital_products) && trainer.digital_products.length > 0
+    ? trainer.digital_products
+    : [
+        {
+          id: 'prod-1',
+          type: 'checklist',
+          categoryTitle: 'Чек-лист',
+          title: 'Идеальная продуктовая корзина для гипертрофии',
+          subtitle: 'Список продуктов с точными граммовками белка на каждый день',
+          price: 2490
+        },
+        {
+          id: 'prod-2',
+          type: 'guide',
+          categoryTitle: 'Гайд',
+          title: 'Сушка без потери силовых показателей',
+          subtitle: 'Пошаговый разбор безопасного дефицита калорий без срывов',
+          price: 5990
+        },
+        {
+          id: 'prod-3',
+          type: 'marathon',
+          categoryTitle: 'Марафон',
+          title: '21 день рельефа: трансформация тела',
+          subtitle: 'Интенсивный тренинг, контроль КБЖУ и общий закрытый чат',
+          price: 19900
+        }
+      ];
+
+  const handleProductAction = (product) => {
+    const text = encodeURIComponent(
+      `Здравствуйте, ${fullName}! Хочу приобрести ваш цифровой продукт «${product.title}» (${Number(product.price).toLocaleString()} ₸).`
+    );
+    if (cleanUsername) {
+      window.open(`https://t.me/${cleanUsername}?text=${text}`, '_blank');
+    } else if (cleanPhone) {
+      window.open(`https://wa.me/7${cleanPhone.slice(-10)}?text=${text}`, '_blank');
+    }
+  };
 
   // Запись и автопривязка атлета к тренеру
   const handleEnrollToCoach = async () => {
@@ -91,7 +133,6 @@ export default function TrainerPublicDetailPage({
           .eq('telegram_id', tgId);
       }
 
-      // Обновляем локальный профиль
       try {
         const saved = localStorage.getItem('gymconnect_user_profile');
         if (saved) {
@@ -100,7 +141,6 @@ export default function TrainerPublicDetailPage({
         }
       } catch (e) {}
 
-      // Отправляем уведомление тренеру в Telegram
       if (trainer.telegram_id) {
         const studentName = `${userProfile?.first_name || 'Атлет'} ${userProfile?.last_name || ''}`.trim();
         const studentContact = userProfile?.username ? `@${userProfile.username}` : (userProfile?.phone || 'контакт в профиле');
@@ -218,7 +258,7 @@ export default function TrainerPublicDetailPage({
           </div>
         </div>
 
-        {/* Бейдж бонуса для нового атлета */}
+        {/* Бонус для нового атлета */}
         {(hasTrial || hasConsultation) && (
           <div className="p-3.5 rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-1 shadow-xs">
             <span className="text-xs font-bold flex items-center gap-1.5 text-emerald-900">
@@ -232,6 +272,39 @@ export default function TrainerPublicDetailPage({
             </p>
           </div>
         )}
+
+        {/* ================= СЕКЦИЯ: ЦИФРОВЫЕ ПРОДУКТЫ ТРЕНЕРА ================= */}
+        <div className="bg-white rounded-3xl p-4 border border-neutral-200/80 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
+            <div>
+              <h3 className="text-xs font-bold text-neutral-900">Авторские программы и материалы</h3>
+              <p className="text-[10.5px] text-neutral-400">Чек-листы, гайды и онлайн-марафоны</p>
+            </div>
+
+            {isPreviewMode && onOpenLaunchStudio && (
+              <button
+                type="button"
+                onClick={onOpenLaunchStudio}
+                className="text-[10.5px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Запустить</span>
+              </button>
+            )}
+          </div>
+
+          {/* Горизонтальный скролл цифровых продуктов */}
+          <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
+            {digitalProducts.map((prod) => (
+              <TrainerDigitalProductCard
+                key={prod.id}
+                product={prod}
+                onAction={handleProductAction}
+                isUnlocked={false}
+              />
+            ))}
+          </div>
+        </div>
 
         {/* О тренере и методологии */}
         {trainer.bio && (
@@ -288,7 +361,6 @@ export default function TrainerPublicDetailPage({
           </div>
 
           <div className="space-y-2 font-mono">
-            {/* Разовая тренировка */}
             <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-neutral-900 block font-sans">Разовая тренировка</span>
@@ -299,7 +371,6 @@ export default function TrainerPublicDetailPage({
               </span>
             </div>
 
-            {/* Пакет 8 занятий */}
             <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-neutral-900 block font-sans">Блок 8 занятий</span>
@@ -310,7 +381,6 @@ export default function TrainerPublicDetailPage({
               </span>
             </div>
 
-            {/* Пакет 12 занятий (Хит) */}
             <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-200 flex items-center justify-between relative overflow-hidden">
               <div>
                 <div className="flex items-center gap-1.5">
@@ -341,7 +411,7 @@ export default function TrainerPublicDetailPage({
           </div>
         </div>
 
-        {/* Локация и фитнес-клуб */}
+        {/* Локация и клуб */}
         <div className="bg-white rounded-3xl p-4 border border-neutral-200/80 shadow-xs space-y-2">
           <span className="text-xs font-bold text-neutral-900 block">Локация тренировок</span>
           <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/70 flex items-center gap-2.5 text-xs text-neutral-700">
