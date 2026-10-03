@@ -2,21 +2,11 @@
 import React, { useState } from 'react';
 import { 
   ArrowLeft, 
-  X, 
-  HeartPulse, 
   AlertTriangle, 
   ShieldCheck, 
   CheckCircle2, 
-  Bone, 
-  Activity, 
-  Pill, 
   Send, 
-  Edit3, 
-  Save, 
-  ChevronDown, 
-  ChevronUp, 
-  FileText, 
-  Clock 
+  Save
 } from 'lucide-react';
 import { supabase } from '../../../../supabaseClient';
 import { 
@@ -48,7 +38,7 @@ export default function AthleteHealthSheetModal({
   const redFlags = healthData.redFlags || [];
   const completedDate = healthData.completed_at 
     ? new Date(healthData.completed_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
-    : 'Не заполнена';
+    : (student.health_completed_at ? new Date(student.health_completed_at).toLocaleDateString('ru-RU') : 'Не заполнена');
 
   const fullName = student?.full_name || `${student?.first_name || 'Атлет'} ${student?.last_name || ''}`.trim();
 
@@ -226,7 +216,7 @@ export default function AthleteHealthSheetModal({
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                 <h4 className="text-xs font-bold text-neutral-900">Критических ограничений нет</h4>
                 <p className="text-[11px] text-neutral-500 max-w-xs mx-auto leading-relaxed">
-                  Подопечный не отметил травм позвоночника, скачков давления или операций. Можно следовать стандартному тренировочному протоколу.
+                  Подопечный не отметил травм позвоночника, скачков давления или операций. Можно следовать стандартному протоколу нагрузок.
                 </p>
               </div>
             )}
