@@ -130,16 +130,16 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
 
   const weightChart = useMemo(() => {
     const all = [startWeight, prevWeight, currentWeight, targetWeight].filter(n => !isNaN(n));
-    const min = Math.min(...all) - 1.2;
-    const max = Math.max(...all) + 1.2;
+    const min = all.length > 0 ? Math.min(...all) - 1.2 : 0;
+    const max = all.length > 0 ? Math.max(...all) + 1.2 : 100;
     return generateSvgChart(startWeight, prevWeight, currentWeight, min, max, 340, 115);
   }, [startWeight, prevWeight, currentWeight, targetWeight]);
 
   const dynamicMetricChart = useMemo(() => {
-    const all = [activeMetric.start, activeMetric.prev, activeMetric.current].filter(n => !isNaN(n));
-    const min = Math.min(...all) - 1.0;
-    const max = Math.max(...all) + 1.0;
-    return generateSvgChart(activeMetric.start, activeMetric.prev, activeMetric.current, min, max, 340, 105);
+    const all = [activeMetric?.start, activeMetric?.prev, activeMetric?.current].filter(n => n !== undefined && !isNaN(n));
+    const min = all.length > 0 ? Math.min(...all) - 1.0 : 0;
+    const max = all.length > 0 ? Math.max(...all) + 1.0 : 100;
+    return generateSvgChart(activeMetric?.start || 0, activeMetric?.prev || 0, activeMetric?.current || 0, min, max, 340, 105);
   }, [activeMetric]);
 
   const [timelineNotes, setTimelineNotes] = useState({
@@ -552,10 +552,10 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
               </div>
 
               <div className="divide-y divide-slate-100 text-xs font-mono">
-                {measurementRows.map((row) => {
-                  const diff = (row.current - row.start).toFixed(1);
-                  const numDiff = Number(diff);
-                  const isSelected = selectedMetricKey === row.key;
+                {(measurementRows || []).map((row, index) => {
+                  const diff = row ? (row.current - row.start).toFixed(1) : 0;
+                  const numDiff = Number(diff) || 0;
+                  const isSelected = row && selectedMetricKey === row.key;
 
                   // Define arrow and color based on metric type (fat vs muscle)
                   const isFatMetric = row.key === 'waist' || row.key === 'hips' || row.key === 'neck';
@@ -575,8 +575,8 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
 
                   return (
                     <div 
-                      key={row.key}
-                      onClick={() => setSelectedMetricKey(row.key)}
+                      key={row?.key || index}
+                      onClick={() => row && setSelectedMetricKey(row.key)}
                       className={`grid grid-cols-10 gap-2 py-2.5 items-center text-center cursor-pointer transition-colors rounded-xl px-2 ${
                         isSelected 
                           ? 'bg-blue-50/90 border border-blue-200' 
@@ -586,17 +586,17 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
                       <span className={`col-span-4 text-left font-sans text-[11.5px] truncate ${
                         isSelected ? 'font-semibold text-[#1E60D5]' : 'font-medium text-slate-700'
                       }`}>
-                        {row.label}
+                        {row?.label || ''}
                       </span>
 
                       <span className="col-span-2 text-slate-500 text-[11px] whitespace-nowrap">
-                        {row.start} {row.unit}
+                        {row?.start || 0} {row?.unit || ''}
                       </span>
 
                       <span className={`col-span-2 text-[11px] whitespace-nowrap ${
                         isSelected ? 'font-bold text-[#1E60D5]' : 'font-semibold text-slate-800'
                       }`}>
-                        {row.current} {row.unit}
+                        {row?.current || 0} {row?.unit || ''}
                       </span>
 
                       <div className="col-span-2 text-right whitespace-nowrap flex justify-end">
@@ -621,35 +621,35 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
           </div>
 
           <div className="space-y-3">
-            {timelineHistory.map((item, idx) => (
-              <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 space-y-2.5">
+            {(timelineHistory || []).map((item, idx) => (
+              <div key={item?.date || idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 space-y-2.5">
                 <div className="flex items-center justify-between border-b border-slate-200/40 pb-1.5">
                   <div>
                     <span className="text-xs font-bold font-mono text-slate-900 block">
-                      {item.date}
+                      {item?.date}
                     </span>
                     <span className="text-[10px] text-slate-400 font-medium">
-                      {item.title}
+                      {item?.title}
                     </span>
                   </div>
                   <span className="text-xs font-mono font-bold text-slate-900 bg-white px-2.5 py-0.5 rounded-md border border-slate-200 shadow-2xs">
-                    {item.weight} кг
+                    {item?.weight} кг
                   </span>
                 </div>
 
                 {/* Сетка замеров */}
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-                  {item.stats.map((st, sIdx) => (
-                    <div key={sIdx} className="bg-white px-2 py-1 rounded-lg border border-slate-200/60 flex items-center justify-between text-[10px]">
-                      <span className="text-slate-400">{st.label}:</span>
-                      <span className="font-mono font-bold text-slate-700 ml-1">{st.val}</span>
+                  {(item?.stats || []).map((st, sIdx) => (
+                    <div key={st?.label || sIdx} className="bg-white px-2 py-1 rounded-lg border border-slate-200/60 flex items-center justify-between text-[10px]">
+                      <span className="text-slate-400">{st?.label}:</span>
+                      <span className="font-mono font-bold text-slate-700 ml-1">{st?.val}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Быстрые чипсы-шаблоны */}
                 <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-0.5">
-                  {quickChips.map((chip, cIdx) => (
+                  {(quickChips || []).map((chip, cIdx) => (
                     <button
                       key={cIdx}
                       type="button"
@@ -672,7 +672,7 @@ export default function AthleteMeasurementsScreen({ student, trainer, onBack }) 
                   />
                   <button
                     type="button"
-                    onClick={() => handleSendTimelineNote(idx, item.date)}
+                    onClick={() => handleSendTimelineNote(idx, item?.date)}
                     className="absolute right-1 h-6 px-2.5 bg-[#1E60D5] hover:bg-blue-600 text-white rounded-md text-[10.5px] font-semibold inline-flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-2xs"
                   >
                     {sentNoteIdx === idx ? <Check className="w-3 h-3 text-white" /> : <Send className="w-3 h-3" />}
