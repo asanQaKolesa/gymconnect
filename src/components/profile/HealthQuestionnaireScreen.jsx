@@ -11,8 +11,6 @@ import {
   ChevronRight, 
   Send, 
   ShieldCheck, 
-  Clock, 
-  HelpCircle,
   FileText
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
@@ -34,9 +32,9 @@ export default function HealthQuestionnaireScreen({
 
   // Базовые биометрические параметры
   const [biometrics, setBiometrics] = useState({
-    age: userProfile?.age || '25',
-    height: userProfile?.height || '178',
-    weight: userProfile?.weight || userProfile?.current_weight || '75'
+    age: String(userProfile?.age || '25'),
+    height: String(userProfile?.height || '178'),
+    weight: String(userProfile?.weight || userProfile?.current_weight || '75')
   });
 
   // Ответы на вопросы: { [questionId]: { hasIssue: boolean, details: string } }
@@ -45,7 +43,6 @@ export default function HealthQuestionnaireScreen({
     DEFAULT_HEALTH_QUESTIONS.forEach(q => {
       initial[q.id] = { hasIssue: false, details: '' };
     });
-    // Инициализация кастомных вопросов тренера
     (customQuestions || []).forEach((cq, idx) => {
       initial[`custom_${idx}`] = { hasIssue: false, details: '' };
     });
@@ -61,7 +58,6 @@ export default function HealthQuestionnaireScreen({
 
   const questionsForCurrentStep = useMemo(() => {
     const list = DEFAULT_HEALTH_QUESTIONS.filter(q => q.category === currentCategory.id);
-    // На 4-м шаге подмешиваем вопросы от тренера
     if (currentCategory.id === 'lifestyle' && customQuestions?.length > 0) {
       customQuestions.forEach((cq, idx) => {
         list.push({
@@ -98,7 +94,7 @@ export default function HealthQuestionnaireScreen({
     }));
   };
 
-  // Проверка обязательности заполнения деталей, если атлет выбрал "Да"
+  // Валидация: если выбрано "Да, есть нюансы", поле описания обязательно к заполнению
   const canProceedCurrentStep = useMemo(() => {
     for (const q of questionsForCurrentStep) {
       if (q.isSleepSpecial || q.isLabSpecial) continue;
@@ -160,7 +156,6 @@ export default function HealthQuestionnaireScreen({
         redFlags: detectedRedFlags
       };
 
-      // Краткая текстовая сводка для профиля
       const summaryText = detectedRedFlags.length > 0 
         ? `⚠️ Ограничения: ${detectedRedFlags.map(f => f.title).join(', ')}`
         : 'Противопоказаний и травм не зафиксировано (норма)';
@@ -170,7 +165,10 @@ export default function HealthQuestionnaireScreen({
         health_completed_at: nowIso,
         health_data: healthSnapshot,
         health_notes: summaryText,
-        injury_notes: summaryText
+        injury_notes: summaryText,
+        age: Number(biometrics.age) || userProfile?.age,
+        height: Number(biometrics.height) || userProfile?.height,
+        weight: Number(biometrics.weight) || userProfile?.weight
       };
 
       if (userProfile?.id) {
@@ -185,7 +183,6 @@ export default function HealthQuestionnaireScreen({
           .eq('telegram_id', tgId);
       }
 
-      // Обновляем локальное хранилище
       try {
         const saved = localStorage.getItem('gymconnect_user_profile');
         if (saved) {
@@ -194,7 +191,7 @@ export default function HealthQuestionnaireScreen({
         }
       } catch (e) {}
 
-      // Уведомляем тренера в Telegram бота
+      // Оповещение тренера в Telegram
       const coachTgId = trainerProfile?.telegram_id;
       if (coachTgId) {
         const athleteName = `${userProfile?.first_name || 'Атлет'} ${userProfile?.last_name || ''}`.trim();
@@ -202,7 +199,7 @@ export default function HealthQuestionnaireScreen({
           ? `\n\n🚨 <b>Выявлено факторов риска: ${detectedRedFlags.length}</b>\n${detectedRedFlags.map(f => `• ${escapeHtml(f.title)}: ${escapeHtml(f.details || 'да')}`).join('\n')}`
           : '\n\n✅ <i>Травм и критических ограничений не выявлено (норма).</i>';
 
-        const coachMsg = `🩺 <b>Атлет заполнил медицинскую анкету PAR-Q!</b>\n\nПодопечный: <b>${escapeHtml(athleteName)}</b> (@${escapeHtml(userProfile?.username || 'нет')})${redFlagsWarning}\n\nПолное досье доступно в CoachOS CRM.`;
+        const coachMsg = `🩺 <b>Атлет заполнил медицинскую анкету PAR-Q!</b>\n\nПодопечный: <b>${escapeHtml(athleteName)}</b> (@${escapeHtml(userProfile?.username || 'нет')})${redFlagsWarning}\n\nПолное досье открывается в CoachOS CRM.`;
         sendTelegramMessage(coachTgId, coachMsg).catch(() => {});
       }
 
@@ -258,7 +255,7 @@ export default function HealthQuestionnaireScreen({
           </div>
         </div>
 
-        {/* Прогресс-линия */}
+        {/* Прогресс-бар */}
         <div className="max-w-md mx-auto mt-2.5 w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden">
           <div 
             className="bg-blue-600 h-full rounded-full transition-all duration-300 ease-out"
@@ -285,7 +282,7 @@ export default function HealthQuestionnaireScreen({
           </div>
         </div>
 
-        {/* На первом шаге: быстрая верификация роста/веса */}
+        {/* Шаг 1: быстрая верификация возраста, роста и веса */}
         {currentStep === 0 && (
           <div className="bg-white rounded-3xl p-4 border border-neutral-200/80 shadow-xs space-y-2.5">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
@@ -329,7 +326,7 @@ export default function HealthQuestionnaireScreen({
           </div>
         )}
 
-        {/* Вопросы текущего шага */}
+        {/* Вопросы текущей категории */}
         <div className="space-y-3">
           {questionsForCurrentStep.map((q) => {
             // Специальный виджет для анализов крови
@@ -483,11 +480,11 @@ export default function HealthQuestionnaireScreen({
                   </button>
                 </div>
 
-                {/* Динамическое поле описания при выборе "Да" */}
+                {/* Динамическое поле ввода подробностей при выборе "Да" */}
                 {currentAnswer.hasIssue && (
                   <div className="pt-1 space-y-1 animate-in fade-in">
                     <label className="text-[10px] font-bold text-neutral-600 block">
-                      Опишите подробнее для тренера <span className="text-red-500">*</span>:
+                      Опишите подробнее для наставника <span className="text-red-500">*</span>:
                     </label>
                     <textarea
                       rows={2}
