@@ -37,8 +37,12 @@ export default function CalendarTodayTab({ students, trainerProfile, onUpdate })
 
           if (data && data.schedule_events) {
             const raw = data.schedule_events;
-            loaded = typeof raw === 'string' ? JSON.parse(raw) : raw;
-            localStorage.setItem(`gymconnect_trainer_events_${trainerKey}`, JSON.stringify(loaded));
+            try {
+              loaded = typeof raw === 'string' ? JSON.parse(raw) : raw;
+              localStorage.setItem(`gymconnect_trainer_events_${trainerKey}`, JSON.stringify(loaded));
+            } catch (e) {
+              console.error('Error parsing schedule_events from db', e);
+            }
           }
         }
 
@@ -84,8 +88,13 @@ export default function CalendarTodayTab({ students, trainerProfile, onUpdate })
         if (error) throw error;
 
         let allEvents = [];
-        const local = localStorage.getItem(`gymconnect_trainer_events_${trainerKey}`);
-        if (local) allEvents = JSON.parse(local);
+        try {
+            const local = localStorage.getItem(`gymconnect_trainer_events_${trainerKey}`);
+            if (local) allEvents = JSON.parse(local);
+        } catch (e) {
+            console.error('Error parsing trainer events from localStorage', e);
+            allEvents = [];
+        }
 
         const updatedEvents = allEvents.map(e => {
             if (e.id === eventObj.id) {
@@ -114,8 +123,13 @@ export default function CalendarTodayTab({ students, trainerProfile, onUpdate })
 
   const handleNoShow = async (eventObj) => {
         let allEvents = [];
-        const local = localStorage.getItem(`gymconnect_trainer_events_${trainerKey}`);
-        if (local) allEvents = JSON.parse(local);
+        try {
+            const local = localStorage.getItem(`gymconnect_trainer_events_${trainerKey}`);
+            if (local) allEvents = JSON.parse(local);
+        } catch (e) {
+            console.error('Error parsing trainer events from localStorage', e);
+            allEvents = [];
+        }
 
         const updatedEvents = allEvents.map(e => {
             if (e.id === eventObj.id) {
