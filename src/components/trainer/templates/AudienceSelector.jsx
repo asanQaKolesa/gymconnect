@@ -3,11 +3,7 @@ import React, { useMemo } from 'react';
 import { 
   Users, 
   User, 
-  Calendar, 
-  AlertCircle, 
   Check, 
-  Building, 
-  Video, 
   Search 
 } from 'lucide-react';
 
@@ -42,7 +38,7 @@ export default function AudienceSelector({
     return ['Пн', 'Ср', 'Пт'];
   };
 
-  // Фильтрация атлетов при выборочном режиме
+  // Фильтрация списка при выборочном режиме
   const filteredStudents = useMemo(() => {
     return students.filter(st => {
       const name = (st.full_name || `${st.first_name || ''} ${st.last_name || ''}`).toLowerCase();
@@ -75,7 +71,7 @@ export default function AudienceSelector({
 
   const handleSelectAllFiltered = () => {
     const allFilteredIds = filteredStudents.map(s => s.id);
-    const areAllSelected = allFilteredIds.every(id => selectedStudentIds.includes(id));
+    const areAllSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedStudentIds.includes(id));
     if (areAllSelected) {
       setSelectedStudentIds(selectedStudentIds.filter(id => !allFilteredIds.includes(id)));
     } else {
@@ -83,7 +79,6 @@ export default function AudienceSelector({
     }
   };
 
-  // Подсчёт получателей
   const totalRecipientsCount = useMemo(() => {
     if (recipientMode === 'individual') return selectedStudentId ? 1 : 0;
     if (recipientMode === 'all') return students.length;
@@ -151,9 +146,9 @@ export default function AudienceSelector({
       {/* РЕЖИМ 2: ВСЕМ УЧЕНИКАМ */}
       {recipientMode === 'all' && (
         <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 space-y-1 animate-in fade-in">
-          <span className="font-bold text-slate-900 block text-[11px]">Массовая рассылка</span>
+          <span className="font-bold text-slate-900 block text-[11px]">Массовая персонализированная рассылка</span>
           <p className="text-[10.5px] text-slate-500 leading-snug">
-            Уведомление будет отправлено каждому из <b>{students.length} активных подопечных</b> в Telegram. Имя каждого атлета подставится автоматически.
+            Уведомление будет отправлено каждому из <b>{students.length} учеников</b>. Имя, зал и время подставятся автоматически для каждого получателя.
           </p>
         </div>
       )}
