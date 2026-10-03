@@ -59,27 +59,30 @@ export default function TodayScheduleWidget({ students, onSelectStudent, trainer
     loadEvents();
   }, [trainer?.id, trainerKey]);
 
-  const morningEvents = events.filter(e => {
+  const morningEvents = (events || []).filter(e => {
+      if (!e?.time) return false;
       const h = parseInt(e.time.split(':')[0], 10);
       return h < 12;
   });
-  const afternoonEvents = events.filter(e => {
+  const afternoonEvents = (events || []).filter(e => {
+      if (!e?.time) return false;
       const h = parseInt(e.time.split(':')[0], 10);
       return h >= 12 && h < 16;
   });
-  const eveningEvents = events.filter(e => {
+  const eveningEvents = (events || []).filter(e => {
+      if (!e?.time) return false;
       const h = parseInt(e.time.split(':')[0], 10);
       return h >= 16;
   });
 
   const handleAttendanceYes = async (e, eventObj) => {
     e.stopPropagation();
-    const student = students.find(s => s.id === eventObj.studentId);
+    const student = (students || []).find(s => s?.id === eventObj?.studentId);
     if (!student) {
         alert('Ученик не найден'); return;
     }
 
-    const currentLeft = student.left_trainings !== undefined ? student.left_trainings : 12;
+    const currentLeft = student?.left_trainings !== undefined ? student.left_trainings : 12;
     if (currentLeft <= 0) {
       alert('У ученика закончились оплаченные тренировки!');
       return;
@@ -97,8 +100,8 @@ export default function TodayScheduleWidget({ students, onSelectStudent, trainer
         const local = localStorage.getItem(`gymconnect_trainer_events_${trainerKey}`);
         if (local) allEvents = JSON.parse(local);
 
-        const updatedEvents = allEvents.map(ev => {
-            if (ev.id === eventObj.id) {
+        const updatedEvents = (allEvents || []).map(ev => {
+            if (ev?.id === eventObj?.id) {
                 return { ...ev, status: 'completed' };
             }
             return ev;
@@ -113,8 +116,8 @@ export default function TodayScheduleWidget({ students, onSelectStudent, trainer
               .eq('id', trainer.id);
         }
 
-      alert(`Занятие засчитано! У ${student.first_name} осталось ${currentLeft - 1} зан.`);
-      setEvents(events.map(ev => ev.id === eventObj.id ? { ...ev, status: 'completed' } : ev));
+      alert(`Занятие засчитано! У ${student?.first_name} осталось ${currentLeft - 1} зан.`);
+      setEvents((events || []).map(ev => ev?.id === eventObj?.id ? { ...ev, status: 'completed' } : ev));
     }
   };
 
@@ -124,8 +127,8 @@ export default function TodayScheduleWidget({ students, onSelectStudent, trainer
     const local = localStorage.getItem(`gymconnect_trainer_events_${trainerKey}`);
     if (local) allEvents = JSON.parse(local);
 
-    const updatedEvents = allEvents.map(ev => {
-        if (ev.id === eventObj.id) {
+    const updatedEvents = (allEvents || []).map(ev => {
+        if (ev?.id === eventObj?.id) {
             return { ...ev, status: 'no_show' };
         }
         return ev;
@@ -139,19 +142,19 @@ export default function TodayScheduleWidget({ students, onSelectStudent, trainer
           .update({ schedule_events: updatedEvents })
           .eq('id', trainer.id);
     }
-    setEvents(events.map(ev => ev.id === eventObj.id ? { ...ev, status: 'no_show' } : ev));
-    alert(`Пропуск зафиксирован. Занятие для ${eventObj.studentName} отмечено как прогул.`);
+    setEvents((events || []).map(ev => ev?.id === eventObj?.id ? { ...ev, status: 'no_show' } : ev));
+    alert(`Пропуск зафиксирован. Занятие для ${eventObj?.studentName} отмечено как прогул.`);
   };
 
-  const renderEventCard = (eventObj) => {
-    const isExpanded = expandedEventId === eventObj.id;
-    const student = students.find(s => s.id === eventObj.studentId);
+  const renderEventCard = (eventObj, index) => {
+    const isExpanded = eventObj && expandedEventId === eventObj.id;
+    const student = (students || []).find(s => s?.id === eventObj?.studentId);
     const leftTr = student?.left_trainings !== undefined ? student.left_trainings : 0;
-    const isCompleted = eventObj.status === 'completed';
-    const isCancelled = eventObj.status === 'cancelled' || eventObj.status === 'no_show';
+    const isCompleted = eventObj?.status === 'completed';
+    const isCancelled = eventObj?.status === 'cancelled' || eventObj?.status === 'no_show';
 
     return (
-      <div key={eventObj.id} className={`border rounded-2xl p-3.5 transition-all space-y-2 ${
+      <div key={eventObj?.id || index} className={`border rounded-2xl p-3.5 transition-all space-y-2 ${
           isCompleted ? 'bg-emerald-50/30 border-emerald-100' :
           isCancelled ? 'bg-slate-50 border-slate-100 opacity-60' :
           'bg-slate-50 border-slate-200'
@@ -163,11 +166,11 @@ export default function TodayScheduleWidget({ students, onSelectStudent, trainer
                 isCancelled ? 'bg-slate-200 text-slate-500' :
                 'bg-blue-600 text-white'
             }`}>
-              {eventObj.time}
+              {eventObj?.time}
             </div>
             <div>
               <h4 className="font-bold text-slate-900 text-xs cursor-pointer hover:text-blue-600" onClick={() => student && onSelectStudent(student)}>
-                {eventObj.studentName}
+                {eventObj?.studentName}
               </h4>
               <p className="text-[10px] text-slate-500">
                 <span className={`font-semibold ${isCompleted ? 'text-emerald-600' : 'text-blue-600'}`}>Остаток: {leftTr} зан.</span>
@@ -178,7 +181,7 @@ export default function TodayScheduleWidget({ students, onSelectStudent, trainer
           {!isCompleted && !isCancelled && (
             <div className="flex items-center gap-1.5 flex-wrap justify-end">
               <button
-                onClick={(e) => { e.stopPropagation(); setExpandedEventId(isExpanded ? null : eventObj.id); }}
+                onClick={(e) => { e.stopPropagation(); eventObj && setExpandedEventId(isExpanded ? null : eventObj.id); }}
                 className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[11px] font-semibold transition-all flex items-center gap-1 border border-blue-200"
               >
                 <Eye className="w-3.5 h-3.5" />
@@ -209,16 +212,16 @@ export default function TodayScheduleWidget({ students, onSelectStudent, trainer
           <div className="mt-2 p-3 bg-white border border-blue-100 rounded-xl space-y-2 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
               <span className="font-bold text-slate-800 flex items-center gap-1">
-                <Dumbbell className="w-3.5 h-3.5 text-blue-600" /> Тариф: {eventObj.packageType}
+                <Dumbbell className="w-3.5 h-3.5 text-blue-600" /> Тариф: {eventObj?.packageType}
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">Длит.: {eventObj.duration} мин</span>
+              <span className="text-[10px] text-slate-400 font-mono">Длит.: {eventObj?.duration} мин</span>
             </div>
             
-            {eventObj.note && (
+            {eventObj?.note && (
                 <div className="text-slate-600 space-y-1">
                 <p><b>Заметка тренера:</b></p>
                 <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-[11px] space-y-1 text-slate-700">
-                    <p>{eventObj.note}</p>
+                    <p>{eventObj?.note}</p>
                 </div>
                 </div>
             )}
@@ -236,38 +239,38 @@ export default function TodayScheduleWidget({ students, onSelectStudent, trainer
           <h3 className="font-bold text-sm text-slate-900">Тренировки на сегодня</h3>
         </div>
         <span className="bg-blue-50 text-blue-700 font-bold px-3 py-1 rounded-xl text-xs font-mono">
-          Всего: {events.length}
+          Всего: {(events || []).length}
         </span>
       </div>
 
       <p className="text-[11px] text-slate-500 font-medium mb-2">{formattedDate}</p>
 
-      {events.length > 0 ? (
+      {(events || []).length > 0 ? (
         <div className="space-y-4">
-          {morningEvents.length > 0 && (
+          {(morningEvents || []).length > 0 && (
             <div className="space-y-2">
               <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-amber-500" /> Утро (07:00 - 12:00)
               </h4>
-              {morningEvents.map(renderEventCard)}
+              {(morningEvents || []).map((ev, idx) => renderEventCard(ev, idx))}
             </div>
           )}
 
-          {afternoonEvents.length > 0 && (
+          {(afternoonEvents || []).length > 0 && (
             <div className="space-y-2">
               <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-blue-500" /> Обед / День (12:00 - 16:00)
               </h4>
-              {afternoonEvents.map(renderEventCard)}
+              {(afternoonEvents || []).map((ev, idx) => renderEventCard(ev, idx))}
             </div>
           )}
 
-          {eveningEvents.length > 0 && (
+          {(eveningEvents || []).length > 0 && (
             <div className="space-y-2">
               <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-indigo-500" /> Вечер (16:00 - 22:00)
               </h4>
-              {eveningEvents.map(renderEventCard)}
+              {(eveningEvents || []).map((ev, idx) => renderEventCard(ev, idx))}
             </div>
           )}
         </div>

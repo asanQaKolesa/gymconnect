@@ -37,18 +37,18 @@ export default function AthletesScreen({
 
   // KPI метрики базы
   const metrics = useMemo(() => {
-    const total = students.length;
-    const active = students.filter(s => (s.status || 'active').toLowerCase() === 'active').length;
-    const paused = students.filter(s => (s.status || '').toLowerCase() === 'paused').length;
-    const archived = students.filter(s => {
-      const st = (s.status || '').toLowerCase();
+    const total = (students || []).length;
+    const active = (students || []).filter(s => (s?.status || 'active').toLowerCase() === 'active').length;
+    const paused = (students || []).filter(s => (s?.status || '').toLowerCase() === 'paused').length;
+    const archived = (students || []).filter(s => {
+      const st = (s?.status || '').toLowerCase();
       return st === 'left' || st === 'archived';
     }).length;
 
-    const expiring = students.filter(s => {
-      const left = Number(s.left_trainings ?? s.remaining_workouts ?? 12);
-      const isPending = s.payment_status === 'pending';
-      const isActive = (s.status || 'active').toLowerCase() === 'active';
+    const expiring = (students || []).filter(s => {
+      const left = Number(s?.left_trainings ?? s?.remaining_workouts ?? 12);
+      const isPending = s?.payment_status === 'pending';
+      const isActive = (s?.status || 'active').toLowerCase() === 'active';
       return isActive && (left <= 2 || isPending);
     }).length;
 
@@ -59,18 +59,18 @@ export default function AthletesScreen({
   const filteredStudents = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
 
-    return students.filter(s => {
-      const fullName = (s.full_name || `${s.first_name || ''} ${s.last_name || ''}`).toLowerCase();
-      const tg = (s.username || s.telegram_username || '').toLowerCase();
-      const phone = (s.phone || s.whatsapp || '').replace(/\D/g, '');
-      const gym = (s.gym || s.custom_gym || '').toLowerCase();
+    return (students || []).filter(s => {
+      const fullName = (s?.full_name || `${s?.first_name || ''} ${s?.last_name || ''}`).toLowerCase();
+      const tg = (s?.username || s?.telegram_username || '').toLowerCase();
+      const phone = (s?.phone || s?.whatsapp || '').replace(/\D/g, '');
+      const gym = (s?.gym || s?.custom_gym || '').toLowerCase();
 
       const matchesSearch = !q || fullName.includes(q) || tg.includes(q) || phone.includes(q) || gym.includes(q);
       if (!matchesSearch) return false;
 
-      const st = (s.status || 'active').toLowerCase();
-      const left = Number(s.left_trainings ?? s.remaining_workouts ?? 12);
-      const isPending = s.payment_status === 'pending';
+      const st = (s?.status || 'active').toLowerCase();
+      const left = Number(s?.left_trainings ?? s?.remaining_workouts ?? 12);
+      const isPending = s?.payment_status === 'pending';
 
       if (statusFilter === 'active') return st === 'active';
       if (statusFilter === 'paused') return st === 'paused';
@@ -82,7 +82,7 @@ export default function AthletesScreen({
   }, [students, searchQuery, statusFilter]);
 
   const getFormatLabel = (s) => {
-    const f = (s.training_format || s.package_type || 'individual').toLowerCase();
+    const f = (s?.training_format || s?.package_type || 'individual').toLowerCase();
     if (f.includes('online')) return 'Онлайн';
     if (f.includes('split')) return 'Сплит';
     if (f.includes('group')) return 'Мини-группа';
@@ -218,7 +218,7 @@ export default function AthletesScreen({
 
         {/* СПИСОК АТЛЕТОВ */}
         <div className="space-y-2.5">
-          {filteredStudents.length === 0 ? (
+          {(filteredStudents || []).length === 0 ? (
             <div className="py-12 text-center bg-white rounded-2xl border border-slate-200/70 p-6 space-y-2">
               <Users className="w-8 h-8 text-slate-300 mx-auto" />
               <h3 className="text-xs font-bold text-slate-700">Атлеты не найдены</h3>
@@ -227,26 +227,26 @@ export default function AthletesScreen({
               </p>
             </div>
           ) : (
-            filteredStudents.map(student => {
-              const fullName = student.full_name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Атлет';
-              const leftWorkouts = Number(student.left_trainings ?? student.remaining_workouts ?? 12);
-              const totalWorkouts = Number(student.total_trainings || 12);
+            (filteredStudents || []).map((student, index) => {
+              const fullName = student?.full_name || `${student?.first_name || ''} ${student?.last_name || ''}`.trim() || 'Атлет';
+              const leftWorkouts = Number(student?.left_trainings ?? student?.remaining_workouts ?? 12);
+              const totalWorkouts = Number(student?.total_trainings || 12);
               const formatLabel = getFormatLabel(student);
-              const hasHealthWarning = Boolean(student.injury_notes || student.parq_notes || student.has_injuries);
-              const isPaused = (student.status || '').toLowerCase() === 'paused';
+              const hasHealthWarning = Boolean(student?.injury_notes || student?.parq_notes || student?.has_injuries);
+              const isPaused = (student?.status || '').toLowerCase() === 'paused';
               const isLowBalance = leftWorkouts <= 2;
 
               return (
                 <div
-                  key={student.id}
+                  key={student?.id || index}
                   onClick={() => onSelectStudent(student)}
                   className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all cursor-pointer active:scale-[0.99] space-y-2.5"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 flex items-center justify-center font-bold text-slate-700 text-sm">
-                        {student.avatar_url || student.photo_url ? (
-                          <img src={student.avatar_url || student.photo_url} alt="" className="w-full h-full object-cover" />
+                        {student?.avatar_url || student?.photo_url ? (
+                          <img src={student?.avatar_url || student?.photo_url} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <span>{fullName.charAt(0).toUpperCase()}</span>
                         )}
@@ -265,12 +265,12 @@ export default function AthletesScreen({
                         </div>
 
                         <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                          {student.username && (
+                          {student?.username && (
                             <span className="font-mono text-[#1E60D5]">
                               @{student.username.replace('@', '')}
                             </span>
                           )}
-                          {student.gym && (
+                          {student?.gym && (
                             <span className="truncate">
                               📍 {student.gym.split('|')[0]}
                             </span>
@@ -287,7 +287,7 @@ export default function AthletesScreen({
                       <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">
                         {formatLabel}
                       </span>
-                      {student.current_weight && (
+                      {student?.current_weight && (
                         <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono font-medium">
                           {student.current_weight} кг
                         </span>

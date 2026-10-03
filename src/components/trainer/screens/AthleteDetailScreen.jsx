@@ -47,7 +47,7 @@ export default function AthleteDetailScreen({
   onBack, 
   onUpdate 
 }) {
-  const [currentStudent, setCurrentStudent] = useState(student);
+  const [currentStudent, setCurrentStudent] = useState(student || {});
   const [actionLoading, setActionLoading] = useState(false);
   const [photoNotice, setPhotoNotice] = useState(false);
   const [showFullMeasurements, setShowFullMeasurements] = useState(false);
@@ -58,17 +58,17 @@ export default function AthleteDetailScreen({
 
   // Режим редактирования тарифа
   const [isEditingPlan, setIsEditingPlan] = useState(false);
-  const [editPrice, setEditPrice] = useState(currentStudent.monthly_price || 70000);
-  const [editBurnable, setEditBurnable] = useState(currentStudent.is_burnable !== false);
-  const [editDaysLimit, setEditDaysLimit] = useState(parseInt(currentStudent.membership_term, 10) || 30);
-  const [editFormat, setEditFormat] = useState(currentStudent.training_format || currentStudent.package_type || 'individual');
+  const [editPrice, setEditPrice] = useState(currentStudent?.monthly_price || 70000);
+  const [editBurnable, setEditBurnable] = useState(currentStudent?.is_burnable !== false);
+  const [editDaysLimit, setEditDaysLimit] = useState(parseInt(currentStudent?.membership_term, 10) || 30);
+  const [editFormat, setEditFormat] = useState(currentStudent?.training_format || currentStudent?.package_type || 'individual');
 
-  const fullName = currentStudent.full_name || `${currentStudent.first_name || ''} ${currentStudent.last_name || ''}`.trim() || 'Атлет';
-  const leftTrainings = Number(currentStudent.left_trainings ?? currentStudent.remaining_workouts ?? 12);
-  const totalTrainings = Number(currentStudent.total_trainings || 12);
-  const currentStatus = (currentStudent.status || 'active').toLowerCase();
+  const fullName = currentStudent?.full_name || `${currentStudent?.first_name || ''} ${currentStudent?.last_name || ''}`.trim() || 'Атлет';
+  const leftTrainings = Number(currentStudent?.left_trainings ?? currentStudent?.remaining_workouts ?? 12);
+  const totalTrainings = Number(currentStudent?.total_trainings || 12);
+  const currentStatus = (currentStudent?.status || 'active').toLowerCase();
   const isExpiring = leftTrainings <= 2;
-  const isPaid = currentStudent.payment_status === 'paid';
+  const isPaid = currentStudent?.payment_status === 'paid';
 
   if (showFullMeasurements) {
     return (
@@ -81,21 +81,22 @@ export default function AthleteDetailScreen({
   }
 
   const handleOpenTg = () => {
-    const username = (currentStudent.username || currentStudent.telegram_username || '').replace('@', '').trim();
+    const username = (currentStudent?.username || currentStudent?.telegram_username || '').replace('@', '').trim();
     if (username) {
       window.open(`https://t.me/${username}`, '_blank');
-    } else if (currentStudent.phone) {
+    } else if (currentStudent?.phone) {
       window.open(`https://wa.me/${currentStudent.phone.replace(/\D/g, '')}`, '_blank');
     }
   };
 
   const handleChangeStatus = async (newStatus) => {
+    if (!currentStudent?.id) return;
     setActionLoading(true);
     try {
       const { error } = await supabase
         .from('profiles')
         .update({ status: newStatus })
-        .eq('id', currentStudent.id);
+        .eq('id', currentStudent?.id);
       if (error) throw error;
 
       setCurrentStudent(prev => ({ ...prev, status: newStatus }));
@@ -109,19 +110,20 @@ export default function AthleteDetailScreen({
   };
 
   const handleTogglePayment = async (statusVal) => {
-    if (currentStudent.payment_status === statusVal) return;
+    if (currentStudent?.payment_status === statusVal) return;
+    if (!currentStudent?.id) return;
     setActionLoading(true);
     try {
       const { error } = await supabase
         .from('profiles')
         .update({ payment_status: statusVal })
-        .eq('id', currentStudent.id);
+        .eq('id', currentStudent?.id);
       if (error) throw error;
 
       setCurrentStudent(prev => ({ ...prev, payment_status: statusVal }));
 
       if (statusVal === 'paid') {
-        const tgId = currentStudent.telegram_id || currentStudent.chat_id;
+        const tgId = currentStudent?.telegram_id || currentStudent?.chat_id;
         if (tgId) {
           sendTelegramMessage(tgId, `✅ <b>Оплата тренировок подтверждена!</b>\n\nТренер отметил получение оплаты за ваш абонемент.`).catch(() => {});
         }
@@ -135,13 +137,14 @@ export default function AthleteDetailScreen({
   };
 
   const handleAdjustBalance = async (delta) => {
+    if (!currentStudent?.id) return;
     const updated = Math.max(0, leftTrainings + delta);
     setActionLoading(true);
     try {
       const { error } = await supabase
         .from('profiles')
         .update({ left_trainings: updated, remaining_workouts: updated })
-        .eq('id', currentStudent.id);
+        .eq('id', currentStudent?.id);
       if (error) throw error;
 
       setCurrentStudent(prev => ({ ...prev, left_trainings: updated, remaining_workouts: updated }));
@@ -154,6 +157,7 @@ export default function AthleteDetailScreen({
   };
 
   const handleRenewPackage = async () => {
+    if (!currentStudent?.id) return;
     setActionLoading(true);
     const updated = leftTrainings + 12;
     try {
@@ -166,7 +170,7 @@ export default function AthleteDetailScreen({
           payment_status: 'paid',
           status: 'active'
         })
-        .eq('id', currentStudent.id);
+        .eq('id', currentStudent?.id);
       if (error) throw error;
 
       setCurrentStudent(prev => ({ 
@@ -177,7 +181,7 @@ export default function AthleteDetailScreen({
         status: 'active'
       }));
 
-      const tgId = currentStudent.telegram_id || currentStudent.chat_id;
+      const tgId = currentStudent?.telegram_id || currentStudent?.chat_id;
       if (tgId) {
         sendTelegramMessage(tgId, `🎉 <b>Абонемент продлен!</b>\n\nВам начислено: <b>+12 тренировок</b> (суммировано с остатком).\nТекущий баланс: <b>${updated} занятий</b>.`).catch(() => {});
       }
@@ -191,7 +195,7 @@ export default function AthleteDetailScreen({
   };
 
   const handleSendRenewalReminder = () => {
-    const tgId = currentStudent.telegram_id || currentStudent.chat_id;
+    const tgId = currentStudent?.telegram_id || currentStudent?.chat_id;
     const coachName = trainer?.full_name || trainer?.first_name || 'Ваш наставник';
     const text = `🔔 <b>Напоминание о продлении тренировок</b>\n\nПривет, ${escapeHtml(fullName)}! В твоем абонементе осталось <b>${leftTrainings} занятий</b>.\n\nЧтобы зафиксировать за собой привычное время и продолжить работу над прогрессом без пауз, давай согласуем продление следующего блока занятий!\n\n<i>Тренер: ${escapeHtml(coachName)}</i>`;
 
@@ -208,6 +212,7 @@ export default function AthleteDetailScreen({
   };
 
   const handleSavePlanSettings = async () => {
+    if (!currentStudent?.id) return;
     setActionLoading(true);
     try {
       const { error } = await supabase
@@ -219,7 +224,7 @@ export default function AthleteDetailScreen({
           training_format: editFormat,
           package_type: editFormat
         })
-        .eq('id', currentStudent.id);
+        .eq('id', currentStudent?.id);
       if (error) throw error;
 
       setCurrentStudent(prev => ({
@@ -240,9 +245,9 @@ export default function AthleteDetailScreen({
   };
 
   const handleSendInvoice = () => {
-    const tgId = currentStudent.telegram_id || currentStudent.chat_id;
+    const tgId = currentStudent?.telegram_id || currentStudent?.chat_id;
     const coachName = trainer?.full_name || trainer?.first_name || 'Ваш наставник';
-    const priceText = Number(currentStudent.monthly_price || 70000).toLocaleString();
+    const priceText = Number(currentStudent?.monthly_price || 70000).toLocaleString();
     const phone = trainer?.phone || 'указанному номеру Kaspi';
 
     const invoiceText = `🧾 <b>Счёт на оплату тренировок</b>\n\nАтлет: <b>${escapeHtml(fullName)}</b>\nПакет: <b>12 персональных занятий</b>\nК оплате: <b>${priceText} ₸</b>\n\nРеквизиты для перевода (Kaspi):\n<b>${phone}</b> (${coachName})\n\n<i>После оплаты отправьте квитанцию тренеру.</i>`;
@@ -261,10 +266,10 @@ export default function AthleteDetailScreen({
     split: 'Сплит-тренировка',
     group: 'Мини-группа',
     online: 'Онлайн-ведение'
-  }[currentStudent.training_format || currentStudent.package_type || 'individual'] || 'Индивидуально';
+  }[currentStudent?.training_format || currentStudent?.package_type || 'individual'] || 'Индивидуально';
 
-  const cleanShift = cleanShiftName(currentStudent.workout_shift || currentStudent.workout_time_slot);
-  const exactTimeText = currentStudent.exact_time || currentStudent.custom_time || currentStudent.workout_time || '18:30';
+  const cleanShift = cleanShiftName(currentStudent?.workout_shift || currentStudent?.workout_time_slot);
+  const exactTimeText = currentStudent?.exact_time || currentStudent?.custom_time || currentStudent?.workout_time || '18:30';
 
   return (
     <div className="min-h-screen bg-slate-50 select-none pb-28">
@@ -309,10 +314,10 @@ export default function AthleteDetailScreen({
                 </h3>
 
                 <p className="text-[11.5px] text-slate-400 font-mono">
-                  {currentStudent.username ? `@${currentStudent.username.replace('@', '')}` : (currentStudent.phone || 'Контакты не указаны')}
+                  {currentStudent?.username ? `@${currentStudent.username.replace('@', '')}` : (currentStudent?.phone || 'Контакты не указаны')}
                 </p>
 
-                {currentStudent.gym && (
+                {currentStudent?.gym && (
                   <p className="text-[10.5px] text-slate-500 font-medium truncate">
                     📍 {currentStudent.gym.split('|')[0]}
                   </p>
@@ -344,9 +349,9 @@ export default function AthleteDetailScreen({
               <span>Написать в TG</span>
             </button>
 
-            {currentStudent.phone ? (
+            {currentStudent?.phone ? (
               <a
-                href={`tel:${currentStudent.phone}`}
+                href={`tel:${currentStudent?.phone}`}
                 className="h-9 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all"
               >
                 <Phone className="w-3.5 h-3.5 text-slate-600" />
@@ -510,13 +515,13 @@ export default function AthleteDetailScreen({
               <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
                 <span className="text-[10px] text-slate-400 font-medium block">Стоимость</span>
                 <span className="text-xs font-mono font-bold text-slate-800 block mt-0.5">
-                  {Number(currentStudent.monthly_price || 70000).toLocaleString()} ₸
+                  {Number(currentStudent?.monthly_price || 70000).toLocaleString()} ₸
                 </span>
               </div>
               <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/50">
                 <span className="text-[10px] text-slate-400 font-medium block">Регламент</span>
                 <span className="text-xs font-semibold text-slate-700 block mt-0.5">
-                  {currentStudent.is_burnable !== false ? 'Сгорает 30 дн.' : 'Несгораемый'}
+                  {currentStudent?.is_burnable !== false ? 'Сгорает 30 дн.' : 'Несгораемый'}
                 </span>
               </div>
             </div>
@@ -619,7 +624,7 @@ export default function AthleteDetailScreen({
             </div>
 
             <span className="text-[11px] font-mono font-bold text-[#1E60D5]">
-              {currentStudent.current_weight || currentStudent.weight || '—'} кг
+              {currentStudent?.current_weight || currentStudent?.weight || '—'} кг
             </span>
           </div>
 
@@ -627,84 +632,84 @@ export default function AthleteDetailScreen({
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Рост</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.height ? `${currentStudent.height} см` : '—'}
+                {currentStudent?.height ? `${currentStudent?.height} см` : '—'}
               </span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Вес</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.current_weight || currentStudent.weight || '—'} кг
+                {currentStudent?.current_weight || currentStudent?.weight || '—'} кг
               </span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Талия</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.waist || '81'} см
+                {currentStudent?.waist || '81'} см
               </span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Грудь</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.chest || '99'} см
+                {currentStudent?.chest || '99'} см
               </span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Бёдра</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.hips || '98'} см
+                {currentStudent?.hips || '98'} см
               </span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Шея</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.neck || '38'} см
+                {currentStudent?.neck || '38'} см
               </span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Пр. бицепс</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.biceps_right || currentStudent.biceps || '36.5'} см
+                {currentStudent?.biceps_right || currentStudent?.biceps || '36.5'} см
               </span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Лев. бицепс</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.biceps_left || '36'} см
+                {currentStudent?.biceps_left || '36'} см
               </span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Пр. бедро</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.thigh_right || currentStudent.thigh || '56.5'} см
+                {currentStudent?.thigh_right || currentStudent?.thigh || '56.5'} см
               </span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Лев. бедро</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.thigh_left || '56'} см
+                {currentStudent?.thigh_left || '56'} см
               </span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Пр. икра</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.calf_right || '37.5'} см
+                {currentStudent?.calf_right || '37.5'} см
               </span>
             </div>
 
             <div className="p-2 bg-slate-50 rounded-xl border border-slate-200/40">
               <span className="text-[10px] text-slate-400 block">Лев. икра</span>
               <span className="text-xs font-mono font-bold text-slate-800">
-                {currentStudent.calf_left || '37.5'} см
+                {currentStudent?.calf_left || '37.5'} см
               </span>
             </div>
           </div>
@@ -756,17 +761,17 @@ export default function AthleteDetailScreen({
           <div className="space-y-2 text-xs divide-y divide-slate-100">
             <div className="flex items-center justify-between pt-1">
               <span className="text-slate-500">Локация и клуб:</span>
-              <span className="font-semibold text-slate-800">{currentStudent.city || 'Алматы'} • {currentStudent.gym ? currentStudent.gym.split('|')[0] : 'Клуб не указан'}</span>
+              <span className="font-semibold text-slate-800">{currentStudent?.city || 'Алматы'} • {currentStudent?.gym ? currentStudent.gym.split('|')[0] : 'Клуб не указан'}</span>
             </div>
 
             <div className="flex items-center justify-between pt-1.5">
               <span className="text-slate-500">Главная цель:</span>
-              <span className="font-semibold text-slate-800">{currentStudent.goal || 'Укрепление формы'}</span>
+              <span className="font-semibold text-slate-800">{currentStudent?.goal || 'Укрепление формы'}</span>
             </div>
 
             <div className="flex items-center justify-between pt-1.5">
               <span className="text-slate-500">Опыт тренировок:</span>
-              <span className="font-semibold text-slate-800">{translateExperience(currentStudent.experience_level)}</span>
+              <span className="font-semibold text-slate-800">{translateExperience(currentStudent?.experience_level)}</span>
             </div>
 
             {/* Чистое слово смены + точное время без лишних скобок */}
@@ -786,14 +791,14 @@ export default function AthleteDetailScreen({
               <div className="p-2 bg-slate-50 rounded-xl text-center border border-slate-200/40">
                 <span className="text-[10px] text-slate-400 block">Рост</span>
                 <span className="text-xs font-mono font-bold text-slate-800">
-                  {currentStudent.height ? `${currentStudent.height} см` : 'Не указан'}
+                  {currentStudent?.height ? `${currentStudent?.height} см` : 'Не указан'}
                 </span>
               </div>
 
               <div className="p-2 bg-slate-50 rounded-xl text-center border border-slate-200/40">
                 <span className="text-[10px] text-slate-400 block">Возраст</span>
                 <span className="text-xs font-mono font-bold text-slate-800">
-                  {currentStudent.age ? `${currentStudent.age} лет` : 'Не указан'}
+                  {currentStudent?.age ? `${currentStudent?.age} лет` : 'Не указан'}
                 </span>
               </div>
             </div>
@@ -808,9 +813,9 @@ export default function AthleteDetailScreen({
           </div>
 
           <div className="bg-slate-50 rounded-xl p-3 text-xs border border-slate-200/60 leading-relaxed">
-            {currentStudent.injury_notes || currentStudent.health_notes || currentStudent.parq_notes ? (
+            {currentStudent?.injury_notes || currentStudent?.health_notes || currentStudent?.parq_notes ? (
               <p className="text-rose-700 font-medium">
-                ⚠️ {currentStudent.injury_notes || currentStudent.health_notes || currentStudent.parq_notes}
+                ⚠️ {currentStudent?.injury_notes || currentStudent?.health_notes || currentStudent?.parq_notes}
               </p>
             ) : (
               <p className="text-slate-500">
