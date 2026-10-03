@@ -1,230 +1,190 @@
 // src/components/trainer/components/modals/TrainerPublicCardModal.jsx
 import React, { useState } from 'react';
-import { ArrowLeft, CheckCircle2, MapPin, Copy, Check, Share2, Save } from 'lucide-react';
-import { supabase } from '../../../../supabaseClient';
+import { 
+  ArrowLeft, 
+  Copy, 
+  Check, 
+  Send, 
+  Eye, 
+  Layers, 
+  Info,
+  Edit3
+} from 'lucide-react';
+import TrainerCatalogCard from '../../../home/TrainerCatalogCard';
+import TrainerPublicDetailPage from '../../../home/TrainerPublicDetailPage';
 
 export default function TrainerPublicCardModal({ 
   isOpen, 
   onClose, 
-  onEditClick, 
+  onEditClick,
   trainer, 
-  cleanUsername = 'coach'
+  cleanUsername = 'coach' 
 }) {
+  const [viewMode, setViewMode] = useState('catalog'); // 'catalog' | 'full'
   const [isCopied, setIsCopied] = useState(false);
-  const [acceptingStudents, setAcceptingStudents] = useState(
-    trainer?.public_settings?.accepting_new_students ?? true
-  );
-  const [showPhone, setShowPhone] = useState(
-    trainer?.public_settings?.show_phone ?? true
-  );
-  const [savingSettings, setSavingSettings] = useState(false);
 
-  if (!isOpen) return null;
+  if (!isOpen || !trainer) return null;
 
-  // Актуальная ссылка на официального рабочего бота платформы
-  const publicCoachLink = `https://t.me/gymconnect_ala_bot?start=coach_${cleanUsername}`;
+  const targetUsername = (cleanUsername || trainer.username || 'coach').replace(/[@\s]/g, '').trim().toLowerCase();
+  
+  // Официальная инвайт-ссылка с префиксом coach_ (перехватывается в App.jsx для автопривязки)
+  const inviteLink = `https://t.me/gymconnect_ala_bot?start=coach_${targetUsername}`;
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(publicCoachLink);
+    navigator.clipboard.writeText(inviteLink);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleShare = () => {
-    const text = encodeURIComponent('Записывайтесь ко мне на персональные тренировки в GymConnect:');
-    const url = encodeURIComponent(publicCoachLink);
-    window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
+  const handleShareTelegram = () => {
+    const text = encodeURIComponent(
+      `Привет! Записывайся ко мне на персональные тренировки в GymConnect:\n${inviteLink}`
+    );
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${text}`, '_blank');
   };
-
-  // МГНОВЕННОЕ СОХРАНЕНИЕ НАСТРОЕК ВИДИМОСТИ В SUPABASE
-  const handleToggleSetting = async (field, value) => {
-    if (field === 'accepting') setAcceptingStudents(value);
-    if (field === 'phone') setShowPhone(value);
-
-    const updatedSettings = {
-      ...trainer?.public_settings,
-      accepting_new_students: field === 'accepting' ? value : acceptingStudents,
-      show_phone: field === 'phone' ? value : showPhone
-    };
-
-    setSavingSettings(true);
-    try {
-      if (cleanUsername && cleanUsername !== 'coach') {
-        await supabase
-          .from('trainer_profiles')
-          .update({ public_settings: updatedSettings })
-          .or(`username.ilike.${cleanUsername},username.ilike.@${cleanUsername}`);
-      }
-    } catch (e) {
-      console.warn('Ошибка сохранения настроек визитки:', e);
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
-  const isApproved = trainer?.status === 'approved';
-  const specializations = Array.isArray(trainer?.specializations) && trainer.specializations.length > 0
-    ? trainer.specializations
-    : ['Набор массы и гипертрофия'];
-
-  const personalSingle = trainer?.pricing?.personal_single || 8000;
-  const personalBlock = trainer?.pricing?.personal_block || 70000;
-  const personalCount = trainer?.pricing?.personal_count || 12;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#F2F2F7] flex flex-col overflow-y-auto select-none animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[100] bg-neutral-100 flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-200 h-[100dvh]">
       
-      {/* Шапка */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex items-center gap-1 text-blue-600 font-semibold text-xs active:scale-95 cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Назад в меню</span>
-        </button>
-        <h2 className="text-xs font-bold text-slate-900">Публичная визитка</h2>
-        <button
-          type="button"
-          onClick={onEditClick}
-          className="text-xs font-semibold text-blue-600 active:scale-95 cursor-pointer"
-        >
-          Изменить
-        </button>
-      </div>
+      {/* 1. ВЕРХНИЙ БАР APPLE LIGHT */}
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-neutral-200/80 px-4 py-3 shadow-xs shrink-0">
+        <div className="max-w-md mx-auto flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-9 h-9 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 flex items-center justify-center active:scale-95 transition-all cursor-pointer border border-neutral-200/60 shrink-0"
+            title="Назад"
+          >
+            <ArrowLeft className="w-4 h-4 stroke-[2.2]" />
+          </button>
 
-      <div className="p-4 space-y-4 max-w-lg mx-auto w-full pb-28">
-        
-        {/* Карточка визитки */}
-        <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-xl overflow-hidden shrink-0 shadow-xs">
-              {trainer?.avatar_url || trainer?.photo_url ? (
-                <img src={trainer.avatar_url || trainer.photo_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span>{cleanUsername[0]?.toUpperCase()}</span>
-              )}
-            </div>
-            <div className="overflow-hidden">
-              <div className="flex items-center gap-1.5">
-                <h3 className="text-base font-bold text-slate-900 truncate">
-                  {trainer?.first_name || 'Тренер'} {trainer?.last_name || ''}
-                </h3>
-                {isApproved && <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />}
-              </div>
-              <p className="text-xs text-blue-600 font-mono mt-0.5">@{cleanUsername}</p>
-              <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 truncate">
-                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                <span>{trainer?.gym || 'Invictus Go'}</span>
-              </p>
-            </div>
+          <div className="text-center flex-1 min-w-0">
+            <h1 className="text-xs font-extrabold text-neutral-900 tracking-tight truncate">
+              Предпросмотр профиля
+            </h1>
+            <p className="text-[10px] text-neutral-400 font-medium truncate">
+              Так вашу визитку видят атлеты
+            </p>
           </div>
 
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            <span className="text-[10px] font-semibold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-xl">
-              Стаж: {trainer?.experience_years || 3} года
-            </span>
-            <span className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-xl">
-              {trainer?.work_format === 'hybrid' ? 'Зал + Онлайн' : trainer?.work_format === 'online' ? 'Только онлайн' : 'В зале'}
-            </span>
-            <span className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-xl">
-              {trainer?.workout_duration || 60} мин / занятие
-            </span>
-          </div>
-
-          <div className="space-y-1.5 pt-2 border-t border-slate-100">
-            <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">Специализации</span>
-            <div className="flex flex-wrap gap-1">
-              {specializations.map((s, i) => (
-                <span key={i} className="text-[10.5px] font-medium bg-slate-100 text-slate-800 px-2 py-0.5 rounded-lg">
-                  {s}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1.5 pt-2 border-t border-slate-100">
-            <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">Цены и абонементы</span>
-            <div className="grid grid-cols-2 gap-2 text-center font-mono">
-              <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl">
-                <p className="text-[10px] text-slate-400 font-sans">Разовая тренировка</p>
-                <p className="text-sm font-bold text-slate-900 mt-0.5">{Number(personalSingle).toLocaleString()} ₸</p>
-              </div>
-              <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl">
-                <p className="text-[10px] text-slate-400 font-sans">Абонемент ({personalCount} зан.)</p>
-                <p className="text-sm font-bold text-blue-600 mt-0.5">{Number(personalBlock).toLocaleString()} ₸</p>
-              </div>
-            </div>
-          </div>
-
-          {trainer?.bio && (
-            <div className="space-y-1 pt-2 border-t border-slate-100">
-              <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">О тренере</span>
-              <p className="text-xs text-slate-600 leading-relaxed italic">«{trainer.bio}»</p>
-            </div>
+          {onEditClick ? (
+            <button
+              type="button"
+              onClick={onEditClick}
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 active:scale-95 transition-all shrink-0 cursor-pointer flex items-center gap-1"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Редактировать</span>
+            </button>
+          ) : (
+            <div className="w-9" />
           )}
         </div>
 
-        {/* Настройки видимости с сохранением */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
-          <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-            <p className="text-xs font-bold text-slate-900">Настройки видимости</p>
-            {savingSettings && <span className="text-[9.5px] text-blue-600 font-mono">Сохранение...</span>}
-          </div>
-          
-          <label className="flex items-center justify-between text-xs cursor-pointer">
-            <span className="text-slate-700">Открыт к записи новых учеников</span>
-            <input
-              type="checkbox"
-              checked={acceptingStudents}
-              onChange={e => handleToggleSetting('accepting', e.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded"
-            />
-          </label>
+        {/* Переключатель режимов: В каталоге (кратко) / Полная визитка */}
+        <div className="max-w-md mx-auto mt-2.5 grid grid-cols-2 p-1 bg-neutral-100/90 rounded-2xl border border-neutral-200/60">
+          <button
+            type="button"
+            onClick={() => setViewMode('catalog')}
+            className={`py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              viewMode === 'catalog'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-neutral-500 hover:text-neutral-800'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>В каталоге (кратко)</span>
+          </button>
 
-          <label className="flex items-center justify-between text-xs cursor-pointer">
-            <span className="text-slate-700">Отображать WhatsApp для прямой связи</span>
-            <input
-              type="checkbox"
-              checked={showPhone}
-              onChange={e => handleToggleSetting('phone', e.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded"
-            />
-          </label>
+          <button
+            type="button"
+            onClick={() => setViewMode('full')}
+            className={`py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              viewMode === 'full'
+                ? 'bg-white text-blue-600 shadow-xs'
+                : 'text-neutral-500 hover:text-neutral-800'
+            }`}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>Полная визитка</span>
+          </button>
         </div>
+      </header>
 
-        {/* Персональная инвайт-ссылка */}
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-            Инвайт-ссылка для автоматической привязки:
+      {/* 2. СКРОЛЛИРУЕМАЯ СЕРЕДИНА */}
+      <main className="flex-1 overflow-y-auto p-4 max-w-md mx-auto w-full space-y-3.5 pb-10">
+        <div className="bg-white rounded-3xl p-3.5 border border-neutral-200/80 shadow-xs flex items-center gap-2.5 text-xs text-neutral-600 leading-snug">
+          <Info className="w-4 h-4 text-blue-600 shrink-0" />
+          <span>
+            {viewMode === 'catalog' 
+              ? 'Компактный вид карточки в ленте поиска всех тренеров Алматы.' 
+              : 'Экран, куда атлет попадает при нажатии «Подробнее» или по вашей ссылке.'}
           </span>
-          <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
-            <span className="font-mono text-[10.5px] text-blue-700 truncate mr-2 font-bold">{publicCoachLink}</span>
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[10.5px] font-semibold flex items-center gap-1 shrink-0 active:scale-95 transition-all cursor-pointer shadow-2xs"
-            >
-              {isCopied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-              <span>{isCopied ? 'Скопировано' : 'Копировать'}</span>
-            </button>
-          </div>
         </div>
 
-      </div>
+        {viewMode === 'catalog' ? (
+          <div className="space-y-3">
+            <span className="text-[10.5px] font-bold text-neutral-400 uppercase tracking-wider block px-1">
+              Карточка в результатах каталога:
+            </span>
 
-      {/* Нижняя кнопка Поделиться */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 max-w-lg mx-auto shadow-lg">
-        <button
-          type="button"
-          onClick={handleShare}
-          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer shadow-md shadow-blue-600/30"
-        >
-          <Share2 className="w-4 h-4" />
-          <span>Поделиться визиткой в Telegram</span>
-        </button>
-      </div>
+            {/* Компактная карточка */}
+            <TrainerCatalogCard 
+              trainer={trainer}
+              onSelect={() => setViewMode('full')}
+            />
+
+            {/* Карточка ссылки */}
+            <div className="bg-white rounded-3xl p-4 border border-neutral-200/80 shadow-xs space-y-2">
+              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+                Персональная ссылка с автопривязкой в CRM:
+              </span>
+              <div className="p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl flex items-center justify-between text-xs font-mono font-semibold text-neutral-800">
+                <span className="truncate mr-2 text-blue-700">{inviteLink}</span>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="px-2.5 py-1 bg-white hover:bg-neutral-100 text-neutral-700 rounded-lg text-[10.5px] font-bold border border-neutral-200 shrink-0 active:scale-95 transition-all shadow-2xs cursor-pointer"
+                >
+                  {isCopied ? 'Скопировано!' : 'Копировать'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Полная визитка */
+          <div className="rounded-3xl overflow-hidden border border-neutral-200/80 shadow-xs bg-white">
+            <TrainerPublicDetailPage 
+              trainer={trainer}
+              isPreviewMode={true}
+              onBack={() => setViewMode('catalog')}
+            />
+          </div>
+        )}
+      </main>
+
+      {/* 3. ЖЕСТКО ЗАФИКСИРОВАННЫЙ НИЖНИЙ БАР (НЕ СЪЕЗЖАЕТ) */}
+      <footer className="sticky bottom-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200/80 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom,20px))] shadow-lg shrink-0">
+        <div className="max-w-md mx-auto grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="py-3.5 px-3 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer border border-neutral-200/80 shadow-2xs truncate"
+          >
+            {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{isCopied ? 'Скопировано!' : 'Копировать ссылку'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShareTelegram}
+            className="py-3.5 px-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-md shadow-blue-600/25 truncate"
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span>Поделиться в TG</span>
+          </button>
+        </div>
+      </footer>
 
     </div>
   );
