@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   ArrowLeft, 
+  ArrowRight,
   Check, 
   HeartPulse, 
   Activity, 
@@ -122,6 +123,8 @@ export default function HealthQuestionnaireScreen({
   }, [answers]);
 
   const handleNextStep = () => {
+    if (!canProceedCurrentStep || isSubmitting) return;
+
     if (currentStep < HEALTH_CATEGORIES.length - 1) {
       setCurrentStep(prev => prev + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -226,16 +229,18 @@ export default function HealthQuestionnaireScreen({
     }
   };
 
+  const isLastStep = currentStep === HEALTH_CATEGORIES.length - 1;
+
   return (
-    <div className="fixed inset-0 z-50 bg-neutral-100 flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] bg-neutral-100 flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-200 h-[100dvh]">
       
-      {/* 1. ШАПКА APPLE LIGHT C ПРОГРЕСС-БАРОМ */}
+      {/* 1. ШАПКА APPLE LIGHT C КНОПКОЙ «ДАЛЕЕ» СПРАВА */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-neutral-200/80 px-4 py-3 shadow-xs shrink-0">
         <div className="max-w-md mx-auto flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={handlePrevStep}
-            className="w-9 h-9 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 flex items-center justify-center active:scale-95 transition-all cursor-pointer border border-neutral-200/60"
+            className="w-9 h-9 rounded-2xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 flex items-center justify-center active:scale-95 transition-all cursor-pointer border border-neutral-200/60 shrink-0"
             title="Назад"
           >
             <ArrowLeft className="w-4 h-4 stroke-[2.2]" />
@@ -250,9 +255,20 @@ export default function HealthQuestionnaireScreen({
             </p>
           </div>
 
-          <div className="w-9 text-right font-mono text-[11px] font-bold text-blue-600">
-            {Math.round(((currentStep + 1) / HEALTH_CATEGORIES.length) * 100)}%
-          </div>
+          {/* Кнопка «Далее» в верхней шапке (всегда видна) */}
+          <button
+            type="button"
+            disabled={!canProceedCurrentStep || isSubmitting}
+            onClick={handleNextStep}
+            className={`h-9 px-3 rounded-2xl font-extrabold text-xs flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
+              canProceedCurrentStep
+                ? 'bg-blue-600 text-white shadow-xs active:scale-95'
+                : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+            }`}
+          >
+            <span>{isLastStep ? 'Готово' : 'Далее'}</span>
+            <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
+          </button>
         </div>
 
         {/* Прогресс-бар */}
@@ -265,7 +281,7 @@ export default function HealthQuestionnaireScreen({
       </header>
 
       {/* 2. СКРОЛЛИРУЕМАЯ СЕРЕДИНА */}
-      <main className="flex-1 overflow-y-auto p-4 max-w-md mx-auto w-full space-y-3.5">
+      <main className="flex-1 overflow-y-auto p-4 max-w-md mx-auto w-full space-y-3.5 pb-8">
 
         {/* Карточка текущей категории */}
         <div className="bg-white rounded-3xl p-4 border border-neutral-200/80 shadow-xs flex items-center gap-3">
@@ -502,8 +518,8 @@ export default function HealthQuestionnaireScreen({
 
       </main>
 
-      {/* 3. ЖЕСТКО ЗАФИКСИРОВАННЫЙ НИЖНИЙ БАР */}
-      <footer className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-neutral-200/80 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg shrink-0">
+      {/* 3. ЖЕСТКО ЗАФИКСИРОВАННЫЙ НИЖНИЙ БАР (Z-[100], НЕ ПЕРЕКРЫВАЕТСЯ МЕНЮ APP.JSX) */}
+      <footer className="sticky bottom-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200/80 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom,20px))] shadow-lg shrink-0">
         <div className="max-w-md mx-auto">
           <button
             type="button"
@@ -515,15 +531,15 @@ export default function HealthQuestionnaireScreen({
                 : 'bg-neutral-200 text-neutral-400 cursor-not-allowed shadow-none'
             }`}
           >
-            {currentStep < HEALTH_CATEGORIES.length - 1 ? (
-              <>
-                <span>Следующий раздел: {HEALTH_CATEGORIES[currentStep + 1]?.title}</span>
-                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
-              </>
-            ) : (
+            {isLastStep ? (
               <>
                 <Send className="w-4 h-4" />
                 <span>{isSubmitting ? 'Сохранение анкеты...' : 'Отправить анкету здоровья тренеру'}</span>
+              </>
+            ) : (
+              <>
+                <span>Далее ({currentStep + 1}/4)</span>
+                <ArrowRight className="w-4 h-4 stroke-[2.5]" />
               </>
             )}
           </button>
