@@ -23,12 +23,14 @@ import {
   Flame,
   Droplet,
   Pill,
-  FileText
+  FileText,
+  HeartPulse
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { sendTrainerAttendanceNotification } from '../../utils/telegramNotifications';
 import TrainersCatalogPage from '../home/TrainersCatalogPage';
 import ClientRulesAgreementModal from './ClientRulesAgreementModal';
+import HealthQuestionnaireScreen from './HealthQuestionnaireScreen';
 
 export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, onUpdate }) {
   const [athleteData, setAthleteData] = useState(initialUser || {});
@@ -36,7 +38,10 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const [activeTab, setActiveTab] = useState('program'); // 'program' | 'nutrition' | 'finance' | 'coach'
   const [trainerData, setTrainerData] = useState(null);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  
+  // Модальные окна регламента и анкеты здоровья
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
+  const [isHealthQuestionnaireOpen, setIsHealthQuestionnaireOpen] = useState(false);
 
   const [selectedDay, setSelectedDay] = useState(1);
 
@@ -282,6 +287,26 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
     );
   }
 
+  // Если открыто прохождение анкеты здоровья
+  if (isHealthQuestionnaireOpen) {
+    return (
+      <HealthQuestionnaireScreen
+        onBack={() => {
+          setIsHealthQuestionnaireOpen(false);
+          fetchFreshProfile(false);
+        }}
+        userProfile={athleteData}
+        trainerProfile={trainerData}
+        customQuestions={trainerData?.custom_health_questions || []}
+        onComplete={() => {
+          setIsHealthQuestionnaireOpen(false);
+          fetchFreshProfile(false);
+          if (onUpdate) onUpdate();
+        }}
+      />
+    );
+  }
+
   const programData = athleteData?.assigned_program?.days || athleteData?.assigned_program || {
     1: {
       title: 'День 1: Базовый комплекс',
@@ -308,6 +333,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
   const coachUsername = trainerData?.username ? String(trainerData.username).replace('@', '').trim() : cleanTrainerUsername;
 
   const isRulesAccepted = Boolean(athleteData?.rules_accepted);
+  const isHealthCompleted = Boolean(athleteData?.health_questionnaire_completed);
 
   return (
     <div className="min-h-screen w-full bg-[#F2F2F7] flex flex-col select-none animate-in fade-in duration-150">
@@ -359,7 +385,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
         
         {hasLinkedCoach ? (
           <>
-            {/* Визитка наставника */}
+            {/* 1. Визитка наставника */}
             <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -422,7 +448,7 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
               </div>
             </div>
 
-            {/* БЛОК РЕГЛАМЕНТА И ПРАВИЛ ВЗАИМОДЕЙСТВИЯ */}
+            {/* 2. БЛОК 1: РЕГЛАМЕНТ И ПРАВИЛА ОТМЕН */}
             <div className="bg-white rounded-3xl p-3.5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
@@ -452,6 +478,44 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
                 }`}
               >
                 {isRulesAccepted ? 'Принят ✓' : 'Ознакомиться →'}
+              </button>
+            </div>
+
+            {/* 3. БЛОК 2: МЕДИЦИНСКАЯ АНКЕТА ЗДОРОВЬЯ (PAR-Q) */}
+            <div className="bg-white rounded-3xl p-3.5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                  isHealthCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                }`}>
+                  <HeartPulse className="w-4 h-4 stroke-[2]" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900 truncate">
+                      Медицинская анкета (PAR-Q)
+                    </span>
+                    {!isHealthCompleted && (
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-400 block truncate">
+                    {isHealthCompleted 
+                      ? (athleteData?.health_notes || 'Анкета заполнена, травм нет ✓')
+                      : 'Ограничения, травмы и чекап анализов'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsHealthQuestionnaireOpen(true)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0 border shadow-2xs ${
+                  isHealthCompleted 
+                    ? 'bg-neutral-100 text-neutral-700 border-neutral-200 hover:bg-neutral-200' 
+                    : 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                }`}
+              >
+                {isHealthCompleted ? 'Изменить' : 'Заполнить ⚠️'}
               </button>
             </div>
 
@@ -936,6 +1000,12 @@ export default function AthleteCoachWorkoutsPage({ user: initialUser, onBack, on
         onAgreementSuccess={() => {
           fetchFreshProfile(false);
           if (onUpdate) onUpdate();
+          // Авто-цепочка: если анкета здоровья ещё не пройдена, сразу открываем её
+          if (!athleteData?.health_questionnaire_completed) {
+            setTimeout(() => {
+              setIsHealthQuestionnaireOpen(true);
+            }, 350);
+          }
         }}
       />
 
