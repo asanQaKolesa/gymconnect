@@ -286,3 +286,6 @@ export const ALMATY_GYMS = [
   // Дополнительная опция ручного ввода
   "Другой зал (указать в профиле)"
 ];
+
+export const almatyGyms = ALMATY_GYMS;
+export default ALMATY_GYMS;

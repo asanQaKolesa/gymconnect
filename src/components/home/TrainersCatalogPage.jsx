@@ -112,7 +112,7 @@ export default function TrainersCatalogPage({ onBack, userProfile }) {
   const uniqueGyms = useMemo(() => {
     const set = new Set();
     trainers.forEach(t => {
-      if (t.gym) set.add(t.gym.split('|')[0].trim());
+      if (t.gym) set.add(t.gym?.split('|')[0].trim());
     });
     return Array.from(set);
   }, [trainers]);
@@ -175,12 +175,16 @@ export default function TrainersCatalogPage({ onBack, userProfile }) {
       // Обновляем локальный профиль
       const saved = localStorage.getItem('gymconnect_user_profile');
       if (saved) {
-        const parsed = JSON.parse(saved);
-        localStorage.setItem('gymconnect_user_profile', JSON.stringify({
-          ...parsed,
-          trainer_username: coachNick,
-          trainer_telegram: coachNick
-        }));
+        try {
+          const parsed = JSON.parse(saved);
+          localStorage.setItem('gymconnect_user_profile', JSON.stringify({
+            ...parsed,
+            trainer_username: coachNick,
+            trainer_telegram: coachNick
+          }));
+        } catch (e) {
+          console.error("Error parsing profile data from localStorage", e);
+        }
       }
 
       setLinkingSuccess(true);
@@ -313,7 +317,7 @@ export default function TrainersCatalogPage({ onBack, userProfile }) {
               const blockPrice = coach.pricing?.personal_block || 70000;
               const specs = Array.isArray(coach.specializations) && coach.specializations.length > 0
                 ? coach.specializations
-                : (typeof coach.specialization === 'string' ? coach.specialization.split(',') : ['Фитнес и тонус']);
+                : (typeof coach.specialization === 'string' ? coach.specialization?.split(',') : ['Фитнес и тонус']);
 
               return (
                 <div
@@ -358,7 +362,7 @@ export default function TrainersCatalogPage({ onBack, userProfile }) {
 
                         <p className="text-[11px] text-slate-500 truncate flex items-center gap-1">
                           <MapPin className="w-3 h-3 text-blue-600 shrink-0" />
-                          <span>{coach.gym ? coach.gym.split('|')[0] : 'Алматы'}</span>
+                          <span>{coach.gym ? coach.gym?.split('|')[0] : 'Алматы'}</span>
                         </p>
 
                         <p className="text-[10px] text-slate-400">
@@ -457,7 +461,7 @@ export default function TrainersCatalogPage({ onBack, userProfile }) {
                     Запись к тренеру {selectedTrainerForAction.first_name}
                   </h3>
                   <p className="text-[10.5px] text-slate-400">
-                    {selectedTrainerForAction.gym ? selectedTrainerForAction.gym.split('|')[0] : 'Алматы'}
+                    {selectedTrainerForAction.gym ? selectedTrainerForAction.gym?.split('|')[0] : 'Алматы'}
                   </p>
                 </div>
               </div>

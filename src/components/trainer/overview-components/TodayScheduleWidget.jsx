@@ -37,8 +37,12 @@ export default function TodayScheduleWidget({ students, onSelectStudent, trainer
 
           if (data && data.schedule_events) {
             const raw = data.schedule_events;
-            loaded = typeof raw === 'string' ? JSON.parse(raw) : raw;
-            localStorage.setItem(`gymconnect_trainer_events_${trainerKey}`, JSON.stringify(loaded));
+            try {
+              loaded = typeof raw === 'string' ? JSON.parse(raw) : raw;
+              localStorage.setItem(`gymconnect_trainer_events_${trainerKey}`, JSON.stringify(loaded));
+            } catch (e) {
+              console.error('Error parsing trainer schedule_events from db', e);
+            }
           }
         }
 
@@ -97,8 +101,13 @@ export default function TodayScheduleWidget({ students, onSelectStudent, trainer
       alert('Ошибка списания: ' + error.message);
     } else {
         let allEvents = [];
-        const local = localStorage.getItem(`gymconnect_trainer_events_${trainerKey}`);
-        if (local) allEvents = JSON.parse(local);
+        try {
+            const local = localStorage.getItem(`gymconnect_trainer_events_${trainerKey}`);
+            if (local) allEvents = JSON.parse(local);
+        } catch (e) {
+            console.error('Error parsing trainer events from localStorage', e);
+            allEvents = [];
+        }
 
         const updatedEvents = (allEvents || []).map(ev => {
             if (ev?.id === eventObj?.id) {
@@ -124,8 +133,13 @@ export default function TodayScheduleWidget({ students, onSelectStudent, trainer
   const handleAttendanceNo = async (e, eventObj) => {
     e.stopPropagation();
     let allEvents = [];
-    const local = localStorage.getItem(`gymconnect_trainer_events_${trainerKey}`);
-    if (local) allEvents = JSON.parse(local);
+    try {
+        const local = localStorage.getItem(`gymconnect_trainer_events_${trainerKey}`);
+        if (local) allEvents = JSON.parse(local);
+    } catch (e) {
+        console.error('Error parsing trainer events from localStorage', e);
+        allEvents = [];
+    }
 
     const updatedEvents = (allEvents || []).map(ev => {
         if (ev?.id === eventObj?.id) {
