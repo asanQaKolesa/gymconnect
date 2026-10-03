@@ -23,6 +23,7 @@ import {
 import { supabase } from '../../../supabaseClient';
 import { sendTelegramMessage, escapeHtml } from '../../../utils/telegramNotifications';
 import AthleteMeasurementsScreen from './AthleteMeasurementsScreen';
+import AthleteHealthSheetModal from '../components/modals/AthleteHealthSheetModal';
 
 const translateExperience = (raw) => {
   if (!raw) return '1–2 года тренировок';
@@ -55,6 +56,9 @@ export default function AthleteDetailScreen({
 
   // Модалка смены статуса (карандашик)
   const [isEditingStatus, setIsEditingStatus] = useState(false);
+
+  // Модалка медицинской карты здоровья (PAR-Q)
+  const [isHealthSheetOpen, setIsHealthSheetOpen] = useState(false);
 
   // Режим редактирования тарифа
   const [isEditingPlan, setIsEditingPlan] = useState(false);
@@ -806,20 +810,28 @@ export default function AthleteDetailScreen({
         </div>
 
         {/* 6. АНКЕТА ЗДОРОВЬЯ И ОГРАНИЧЕНИЯ (PAR-Q) */}
-        <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-2.5">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-            <HeartPulse className="w-4 h-4 text-rose-500 stroke-[2]" />
-            <h4 className="text-xs font-bold text-slate-800">Ограничения и травмы (PAR-Q)</h4>
+        <div 
+          onClick={() => setIsHealthSheetOpen(true)}
+          className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-2.5 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
+        >
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2">
+              <HeartPulse className="w-4 h-4 text-rose-500 stroke-[2]" />
+              <h4 className="text-xs font-bold text-slate-800">Ограничения и травмы (PAR-Q)</h4>
+            </div>
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+              Открыть карту →
+            </span>
           </div>
 
           <div className="bg-slate-50 rounded-xl p-3 text-xs border border-slate-200/60 leading-relaxed">
-            {currentStudent?.injury_notes || currentStudent?.health_notes || currentStudent?.parq_notes ? (
+            {currentStudent?.health_notes || currentStudent?.injury_notes ? (
               <p className="text-rose-700 font-medium">
-                ⚠️ {currentStudent?.injury_notes || currentStudent?.health_notes || currentStudent?.parq_notes}
+                ⚠️ {currentStudent.health_notes || currentStudent.injury_notes}
               </p>
             ) : (
               <p className="text-slate-500">
-                Травмы, противопоказания и ограничения не зафиксированы.
+                Травмы и ограничения не зафиксированы. Нажмите для подробного чекапа.
               </p>
             )}
           </div>
@@ -891,6 +903,15 @@ export default function AthleteDetailScreen({
           </div>
         </div>
       )}
+
+      {/* МЕДИЦИНСКАЯ КАРТА ЗДОРОВЬЯ И РИСКОВ PAR-Q */}
+      <AthleteHealthSheetModal
+        isOpen={isHealthSheetOpen}
+        onClose={() => setIsHealthSheetOpen(false)}
+        student={currentStudent}
+        trainer={trainer}
+        onUpdate={() => onUpdate && onUpdate()}
+      />
 
     </div>
   );
